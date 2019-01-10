@@ -1,0 +1,8 @@
+[package]
+name = "izia"
+version = "0.1.0"
+authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
+
+[dependencies]
+zia = { path = "../zia"}
+linefeed = "0.5.3"

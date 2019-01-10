@@ -1,0 +1,9 @@
+[package]
+name = "zia"
+version = "0.1.0"
+authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
+
+[lib]
+name = "zia"
+crate-type = ["lib"]
+
