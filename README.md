@@ -38,8 +38,10 @@ cargo build
 To run tests:
 
 ```
-cargo test --release
+cargo test
 ```
+
+To optimise runtime performance at the cost of compilation time, append `--release` to the above commands.
 
 ## License
 
