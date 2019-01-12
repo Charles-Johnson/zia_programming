@@ -1,13 +1,13 @@
 # izia
-An interactive shell for Zia programming.
+Interactive Shell for the Zia Programming Language.
 
 ## When Building From Source
 
-Assuming that the instructions found [here](../README.md) have been followed, the binary executable `izia` can be found in either the `target/debug` or `target/release` directory. Add this directory to your `PATH` environment variable.
+Assuming that the instructions found [here](https://github.com/Charles-Johnson/zia_programming) have been followed, the binary executable `izia` can be found in either the `target/debug` or `target/release` directory. Add this directory to your `PATH` environment variable.
 
 ## Usage
 
-In the command line enter `izia`. This will print a short license notice followed by `>>>` as prompt. Type in a Zia expression and press enter. `izia` will execute these as commands.
+In the command line enter `izia`. This will print a short license notice followed by `>>>` as a prompt. Type in a Zia expression and press enter. `izia` will execute these as commands.
 
 ```
 >>> let ((not true) (-> false))
@@ -15,7 +15,7 @@ In the command line enter `izia`. This will print a short license notice followe
 >>> (label_of((not true) ->)) ->
 false
 ```
-You can learn more about the Zia language [here](../zia/README.md).
+You can learn more about the Zia programming language [here](https://github.com/Charles-Johnson/zia_programming/tree/master/zia).
 
 ## License
 
