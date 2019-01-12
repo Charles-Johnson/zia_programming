@@ -2,6 +2,15 @@
 name = "izia"
 version = "0.1.0"
 authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
+description = "Interactive Shell for the Zia Programming Language"
+repository = "https://github.com/Charles-Johnson/zia_programming"
+readme = "README.md"
+keywords = ["interpreted", "language-programming", "tacit", "homoiconic", "symbolic"]
+categories = ["science", "internationalization", "compression", "command-line-utilities"]
+license = "GPL-3.0"
+
+[badges]
+maintenance = {status = "actively-developed"}
 
 [dependencies]
 zia = { path = "../zia"}
