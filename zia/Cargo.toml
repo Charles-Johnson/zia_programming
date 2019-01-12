@@ -10,7 +10,7 @@ categories = ["science", "parser-implementations", "internationalization", "comp
 license = "GPL-3.0"
 
 [badges]
-maintainance = {status = "actively-developed"}
+maintenance = {status = "actively-developed"}
 
 
 [lib]
