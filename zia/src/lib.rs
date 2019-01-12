@@ -220,11 +220,11 @@ impl Labeller<Concept> for Context {
 }
 
 impl ConceptMaker<Concept> for Context {
-    /// New concepts are made from abstract syntax trees.
+    /// New concepts are made from syntax trees.
     type S = SyntaxTree;
 }
 
-/// Calling a program expressed as abstract syntax to read or write contained concepts.  
+/// Calling a program expressed as a syntax tree to read or write contained concepts.  
 pub trait Call<T>
 where
     Self: Definer<T> + ExecuteReduction<T> + SyntaxReader<T>,
@@ -251,7 +251,7 @@ where
         + DisplayJoint
         + PartialEq<Self::S>,
 {
-    /// If the associated concept of the syntax is a string concept that that associated string is returned. If not, the function tries to expand the abstract syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, 'try_reducing_then_call' is called on the tree.
+    /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
 		if let Some(c) = ast.get_concept() {
 			if let Some(s) = self.read_concept(c).get_string() {
@@ -263,7 +263,7 @@ where
             None => self.try_expanding_then_call(ast),
         }
     }
-    /// If the associated concept of the lefthand part of the syntax is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then the reduction of the lefthand part of the syntax is displayed. If the associated concept is `:=` the lefthand part of the syntax is expanded in its definitions and displayed. If the associated concept reduces, `call_pair` is called again with the reduced righthand syntax.
+    /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
         if let Some(c) = left.get_concept() {
             if c == LET {
