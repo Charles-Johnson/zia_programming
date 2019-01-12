@@ -2,6 +2,16 @@
 name = "zia"
 version = "0.1.0"
 authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
+description = "Interpreter Library for the Zia Programming Language"
+repository = "https://github.com/Charles-Johnson/zia_programming"
+readme = "README.md"
+keywords = ["interpreter", "language-programming", "tacit", "homoiconic", "symbolic"]
+categories = ["science", "parser-implementations", "internationalization", "compression"]
+license = "GPL-3.0"
+
+[badges]
+maintainance = {status = "actively-developed"}
+
 
 [lib]
 name = "zia"
