@@ -17,3 +17,6 @@ maintenance = {status = "actively-developed"}
 name = "zia"
 crate-type = ["lib"]
 
+[dev-dependencies]
+proptest = "0.8.7"
+
