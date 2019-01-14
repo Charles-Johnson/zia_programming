@@ -19,4 +19,4 @@ crate-type = ["lib"]
 
 [dev-dependencies]
 proptest = "0.8.7"
-
+lazy_static = "1.2.0"
