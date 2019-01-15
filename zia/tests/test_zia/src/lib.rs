@@ -60,3 +60,14 @@ macro_rules! print_pair_expansion {
 		prop_assert_eq!($cont.execute(&print_command), result);
 	)
 }
+
+// Common pattern in tests where a symbol reduces to another symbol
+#[macro_export]
+macro_rules! let_reduction {
+	($cont:ident, $a:ident, $b:ident) => (
+		assume_symbols!($a, $b);
+		assume_abstract!($a);
+		let reduction = format!("let ({} (-> {}))", $a, $b);
+		prop_assert_eq!($cont.execute(&reduction), "");
+	)
+}

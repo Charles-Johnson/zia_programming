@@ -24,15 +24,6 @@ extern crate zia;
 use test_zia::CONCRETE_SYMBOLS;
 use zia::{Context, ContextMaker, Execute, ZiaError};
 
-macro_rules! let_reduction {
-	($cont:ident, $a:ident, $b:ident) => (
-		assume_symbols!($a, $b);
-		assume_abstract!($a);
-		let reduction = format!("let ({} (-> {}))", $a, $b);
-		prop_assert_eq!($cont.execute(&reduction), "");
-	)
-}
-
 proptest! {
 	// If the components of a concept reduce to something that has its own symbol, then the label of the reduction of the original concept should be the latter symbol. The original concept should not be able to reduce to something else because its composition defines its reduction.
 	#[test]
@@ -61,23 +52,38 @@ proptest! {
 		    ZiaError::MultipleReductionPaths.to_string()
 		);
 	}
-}
-#[test]
-fn sneeky_infinite_reduction_chain() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (c (-> a))"), "");
-    assert_eq!(
-        cont.execute("let (a (:= (c b)))"),
-        ZiaError::ExpandingReduction.to_string()
-    );
-}
-#[test]
-fn reducing_nested_definition() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (:= (b (c d))))"), "");
-    assert_eq!(cont.execute("let (c (-> e))"), "");
-    assert_eq!(
-        cont.execute("let (a (-> f))"),
-        ZiaError::MultipleReductionPaths.to_string()
-    );
+	// The interpreter should not allow a definition of a concept in terms of concepts that may reduce to the former concept. 
+	#[test]
+	fn sneeky_infinite_reduction_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		assume_symbol!(b);
+		let mut cont = Context::new();
+		let_reduction!(cont, c, a);
+		let definition = format!("let ({} (:= ({} {})))", a, c, b);
+		assert_eq!(
+		    cont.execute(&definition),
+		    ZiaError::ExpandingReduction.to_string()
+		);
+	}
+	// A reduction defined for a concept which is composed of concepts that may reduce should not be accepted by the interpreter.  
+	#[test]
+	fn reducing_nested_definition(
+		a in "\\PC*",
+		b in "\\PC*",
+		c in "\\PC*",
+		d in "\\PC*",
+		e in "\\PC*",
+		f in "\\PC*",
+	) {
+		assume_abstract!(a);
+		assume_symbols!(a, b, c, d, f);
+		let mut cont = Context::new();
+		let definition = format!("let ({} (:= ({} ({} {}))))", a, b, c, d);
+		assert_eq!(cont.execute(&definition), "");
+		let_reduction!(cont, c, e);
+		let reduction = format!("let ({} (-> {}))", a, f);
+		assert_eq!(
+		    cont.execute(&reduction),
+		    ZiaError::MultipleReductionPaths.to_string()
+		);
+	}
 }
