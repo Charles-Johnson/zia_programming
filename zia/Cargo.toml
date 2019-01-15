@@ -18,5 +18,5 @@ name = "zia"
 crate-type = ["lib"]
 
 [dev-dependencies]
+test_zia = {path = "tests/test_zia"}
 proptest = "0.8.7"
-lazy_static = "1.2.0"

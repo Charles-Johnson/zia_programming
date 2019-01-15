@@ -14,66 +14,14 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#[macro_use] 
+#[macro_use]
 extern crate proptest;
 #[macro_use]
-extern crate lazy_static;
+extern crate test_zia;
 extern crate zia;
 
-use std::collections::HashSet;
+use test_zia::CONCRETE_SYMBOLS;
 use zia::{Context, ContextMaker, Execute, ZiaError};
-
-// Checks if a string can respresent a symbol
-macro_rules! assume_symbol {
-	($a:ident) => (
-		prop_assume!($a.len() > 0);
-		prop_assume!(!$a.contains(' '));
-		prop_assume!(!$a.contains('('));
-		prop_assume!(!$a.contains(')'));
-	)
-}
-
-// Checks if all strings each represent a symbol
-macro_rules! assume_symbols {
-	($($a:ident),*) => ($(assume_symbol!($a);)*)
-}
-
-// Saves having to construct a new HashSet each time.
-lazy_static! {
-	static ref CONCRETE_SYMBOLS: HashSet<String> = {
-		let mut cs = HashSet::new();
-		cs.insert("label_of".to_string());
-		cs.insert("let".to_string());
-		cs.insert(":=".to_string());
-		cs.insert("->".to_string());
-		cs
-	};
-}
-
-// A symbol is abstract if isn't the same as one of the concrete symbols
-macro_rules! assume_abstract {
-	($a:ident) => (prop_assume!(!CONCRETE_SYMBOLS.contains(&$a)))
-}
-
-// Common pattern in tests where a concept is defined from a pair of symbols
-macro_rules! let_definition {
-	($cont:ident, $a:ident, $b:ident, $c:ident) => (	
-		assume_abstract!($a);
-		assume_symbols!($a,$b,$c);
-		prop_assume!($a != $b);
-		prop_assume!($a != $c);
-		let let_command = format!("let ({} (:= ({} {})))", $a, $b, $c);
-		prop_assert_eq!($cont.execute(&let_command), "");
-	)
-}
-// Common pattern in tests where a concept's label is reduced to a pair
-macro_rules! print_pair_expansion {
-	($cont:ident, $a:ident, $b:ident, $c:ident) => (	
-		let print_command = format!("(label_of ({} :=)) ->", $a);
-		let result = format!("{} {}", $b, $c);
-		prop_assert_eq!($cont.execute(&print_command), result);
-	)
-}
 
 proptest! {
 	// The label of a new symbol should reduce to the string of the symbol. 

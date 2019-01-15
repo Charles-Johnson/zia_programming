@@ -1,0 +1,11 @@
+[package]
+name = "test_zia"
+version = "0.1.0"
+
+[lib]
+name = "test_zia"
+crate-type = ["lib"]
+
+[dependencies]
+proptest = "0.8.7"
+lazy_static = "1.2.0"
