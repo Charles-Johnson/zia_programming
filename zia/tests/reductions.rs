@@ -14,28 +14,52 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#[macro_use]
+extern crate proptest;
+#[macro_use]
+extern crate test_zia;
 extern crate zia;
 
+// Needed for assume_abstract macro which is needed for let_reduction macro
+use test_zia::CONCRETE_SYMBOLS;
 use zia::{Context, ContextMaker, Execute, ZiaError};
 
-#[test]
-fn symbol_to_symbol() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("(label_of (a ->)) ->"), "b");
+// Common pattern in tests where a pair of symbols reduces to another symbol
+macro_rules! reduce_pair {
+	($cont:ident, $a:ident, $b:ident, $c:ident) => (
+		assume_symbols!($a, $b, $c);
+		let reduction = format!("let (({} {}) (-> {}))", $a, $b, $c);
+		prop_assert_eq!($cont.execute(&reduction), "");
+	)
 }
-#[test]
-fn pair_to_symbol() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let ((not true) (-> false))"), "");
-    assert_eq!(cont.execute("(label_of ((not true) ->)) ->"), "false");
-}
-#[test]
-fn nested_pairs_to_symbol() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let ((not true) (-> false))"), "");
-    assert_eq!(cont.execute("let ((not false) (-> true))"), "");
-    assert_eq!(cont.execute("(label_of ((not(not true))->)) -> "), "not false");
+
+proptest! {
+	// If a symbol reduces to another symbol then the label of the reduction of that symbol must be a string of that other symbol
+	#[test]
+	fn symbol_to_symbol(a in "\\PC*", b in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let print = format!("(label_of ({} ->)) ->", a);
+		prop_assert_eq!(cont.execute(&print), b);
+	}
+	// If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol
+	#[test]
+	fn pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		reduce_pair!(cont, a, b, c);
+		let print = format!("(label_of (({} {}) ->)) ->", a, b);
+		prop_assert_eq!(cont.execute(&print), c);
+	}
+	// Checking whether two reduction rules can be correctly chained together for an expression with a nested pair
+	#[test]
+	fn nested_pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		assume_symbols!(a, b, c);
+		let mut cont = Context::new();
+		reduce_pair!(cont, a, b, c);
+		reduce_pair!(cont, a, c, b);
+		let print = format!("(label_of ((({}({} {}))->)->)) -> ", a, a, b);
+		assert_eq!(cont.execute(&print), b);
+	}
 }
 #[test]
 fn chain() {
