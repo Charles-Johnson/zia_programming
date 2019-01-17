@@ -58,95 +58,123 @@ proptest! {
 		reduce_pair!(cont, a, b, c);
 		reduce_pair!(cont, a, c, b);
 		let print = format!("(label_of ((({}({} {}))->)->)) -> ", a, a, b);
+		prop_assert_eq!(cont.execute(&print), b);
+	}
+	// Checking whether the label of the reduction of the reduction of a concept reduces correctly 
+	#[test]
+	fn chain(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let_reduction!(cont, b, c);
+		let print = format!("(label_of (({} ->)->)) ->", a);
+		prop_assert_eq!(cont.execute(&print), c);
+	}
+	// A concept should not be able to reduce to a concept whose normal form is the former concept.
+	#[test]
+	fn cycle(a in "\\PC*", b in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let reduction = format!("let ({} (-> {}))", b, a);
+		prop_assert_eq!(
+		    cont.execute(&reduction),
+		    ZiaError::CyclicReduction.to_string()
+		);
+		let print = format!("(label_of ({} ->)) ->", b);
+		prop_assert_eq!(cont.execute(&print), b);
+	}
+	// If only a symbol is enclosed in parentheses, then this should be the same as if the parentheses weren't there
+	#[test]
+	fn trivial_parentheses(a in "\\PC*") {
+		let mut cont = Context::new();
+		assume_symbol!(a);
+		let print = format!("(label_of(({}) ->))->", a);
+		prop_assert_eq!(cont.execute(&print), a);
+	}
+	// Checking that reduction rules can be removed
+	#[test]
+	fn remove_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		reduce_pair!(cont, b, c, a);
+		let reduction = format!("let (({} {}) (-> ({} {})))", b, c, b, c);
+		prop_assert_eq!(cont.execute(&reduction), "");
+		let print = format!("(label_of(({} {}) ->))->", b, c);
+		let result = format!("{} {}", b, c);
+		prop_assert_eq!(cont.execute(&print), result);
+	}
+	// A concept should not be able to reduce to something composed of that concept.
+	#[test]
+	fn infinite_expansion(a in "\\PC*", b in "\\PC*") {
+		assume_symbols!(a, b);
+		let reduction = format!("let ({} (-> ({} {})))", b, a, b);
+		let mut cont = Context::new();
+		assert_eq!(
+		    cont.execute(&reduction),
+		    ZiaError::ExpandingReduction.to_string()
+		);
+	}
+	// A concept that used to doubly reduce but whose first reduction no longer reduces should doubly reduce to its first reduction. 
+	#[test]
+	fn broken_end_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let_reduction!(cont, b, c);
+		let_reduction!(cont, b, b);
+		let print = format!("(label_of (({} ->)->)) ->", a);
 		assert_eq!(cont.execute(&print), b);
 	}
-}
-#[test]
-fn chain() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("let (b (-> c))"), "");
-    assert_eq!(cont.execute("(label_of ((a ->)->)) ->"), "c");
-}
-#[test]
-fn cycle() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(
-        cont.execute("let (b (-> a))"),
-        ZiaError::CyclicReduction.to_string()
-    );
-    assert_eq!(cont.execute("(label_of (b ->))->"), "b");
-}
-#[test]
-fn trivial_parentheses() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("(label_of((a) ->))->"), "a");
-}
-#[test]
-fn remove_reduction() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let ((b c) (-> a))"), "");
-    assert_eq!(cont.execute("let ((b c) (-> (b c)))"), "");
-    assert_eq!(cont.execute("(label_of((b c) ->))->"), "b c");
-}
-#[test]
-fn infinite_expansion() {
-    let mut cont = Context::new();
-    assert_eq!(
-        cont.execute("let (b (-> (a b)))"),
-        ZiaError::ExpandingReduction.to_string()
-    );
-}
-#[test]
-fn broken_end_chain() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("let (b (-> c))"), "");
-    assert_eq!(cont.execute("let (b (-> b))"), "");
-    assert_eq!(cont.execute("(label_of ((a ->)->)) ->"), "b");
-}
-#[test]
-fn broken_middle_chain() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("let (b (-> c))"), "");
-    assert_eq!(cont.execute("let (c (-> d))"), "");
-    assert_eq!(cont.execute("let (b (-> b))"), "");
-    assert_eq!(cont.execute("(label_of (((a ->)->)->)) ->"), "b");
-}
-#[test]
-fn change_reduction_rule() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("let (a (-> c))"), "");
-    assert_eq!(cont.execute("(label_of (a ->)) ->"), "c");
-}
-#[test]
-fn leapfrog_reduction_rule() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(cont.execute("let (b (-> c))"), "");
-    assert_eq!(cont.execute("let (a (-> c))"), "");
-}
-#[test]
-fn redundancy() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("let (a (-> b))"), "");
-    assert_eq!(
-        cont.execute("let (a (-> b))"),
-        ZiaError::RedundantReduction.to_string()
-    );
-    assert_eq!(
-        cont.execute("let (b (-> b))"),
-        ZiaError::RedundantReduction.to_string()
-    );
-}
-#[test]
-fn reducing_concrete() {
-    let mut cont = Context::new();
-    assert_eq!(
-        cont.execute("let (-> (-> a))"),
-        ZiaError::ConcreteReduction.to_string()
-    );
+	// A concept that used to triply reduce but whose first reduction no longer reduces should triply reduce to its first reduction. 
+	#[test]
+	fn broken_middle_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let_reduction!(cont, b, c);
+		let_reduction!(cont, c, d);
+		let_reduction!(cont, b, b);
+		let print = format!("(label_of ((({} ->)->)->)) ->", a);
+		assert_eq!(cont.execute(&print), b);
+	}
+	// Checking that reduction rules can be changed correctly
+	#[test]
+	fn change_reduction_rule(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let_reduction!(cont, a, c);
+		let print = format!("(label_of ({} ->)) ->", a);
+		assert_eq!(cont.execute(&print), c);
+	}
+	// It is not necessarily redundant to make a concept reduce to its normal form  
+	#[test]
+	fn leapfrog_reduction_rule(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let_reduction!(cont, b, c);
+		let_reduction!(cont, a, c);
+	}
+	// It is redundant to specify a reduction rule that is already true
+	#[test]
+	fn redundancy(a in "\\PC*", b in "\\PC*") {
+		let mut cont = Context::new();
+		let_reduction!(cont, a, b);
+		let reduction = format!("let ({} (-> {}))", a, b);
+		assert_eq!(
+		    cont.execute(&reduction),
+		    ZiaError::RedundantReduction.to_string()
+		);
+		let remove_reduction = format!("let ({} (-> {}))", b, b);
+		assert_eq!(
+		    cont.execute(&remove_reduction),
+		    ZiaError::RedundantReduction.to_string()
+		);
+	}
+	// Concrete concepts should be allowed to reduce to anything
+	#[test]
+	fn reducing_concrete(a in "\\PC*", c in "label_of|:=|->|let") {
+		let mut cont = Context::new();
+		assume_symbol!(a);
+		let reduction = format!("let ({} (-> {}))", c, a);
+		assert_eq!(
+		    cont.execute(&reduction),
+		    ZiaError::ConcreteReduction.to_string()
+		);
+	}
 }

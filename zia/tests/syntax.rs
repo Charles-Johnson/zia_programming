@@ -14,6 +14,10 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#[macro_use]
+extern crate proptest;
+#[macro_use]
+extern crate test_zia;
 extern crate zia;
 
 use zia::{Context, ContextMaker, Execute, ZiaError};
@@ -23,11 +27,14 @@ fn empty_parentheses() {
     let mut cont = Context::new();
     assert_eq!(cont.execute("()"), ZiaError::EmptyParentheses.to_string());
 }
-#[test]
-fn ambiguous_expression() {
-    let mut cont = Context::new();
-    assert_eq!(
-        cont.execute("(a b c)"),
-        ZiaError::AmbiguousExpression.to_string()
-    );
+proptest!{
+	#[test]
+	fn ambiguous_expression(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		assume_symbols!(a, b, c);
+		let mut cont = Context::new();
+		assert_eq!(
+		    cont.execute(&format!("({} {} {})", a, b, c)),
+		    ZiaError::AmbiguousExpression.to_string()
+		);
+	}
 }
