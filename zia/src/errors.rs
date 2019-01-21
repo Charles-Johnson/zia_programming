@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.*/
 
-use std::fmt;
+use std::{fmt, error::Error};
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
@@ -51,6 +51,16 @@ pub enum ZiaError {
     ConcreteReduction,
     /// When trying to specify a reduction rule for a concept whose components reduce to something else.
     MultipleReductionPaths,
+}
+
+impl Error for ZiaError {
+    fn description(&self) -> &str {
+        "All the expected ways a Zia command could be invalid"
+    }
+
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
 }
 
 impl fmt::Display for ZiaError {

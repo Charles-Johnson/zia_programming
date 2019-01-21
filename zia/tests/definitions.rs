@@ -100,6 +100,8 @@ proptest! {
 		e in "\\PC*", 
 		f in "\\PC*", 
 	) {
+		// If `c == f` then `b` would be defined as an existing concept. This is not allowed because `b` is already used.
+		prop_assume!(c != f);
 		let mut cont = Context::new();
 		let_definition!(cont, a, b, c);
 		let_definition!(cont, d, e, f);

@@ -4,5 +4,4 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-xs 2181659589 1193762139 1217286235 1241925650 # shrinks to a = "", b = "(", c = ""
-xs 3931155176 1485574454 612264003 1567505190 # shrinks to a = "=", b = "="
+xs 3734123991 916934706 805374198 2420472038 # shrinks to id = 0

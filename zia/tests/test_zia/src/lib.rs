@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
 extern crate proptest;
+
 use std::collections::HashSet;
 
 // Checks if a string can respresent a symbol
@@ -42,7 +44,7 @@ macro_rules! assume_abstract {
 // Common pattern in tests where a concept is defined from a pair of symbols
 #[macro_export]
 macro_rules! let_definition {
-	($cont:ident, $a:ident, $b:ident, $c:ident) => (	
+	($cont:ident, $a:ident, $b:ident, $c:ident) => (
 		assume_abstract!($a);
 		assume_symbols!($a,$b,$c);
 		prop_assume!($a != $b);

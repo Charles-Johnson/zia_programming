@@ -89,6 +89,10 @@
 //! assert_eq!(context.execute("let (e (:= (a d)))"), ZiaError::ExpandingReduction.to_string());
 //! ```
 
+#[cfg(test)]
+#[macro_use]
+extern crate proptest; 
+
 /// Traits for adding concepts to the context.
 mod adding;
 
