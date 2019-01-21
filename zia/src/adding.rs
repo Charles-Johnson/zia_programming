@@ -265,6 +265,54 @@ where
 
 impl<S, T> DefaultMaker<T> for S where S: ConceptAdder<T> {}
 
+#[cfg(test)]
+mod tests {
+	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition};
+	use context::Context;
+	use concepts::Concept;
+	use reading::{GetLabel, GetDefinition, ConceptReader};
+	use translating::{StringConcept, SyntaxFinder};
+	proptest! {
+		#[test]
+		fn getting_new_strings_id(string: String) {
+			let mut cont = Context::<Concept>::default();
+			let new_id = cont.new_string(&string);
+			assert_eq!(cont.get_string_concept(&string), Some(new_id));
+		}
+		#[test]
+		fn getting_label_of_new_labelled_default(string: String) {
+			let mut cont = Context::<Concept>::default();
+			let concept_id = try!(cont.new_labelled_default(&string));
+			assert_eq!(cont.get_label(concept_id), Some(string));
+		}
+		#[test]
+		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) {
+			let mut cont = Context::<Concept>::new();
+			assert_eq!(
+				try!(cont.find_or_insert_definition(left, right)), 
+				try!(cont.find_or_insert_definition(left, right)),
+			);
+		}
+		#[test]
+		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) {
+			let mut cont = Context::<Concept>::new();
+			let def = try!(cont.find_or_insert_definition(left, right));
+			assert_eq!(
+				cont.read_concept(def).get_definition(), 
+				Some((left, right)),
+			);
+		}
+	}
+	#[test]
+	fn getting_ids_of_concrete_concepts() {
+		let cont = Context::<Concept>::new();
+		assert_eq!(cont.concept_from_label("label_of"), Some(0));
+		assert_eq!(cont.concept_from_label(":="), Some(1));
+		assert_eq!(cont.concept_from_label("->"), Some(2));
+		assert_eq!(cont.concept_from_label("let"), Some(3));
+	}
+}
+
 pub trait StringAdder {
     fn add_string(&mut self, usize, &str);
 }
