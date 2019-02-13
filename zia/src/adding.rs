@@ -267,7 +267,7 @@ impl<S, T> DefaultMaker<T> for S where S: ConceptAdder<T> {}
 
 #[cfg(test)]
 mod tests {
-	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition, Container, ConceptMaker, StringAdder};
+	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition, Container, ConceptMaker};
     use ast::SyntaxTree;
 	use context::Context;
 	use concepts::Concept;
@@ -318,12 +318,6 @@ mod tests {
             let mut cont = Context::default();
             let id = try!(cont.concept_from_ast(&ast));
             assert_eq!(cont.get_label(id), Some(s));
-        }
-        #[test]
-        fn added_string_can_be_found(s in "\\PC", string_id: usize) {
-            let mut cont = Context::<Concept>::default();
-            cont.add_string(string_id, &s);
-            assert_eq!(cont.get_string_concept(&s), Some(string_id));
         }
     }
 	#[test]
