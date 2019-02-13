@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
 extern crate proptest;
 
 use std::collections::HashSet;

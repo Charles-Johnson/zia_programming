@@ -267,10 +267,12 @@ impl<S, T> DefaultMaker<T> for S where S: ConceptAdder<T> {}
 
 #[cfg(test)]
 mod tests {
-	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition};
+	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition, Container};
+    use ast::SyntaxTree;
 	use context::Context;
 	use concepts::Concept;
-	use reading::{GetLabel, GetDefinition, ConceptReader};
+	use reading::{GetLabel, GetDefinition, ConceptReader, Pair};
+    use std::rc::Rc;
 	use translating::{StringConcept, SyntaxFinder};
 	proptest! {
 		#[test]
@@ -302,7 +304,15 @@ mod tests {
 				Some((left, right)),
 			);
 		}
-	}
+        #[test]
+        fn syntax_contains_other_syntax(s1 in "\\PC", id1: usize, s2 in "\\PC", id2: usize, s3 in "\\PC", id3: usize) {
+            let ast1 = SyntaxTree::from((s1, Some(id1)));
+            let ast2 = SyntaxTree::from((s2, Some(id2)));
+            let ast3 = SyntaxTree::from_pair((s3, Some(id3)), &Rc::new(ast1.clone()), &Rc::new(ast2.clone()));
+            assert!(ast3.contains(&ast1));
+            assert!(ast3.contains(&ast2));
+        }
+    }
 	#[test]
 	fn getting_ids_of_concrete_concepts() {
 		let cont = Context::<Concept>::new();

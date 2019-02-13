@@ -19,4 +19,4 @@ crate-type = ["lib"]
 
 [dev-dependencies]
 test_zia = {path = "tests/test_zia"}
-proptest = "0.8.7"
+proptest = "0.9.1"
