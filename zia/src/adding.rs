@@ -267,7 +267,7 @@ impl<S, T> DefaultMaker<T> for S where S: ConceptAdder<T> {}
 
 #[cfg(test)]
 mod tests {
-	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition, Container};
+	use adding::{StringMaker, Labeller, ContextMaker, FindOrInsertDefinition, Container, ConceptMaker};
     use ast::SyntaxTree;
 	use context::Context;
 	use concepts::Concept;
@@ -311,6 +311,13 @@ mod tests {
             let ast3 = SyntaxTree::from_pair((s3, Some(id3)), &Rc::new(ast1.clone()), &Rc::new(ast2.clone()));
             assert!(ast3.contains(&ast1));
             assert!(ast3.contains(&ast2));
+        }
+        #[test]
+        fn concept_from_ast_has_the_right_label(s in "\\PC") {
+            let ast = SyntaxTree::from((s.clone(), None));
+            let mut cont = Context::default();
+            let id = try!(cont.concept_from_ast(&ast));
+            assert_eq!(cont.get_label(id), Some(s));
         }
     }
 	#[test]
