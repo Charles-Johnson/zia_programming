@@ -43,18 +43,18 @@ where
 	Concept(ConceptDelta<T>)
 }
 
-enum StringDelta {
+pub enum StringDelta {
 	Insert(usize), 
 	Remove,
 }
 
-enum ConceptDelta<T> 
+pub enum ConceptDelta<T> 
 where
 	T: Delta,
 {
 	Insert(T),
 	Remove(usize),
-	Update(T::Delta),
+	Update(usize, T::Delta),
 }
 
 impl<T> Delta for Context<T> 
@@ -62,6 +62,21 @@ where
 	T: Delta,
 {
 	type Delta = ContextDelta<T>;
+	fn apply(&mut self, delta: ContextDelta<T>) {
+		match delta {
+			ContextDelta::<T>::String(s, sd) => match sd {
+				StringDelta::Insert(id) => self.add_string(id, &s),
+				StringDelta::Remove => self.remove_string(&s),
+			},
+			ContextDelta::<T>::Concept(cd) => match cd {
+				ConceptDelta::<T>::Insert(c) => {
+					self.add_concept(c);
+				},
+				ConceptDelta::<T>::Remove(id) => self.blindly_remove_concept(id),
+				ConceptDelta::<T>::Update(id, d) => self.write_concept(id).apply(d),
+			},
+		};
+	}
 }
 
 impl<T> Default for Context<T> {

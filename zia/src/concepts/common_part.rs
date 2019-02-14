@@ -31,6 +31,16 @@ pub struct CommonPart {
 
 impl Delta for CommonPart {
     type Delta = CommonDelta;
+    fn apply(&mut self, delta: CommonDelta) {
+        match delta {
+            CommonDelta::AddLeft(left) => self.add_as_lefthand_of(left),
+            CommonDelta::AddRight(right) => self.add_as_righthand_of(right),
+            CommonDelta::RemoveLeft(left) => self.remove_as_lefthand_of(left),
+            CommonDelta::RemoveRight(right) => self.remove_as_righthand_of(right),
+            CommonDelta::AddReducesFrom(concept) => self.make_reduce_from(concept),
+            CommonDelta::RemoveReducesFrom(concept) => self.no_longer_reduces_from(concept),
+        };
+    }
 }
 
 pub enum CommonDelta {

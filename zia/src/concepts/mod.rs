@@ -51,6 +51,15 @@ pub enum ConceptDelta {
 
 impl Delta for Concept {
     type Delta = ConceptDelta;
+    fn apply(&mut self, delta: ConceptDelta) {
+        match delta {
+            ConceptDelta::Abstract(ad) => match self.specific_part {
+                SpecificPart::Abstract(ref mut ap) => ap.apply(ad),
+                _ => panic!("AbstractDelta applied to concrete concept."),
+                }
+            ConceptDelta::Common(cd) => self.common_part.apply(cd),
+        };
+    }
 }
 
 impl From<AbstractPart> for Concept {
@@ -130,7 +139,10 @@ impl SetDefinition for Concept {
     /// Sets the definition of the concept if abstract, otherwise returns an error.
     fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
         match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.set_definition(lefthand, righthand),
+            SpecificPart::Abstract(ref mut c) => {
+                c.set_definition(lefthand, righthand);
+                Ok(())
+            },
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
@@ -163,7 +175,10 @@ impl SetReduction for Concept {
     /// Sets the index of the concept that `self` reduces to if abstract. Otherwise returns an error.
     fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
         match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.make_reduce_to(concept),
+            SpecificPart::Abstract(ref mut c) => {
+                c.make_reduce_to(concept);
+                Ok(())
+            },
             _ => Err(ZiaError::ConcreteReduction),
         }
     }

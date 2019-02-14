@@ -16,9 +16,8 @@
 */
 
 use delta::Delta;
-use errors::ZiaResult;
 use reading::{GetDefinition, GetReduction};
-use writing::{RemoveDefinition, RemoveReduction, SetDefinition, SetReduction};
+use writing::{RemoveDefinition, RemoveReduction};
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
 pub struct AbstractPart {
@@ -30,6 +29,14 @@ pub struct AbstractPart {
 
 impl Delta for AbstractPart {
     type Delta = AbstractDelta;
+    fn apply(&mut self, delta: AbstractDelta) {
+        match delta {
+            AbstractDelta::SetDefinition(left, right) => self.set_definition(left, right),
+            AbstractDelta::RemoveDefinition => self.remove_definition(),
+            AbstractDelta::SetReduction(concept) => self.make_reduce_to(concept),
+            AbstractDelta::RemoveReduction => self.make_reduce_to_none(),
+        };
+    }
 }
 
 pub enum AbstractDelta {
@@ -55,10 +62,12 @@ impl GetDefinition for AbstractPart {
     }
 }
 
-impl SetDefinition for AbstractPart {
-    fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
+impl AbstractPart {
+    pub fn set_definition(&mut self, lefthand: usize, righthand: usize) {
         self.definition = Some((lefthand, righthand));
-        Ok(())
+    }
+    pub fn make_reduce_to(&mut self, concept: usize) {
+        self.reduces_to = Some(concept);
     }
 }
 
@@ -71,13 +80,6 @@ impl RemoveDefinition for AbstractPart {
 impl GetReduction for AbstractPart {
     fn get_reduction(&self) -> Option<usize> {
         self.reduces_to
-    }
-}
-
-impl SetReduction for AbstractPart {
-    fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
-        self.reduces_to = Some(concept);
-        Ok(())
     }
 }
 
