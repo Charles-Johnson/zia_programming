@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{ConceptAdder, StringAdder, StringAdderDelta};
+use adding::{ConceptAdder, StringAdder, StringAdderDelta, ConceptAdderDelta};
 use delta::Delta;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
@@ -152,6 +152,19 @@ impl<T> ConceptAdder<T> for Context<T> {
             }
         }
     }
+}
+
+impl<T> ConceptAdderDelta<T> for Context<T> 
+where
+	T: Delta,
+{
+	fn add_concept_delta(&self, concept: T) -> (usize, Self::Delta) {
+		let index = match self.gaps.last() {
+			None => self.concepts.len(),
+			Some(i) => *i, 
+		}; 
+		(index, ContextDelta::<T>::Concept(ConceptDelta::Insert(concept)))
+	}
 }
 
 impl<T> StringConcept for Context<T> {

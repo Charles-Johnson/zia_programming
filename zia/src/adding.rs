@@ -190,8 +190,8 @@ where
     type C: Default;
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let definition = try!(self.find_or_insert_definition(LABEL, concept));
-        let (string_id, delta) = self.new_string(string);
-        self.apply(delta);
+        let (string_id, deltas) = self.new_string(string);
+        self.apply_all(deltas);
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
@@ -238,19 +238,21 @@ where
 pub trait StringMaker<T>
 where
     T: From<String>,
-    Self: ConceptAdder<T> + StringAdderDelta,
+    Self: ConceptAdderDelta<T> + StringAdderDelta,
 {
-    fn new_string(&mut self, string: &str) -> (usize, Self::Delta) {
+    fn new_string(&self, string: &str) -> (usize, Vec<Self::Delta>) {
         let string_concept = string.to_string().into();
-        let index = self.add_concept(string_concept);
-        (index, self.add_string_delta(index, string))
+        let (index, concept_delta) = self.add_concept_delta(string_concept);
+        let string_delta = self.add_string_delta(index, string);
+        let deltas = vec!{concept_delta, string_delta};
+        (index, deltas)
     }
 }
 
 impl<S, T> StringMaker<T> for S
 where
     T: From<String>,
-    S: ConceptAdder<T> + StringAdderDelta,
+    S: ConceptAdderDelta<T> + StringAdderDelta,
 {
 }
 
@@ -280,8 +282,8 @@ mod tests {
 		#[test]
 		fn getting_new_strings_id(string: String) {
 			let mut cont = Context::<Concept>::default();
-			let (new_id, delta) = cont.new_string(&string);
-            cont.apply(delta);
+			let (new_id, deltas) = cont.new_string(&string);
+            cont.apply_all(deltas);
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
@@ -343,6 +345,13 @@ where
 
 pub trait StringAdder {
     fn add_string(&mut self, usize, &str);
+}
+
+pub trait ConceptAdderDelta<T> 
+where
+    Self: Delta,
+{
+    fn add_concept_delta(&self, T) -> (usize, Self::Delta);
 }
 
 pub trait ConceptAdder<T> {
