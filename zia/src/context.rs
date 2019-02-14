@@ -19,7 +19,7 @@ use adding::{ConceptAdder, StringAdder, StringAdderDelta, ConceptAdderDelta};
 use delta::Delta;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use translating::StringConcept;
 use writing::ConceptWriter;
 
@@ -40,7 +40,7 @@ where
 	T: Delta,
 {
 	String(String, StringDelta),
-	Concept(ConceptDelta<T>)
+	Concept(usize, ConceptDelta<T>)
 }
 
 pub enum StringDelta {
@@ -53,8 +53,8 @@ where
 	T: Delta,
 {
 	Insert(T),
-	Remove(usize),
-	Update(usize, T::Delta),
+	Remove,
+	Update(T::Delta),
 }
 
 impl<T> Delta for Context<T> 
@@ -68,12 +68,12 @@ where
 				StringDelta::Insert(id) => self.add_string(id, &s),
 				StringDelta::Remove => self.remove_string(&s),
 			},
-			ContextDelta::<T>::Concept(cd) => match cd {
+			ContextDelta::<T>::Concept(id, cd) => match cd {
 				ConceptDelta::<T>::Insert(c) => {
 					self.add_concept(c);
 				},
-				ConceptDelta::<T>::Remove(id) => self.blindly_remove_concept(id),
-				ConceptDelta::<T>::Update(id, d) => self.write_concept(id).apply(d),
+				ConceptDelta::<T>::Remove => self.blindly_remove_concept(id),
+				ConceptDelta::<T>::Update(d) => self.write_concept(id).apply(d),
 			},
 		};
 	}
@@ -158,12 +158,59 @@ impl<T> ConceptAdderDelta<T> for Context<T>
 where
 	T: Delta,
 {
-	fn add_concept_delta(&self, concept: T) -> (usize, Self::Delta) {
-		let index = match self.gaps.last() {
-			None => self.concepts.len(),
-			Some(i) => *i, 
-		}; 
-		(index, ContextDelta::<T>::Concept(ConceptDelta::Insert(concept)))
+	fn add_concept_delta(&self, deltas: &Vec<Self::Delta>, concept: T) -> (usize, Self::Delta) {
+		let mut added_gaps = Vec::<usize>::new();
+		let mut removed_gaps = HashSet::<usize>::new();
+		let mut new_concept_length = self.concepts.len();
+		for delta in deltas {
+			match delta {
+				ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Insert(_)) => if *id < new_concept_length {
+					removed_gaps.insert(*id);
+				} else {
+					new_concept_length += 1
+				},
+				ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Remove) => {
+					added_gaps.push(*id);
+					removed_gaps.remove(&id);
+				},
+				_ => (),
+			};
+		}
+		let index: usize;
+		let mut gap_index = if self.gaps.len() == 0 {
+			None
+		} else {
+			Some(self.gaps.len() - 1)
+		};
+		loop {
+			match added_gaps.pop() {
+				Some(id) => if removed_gaps.contains(&id) {
+					continue;
+				} else {
+					index = id;
+					break;
+				},
+				None => match gap_index {
+					Some(gi) => if removed_gaps.contains(&self.gaps[gi]) {
+						if gi == 0 {
+							index = new_concept_length;
+							break;
+						} else {
+							gap_index = Some(gi - 1);
+							continue;
+						}
+					} else {
+						index = self.gaps[gi];
+						break;
+					},
+					None => {
+						index = new_concept_length;
+						break;
+					}
+				},
+			};
+		}
+		(index, ContextDelta::<T>::Concept(index, ConceptDelta::Insert(concept)))
 	}
 }
 
