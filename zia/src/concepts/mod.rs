@@ -25,7 +25,7 @@ use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction,
 use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
-    SetAsDefinitionOf, SetDefinition, SetDefinitionDelta, SetReduction,
+    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
 };
 
 /// Data type for any type of concept.
@@ -122,6 +122,15 @@ impl SetAsDefinitionOf for Concept {
     }
     fn add_as_righthand_of(&mut self, index: usize) {
         self.common_part.add_as_righthand_of(index);
+    }
+}
+
+impl SetAsDefinitionOfDelta for Concept {
+    fn add_as_lefthand_of_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta::Common(self.common_part.add_as_lefthand_of_delta(index))
+    }
+    fn add_as_righthand_of_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta::Common(self.common_part.add_as_righthand_of_delta(index))
     }
 }
 

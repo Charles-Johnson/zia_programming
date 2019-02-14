@@ -17,7 +17,7 @@
 use delta::Delta;
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
-use writing::{MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf};
+use writing::{MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf, SetAsDefinitionOfDelta};
 
 #[derive(Default)]
 pub struct CommonPart {
@@ -73,6 +73,15 @@ impl SetAsDefinitionOf for CommonPart {
     }
     fn add_as_righthand_of(&mut self, index: usize) {
         self.righthand_of.insert(index);
+    }
+}
+
+impl SetAsDefinitionOfDelta for CommonPart {
+    fn add_as_lefthand_of_delta(&self, index: usize) -> CommonDelta {
+        CommonDelta::AddLeft(index)
+    }
+    fn add_as_righthand_of_delta(&self, index: usize) -> CommonDelta {
+        CommonDelta::AddRight(index)
     }
 }
 

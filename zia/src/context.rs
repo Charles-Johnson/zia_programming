@@ -22,7 +22,7 @@ use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
 use std::collections::{HashMap, HashSet};
 use translating::StringConcept;
-use writing::{ConceptWriter, SetConceptDefinitionDelta, SetDefinitionDelta};
+use writing::{ConceptWriter, SetConceptDefinitionDelta, SetDefinitionDelta, SetAsDefinitionOfDelta, SetConceptAsDefinitionOfDelta};
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 pub struct Context<T> {
@@ -121,6 +121,19 @@ where
 {
 	fn set_concept_definition_delta(&self, concept: usize, lefthand: usize, righthand: usize) -> ZiaResult<ContextDelta<T>> {
 		Ok(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(try!(self.read_concept(concept).set_definition_delta(lefthand, righthand)))))
+	}
+}
+
+impl<T> SetConceptAsDefinitionOfDelta for Context<T>
+where
+	Self: ConceptReader<T>,
+	T: SetAsDefinitionOfDelta,
+{
+	fn add_concept_as_lefthand_of_delta(&self, concept: usize, definition: usize) -> ContextDelta<T> {
+		ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(concept).add_as_lefthand_of_delta(definition)))
+	}
+	fn add_concept_as_righthand_of_delta(&self, concept: usize, definition: usize) -> ContextDelta<T> {
+		ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(concept).add_as_righthand_of_delta(definition)))
 	}
 }
 

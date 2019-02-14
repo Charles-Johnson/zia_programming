@@ -149,8 +149,8 @@ where
 
 pub trait InsertDefinition<T>
 where
-    T: SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
-    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta,
+    T: Sized + GetDefinition + GetReduction,
+    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta + SetConceptAsDefinitionOfDelta,
 {
     fn insert_definition(
         &mut self,
@@ -166,9 +166,10 @@ where
             let delta = try!(self
                 .set_concept_definition_delta(definition, lefthand, righthand));
             self.apply(delta);
-            self.write_concept(lefthand).add_as_lefthand_of(definition);
-            self.write_concept(righthand)
-                .add_as_righthand_of(definition);
+            let delta = self.add_concept_as_lefthand_of_delta(lefthand, definition);
+            self.apply(delta);
+            let delta = self.add_concept_as_righthand_of_delta(righthand, definition);
+            self.apply(delta);
             Ok(())
         }
     }
@@ -187,8 +188,8 @@ where
 
 impl<S, T> InsertDefinition<T> for S
 where
-    T: SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
-    S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta,
+    T: Sized + GetDefinition + GetReduction,
+    S: ConceptWriter<T> + Container<T> + SetConceptAsDefinitionOfDelta + SetConceptDefinitionDelta,
 {
 }
 
@@ -225,6 +226,22 @@ pub trait SetDefinition {
 pub trait SetAsDefinitionOf {
     fn add_as_lefthand_of(&mut self, usize);
     fn add_as_righthand_of(&mut self, usize);
+}
+
+pub trait SetAsDefinitionOfDelta 
+where
+    Self: Delta,
+{
+    fn add_as_lefthand_of_delta(&self, usize) -> Self::Delta;
+    fn add_as_righthand_of_delta(&self, usize) -> Self::Delta;
+}
+
+pub trait SetConceptAsDefinitionOfDelta 
+where
+    Self: Delta,
+{
+    fn add_concept_as_lefthand_of_delta(&self, usize, usize) -> Self::Delta;
+    fn add_concept_as_righthand_of_delta(&self, usize, usize) -> Self::Delta;
 }
 
 pub trait SetReduction {
