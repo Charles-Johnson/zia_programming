@@ -108,6 +108,9 @@ mod constants;
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
+/// The trait for describing incremental changes in state.
+mod delta;
+
 /// The errors that the users could make when making commands.
 mod errors;
 

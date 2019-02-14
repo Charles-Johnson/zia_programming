@@ -17,8 +17,9 @@
 mod abstract_part;
 mod common_part;
 
-pub use self::abstract_part::AbstractPart;
-pub use self::common_part::CommonPart;
+pub use self::abstract_part::{AbstractPart, AbstractDelta};
+pub use self::common_part::{CommonPart, CommonDelta};
+use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
 use std::collections::HashSet;
@@ -41,6 +42,15 @@ enum SpecificPart {
     Abstract(AbstractPart),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
+}
+
+pub enum ConceptDelta {
+    Abstract(AbstractDelta),
+    Common(CommonDelta),
+}
+
+impl Delta for Concept {
+    type Delta = ConceptDelta;
 }
 
 impl From<AbstractPart> for Concept {

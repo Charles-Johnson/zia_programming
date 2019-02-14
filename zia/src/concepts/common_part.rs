@@ -14,6 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+use delta::Delta;
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
 use writing::{MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf};
@@ -26,6 +27,19 @@ pub struct CommonPart {
     righthand_of: HashSet<usize>,
     /// Set of all indices of the concepts which reduce to this concept.
     reduces_from: HashSet<usize>,
+}
+
+impl Delta for CommonPart {
+    type Delta = CommonDelta;
+}
+
+pub enum CommonDelta {
+    AddLeft(usize),
+    AddRight(usize),
+    RemoveLeft(usize),
+    RemoveRight(usize),
+    AddReducesFrom(usize),
+    RemoveReducesFrom(usize),
 }
 
 impl GetDefinitionOf for CommonPart {

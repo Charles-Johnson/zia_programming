@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use delta::Delta;
 use errors::ZiaResult;
 use reading::{GetDefinition, GetReduction};
 use writing::{RemoveDefinition, RemoveReduction, SetDefinition, SetReduction};
@@ -25,6 +26,17 @@ pub struct AbstractPart {
     definition: Option<(usize, usize)>,
     /// The concept may reduce to another concept.
     reduces_to: Option<usize>,
+}
+
+impl Delta for AbstractPart {
+    type Delta = AbstractDelta;
+}
+
+pub enum AbstractDelta {
+    SetDefinition(usize, usize),
+    RemoveDefinition,
+    SetReduction(usize),
+    RemoveReduction,
 }
 
 impl Default for AbstractPart {

@@ -16,6 +16,7 @@
 */
 
 use adding::{ConceptAdder, StringAdder};
+use delta::Delta;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
 use std::collections::HashMap;
@@ -32,6 +33,35 @@ pub struct Context<T> {
     concepts: Vec<Option<T>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
+}
+
+pub enum ContextDelta<T> 
+where
+	T: Delta,
+{
+	String(String, StringDelta),
+	Concept(ConceptDelta<T>)
+}
+
+enum StringDelta {
+	Insert(usize), 
+	Remove,
+}
+
+enum ConceptDelta<T> 
+where
+	T: Delta,
+{
+	Insert(T),
+	Remove(usize),
+	Update(T::Delta),
+}
+
+impl<T> Delta for Context<T> 
+where
+	T: Delta,
+{
+	type Delta = ContextDelta<T>;
 }
 
 impl<T> Default for Context<T> {
