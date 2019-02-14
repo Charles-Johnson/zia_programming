@@ -195,15 +195,20 @@ where
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default = self.new_default::<Self::A>();
+        let (new_default, delta) = self.new_default::<Self::A>();
+        self.apply(delta);
         try!(self.label(new_default, string));
         Ok(new_default)
     }
     fn setup(&mut self) -> ZiaResult<()> {
-        let label_concept = self.new_default::<Self::C>();
-        let define_concept = self.new_default::<Self::C>();
-        let reduction_concept = self.new_default::<Self::C>();
-        let let_concept = self.new_default::<Self::C>();
+        let (label_concept, delta1) = self.new_default::<Self::C>();
+        self.apply(delta1);
+        let (define_concept, delta2) = self.new_default::<Self::C>();
+        self.apply(delta2);
+        let (reduction_concept, delta3) = self.new_default::<Self::C>();
+        self.apply(delta3);
+        let (let_concept, delta4) = self.new_default::<Self::C>();
+        self.apply(delta4);
 		try!(self.label(label_concept, "label_of"));
         try!(self.label(define_concept, ":="));
         try!(self.label(reduction_concept, "->"));
@@ -226,7 +231,8 @@ where
         let pair = self.find_definition(lefthand, righthand);
         match pair {
             None => {
-                let definition = self.new_default::<Self::A>();
+                let (definition, delta) = self.new_default::<Self::A>();
+                self.apply(delta);
                 try!(self.insert_definition(definition, lefthand, righthand));
                 Ok(definition)
             }
@@ -258,15 +264,15 @@ where
 
 pub trait DefaultMaker<T>
 where
-    Self: ConceptAdder<T>,
+    Self: ConceptAdderDelta<T>,
 {
-    fn new_default<V: Default + Into<T>>(&mut self) -> usize {
+    fn new_default<V: Default + Into<T>>(&self) -> (usize, Self::Delta) {
         let concept: T = V::default().into();
-        self.add_concept(concept)
+        self.add_concept_delta(concept)
     }
 }
 
-impl<S, T> DefaultMaker<T> for S where S: ConceptAdder<T> {}
+impl<S, T> DefaultMaker<T> for S where S: ConceptAdderDelta<T> {}
 
 #[cfg(test)]
 mod tests {
