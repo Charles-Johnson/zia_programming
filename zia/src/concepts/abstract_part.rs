@@ -66,6 +66,9 @@ impl AbstractPart {
     pub fn set_definition(&mut self, lefthand: usize, righthand: usize) {
         self.definition = Some((lefthand, righthand));
     }
+    pub fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> AbstractDelta {
+        AbstractDelta::SetDefinition(lefthand, righthand)
+    }
     pub fn make_reduce_to(&mut self, concept: usize) {
         self.reduces_to = Some(concept);
     }

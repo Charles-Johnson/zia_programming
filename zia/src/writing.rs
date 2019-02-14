@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+pub use delta::Delta;
 pub use errors::{ZiaError, ZiaResult};
 pub use reading::{
     ConceptReader, FindDefinition, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction,
@@ -148,8 +149,8 @@ where
 
 pub trait InsertDefinition<T>
 where
-    T: SetDefinition + SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
-    Self: ConceptWriter<T> + Container<T>,
+    T: SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
+    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta,
 {
     fn insert_definition(
         &mut self,
@@ -162,9 +163,9 @@ where
         } else {
             try!(self.check_reductions(definition, lefthand));
             try!(self.check_reductions(definition, righthand));
-            try!(self
-                .write_concept(definition)
-                .set_definition(lefthand, righthand));
+            let delta = try!(self
+                .set_concept_definition_delta(definition, lefthand, righthand));
+            self.apply(delta);
             self.write_concept(lefthand).add_as_lefthand_of(definition);
             self.write_concept(righthand)
                 .add_as_righthand_of(definition);
@@ -186,8 +187,8 @@ where
 
 impl<S, T> InsertDefinition<T> for S
 where
-    T: SetDefinition + SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
-    S: ConceptWriter<T> + Container<T>,
+    T: SetAsDefinitionOf + Sized + GetDefinition + GetReduction,
+    S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta,
 {
 }
 
@@ -201,6 +202,20 @@ pub trait RemoveReduction {
 
 pub trait NoLongerReducesFrom {
     fn no_longer_reduces_from(&mut self, usize);
+}
+
+pub trait SetConceptDefinitionDelta 
+where
+    Self: Delta,
+{
+    fn set_concept_definition_delta(&self, usize, usize, usize) -> ZiaResult<Self::Delta>;
+}
+
+pub trait SetDefinitionDelta 
+where
+    Self: Delta,
+{
+    fn set_definition_delta(&self, usize, usize) -> ZiaResult<Self::Delta>;
 }
 
 pub trait SetDefinition {

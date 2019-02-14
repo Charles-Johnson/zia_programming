@@ -17,11 +17,12 @@
 
 use adding::{ConceptAdder, StringAdder, StringAdderDelta, ConceptAdderDelta};
 use delta::Delta;
+use errors::ZiaResult;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
 use std::collections::{HashMap, HashSet};
 use translating::StringConcept;
-use writing::ConceptWriter;
+use writing::{ConceptWriter, SetConceptDefinitionDelta, SetDefinitionDelta};
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 pub struct Context<T> {
@@ -111,6 +112,16 @@ impl<T> ConceptWriter<T> for Context<T> {
             None => panic!("No concept with id = {}", id),
         }
     }
+}
+
+impl<T> SetConceptDefinitionDelta for Context<T> 
+where
+	Self: ConceptReader<T>,
+	T: SetDefinitionDelta,
+{
+	fn set_concept_definition_delta(&self, concept: usize, lefthand: usize, righthand: usize) -> ZiaResult<ContextDelta<T>> {
+		Ok(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(try!(self.read_concept(concept).set_definition_delta(lefthand, righthand)))))
+	}
 }
 
 impl<T> ConceptReader<T> for Context<T> {

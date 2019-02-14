@@ -25,7 +25,7 @@ use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction,
 use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
-    SetAsDefinitionOf, SetDefinition, SetReduction,
+    SetAsDefinitionOf, SetDefinition, SetDefinitionDelta, SetReduction,
 };
 
 /// Data type for any type of concept.
@@ -143,6 +143,15 @@ impl SetDefinition for Concept {
                 c.set_definition(lefthand, righthand);
                 Ok(())
             },
+            _ => Err(ZiaError::SettingDefinitionOfConcrete),
+        }
+    }
+}
+
+impl SetDefinitionDelta for Concept {
+    fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> ZiaResult<ConceptDelta> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => Ok(ConceptDelta::Abstract(c.set_definition_delta(lefthand, righthand))),
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
