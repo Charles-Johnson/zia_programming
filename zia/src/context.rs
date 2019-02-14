@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{ConceptAdder, StringAdder};
+use adding::{ConceptAdder, StringAdder, StringAdderDelta};
 use delta::Delta;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
@@ -93,6 +93,15 @@ impl<T> StringAdder for Context<T> {
     fn add_string(&mut self, string_id: usize, string: &str) {
         self.string_map.insert(string.to_string(), string_id);
     }
+}
+
+impl<T> StringAdderDelta for Context<T> 
+where
+	T: Delta,
+{
+	fn add_string_delta(&self, string_id: usize, string: &str) -> ContextDelta<T> {
+		ContextDelta::<T>::String(string.to_string(), StringDelta::Insert(string_id))
+	}
 }
 
 impl<T> ConceptWriter<T> for Context<T> {

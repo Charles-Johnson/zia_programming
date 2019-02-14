@@ -16,6 +16,7 @@
 */
 
 use constants::LABEL;
+use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{FindDefinition, MaybeString, MightExpand};
 use std::{fmt, rc::Rc};
@@ -189,7 +190,8 @@ where
     type C: Default;
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let definition = try!(self.find_or_insert_definition(LABEL, concept));
-        let string_id = self.new_string(string);
+        let (string_id, delta) = self.new_string(string);
+        self.apply(delta);
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
@@ -236,20 +238,19 @@ where
 pub trait StringMaker<T>
 where
     T: From<String>,
-    Self: ConceptAdder<T> + StringAdder,
+    Self: ConceptAdder<T> + StringAdderDelta,
 {
-    fn new_string(&mut self, string: &str) -> usize {
+    fn new_string(&mut self, string: &str) -> (usize, Self::Delta) {
         let string_concept = string.to_string().into();
         let index = self.add_concept(string_concept);
-        self.add_string(index, string);
-        index
+        (index, self.add_string_delta(index, string))
     }
 }
 
 impl<S, T> StringMaker<T> for S
 where
     T: From<String>,
-    S: ConceptAdder<T> + StringAdder,
+    S: ConceptAdder<T> + StringAdderDelta,
 {
 }
 
@@ -271,6 +272,7 @@ mod tests {
     use ast::SyntaxTree;
 	use context::Context;
 	use concepts::Concept;
+    use delta::Delta;
 	use reading::{GetLabel, GetDefinition, ConceptReader, Pair};
     use std::rc::Rc;
 	use translating::{StringConcept, SyntaxFinder};
@@ -278,7 +280,8 @@ mod tests {
 		#[test]
 		fn getting_new_strings_id(string: String) {
 			let mut cont = Context::<Concept>::default();
-			let new_id = cont.new_string(&string);
+			let (new_id, delta) = cont.new_string(&string);
+            cont.apply(delta);
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
@@ -328,6 +331,14 @@ mod tests {
 		assert_eq!(cont.concept_from_label("->"), Some(2));
 		assert_eq!(cont.concept_from_label("let"), Some(3));
 	}
+}
+
+
+pub trait StringAdderDelta 
+where
+    Self: Delta,
+{
+    fn add_string_delta(&self, usize, &str) -> Self::Delta;
 }
 
 pub trait StringAdder {
