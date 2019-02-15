@@ -125,7 +125,7 @@ where
             } else {
                 try!(self.get_reduction_of_composition(left))
             };
-            let rc = if let Some(r) = self.read_concept(&vec!(), left).get_reduction() {
+            let rc = if let Some(r) = self.read_concept(&vec!(), right).get_reduction() {
                 r
             } else {
                 try!(self.get_reduction_of_composition(right))

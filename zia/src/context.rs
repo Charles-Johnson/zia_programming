@@ -100,7 +100,7 @@ impl<T> StringAdderDelta for Context<T>
 where
 	T: Delta + Clone,
 {
-	fn add_string_delta(&self, string_id: usize, string: &str) -> ContextDelta<T> {
+	fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
 		ContextDelta::<T>::String(string.to_string(), StringDelta::Insert(string_id))
 	}
 }
@@ -124,10 +124,43 @@ where
 		let concept_delta1 = try!(self.read_concept(&deltas, concept).set_definition_delta(lefthand, righthand));
 		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(concept_delta1)));
 		let concept_delta2 = self.read_concept(&deltas, lefthand).add_as_lefthand_of_delta(concept);
-		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(concept_delta2)));
+		deltas.push(ContextDelta::<T>::Concept(lefthand, ConceptDelta::<T>::Update(concept_delta2)));
 		let concept_delta3 = self.read_concept(&deltas, righthand).add_as_righthand_of_delta(concept);
-		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(concept_delta3)));
+		deltas.push(ContextDelta::<T>::Concept(righthand, ConceptDelta::<T>::Update(concept_delta3)));
 		Ok(deltas)
+	}
+}
+
+#[cfg(test)]
+mod delta_tests {
+	use {Context, Concept};
+	use adding::DefaultMaker;
+	use concepts::AbstractPart;
+	use context::{ContextDelta, ConceptDelta};
+	use delta::Delta;
+	use writing::SetConceptDefinitionDeltas;
+	#[test] 
+	fn delta_test() {
+		let mut cont = Context::default();
+		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
+		cont.apply(&delta);
+		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
+		cont.apply(&delta);
+		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
+		cont.apply(&delta);
+		for delta in cont.set_concept_definition_deltas(0, 1, 2).unwrap() {
+			match delta {
+				ContextDelta::Concept(concept, cd) => {
+					println!("Concept: {}", concept);
+					match cd {
+						ConceptDelta::<Concept>::Update(_) => println!("Updated"),
+						ConceptDelta::<Concept>::Remove => println!("Removed"),
+						ConceptDelta::<Concept>::Insert(_) => println!("Inserted",)
+					};
+				},
+				_ => (),
+			};
+		}
 	}
 }
 
@@ -207,8 +240,10 @@ where
 			match delta {
 				ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Insert(_)) => if *id < new_concept_length {
 					removed_gaps.insert(*id);
-				} else {
+				} else if *id == new_concept_length {
 					new_concept_length += 1
+				} else {
+					panic!("Deltas imply that a new concept has been given too large an id.")
 				},
 				ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Remove) => {
 					added_gaps.push(*id);
@@ -252,6 +287,39 @@ where
 			};
 		}
 		(index, ContextDelta::<T>::Concept(index, ConceptDelta::Insert(concept)))
+	}
+}
+
+#[cfg(test)]
+mod add_concept_delta_test {
+	use {Concept, Context};
+	use adding::{ConceptAdderDelta, ContextMaker};
+	use concepts::AbstractPart;
+	use context::{ContextDelta, ConceptDelta};
+	#[test]
+	fn test() {
+		let cont = Context::new();
+		match cont.add_concept_delta(&vec!(), Concept::from(AbstractPart::default())){
+			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
+			_ => (),
+		};
+		match cont.add_concept_delta(&vec!(ContextDelta::<Concept>::Concept(9, ConceptDelta::Remove)), Concept::from(AbstractPart::default())){
+			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
+			_ => (),
+		};
+		match cont.add_concept_delta(&vec!(
+			ContextDelta::<Concept>::Concept(9, ConceptDelta::Remove),
+			ContextDelta::<Concept>::Concept(9, ConceptDelta::Insert(Concept::from(AbstractPart::default()))),
+		), Concept::from(AbstractPart::default())){
+			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
+			_ => (),
+		};
+		match cont.add_concept_delta(&vec!(
+			ContextDelta::<Concept>::Concept(12, ConceptDelta::Insert(Concept::from(AbstractPart::default()))),
+		), Concept::from(AbstractPart::default())){
+			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
+			_ => (),
+		};
 	}
 }
 

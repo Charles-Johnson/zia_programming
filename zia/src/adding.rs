@@ -252,9 +252,9 @@ where
     fn new_string(&self, deltas: &Vec<Self::Delta>, string: &str) -> (usize, Vec<Self::Delta>) {
         let string_concept = string.to_string().into();
         let (index, concept_delta) = self.add_concept_delta(deltas, string_concept);
-        let string_delta = self.add_string_delta(index, string);
-        let deltas = vec!{concept_delta, string_delta};
-        (index, deltas)
+        let string_delta = Self::add_string_delta(index, string);
+        let new_deltas = vec!(concept_delta, string_delta);
+        (index, new_deltas)
     }
 }
 
@@ -296,13 +296,13 @@ mod tests {
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
-		fn getting_label_of_new_labelled_default(string: String) { //Error! MultipleReductionPaths string=""
+		fn getting_label_of_new_labelled_default(string: String) {
 			let mut cont = Context::<Concept>::default();
 			let concept_id = try!(cont.new_labelled_default(&string));
 			assert_eq!(cont.get_label(concept_id), Some(string));
 		}
 		#[test]
-		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) { //Error! MultipleReductionPaths for left=right=0
+		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) {
 			let mut cont = Context::<Concept>::new();
 			assert_eq!(
 				try!(cont.find_or_insert_definition(left, right)), 
@@ -310,7 +310,7 @@ mod tests {
 			);
 		}
 		#[test]
-		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! MultipleReductionPaths left=right=0
+		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) {
 			let mut cont = Context::<Concept>::new();
 			let def = try!(cont.find_or_insert_definition(left, right));
 			assert_eq!(
@@ -327,7 +327,7 @@ mod tests {
             assert!(ast3.contains(&ast2));
         }
         #[test]
-        fn concept_from_ast_has_the_right_label(s in "\\PC") { // Error! MultipleReductionPaths s="a"
+        fn concept_from_ast_has_the_right_label(s in "\\PC") {
             let ast = SyntaxTree::from((s.clone(), None));
             let mut cont = Context::default();
             let id = try!(cont.concept_from_ast(&ast));
@@ -335,7 +335,7 @@ mod tests {
         }
     }
 	#[test]
-	fn getting_ids_of_concrete_concepts() { //Error! MultipleReductionPaths
+	fn getting_ids_of_concrete_concepts() {
 		let cont = Context::<Concept>::new();
 		assert_eq!(cont.concept_from_label("label_of"), Some(0));
 		assert_eq!(cont.concept_from_label(":="), Some(1));
@@ -349,7 +349,7 @@ pub trait StringAdderDelta
 where
     Self: Delta,
 {
-    fn add_string_delta(&self, usize, &str) -> Self::Delta;
+    fn add_string_delta(usize, &str) -> Self::Delta;
 }
 
 pub trait StringAdder {

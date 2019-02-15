@@ -43,7 +43,7 @@ proptest! {
 		let print = format!("(label_of ({} ->)) ->", a);
 		prop_assert_eq!(cont.execute(&print), b);
 	}
-	// If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol. Error! : if `a == b` then the interpreter can't reduce `a b` to `c`.
+	// If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol. Error! : if `b == c` and `b` is a previously unused symbol then the interpreter can't reduce `a b` to `c`.
 	#[test]
 	fn pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
 		let mut cont = Context::new();
@@ -51,7 +51,7 @@ proptest! {
 		let print = format!("(label_of (({} {}) ->)) ->", a, b);
 		prop_assert_eq!(cont.execute(&print), c);
 	}
-	// Checking whether two reduction rules can be correctly chained together for an expression with a nested pair. Error! : if `a == b` then the interpreter can't twice reduce `a (a b)` to `b`. 
+	// Checking whether two reduction rules can be correctly chained together for an expression with a nested pair.
 	#[test]
 	fn nested_pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
 		let mut cont = Context::new();
@@ -94,7 +94,7 @@ proptest! {
 		let print = format!("(label_of(({}) ->))->", a);
 		prop_assert_eq!(cont.execute(&print), a);
 	}
-	// Checking that reduction rules can be removed. Error! : if `a == b` then the interpreter thinks a reduction rule already exists.
+	// Checking that reduction rules can be removed. Error! : if `b == c` and `b` is a previously unused symbol then the interpreter thinks a reduction rule already exists.
 	#[test]
 	fn remove_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
 		let mut cont = Context::new();

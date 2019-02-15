@@ -6,3 +6,4 @@
 # everyone who runs the test benefits from these saved cases.
 xs 2181659589 1193762139 1217286235 1241925650 # shrinks to a = "", b = "(", c = ""
 xs 3931155176 1485574454 612264003 1567505190 # shrinks to a = "=", b = "="
+cc c2a36ad66a4c2daf8343d15066959d187702970332c1d37161cbf7dd1166b001 # shrinks to a = "㇀", b = "=", c = "="
