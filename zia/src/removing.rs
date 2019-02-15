@@ -36,7 +36,7 @@ where
         + MaybeString,
 {
     fn cleanly_delete_definition(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(concept).get_definition() {
+        match self.read_concept(&vec!(), concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
                 self.delete_definition(concept, left, right);
@@ -76,7 +76,7 @@ where
     T: MaybeString,
 {
     fn remove_concept(&mut self, concept: usize) {
-        if let Some(ref s) = self.read_concept(concept).get_string() {
+        if let Some(ref s) = self.read_concept(&vec!(), concept).get_string() {
             self.remove_string(s);
         }
         self.blindly_remove_concept(concept);

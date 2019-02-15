@@ -191,12 +191,12 @@ where
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let definition = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, deltas) = self.new_string(&vec!(), string);
-        self.apply_all(deltas);
+        self.apply_all(&deltas);
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
         let (new_default, delta) = self.new_default::<Self::A>(&vec!());
-        self.apply(delta);
+        self.apply(&delta);
         try!(self.label(new_default, string));
         Ok(new_default)
     }
@@ -211,7 +211,7 @@ where
         deltas.push(delta3);
         let (let_concept, delta4) = self.new_default::<Self::C>(&deltas);
         deltas.push(delta4);
-        self.apply_all(deltas);
+        self.apply_all(&deltas);
 		try!(self.label(label_concept, "label_of"));
         try!(self.label(define_concept, ":="));
         try!(self.label(reduction_concept, "->"));
@@ -235,7 +235,7 @@ where
         match pair {
             None => {
                 let (definition, delta) = self.new_default::<Self::A>(&vec!());
-                self.apply(delta);
+                self.apply(&delta);
                 try!(self.insert_definition(definition, lefthand, righthand));
                 Ok(definition)
             }
@@ -292,17 +292,17 @@ mod tests {
 		fn getting_new_strings_id(string: String) {
 			let mut cont = Context::<Concept>::default();
 			let (new_id, deltas) = cont.new_string(&vec!(), &string);
-            cont.apply_all(deltas);
+            cont.apply_all(&deltas);
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
-		fn getting_label_of_new_labelled_default(string: String) {
+		fn getting_label_of_new_labelled_default(string: String) { //Error! MultipleReductionPaths string=""
 			let mut cont = Context::<Concept>::default();
 			let concept_id = try!(cont.new_labelled_default(&string));
 			assert_eq!(cont.get_label(concept_id), Some(string));
 		}
 		#[test]
-		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) { //Error! MultipleReductionPaths for left=right=0
 			let mut cont = Context::<Concept>::new();
 			assert_eq!(
 				try!(cont.find_or_insert_definition(left, right)), 
@@ -310,11 +310,11 @@ mod tests {
 			);
 		}
 		#[test]
-		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! MultipleReductionPaths left=right=0
 			let mut cont = Context::<Concept>::new();
 			let def = try!(cont.find_or_insert_definition(left, right));
 			assert_eq!(
-				cont.read_concept(def).get_definition(), 
+				cont.read_concept(&vec!(), def).get_definition(), 
 				Some((left, right)),
 			);
 		}
@@ -327,7 +327,7 @@ mod tests {
             assert!(ast3.contains(&ast2));
         }
         #[test]
-        fn concept_from_ast_has_the_right_label(s in "\\PC") {
+        fn concept_from_ast_has_the_right_label(s in "\\PC") { // Error! MultipleReductionPaths s="a"
             let ast = SyntaxTree::from((s.clone(), None));
             let mut cont = Context::default();
             let id = try!(cont.concept_from_ast(&ast));
@@ -335,7 +335,7 @@ mod tests {
         }
     }
 	#[test]
-	fn getting_ids_of_concrete_concepts() {
+	fn getting_ids_of_concrete_concepts() { //Error! MultipleReductionPaths
 		let cont = Context::<Concept>::new();
 		assert_eq!(cont.concept_from_label("label_of"), Some(0));
 		assert_eq!(cont.concept_from_label(":="), Some(1));

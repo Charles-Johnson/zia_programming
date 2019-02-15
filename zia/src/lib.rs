@@ -261,7 +261,7 @@ where
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
 		if let Some(c) = ast.get_concept() {
-			if let Some(s) = self.read_concept(c).get_string() {
+			if let Some(s) = self.read_concept(&vec!(), c).get_string() {
 				return Ok(s);
 			}
 		}
@@ -355,7 +355,7 @@ where
                 REDUCTION => self.execute_reduction(left, rightright),
                 DEFINE => self.execute_definition(left, rightright),
                 _ => {
-                    let rightleft_reduction = self.read_concept(c).get_reduction();
+                    let rightleft_reduction = self.read_concept(&vec!(), c).get_reduction();
                     if let Some(r) = rightleft_reduction {
                         let ast = self.to_ast::<Self::S>(r);
                         self.match_righthand_pair(left, &ast, rightright)
@@ -467,7 +467,7 @@ where
     }
     /// Defining a concept as a composition whose syntax is given by `left` and `right`. If the concept already has a definition, then the concepts of this composition are relabelled with `left` and `right`. Otherwise new concepts are made from `left` and `right` to define the concept.
     fn redefine(&mut self, concept: usize, left: &Self::S, right: &Self::S) -> ZiaResult<()> {
-        if let Some((left_concept, right_concept)) = self.read_concept(concept).get_definition() {
+        if let Some((left_concept, right_concept)) = self.read_concept(&vec!(), concept).get_definition() {
             try!(self.relabel(left_concept, &left.to_string()));
             self.relabel(right_concept, &right.to_string())
         } else {

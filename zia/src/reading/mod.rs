@@ -21,6 +21,7 @@ mod syntax;
 pub use self::concepts::*;
 pub use self::syntax::*;
 use constants::LABEL;
+use delta::Delta;
 use std::{collections::HashSet, fmt, rc::Rc};
 
 pub trait SyntaxReader<T>
@@ -42,7 +43,7 @@ where
         ast: &Rc<U>,
     ) -> Rc<U> {
         if let Some(con) = ast.get_concept() {
-            if let Some((left, right)) = self.read_concept(con).get_definition() {
+            if let Some((left, right)) = self.read_concept(&vec!(), con).get_definition() {
                 self.combine(
                     &self.expand(&self.to_ast::<U>(left)),
                     &self.expand(&self.to_ast::<U>(right)),
@@ -102,8 +103,8 @@ where
         &self,
         concept: usize,
     ) -> Option<Rc<U>> {
-        match self.read_concept(concept).get_reduction() {
-            None => match self.read_concept(concept).get_definition() {
+        match self.read_concept(&vec!(), concept).get_reduction() {
+            None => match self.read_concept(&vec!(), concept).get_definition() {
                 Some((left, right)) => {
                     let left_result = self.reduce_concept::<U>(left);
                     let right_result = self.reduce_concept::<U>(right);
@@ -126,7 +127,7 @@ where
     ) -> Rc<U> {
         match self.get_label(concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
-            None => match self.read_concept(concept).get_definition() {
+            None => match self.read_concept(&vec!(), concept).get_definition() {
                 Some((left, right)) => {
                     self.combine(&self.to_ast::<U>(left), &self.to_ast::<U>(right))
                 }
@@ -192,11 +193,11 @@ where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
 {
     fn display(&self, concept: usize) -> String {
-        match self.read_concept(concept).get_string() {
+        match self.read_concept(&vec!(), concept).get_string() {
             Some(s) => "\"".to_string() + &s + "\"",
             None => match self.get_label(concept) {
                 Some(l) => l,
-                None => match self.read_concept(concept).get_definition() {
+                None => match self.read_concept(&vec!(), concept).get_definition() {
                     Some((left, right)) => {
                         let mut left_string = self.display(left);
                         if left_string.contains(' ') {
@@ -231,7 +232,7 @@ where
             None => None,
             Some(d) => match self.get_normal_form(d) {
                 None => None,
-                Some(n) => self.read_concept(n).get_string(),
+                Some(n) => self.read_concept(&vec!(), n).get_string(),
             },
         }
     }
@@ -282,7 +283,7 @@ where
     fn get_labellee(&self, concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
         for label in self.find_what_its_a_normal_form_of(concept) {
-            match self.read_concept(label).get_definition() {
+            match self.read_concept(&vec!(), label).get_definition() {
                 None => continue,
                 Some((r, x)) => {
                     if r == LABEL {
@@ -313,7 +314,7 @@ where
     Self: ConceptReader<T>,
 {
     fn get_normal_form(&self, concept: usize) -> Option<usize> {
-        match self.read_concept(concept).get_reduction() {
+        match self.read_concept(&vec!(), concept).get_reduction() {
             None => None,
             Some(n) => match self.get_normal_form(n) {
                 None => Some(n),
@@ -336,8 +337,8 @@ where
     Self: ConceptReader<T>,
 {
     fn get_concept_of_label(&self, concept: usize) -> Option<usize> {
-        for candidate in self.read_concept(concept).get_righthand_of().iter() {
-            match self.read_concept(*candidate).get_definition() {
+        for candidate in self.read_concept(&vec!(), concept).get_righthand_of().iter() {
+            match self.read_concept(&vec!(), *candidate).get_definition() {
                 None => panic!("Candidate should have a definition!"),
                 Some((left, _)) => {
                     if left == LABEL {
@@ -363,18 +364,18 @@ where
     Self: ConceptReader<T>,
 {
     fn is_disconnected(&self, concept: usize) -> bool {
-        self.read_concept(concept).get_reduction().is_none()
-            && self.read_concept(concept).get_definition().is_none()
-            && self.read_concept(concept).get_lefthand_of().is_empty()
+        self.read_concept(&vec!(), concept).get_reduction().is_none()
+            && self.read_concept(&vec!(), concept).get_definition().is_none()
+            && self.read_concept(&vec!(), concept).get_lefthand_of().is_empty()
             && self.righthand_of_without_label_is_empty(concept)
             && self
-                .read_concept(concept)
+                .read_concept(&vec!(), concept)
                 .find_what_reduces_to_it()
                 .is_empty()
     }
     fn righthand_of_without_label_is_empty(&self, con: usize) -> bool {
-        for concept in self.read_concept(con).get_righthand_of().iter() {
-            if let Some((left, _)) = self.read_concept(*concept).get_definition() {
+        for concept in self.read_concept(&vec!(), con).get_righthand_of().iter() {
+            if let Some((left, _)) = self.read_concept(&vec!(), *concept).get_definition() {
                 if left != LABEL {
                     return false;
                 }
@@ -397,8 +398,8 @@ where
     Self: ConceptReader<T>,
 {
     fn find_definition(&self, lefthand: usize, righthand: usize) -> Option<usize> {
-        let has_lefthand = self.read_concept(lefthand).get_lefthand_of();
-        let has_righthand = self.read_concept(righthand).get_righthand_of();
+        let has_lefthand = self.read_concept(&vec!(), lefthand).get_lefthand_of();
+        let has_righthand = self.read_concept(&vec!(), righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
         match candidates.next() {
             None => None,
@@ -425,7 +426,7 @@ where
     Self: ConceptReader<T>,
 {
     fn find_what_its_a_normal_form_of(&self, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(con).find_what_reduces_to_it();
+        let mut normal_form_of = self.read_concept(&vec!(), con).find_what_reduces_to_it();
         for concept in normal_form_of.clone().iter() {
             for concept2 in self.find_what_its_a_normal_form_of(*concept).iter() {
                 normal_form_of.insert(*concept2);
@@ -448,7 +449,7 @@ where
     T: GetDefinition,
 {
     fn contains(&self, outer: usize, inner: usize) -> bool {
-        if let Some((left, right)) = self.read_concept(outer).get_definition() {
+        if let Some((left, right)) = self.read_concept(&vec!(), outer).get_definition() {
             left == inner
                 || right == inner
                 || self.contains(left, inner)
@@ -466,6 +467,9 @@ where
 {
 }
 
-pub trait ConceptReader<T> {
-    fn read_concept(&self, usize) -> &T;
+pub trait ConceptReader<T> 
+where
+    Self: Delta,
+{
+    fn read_concept(&self, &Vec<Self::Delta>, usize) -> T;
 }
