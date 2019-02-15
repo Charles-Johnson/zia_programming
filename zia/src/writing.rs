@@ -22,10 +22,10 @@ pub use reading::{
     MaybeConcept,
 };
 use reading::{Container, GetConceptOfLabel};
-pub trait Unlabeller<T>
+pub trait Unlabeller<T, D>
 where
     T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinition + GetDefinitionOf,
-    Self: DeleteReduction<T> + GetConceptOfLabel<T>,
+    Self: DeleteReduction<T, D> + GetConceptOfLabel<T, D>,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
         match self.get_concept_of_label(concept) {
@@ -35,17 +35,17 @@ where
     }
 }
 
-impl<S, T> Unlabeller<T> for S
+impl<S, T, D> Unlabeller<T, D> for S
 where
     T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinitionOf + GetDefinition,
-    S: DeleteReduction<T> + GetConceptOfLabel<T>,
+    S: DeleteReduction<T, D> + GetConceptOfLabel<T, D>,
 {
 }
 
-pub trait DeleteReduction<T>
+pub trait DeleteReduction<T, D>
 where
     T: GetReduction + RemoveReduction + NoLongerReducesFrom,
-    Self: ConceptWriter<T> + ConceptReader<T>,
+    Self: ConceptWriter<T> + ConceptReader<T, D>,
 {
     fn try_removing_reduction<U: MaybeConcept>(&mut self, syntax: &U) -> ZiaResult<()> {
         if let Some(c) = syntax.get_concept() {
@@ -55,7 +55,7 @@ where
         }
     }
     fn delete_reduction(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(concept).get_reduction() {
+        match self.read_concept(&vec!(), concept).get_reduction() {
             None => Err(ZiaError::RedundantReduction),
             Some(n) => {
                 self.write_concept(n).no_longer_reduces_from(concept);
@@ -66,17 +66,17 @@ where
     }
 }
 
-impl<S, T> DeleteReduction<T> for S
+impl<S, T, D> DeleteReduction<T, D> for S
 where
-    S: ConceptWriter<T> + ConceptReader<T>,
+    S: ConceptWriter<T> + ConceptReader<T, D>,
     T: GetReduction + RemoveReduction + NoLongerReducesFrom,
 {
 }
 
-pub trait DeleteDefinition<T>
+pub trait DeleteDefinition<T, D>
 where
     T: GetDefinition + RemoveDefinition + RemoveAsDefinitionOf + Sized,
-    Self: ConceptReader<T> + ConceptWriter<T>,
+    Self: ConceptReader<T, D> + ConceptWriter<T>,
 {
     fn delete_definition(&mut self, concept: usize, left: usize, right: usize) {
         self.write_concept(left).remove_as_lefthand_of(concept);
@@ -85,17 +85,17 @@ where
     }
 }
 
-impl<S, T> DeleteDefinition<T> for S
+impl<S, T, D> DeleteDefinition<T, D> for S
 where
     T: GetDefinition + RemoveDefinition + RemoveAsDefinitionOf + Sized,
-    S: ConceptReader<T> + ConceptWriter<T>,
+    S: ConceptReader<T, D> + ConceptWriter<T>,
 {
 }
 
-pub trait UpdateReduction<T>
+pub trait UpdateReduction<T, D>
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T>,
+    Self: ConceptWriter<T> + GetNormalForm<T, D> + FindDefinition<T, D>,
 {
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
         if let Some(n) = self.get_normal_form(reduction) {
@@ -103,7 +103,7 @@ where
                 return Err(ZiaError::CyclicReduction);
             }
         }
-        if let Some(r) = self.read_concept(concept).get_reduction() {
+        if let Some(r) = self.read_concept(&vec!(), concept).get_reduction() {
             if r == reduction {
                 return Err(ZiaError::RedundantReduction);
             }
@@ -119,13 +119,13 @@ where
         Ok(())
     }
     fn get_reduction_of_composition(&self, concept: usize) -> ZiaResult<usize> {
-        if let Some((left, right)) = self.read_concept(concept).get_definition() {
-            let lc = if let Some(l) = self.read_concept(left).get_reduction() {
+        if let Some((left, right)) = self.read_concept(&vec!(), concept).get_definition() {
+            let lc = if let Some(l) = self.read_concept(&vec!(), left).get_reduction() {
                 l
             } else {
                 try!(self.get_reduction_of_composition(left))
             };
-            let rc = if let Some(r) = self.read_concept(left).get_reduction() {
+            let rc = if let Some(r) = self.read_concept(&vec!(), left).get_reduction() {
                 r
             } else {
                 try!(self.get_reduction_of_composition(right))
@@ -140,17 +140,17 @@ where
     }
 }
 
-impl<S, T> UpdateReduction<T> for S
+impl<S, T, D> UpdateReduction<T, D> for S
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    S: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T>,
+    S: ConceptWriter<T> + GetNormalForm<T, D> + FindDefinition<T, D>,
 {
 }
 
-pub trait InsertDefinition<T>
+pub trait InsertDefinition<T, D>
 where
     T: Sized + GetDefinition + GetReduction,
-    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDelta + SetConceptAsDefinitionOfDelta,
+    Self: ConceptWriter<T> + Container<T, D> + SetConceptDefinitionDeltas<D> + Delta<D>,
 {
     fn insert_definition(
         &mut self,
@@ -163,18 +163,14 @@ where
         } else {
             try!(self.check_reductions(definition, lefthand));
             try!(self.check_reductions(definition, righthand));
-            let delta = try!(self
-                .set_concept_definition_delta(definition, lefthand, righthand));
-            self.apply(delta);
-            let delta = self.add_concept_as_lefthand_of_delta(lefthand, definition);
-            self.apply(delta);
-            let delta = self.add_concept_as_righthand_of_delta(righthand, definition);
-            self.apply(delta);
+            let deltas = try!(self
+                .set_concept_definition_deltas(definition, lefthand, righthand));
+            self.apply_all(&deltas);
             Ok(())
         }
     }
     fn check_reductions(&self, outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(inner_concept).get_reduction() {
+        if let Some(r) = self.read_concept(&vec!(), inner_concept).get_reduction() {
             if r == outer_concept || self.contains(r, outer_concept) {
                 Err(ZiaError::ExpandingReduction)
             } else {
@@ -186,10 +182,10 @@ where
     }
 }
 
-impl<S, T> InsertDefinition<T> for S
+impl<S, T, D> InsertDefinition<T, D> for S
 where
     T: Sized + GetDefinition + GetReduction,
-    S: ConceptWriter<T> + Container<T> + SetConceptAsDefinitionOfDelta + SetConceptDefinitionDelta,
+    S: ConceptWriter<T> + Container<T, D> + SetConceptDefinitionDeltas<D>,
 {
 }
 
@@ -205,11 +201,9 @@ pub trait NoLongerReducesFrom {
     fn no_longer_reduces_from(&mut self, usize);
 }
 
-pub trait SetConceptDefinitionDelta 
-where
-    Self: Delta,
+pub trait SetConceptDefinitionDeltas<D>
 {
-    fn set_concept_definition_delta(&self, usize, usize, usize) -> ZiaResult<Self::Delta>;
+    fn set_concept_definition_deltas(&self, usize, usize, usize) -> ZiaResult<Vec<D>>;
 }
 
 pub trait SetDefinitionDelta 
@@ -234,14 +228,6 @@ where
 {
     fn add_as_lefthand_of_delta(&self, usize) -> Self::Delta;
     fn add_as_righthand_of_delta(&self, usize) -> Self::Delta;
-}
-
-pub trait SetConceptAsDefinitionOfDelta 
-where
-    Self: Delta,
-{
-    fn add_concept_as_lefthand_of_delta(&self, usize, usize) -> Self::Delta;
-    fn add_concept_as_righthand_of_delta(&self, usize, usize) -> Self::Delta;
 }
 
 pub trait SetReduction {

@@ -131,7 +131,7 @@ use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, 
 pub use ast::SyntaxTree;
 use concepts::{AbstractPart, CommonPart, Concept};
 use constants::{LABEL, DEFINE, LET, REDUCTION};
-use context::Context as GenericContext;
+use context::{Context as GenericContext, ContextDelta};
 pub use errors::ZiaError;
 use errors::ZiaResult;
 use reading::{
@@ -150,9 +150,9 @@ use writing::{
 pub type Context = GenericContext<Concept>;
 
 /// Executing a command based on a string to add, write, read, or remove contained concepts.  
-pub trait Execute<T>
+pub trait Execute<T, D>
 where
-    Self: Call<T> + SyntaxConverter<T>,
+    Self: Call<T, D> + SyntaxConverter<T, D>,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -188,7 +188,7 @@ where
     }
 }
 
-impl<S, T> Execute<T> for S
+impl<S, T, D> Execute<T, D> for S
 where
     T: From<String>
         + From<Self::C>
@@ -206,7 +206,7 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt,
-    S: Call<T> + SyntaxConverter<T>,
+    S: Call<T, D> + SyntaxConverter<T, D>,
     S::S: Container
         + Pair<S::S>
         + Clone
@@ -216,25 +216,25 @@ where
 {
 }
 
-impl FindOrInsertDefinition<Concept> for Context {
+impl FindOrInsertDefinition<Concept, ContextDelta<Concept>> for Context {
     /// When a specific composition of concepts does not exist as its own concept, a new abstract concept is defined as that composition.
     type A = AbstractPart;
 }
 
-impl Labeller<Concept> for Context {
+impl Labeller<Concept, ContextDelta<Concept>> for Context {
     /// The `setup` method labels concrete concepts.
     type C = CommonPart;
 }
 
-impl ConceptMaker<Concept> for Context {
+impl ConceptMaker<Concept, ContextDelta<Concept>> for Context {
     /// New concepts are made from syntax trees.
     type S = SyntaxTree;
 }
 
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  
-pub trait Call<T>
+pub trait Call<T, D>
 where
-    Self: Definer<T> + ExecuteReduction<T> + SyntaxReader<T>,
+    Self: Definer<T, D> + ExecuteReduction<T, D> + SyntaxReader<T, D>,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -261,7 +261,7 @@ where
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
 		if let Some(c) = ast.get_concept() {
-			if let Some(s) = self.read_concept(c).get_string() {
+			if let Some(s) = self.read_concept(&vec!(), c).get_string() {
 				return Ok(s);
 			}
 		}
@@ -355,7 +355,7 @@ where
                 REDUCTION => self.execute_reduction(left, rightright),
                 DEFINE => self.execute_definition(left, rightright),
                 _ => {
-                    let rightleft_reduction = self.read_concept(c).get_reduction();
+                    let rightleft_reduction = self.read_concept(&vec!(), c).get_reduction();
                     if let Some(r) = rightleft_reduction {
                         let ast = self.to_ast::<Self::S>(r);
                         self.match_righthand_pair(left, &ast, rightright)
@@ -369,9 +369,9 @@ where
     }
 }
 
-impl<S, T> Call<T> for S
+impl<S, T, D> Call<T, D> for S
 where
-    S: Definer<T> + ExecuteReduction<T> + SyntaxReader<T>,
+    S: Definer<T, D> + ExecuteReduction<T, D> + SyntaxReader<T, D>,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -398,7 +398,7 @@ where
 }
 
 /// Defining new syntax in terms of old syntax.
-pub trait Definer<T>
+pub trait Definer<T, D>
 where
     T: From<String>
         + From<Self::C>
@@ -416,7 +416,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString,
-    Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
+    Self: GetLabel<T, D> + ConceptMaker<T, D> + DefinitionDeleter<T, D>,
     Self::S: Pair<Self::S> + Container,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
@@ -467,7 +467,7 @@ where
     }
     /// Defining a concept as a composition whose syntax is given by `left` and `right`. If the concept already has a definition, then the concepts of this composition are relabelled with `left` and `right`. Otherwise new concepts are made from `left` and `right` to define the concept.
     fn redefine(&mut self, concept: usize, left: &Self::S, right: &Self::S) -> ZiaResult<()> {
-        if let Some((left_concept, right_concept)) = self.read_concept(concept).get_definition() {
+        if let Some((left_concept, right_concept)) = self.read_concept(&vec!(), concept).get_definition() {
             try!(self.relabel(left_concept, &left.to_string()));
             self.relabel(right_concept, &right.to_string())
         } else {
@@ -500,7 +500,7 @@ where
     }
 }
 
-impl<S, T> Definer<T> for S
+impl<S, T, D> Definer<T, D> for S
 where
     T: From<String>
         + From<Self::C>
@@ -518,7 +518,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString,
-    S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
+    S: ConceptMaker<T, D> + GetLabel<T, D> + DefinitionDeleter<T, D>,
     S::S: Pair<S::S> + Container,
 {
 }

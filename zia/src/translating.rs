@@ -22,9 +22,9 @@ use reading::{
 };
 use std::rc::Rc;
 
-pub trait SyntaxConverter<T>
+pub trait SyntaxConverter<T, D>
 where
-    Self: SyntaxFinder<T> + Combine<T>,
+    Self: SyntaxFinder<T, D> + Combine<T, D>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt,
 {
     fn ast_from_expression<
@@ -62,9 +62,9 @@ where
     }
 }
 
-impl<S, T> SyntaxConverter<T> for S
+impl<S, T, D> SyntaxConverter<T, D> for S
 where
-    S: SyntaxFinder<T> + Combine<T>,
+    S: SyntaxFinder<T, D> + Combine<T, D>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt,
 {
 }
@@ -134,9 +134,9 @@ fn push_token(letter: char, parenthesis_level: i8, token: &mut String, tokens: &
     }
 }
 
-pub trait SyntaxFinder<T>
+pub trait SyntaxFinder<T, D>
 where
-    Self: StringConcept + Label<T>,
+    Self: StringConcept + Label<T, D>,
     T: FindWhatReducesToIt + GetDefinition,
 {
     fn concept_from_label(&self, s: &str) -> Option<usize> {
@@ -151,9 +151,9 @@ where
     }
 }
 
-impl<S, T> SyntaxFinder<T> for S
+impl<S, T, D> SyntaxFinder<T, D> for S
 where
-    S: StringConcept + Label<T>,
+    S: StringConcept + Label<T, D>,
     T: FindWhatReducesToIt + GetDefinition,
 {
 }

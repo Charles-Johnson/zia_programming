@@ -29,11 +29,13 @@ use writing::{
 };
 
 /// Data type for any type of concept.
+#[derive(Clone)]
 pub struct Concept {
     common_part: CommonPart,
     specific_part: SpecificPart,
 }
 
+#[derive(Clone)]
 enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,
@@ -49,9 +51,8 @@ pub enum ConceptDelta {
     Common(CommonDelta),
 }
 
-impl Delta for Concept {
-    type Delta = ConceptDelta;
-    fn apply(&mut self, delta: ConceptDelta) {
+impl Delta<ConceptDelta> for Concept {
+    fn apply(&mut self, delta: &ConceptDelta) {
         match delta {
             ConceptDelta::Abstract(ad) => match self.specific_part {
                 SpecificPart::Abstract(ref mut ap) => ap.apply(ad),

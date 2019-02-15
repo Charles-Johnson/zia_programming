@@ -22,9 +22,9 @@ use writing::{
     NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction, Unlabeller,
 };
 
-pub trait DefinitionDeleter<T>
+pub trait DefinitionDeleter<T, D>
 where
-    Self: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T>,
+    Self: MaybeDisconnected<T, D> + ConceptRemover<T, D> + DeleteDefinition<T, D> + Unlabeller<T, D>,
     T: RemoveDefinition
         + RemoveAsDefinitionOf
         + RemoveReduction
@@ -36,7 +36,7 @@ where
         + MaybeString,
 {
     fn cleanly_delete_definition(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(concept).get_definition() {
+        match self.read_concept(&vec!(), concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
                 self.delete_definition(concept, left, right);
@@ -55,9 +55,9 @@ where
     }
 }
 
-impl<S, T> DefinitionDeleter<T> for S
+impl<S, T, D> DefinitionDeleter<T, D> for S
 where
-    S: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T>,
+    S: MaybeDisconnected<T, D> + ConceptRemover<T, D> + DeleteDefinition<T, D> + Unlabeller<T, D>,
     T: RemoveDefinition
         + RemoveAsDefinitionOf
         + RemoveReduction
@@ -70,22 +70,22 @@ where
 {
 }
 
-pub trait ConceptRemover<T>
+pub trait ConceptRemover<T, D>
 where
-    Self: BlindConceptRemover + ConceptReader<T> + StringRemover,
+    Self: BlindConceptRemover + ConceptReader<T, D> + StringRemover,
     T: MaybeString,
 {
     fn remove_concept(&mut self, concept: usize) {
-        if let Some(ref s) = self.read_concept(concept).get_string() {
+        if let Some(ref s) = self.read_concept(&vec!(), concept).get_string() {
             self.remove_string(s);
         }
         self.blindly_remove_concept(concept);
     }
 }
 
-impl<S, T> ConceptRemover<T> for S
+impl<S, T, D> ConceptRemover<T, D> for S
 where
-    S: BlindConceptRemover + ConceptReader<T> + StringRemover,
+    S: BlindConceptRemover + ConceptReader<T, D> + StringRemover,
     T: MaybeString,
 {
 }

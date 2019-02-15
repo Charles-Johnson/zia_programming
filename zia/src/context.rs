@@ -22,7 +22,7 @@ use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
 use std::collections::{HashMap, HashSet};
 use translating::StringConcept;
-use writing::{ConceptWriter, SetConceptDefinitionDelta, SetDefinitionDelta, SetAsDefinitionOfDelta, SetConceptAsDefinitionOfDelta};
+use writing::{ConceptWriter, SetConceptDefinitionDeltas, SetDefinitionDelta, SetAsDefinitionOfDelta};
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 pub struct Context<T> {
@@ -63,18 +63,18 @@ where
 	T: Delta,
 {
 	type Delta = ContextDelta<T>;
-	fn apply(&mut self, delta: ContextDelta<T>) {
+	fn apply(&mut self, delta: &ContextDelta<T>) {
 		match delta {
 			ContextDelta::<T>::String(s, sd) => match sd {
-				StringDelta::Insert(id) => self.add_string(id, &s),
+				StringDelta::Insert(id) => self.add_string(*id, &s),
 				StringDelta::Remove => self.remove_string(&s),
 			},
 			ContextDelta::<T>::Concept(id, cd) => match cd {
 				ConceptDelta::<T>::Insert(c) => {
-					self.add_concept(c);
+					self.add_concept(*c);
 				},
-				ConceptDelta::<T>::Remove => self.blindly_remove_concept(id),
-				ConceptDelta::<T>::Update(d) => self.write_concept(id).apply(d),
+				ConceptDelta::<T>::Remove => self.blindly_remove_concept(*id),
+				ConceptDelta::<T>::Update(d) => self.write_concept(*id).apply(d),
 			},
 		};
 	}
@@ -114,33 +114,44 @@ impl<T> ConceptWriter<T> for Context<T> {
     }
 }
 
-impl<T> SetConceptDefinitionDelta for Context<T> 
+impl<T> SetConceptDefinitionDeltas<ContextDelta<T>> for Context<T> 
 where
-	Self: ConceptReader<T>,
-	T: SetDefinitionDelta,
+	Self: ConceptReader<T, ContextDelta<T>>,
+	T: SetDefinitionDelta + SetAsDefinitionOfDelta + Clone,
 {
-	fn set_concept_definition_delta(&self, concept: usize, lefthand: usize, righthand: usize) -> ZiaResult<ContextDelta<T>> {
-		Ok(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(try!(self.read_concept(concept).set_definition_delta(lefthand, righthand)))))
+	fn set_concept_definition_deltas(&self, concept: usize, lefthand: usize, righthand: usize) -> ZiaResult<Vec<ContextDelta<T>>> {
+		let mut deltas = Vec::<ContextDelta<T>>::new();
+		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(try!(self.read_concept(&deltas, concept).set_definition_delta(lefthand, righthand)))));
+		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(&deltas, lefthand).add_as_lefthand_of_delta(concept))));
+		deltas.push(ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(&deltas, righthand).add_as_righthand_of_delta(concept))));
+		Ok(deltas)
 	}
 }
 
-impl<T> SetConceptAsDefinitionOfDelta for Context<T>
+impl<T> ConceptReader<T, ContextDelta<T>> for Context<T> 
 where
-	Self: ConceptReader<T>,
-	T: SetAsDefinitionOfDelta,
+	T: Delta + Clone,
 {
-	fn add_concept_as_lefthand_of_delta(&self, concept: usize, definition: usize) -> ContextDelta<T> {
-		ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(concept).add_as_lefthand_of_delta(definition)))
-	}
-	fn add_concept_as_righthand_of_delta(&self, concept: usize, definition: usize) -> ContextDelta<T> {
-		ContextDelta::<T>::Concept(concept, ConceptDelta::<T>::Update(self.read_concept(concept).add_as_righthand_of_delta(definition)))
-	}
-}
-
-impl<T> ConceptReader<T> for Context<T> {
-    fn read_concept(&self, id: usize) -> &T {
-        match self.concepts[id] {
-            Some(ref c) => c,
+    fn read_concept(&self, deltas: &Vec<ContextDelta<T>>, id: usize) -> &T {
+        let mut concept_if_still_exists = &self.concepts[id];
+		for delta in deltas {
+			match delta {
+				ContextDelta::<T>::Concept(index, cd) => if *index == id {
+					match cd {
+						ConceptDelta::Insert(c) => concept_if_still_exists = &Some(c.clone()),
+						ConceptDelta::Remove => concept_if_still_exists = &None,
+						ConceptDelta::Update(d) => if let &Some(c) = concept_if_still_exists {
+							c.apply(d)
+						} else {
+							panic!("Deltas imply that a concept that doesn't exist will be updated!")
+						}
+					}
+				},
+				_ => (),
+			};
+		}
+		match concept_if_still_exists {
+            Some(c) => c,
             None => panic!("No concept with id = {}", id),
         }
     }
@@ -286,13 +297,13 @@ mod tests {
 			let mut cont = Context::<Concept>::default();
 			let concept_id = cont.add_concept(AbstractPart::default().into());
 			try!(cont.write_concept(concept_id).make_reduce_to(reduction));
-			assert_eq!(cont.read_concept(concept_id).get_reduction(), Some(reduction));
+			assert_eq!(cont.read_concept(&vec!(), concept_id).get_reduction(), Some(reduction));
 		}
 		#[test]
 		#[should_panic]
 		fn reading_a_concept_that_was_not_added(id: usize) {
 			let cont = Context::<Concept>::default();
-			cont.read_concept(id);		
+			cont.read_concept(&vec!(), id);		
 		}
 		#[test]
 		#[should_panic]
@@ -313,7 +324,7 @@ mod tests {
 		let mut cont = Context::<Concept>::default();
 		let concept_id = cont.add_concept(AbstractPart::default().into());
 		cont.blindly_remove_concept(concept_id);
-		cont.read_concept(concept_id);
+		cont.read_concept(&vec!(), concept_id);
 	}
 	#[test]
 	#[should_panic]

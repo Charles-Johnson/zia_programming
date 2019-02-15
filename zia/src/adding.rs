@@ -26,9 +26,9 @@ use writing::{
     SetDefinition, SetReduction, UpdateReduction,
 };
 
-pub trait ExecuteReduction<T>
+pub trait ExecuteReduction<T, D>
 where
-    Self: ConceptMaker<T> + DeleteReduction<T>,
+    Self: ConceptMaker<T, D> + DeleteReduction<T, D>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
@@ -59,9 +59,9 @@ where
     }
 }
 
-impl<S, T> ExecuteReduction<T> for S
+impl<S, T, D> ExecuteReduction<T, D> for S
 where
-    S: ConceptMaker<T> + DeleteReduction<T>,
+    S: ConceptMaker<T, D> + DeleteReduction<T, D>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
@@ -94,7 +94,7 @@ where
 
 impl<T> Container for T where T: MightExpand<T> + PartialEq<Rc<T>> + Sized {}
 
-pub trait ConceptMaker<T>
+pub trait ConceptMaker<T, D>
 where
     T: From<String>
         + From<Self::C>
@@ -107,7 +107,7 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + GetReduction,
-    Self: Labeller<T> + GetNormalForm<T>,
+    Self: Labeller<T, D> + GetNormalForm<T, D>,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
@@ -132,9 +132,9 @@ where
 }
 
 /// Preparing a context by labelling concrete concepts.
-pub trait ContextMaker<T>
+pub trait ContextMaker<T, D>
 where
-    Self: Labeller<T> + Default,
+    Self: Labeller<T, D> + Default,
     T: GetDefinitionOf
         + From<String>
         + From<Self::C>
@@ -154,9 +154,9 @@ where
     }
 }
 
-impl<S, T> ContextMaker<T> for S
+impl<S, T, D> ContextMaker<T, D> for S
 where
-    S: Labeller<T> + Default,
+    S: Labeller<T, D> + Default,
     T: GetDefinitionOf
         + From<String>
         + From<Self::C>
@@ -171,7 +171,7 @@ where
 {
 }
 
-pub trait Labeller<T>
+pub trait Labeller<T, D>
 where
     T: SetReduction
         + MakeReduceFrom
@@ -185,23 +185,23 @@ where
         + MaybeString
         + From<Self::C>
         + From<Self::A>,
-    Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
+    Self: StringMaker<T, D> + FindOrInsertDefinition<T, D> + UpdateReduction<T, D>,
 {
     type C: Default;
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let definition = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, deltas) = self.new_string(&vec!(), string);
-        self.apply_all(deltas);
+        self.apply_all(&deltas);
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
         let (new_default, delta) = self.new_default::<Self::A>(&vec!());
-        self.apply(delta);
+        self.apply(&delta);
         try!(self.label(new_default, string));
         Ok(new_default)
     }
     fn setup(&mut self) -> ZiaResult<()> {
-        let mut deltas = Vec::<Self::Delta>::new();
+        let mut deltas = Vec::<D>::new();
         deltas.reserve(4);
         let (label_concept, delta1) = self.new_default::<Self::C>(&deltas);
         deltas.push(delta1);
@@ -211,7 +211,7 @@ where
         deltas.push(delta3);
         let (let_concept, delta4) = self.new_default::<Self::C>(&deltas);
         deltas.push(delta4);
-        self.apply_all(deltas);
+        self.apply_all(&deltas);
 		try!(self.label(label_concept, "label_of"));
         try!(self.label(define_concept, ":="));
         try!(self.label(reduction_concept, "->"));
@@ -219,7 +219,7 @@ where
     }
 }
 
-pub trait FindOrInsertDefinition<T>
+pub trait FindOrInsertDefinition<T, D>
 where
     T: From<Self::A>
         + GetDefinition
@@ -227,7 +227,7 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + GetDefinitionOf,
-    Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
+    Self: DefaultMaker<T, D> + InsertDefinition<T, D> + FindDefinition<T, D>,
 {
     type A: Default;
     fn find_or_insert_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<usize> {
@@ -235,7 +235,7 @@ where
         match pair {
             None => {
                 let (definition, delta) = self.new_default::<Self::A>(&vec!());
-                self.apply(delta);
+                self.apply(&delta);
                 try!(self.insert_definition(definition, lefthand, righthand));
                 Ok(definition)
             }
@@ -244,12 +244,12 @@ where
     }
 }
 
-pub trait StringMaker<T>
+pub trait StringMaker<T, D>
 where
     T: From<String>,
-    Self: ConceptAdderDelta<T> + StringAdderDelta,
+    Self: ConceptAdderDelta<T, D> + StringAdderDelta<D>,
 {
-    fn new_string(&self, deltas: &Vec<Self::Delta>, string: &str) -> (usize, Vec<Self::Delta>) {
+    fn new_string(&self, deltas: &Vec<D>, string: &str) -> (usize, Vec<D>) {
         let string_concept = string.to_string().into();
         let (index, concept_delta) = self.add_concept_delta(deltas, string_concept);
         let string_delta = self.add_string_delta(index, string);
@@ -258,24 +258,24 @@ where
     }
 }
 
-impl<S, T> StringMaker<T> for S
+impl<S, T, D> StringMaker<T, D> for S
 where
     T: From<String>,
-    S: ConceptAdderDelta<T> + StringAdderDelta,
+    S: ConceptAdderDelta<T, D> + StringAdderDelta<D>,
 {
 }
 
-pub trait DefaultMaker<T>
+pub trait DefaultMaker<T, D>
 where
-    Self: ConceptAdderDelta<T>,
+    Self: ConceptAdderDelta<T, D>,
 {
-    fn new_default<V: Default + Into<T>>(&self, deltas: &Vec<Self::Delta>) -> (usize, Self::Delta) {
+    fn new_default<V: Default + Into<T>>(&self, deltas: &Vec<D>) -> (usize, D) {
         let concept: T = V::default().into();
         self.add_concept_delta(deltas, concept)
     }
 }
 
-impl<S, T> DefaultMaker<T> for S where S: ConceptAdderDelta<T> {}
+impl<S, T, D> DefaultMaker<T, D> for S where S: ConceptAdderDelta<T, D> {}
 
 #[cfg(test)]
 mod tests {
@@ -292,17 +292,17 @@ mod tests {
 		fn getting_new_strings_id(string: String) {
 			let mut cont = Context::<Concept>::default();
 			let (new_id, deltas) = cont.new_string(&vec!(), &string);
-            cont.apply_all(deltas);
+            cont.apply_all(&deltas);
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
-		fn getting_label_of_new_labelled_default(string: String) {
+		fn getting_label_of_new_labelled_default(string: String) { // Error! when string = ""
 			let mut cont = Context::<Concept>::default();
 			let concept_id = try!(cont.new_labelled_default(&string));
 			assert_eq!(cont.get_label(concept_id), Some(string));
 		}
 		#[test]
-		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! left = right = 0
 			let mut cont = Context::<Concept>::new();
 			assert_eq!(
 				try!(cont.find_or_insert_definition(left, right)), 
@@ -310,11 +310,11 @@ mod tests {
 			);
 		}
 		#[test]
-		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! for left = right = 0
 			let mut cont = Context::<Concept>::new();
 			let def = try!(cont.find_or_insert_definition(left, right));
 			assert_eq!(
-				cont.read_concept(def).get_definition(), 
+				cont.read_concept(&vec!(), def).get_definition(), 
 				Some((left, right)),
 			);
 		}
@@ -327,15 +327,15 @@ mod tests {
             assert!(ast3.contains(&ast2));
         }
         #[test]
-        fn concept_from_ast_has_the_right_label(s in "\\PC") {
+        fn concept_from_ast_has_the_right_label(s in "\\PC") { // Error! s = "a"
             let ast = SyntaxTree::from((s.clone(), None));
-            let mut cont = Context::default();
+            let mut cont = Context::new();
             let id = try!(cont.concept_from_ast(&ast));
             assert_eq!(cont.get_label(id), Some(s));
         }
     }
 	#[test]
-	fn getting_ids_of_concrete_concepts() {
+	fn getting_ids_of_concrete_concepts() { // Error!
 		let cont = Context::<Concept>::new();
 		assert_eq!(cont.concept_from_label("label_of"), Some(0));
 		assert_eq!(cont.concept_from_label(":="), Some(1));
@@ -345,22 +345,18 @@ mod tests {
 }
 
 
-pub trait StringAdderDelta 
-where
-    Self: Delta,
+pub trait StringAdderDelta<D>
 {
-    fn add_string_delta(&self, usize, &str) -> Self::Delta;
+    fn add_string_delta(&self, usize, &str) -> D;
 }
 
 pub trait StringAdder {
     fn add_string(&mut self, usize, &str);
 }
 
-pub trait ConceptAdderDelta<T> 
-where
-    Self: Delta,
+pub trait ConceptAdderDelta<T, D> 
 {
-    fn add_concept_delta(&self, &Vec<Self::Delta>, T) -> (usize, Self::Delta);
+    fn add_concept_delta(&self, &Vec<D>, T) -> (usize, D);
 }
 
 pub trait ConceptAdder<T> {

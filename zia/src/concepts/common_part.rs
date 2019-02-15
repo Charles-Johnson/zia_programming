@@ -19,7 +19,7 @@ use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
 use writing::{MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf, SetAsDefinitionOfDelta};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct CommonPart {
     /// Set of all indices of the concepts which have this concept as the lefthand of their definition
     lefthand_of: HashSet<usize>,
@@ -29,16 +29,15 @@ pub struct CommonPart {
     reduces_from: HashSet<usize>,
 }
 
-impl Delta for CommonPart {
-    type Delta = CommonDelta;
-    fn apply(&mut self, delta: CommonDelta) {
+impl Delta<CommonDelta> for CommonPart {
+    fn apply(&mut self, delta: &CommonDelta) {
         match delta {
-            CommonDelta::AddLeft(left) => self.add_as_lefthand_of(left),
-            CommonDelta::AddRight(right) => self.add_as_righthand_of(right),
-            CommonDelta::RemoveLeft(left) => self.remove_as_lefthand_of(left),
-            CommonDelta::RemoveRight(right) => self.remove_as_righthand_of(right),
-            CommonDelta::AddReducesFrom(concept) => self.make_reduce_from(concept),
-            CommonDelta::RemoveReducesFrom(concept) => self.no_longer_reduces_from(concept),
+            CommonDelta::AddLeft(left) => self.add_as_lefthand_of(*left),
+            CommonDelta::AddRight(right) => self.add_as_righthand_of(*right),
+            CommonDelta::RemoveLeft(left) => self.remove_as_lefthand_of(*left),
+            CommonDelta::RemoveRight(right) => self.remove_as_righthand_of(*right),
+            CommonDelta::AddReducesFrom(concept) => self.make_reduce_from(*concept),
+            CommonDelta::RemoveReducesFrom(concept) => self.no_longer_reduces_from(*concept),
         };
     }
 }

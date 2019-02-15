@@ -21,11 +21,12 @@ mod syntax;
 pub use self::concepts::*;
 pub use self::syntax::*;
 use constants::LABEL;
+use delta::Delta;
 use std::{collections::HashSet, fmt, rc::Rc};
 
-pub trait SyntaxReader<T>
+pub trait SyntaxReader<T, D>
 where
-    Self: GetLabel<T> + Combine<T>,
+    Self: GetLabel<T, D> + Combine<T, D>,
     T: GetDefinitionOf + GetDefinition + GetReduction + MaybeString,
 {
     /// Expands syntax by definition of its associated concept.
@@ -42,7 +43,7 @@ where
         ast: &Rc<U>,
     ) -> Rc<U> {
         if let Some(con) = ast.get_concept() {
-            if let Some((left, right)) = self.read_concept(con).get_definition() {
+            if let Some((left, right)) = self.read_concept(&vec!(), con).get_definition() {
                 self.combine(
                     &self.expand(&self.to_ast::<U>(left)),
                     &self.expand(&self.to_ast::<U>(right)),
@@ -102,8 +103,8 @@ where
         &self,
         concept: usize,
     ) -> Option<Rc<U>> {
-        match self.read_concept(concept).get_reduction() {
-            None => match self.read_concept(concept).get_definition() {
+        match self.read_concept(&vec!(), concept).get_reduction() {
+            None => match self.read_concept(&vec!(), concept).get_definition() {
                 Some((left, right)) => {
                     let left_result = self.reduce_concept::<U>(left);
                     let right_result = self.reduce_concept::<U>(right);
@@ -126,7 +127,7 @@ where
     ) -> Rc<U> {
         match self.get_label(concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
-            None => match self.read_concept(concept).get_definition() {
+            None => match self.read_concept(&vec!(), concept).get_definition() {
                 Some((left, right)) => {
                     self.combine(&self.to_ast::<U>(left), &self.to_ast::<U>(right))
                 }
@@ -180,23 +181,23 @@ where
     }
 }
 
-impl<S, T> SyntaxReader<T> for S
+impl<S, T, D> SyntaxReader<T, D> for S
 where
-    S: GetLabel<T> + Combine<T>,
+    S: GetLabel<T, D> + Combine<T, D>,
     T: GetDefinitionOf + GetDefinition + MaybeString + GetReduction,
 {
 }
-pub trait Display<T>
+pub trait Display<T, D>
 where
-    Self: GetLabel<T>,
+    Self: GetLabel<T, D>,
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
 {
     fn display(&self, concept: usize) -> String {
-        match self.read_concept(concept).get_string() {
+        match self.read_concept(&vec!(), concept).get_string() {
             Some(s) => "\"".to_string() + &s + "\"",
             None => match self.get_label(concept) {
                 Some(l) => l,
-                None => match self.read_concept(concept).get_definition() {
+                None => match self.read_concept(&vec!(), concept).get_definition() {
                     Some((left, right)) => {
                         let mut left_string = self.display(left);
                         if left_string.contains(' ') {
@@ -215,37 +216,37 @@ where
     }
 }
 
-impl<S, T> Display<T> for S
+impl<S, T, D> Display<T, D> for S
 where
-    S: GetLabel<T>,
+    S: GetLabel<T, D>,
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
 {
 }
-pub trait GetLabel<T>
+pub trait GetLabel<T, D>
 where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
-    Self: GetNormalForm<T> + GetConceptOfLabel<T>,
+    Self: GetNormalForm<T, D> + GetConceptOfLabel<T, D>,
 {
     fn get_label(&self, concept: usize) -> Option<String> {
         match self.get_concept_of_label(concept) {
             None => None,
             Some(d) => match self.get_normal_form(d) {
                 None => None,
-                Some(n) => self.read_concept(n).get_string(),
+                Some(n) => self.read_concept(&vec!(), n).get_string(),
             },
         }
     }
 }
 
-impl<S, T> GetLabel<T> for S
+impl<S, T, D> GetLabel<T, D> for S
 where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
-    S: GetNormalForm<T> + GetConceptOfLabel<T>,
+    S: GetNormalForm<T, D> + GetConceptOfLabel<T, D>,
 {
 }
-pub trait Combine<T>
+pub trait Combine<T, D>
 where
-    Self: FindDefinition<T>,
+    Self: FindDefinition<T, D>,
     T: GetDefinitionOf,
 {
     fn combine<U: DisplayJoint + MaybeConcept + Pair<U> + Sized>(
@@ -268,21 +269,21 @@ where
     }
 }
 
-impl<S, T> Combine<T> for S
+impl<S, T, D> Combine<T, D> for S
 where
     T: GetDefinitionOf,
-    S: FindDefinition<T>,
+    S: FindDefinition<T, D>,
 {
 }
-pub trait Label<T>
+pub trait Label<T, D>
 where
     T: GetDefinition + FindWhatReducesToIt,
-    Self: FindWhatItsANormalFormOf<T>,
+    Self: FindWhatItsANormalFormOf<T, D>,
 {
     fn get_labellee(&self, concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
         for label in self.find_what_its_a_normal_form_of(concept) {
-            match self.read_concept(label).get_definition() {
+            match self.read_concept(&vec!(), label).get_definition() {
                 None => continue,
                 Some((r, x)) => {
                     if r == LABEL {
@@ -301,19 +302,19 @@ where
     }
 }
 
-impl<S, T> Label<T> for S
+impl<S, T, D> Label<T, D> for S
 where
-    S: FindWhatItsANormalFormOf<T>,
+    S: FindWhatItsANormalFormOf<T, D>,
     T: GetDefinition + FindWhatReducesToIt,
 {
 }
-pub trait GetNormalForm<T>
+pub trait GetNormalForm<T, D>
 where
     T: GetReduction,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
 {
     fn get_normal_form(&self, concept: usize) -> Option<usize> {
-        match self.read_concept(concept).get_reduction() {
+        match self.read_concept(&vec!(), concept).get_reduction() {
             None => None,
             Some(n) => match self.get_normal_form(n) {
                 None => Some(n),
@@ -323,21 +324,21 @@ where
     }
 }
 
-impl<S, T> GetNormalForm<T> for S
+impl<S, T, D> GetNormalForm<T, D> for S
 where
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
     T: GetReduction,
 {
 }
 
-pub trait GetConceptOfLabel<T>
+pub trait GetConceptOfLabel<T, D>
 where
     T: GetDefinition + GetDefinitionOf,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
 {
     fn get_concept_of_label(&self, concept: usize) -> Option<usize> {
-        for candidate in self.read_concept(concept).get_righthand_of().iter() {
-            match self.read_concept(*candidate).get_definition() {
+        for candidate in self.read_concept(&vec!(), concept).get_righthand_of().iter() {
+            match self.read_concept(&vec!(), *candidate).get_definition() {
                 None => panic!("Candidate should have a definition!"),
                 Some((left, _)) => {
                     if left == LABEL {
@@ -350,31 +351,31 @@ where
     }
 }
 
-impl<S, T> GetConceptOfLabel<T> for S
+impl<S, T, D> GetConceptOfLabel<T, D> for S
 where
     T: GetDefinition + GetDefinitionOf,
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
 {
 }
 
-pub trait MaybeDisconnected<T>
+pub trait MaybeDisconnected<T, D>
 where
     T: GetReduction + FindWhatReducesToIt + GetDefinition + GetDefinitionOf,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
 {
     fn is_disconnected(&self, concept: usize) -> bool {
-        self.read_concept(concept).get_reduction().is_none()
-            && self.read_concept(concept).get_definition().is_none()
-            && self.read_concept(concept).get_lefthand_of().is_empty()
+        self.read_concept(&vec!(), concept).get_reduction().is_none()
+            && self.read_concept(&vec!(), concept).get_definition().is_none()
+            && self.read_concept(&vec!(), concept).get_lefthand_of().is_empty()
             && self.righthand_of_without_label_is_empty(concept)
             && self
-                .read_concept(concept)
+                .read_concept(&vec!(), concept)
                 .find_what_reduces_to_it()
                 .is_empty()
     }
     fn righthand_of_without_label_is_empty(&self, con: usize) -> bool {
-        for concept in self.read_concept(con).get_righthand_of().iter() {
-            if let Some((left, _)) = self.read_concept(*concept).get_definition() {
+        for concept in self.read_concept(&vec!(), con).get_righthand_of().iter() {
+            if let Some((left, _)) = self.read_concept(&vec!(), *concept).get_definition() {
                 if left != LABEL {
                     return false;
                 }
@@ -384,21 +385,21 @@ where
     }
 }
 
-impl<S, T> MaybeDisconnected<T> for S
+impl<S, T, D> MaybeDisconnected<T, D> for S
 where
     T: GetReduction + FindWhatReducesToIt + GetDefinition + GetDefinitionOf,
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
 {
 }
 
-pub trait FindDefinition<T>
+pub trait FindDefinition<T, D>
 where
     T: GetDefinitionOf,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
 {
     fn find_definition(&self, lefthand: usize, righthand: usize) -> Option<usize> {
-        let has_lefthand = self.read_concept(lefthand).get_lefthand_of();
-        let has_righthand = self.read_concept(righthand).get_righthand_of();
+        let has_lefthand = self.read_concept(&vec!(), lefthand).get_lefthand_of();
+        let has_righthand = self.read_concept(&vec!(), righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
         match candidates.next() {
             None => None,
@@ -412,20 +413,20 @@ where
     }
 }
 
-impl<S, T> FindDefinition<T> for S
+impl<S, T, D> FindDefinition<T, D> for S
 where
     T: GetDefinitionOf,
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
 {
 }
 
-pub trait FindWhatItsANormalFormOf<T>
+pub trait FindWhatItsANormalFormOf<T, D>
 where
     T: FindWhatReducesToIt,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
 {
     fn find_what_its_a_normal_form_of(&self, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(con).find_what_reduces_to_it();
+        let mut normal_form_of = self.read_concept(&vec!(), con).find_what_reduces_to_it();
         for concept in normal_form_of.clone().iter() {
             for concept2 in self.find_what_its_a_normal_form_of(*concept).iter() {
                 normal_form_of.insert(*concept2);
@@ -435,20 +436,20 @@ where
     }
 }
 
-impl<S, T> FindWhatItsANormalFormOf<T> for S
+impl<S, T, D> FindWhatItsANormalFormOf<T, D> for S
 where
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
     T: FindWhatReducesToIt,
 {
 }
 
-pub trait Container<T>
+pub trait Container<T, D>
 where
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T, D>,
     T: GetDefinition,
 {
     fn contains(&self, outer: usize, inner: usize) -> bool {
-        if let Some((left, right)) = self.read_concept(outer).get_definition() {
+        if let Some((left, right)) = self.read_concept(&vec!(), outer).get_definition() {
             left == inner
                 || right == inner
                 || self.contains(left, inner)
@@ -459,13 +460,14 @@ where
     }
 }
 
-impl<S, T> Container<T> for S
+impl<S, T, D> Container<T, D> for S
 where
-    S: ConceptReader<T>,
+    S: ConceptReader<T, D>,
     T: GetDefinition,
 {
 }
 
-pub trait ConceptReader<T> {
-    fn read_concept(&self, usize) -> &T;
+pub trait ConceptReader<T, D> 
+{
+    fn read_concept(&self, &Vec<D>, usize) -> &T;
 }
