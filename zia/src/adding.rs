@@ -296,13 +296,13 @@ mod tests {
 			assert_eq!(cont.get_string_concept(&string), Some(new_id));
 		}
 		#[test]
-		fn getting_label_of_new_labelled_default(string: String) {
+		fn getting_label_of_new_labelled_default(string: String) { // Error! when string = ""
 			let mut cont = Context::<Concept>::default();
 			let concept_id = try!(cont.new_labelled_default(&string));
 			assert_eq!(cont.get_label(concept_id), Some(string));
 		}
 		#[test]
-		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn the_same_pair_of_ids_has_the_same_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! left = right = 0
 			let mut cont = Context::<Concept>::new();
 			assert_eq!(
 				try!(cont.find_or_insert_definition(left, right)), 
@@ -310,7 +310,7 @@ mod tests {
 			);
 		}
 		#[test]
-		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) {
+		fn correct_definition(left in 0usize..4usize, right in 0usize..4usize) { // Error! for left = right = 0
 			let mut cont = Context::<Concept>::new();
 			let def = try!(cont.find_or_insert_definition(left, right));
 			assert_eq!(
@@ -327,15 +327,15 @@ mod tests {
             assert!(ast3.contains(&ast2));
         }
         #[test]
-        fn concept_from_ast_has_the_right_label(s in "\\PC") {
+        fn concept_from_ast_has_the_right_label(s in "\\PC") { // Error! s = "a"
             let ast = SyntaxTree::from((s.clone(), None));
-            let mut cont = Context::default();
+            let mut cont = Context::new();
             let id = try!(cont.concept_from_ast(&ast));
             assert_eq!(cont.get_label(id), Some(s));
         }
     }
 	#[test]
-	fn getting_ids_of_concrete_concepts() {
+	fn getting_ids_of_concrete_concepts() { // Error!
 		let cont = Context::<Concept>::new();
 		assert_eq!(cont.concept_from_label("label_of"), Some(0));
 		assert_eq!(cont.concept_from_label(":="), Some(1));
@@ -345,7 +345,7 @@ mod tests {
 }
 
 
-pub trait StringAdderDelta 
+pub trait StringAdderDelta
 where
     Self: Delta,
 {
