@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use logging::Logger;
 pub use delta::Delta;
 pub use errors::{ZiaError, ZiaResult};
 pub use reading::{
@@ -95,27 +96,32 @@ where
 pub trait UpdateReduction<T>
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T>,
+    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
 {
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
         if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
+                trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)", concept, reduction);
                 return Err(ZiaError::CyclicReduction);
             }
         }
         if let Some(r) = self.read_concept(&vec!(), concept).get_reduction() {
             if r == reduction {
+                trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction);
                 return Err(ZiaError::RedundantReduction);
             }
         }
         let r = try!(self.get_reduction_of_composition(concept));
         if r == reduction {
+            trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction);
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
+            trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)", concept, reduction);
             return Err(ZiaError::MultipleReductionPaths);
         }
         try!(self.write_concept(concept).make_reduce_to(reduction));
         self.write_concept(reduction).make_reduce_from(concept);
+        trace!(self.logger(), "update_reduction({}, {}) -> Ok(())", concept, reduction);
         Ok(())
     }
     fn get_reduction_of_composition(&self, concept: usize) -> ZiaResult<usize> {
@@ -143,7 +149,7 @@ where
 impl<S, T> UpdateReduction<T> for S
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    S: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T>,
+    S: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
 {
 }
 

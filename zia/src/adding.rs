@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use reading::DisplayJoint;
 use logging::Logger;
 use constants::LABEL;
 use delta::Delta;
@@ -29,7 +30,7 @@ use writing::{
 
 pub trait ExecuteReduction<T>
 where
-    Self: ConceptMaker<T> + DeleteReduction<T>,
+    Self: ConceptMaker<T> + DeleteReduction<T> + Logger,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
@@ -43,9 +44,10 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString,
-    Self::S: Container + PartialEq,
+    Self::S: Container + PartialEq + DisplayJoint,
 {
     fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
+        trace!(self.logger(), "execute_reduction({}, {})", syntax.display_joint(), normal_form.display_joint());
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
@@ -62,7 +64,7 @@ where
 
 impl<S, T> ExecuteReduction<T> for S
 where
-    S: ConceptMaker<T> + DeleteReduction<T>,
+    S: ConceptMaker<T> + DeleteReduction<T> + Logger,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
@@ -76,7 +78,7 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString,
-    Self::S: Container + PartialEq<Self::S>,
+    Self::S: Container + PartialEq<Self::S> + DisplayJoint,
 {
 }
 
@@ -108,16 +110,22 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + GetReduction,
-    Self: Labeller<T> + GetNormalForm<T>,
+    Self: Labeller<T> + GetNormalForm<T> + Logger,
+    Self::S: DisplayJoint,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
+            trace!(self.logger(), "concept_from_ast({}) -> Ok({})", ast.display_joint(), c);
             Ok(c)
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => self.new_labelled_default(string),
+                None => {
+                    let new_concept = try!(self.new_labelled_default(string));
+                    trace!(self.logger(), "concept_from_ast({}) -> Ok({})", ast.display_joint(), new_concept);
+                    Ok(new_concept)
+                },
                 Some((ref left, ref right)) => {
                     let mut leftc = try!(self.concept_from_ast(left));
                     let mut rightc = try!(self.concept_from_ast(right));
@@ -125,6 +133,7 @@ where
                     if !string.contains(' ') {
                         try!(self.label(concept, string));
                     }
+                    trace!(self.logger(), "concept_from_ast({}) -> Ok({})", ast.display_joint(), concept);
                     Ok(concept)
                 }
             }
