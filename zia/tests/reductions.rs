@@ -54,6 +54,7 @@ proptest! {
 	// Checking whether two reduction rules can be correctly chained together for an expression with a nested pair.
 	#[test]
 	fn nested_pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+		prop_assume!(b != c);
 		let mut cont = Context::new();
 		reduce_pair!(cont, a, b, c);
 		reduce_pair!(cont, a, c, b);

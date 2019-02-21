@@ -15,6 +15,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use reading::FindWhatReducesToIt;
+use translating::SyntaxFinder;
 use reading::DisplayJoint;
 use logging::Logger;
 use constants::LABEL;
@@ -43,7 +45,8 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + GetDefinition
-        + MaybeString,
+        + MaybeString
+        + FindWhatReducesToIt,
     Self::S: Container + PartialEq + DisplayJoint,
 {
     fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
@@ -77,7 +80,8 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + GetDefinition
-        + MaybeString,
+        + MaybeString
+        + FindWhatReducesToIt,
     Self::S: Container + PartialEq<Self::S> + DisplayJoint,
 {
 }
@@ -109,13 +113,17 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + GetReduction,
-    Self: Labeller<T> + GetNormalForm<T> + Logger,
+        + GetReduction
+        + FindWhatReducesToIt,
+    Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::S: DisplayJoint,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
+            trace!(self.logger(), "concept_from_ast({}) -> Ok({})", ast.display_joint(), c);
+            Ok(c)
+        } else if let Some(c) = self.concept_from_label(&ast.display_joint()) {
             trace!(self.logger(), "concept_from_ast({}) -> Ok({})", ast.display_joint(), c);
             Ok(c)
         } else {
@@ -155,7 +163,8 @@ where
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + FindWhatReducesToIt,
 {
     fn new() -> Self {
         let mut cont = Self::default();
@@ -178,7 +187,8 @@ where
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + FindWhatReducesToIt,
 {
 }
 
