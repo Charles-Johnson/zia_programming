@@ -18,7 +18,7 @@ use reading::{DisplayJoint, MaybeConcept, MightExpand, Pair};
 use std::{fmt, rc::Rc};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SyntaxTree {
     /// The root of this syntax tree, represented as a `String`.
     syntax: String,

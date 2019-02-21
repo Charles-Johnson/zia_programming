@@ -141,6 +141,7 @@ use constants::{LABEL, DEFINE, LET, REDUCTION};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
 use errors::ZiaResult;
+use std::fmt::Debug;
 use logging::Logger;
 use reading::{
     DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
@@ -179,6 +180,7 @@ where
         + FindWhatReducesToIt,
     Self::S: Container
         + Pair<Self::S>
+        + Debug
         + Clone
         + From<(String, Option<usize>)>
         + DisplayJoint
@@ -221,6 +223,7 @@ where
         + Clone
         + From<(String, Option<usize>)>
         + DisplayJoint
+        + Debug
         + PartialEq<Self::S>,
 {
 }
@@ -243,7 +246,7 @@ impl ConceptMaker<Concept> for Context {
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  
 pub trait Call<T>
 where
-    Self: Definer<T> + ExecuteReduction<T> + SyntaxReader<T>,
+    Self: Definer<T> + ExecuteReduction<T> + SyntaxReader<T> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -265,10 +268,12 @@ where
         + Clone
         + From<(String, Option<usize>)>
         + DisplayJoint
-        + PartialEq<Self::S>,
+        + PartialEq<Self::S>
+        + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
+        trace!(self.logger(), "call {:?}", ast);
 		if let Some(c) = ast.get_concept() {
 			if let Some(s) = self.read_concept(&vec!(), c).get_string() {
 				return Ok(s);
@@ -380,7 +385,7 @@ where
 
 impl<S, T> Call<T> for S
 where
-    S: Definer<T> + ExecuteReduction<T> + SyntaxReader<T>,
+    S: Definer<T> + ExecuteReduction<T> + SyntaxReader<T> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -400,6 +405,7 @@ where
     S::S: Container
         + Pair<S::S>
         + Clone
+        + Debug
         + From<(String, Option<usize>)>
         + DisplayJoint
         + PartialEq<Self::S>,
