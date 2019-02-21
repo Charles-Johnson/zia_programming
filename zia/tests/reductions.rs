@@ -24,7 +24,7 @@ extern crate zia;
 use test_zia::CONCRETE_SYMBOLS;
 use zia::{Context, ContextMaker, Execute, ZiaError};
 
-// Common pattern in tests where a pair of symbols reduces to another symbol. If `a == b` the tests that use this macro fail as if they forgot the reduction rule.
+// Common pattern in tests where a pair of symbols reduces to another symbol. If `b == c` and `b` and `c` are previously unused symbols the tests that use this macro fail as if they forgot the reduction rule.
 macro_rules! reduce_pair {
 	($cont:ident, $a:ident, $b:ident, $c:ident) => (
 		assume_symbols!($a, $b, $c);

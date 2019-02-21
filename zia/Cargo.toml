@@ -17,6 +17,10 @@ maintenance = {status = "actively-developed"}
 name = "zia"
 crate-type = ["lib"]
 
+[dependencies]
+slog = { version="2.4.1", features=["max_level_trace", "release_max_level_warn"]}
+slog-term = "2.4.0"
+
 [dev-dependencies]
 test_zia = {path = "tests/test_zia"}
 proptest = "0.9.1"

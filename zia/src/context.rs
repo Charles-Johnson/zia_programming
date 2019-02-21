@@ -18,8 +18,11 @@
 use adding::{ConceptAdder, StringAdder, StringAdderDelta, ConceptAdderDelta};
 use delta::Delta;
 use errors::ZiaResult;
+use logging::Logger;
 use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
+use slog;
+use slog::Drain;
 use std::collections::{HashMap, HashSet};
 use translating::StringConcept;
 use writing::{ConceptWriter, SetConceptDefinitionDeltas, SetDefinitionDelta, SetAsDefinitionOfDelta};
@@ -34,6 +37,13 @@ pub struct Context<T> {
     concepts: Vec<Option<T>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
+	logger: slog::Logger,
+}
+
+impl<T> Logger for Context<T> {
+	fn logger(&mut self) -> &mut slog::Logger {
+		&mut self.logger
+	}
 }
 
 pub enum ContextDelta<T> 
@@ -82,10 +92,16 @@ where
 
 impl<T> Default for Context<T> {
     fn default() -> Context<T> {
+		let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+    	let logger = slog::Logger::root(
+        	slog_term::FullFormat::new(plain)
+        	.build().fuse(), o!()
+    	);
         Context::<T> {
             string_map: HashMap::new(),
             concepts: Vec::new(),
             gaps: Vec::new(),
+			logger
         }
     }
 }

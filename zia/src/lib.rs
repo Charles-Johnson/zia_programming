@@ -89,6 +89,10 @@
 //! assert_eq!(context.execute("let (e (:= (a d)))"), ZiaError::ExpandingReduction.to_string());
 //! ```
 
+#[macro_use]
+extern crate slog;
+extern crate slog_term;
+
 #[cfg(test)]
 #[macro_use]
 extern crate proptest; 
@@ -114,6 +118,9 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+// Trait for logging.
+mod logging;
+
 /// Traits for reading concepts within the context.
 mod reading;
 
@@ -134,6 +141,7 @@ use constants::{LABEL, DEFINE, LET, REDUCTION};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
 use errors::ZiaResult;
+use logging::Logger;
 use reading::{
     DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
     MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
@@ -152,7 +160,7 @@ pub type Context = GenericContext<Concept>;
 /// Executing a command based on a string to add, write, read, or remove contained concepts.  
 pub trait Execute<T>
 where
-    Self: Call<T> + SyntaxConverter<T>,
+    Self: Call<T> + SyntaxConverter<T> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -177,6 +185,7 @@ where
         + PartialEq<Self::S>,
 {
     fn execute(&mut self, command: &str) -> String {
+        trace!(self.logger(), "execute({})", command);
         let ast = match self.ast_from_expression(command) {
             Ok(a) => a,
             Err(e) => return e.to_string(),
@@ -206,7 +215,7 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt,
-    S: Call<T> + SyntaxConverter<T>,
+    S: Call<T> + SyntaxConverter<T> + Logger,
     S::S: Container
         + Pair<S::S>
         + Clone

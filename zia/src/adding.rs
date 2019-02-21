@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use logging::Logger;
 use constants::LABEL;
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
@@ -134,7 +135,7 @@ where
 /// Preparing a context by labelling concrete concepts.
 pub trait ContextMaker<T>
 where
-    Self: Labeller<T> + Default,
+    Self: Labeller<T> + Default + Logger,
     T: GetDefinitionOf
         + From<String>
         + From<Self::C>
@@ -150,13 +151,14 @@ where
     fn new() -> Self {
         let mut cont = Self::default();
         cont.setup().unwrap();
+        trace!(cont.logger(), "Setup a new context");
         cont
     }
 }
 
 impl<S, T> ContextMaker<T> for S
 where
-    S: Labeller<T> + Default,
+    S: Labeller<T> + Default + Logger,
     T: GetDefinitionOf
         + From<String>
         + From<Self::C>
