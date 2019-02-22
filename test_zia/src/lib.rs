@@ -21,6 +21,16 @@ extern crate proptest;
 
 use std::collections::HashSet;
 
+// Common pattern in tests where a pair of symbols reduces to another symbol. If `b == c` and `b` and `c` are previously unused symbols the tests that use this macro fail as if they forgot the reduction rule.
+#[macro_export]
+macro_rules! reduce_pair {
+    ($cont:ident, $a:ident, $b:ident, $c:ident) => {
+        assume_symbols!($a, $b, $c);
+        let reduction = format!("let (({} {}) (-> {}))", $a, $b, $c);
+        prop_assert_eq!($cont.execute(&reduction), "");
+    };
+}
+
 // Checks if a string can respresent a symbol
 #[macro_export]
 macro_rules! assume_symbol {

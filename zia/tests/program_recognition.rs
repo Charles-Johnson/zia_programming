@@ -56,20 +56,17 @@ proptest! {
     }
     // A previously used symbol cannot be interpreted as a program unless the concept is composed of any concrete concepts.
     #[test]
-    fn used_symbol_is_not_a_program(a in "\\PC*", b in "\\PC*") {
-        prop_assume!(a != b);
+    fn used_symbol_is_not_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
-        let_reduction!(cont, a, b);
-        assert_eq!(cont.execute(&a), ZiaError::NotAProgram.to_string());
+        reduce_pair!(cont, a, b, c);
+        assert_eq!(cont.execute(&c), ZiaError::NotAProgram.to_string());
     }
     // A pair of previously used symbols cannot be interpreted as a program unless their concepts are composed of any concrete concepts.
     #[test]
-    fn used_symbol_in_a_pair_is_not_a_program(a in "\\PC*", b in "\\PC*") {
-        prop_assume!(a != b);
-        assume_abstract!(b);
+    fn used_symbol_in_a_pair_is_not_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
-        let_reduction!(cont, a, b);
-        let command = format!("{} {}", a, b);
+        reduce_pair!(cont, a, b, c);
+        let command = format!("{} {}", a, c);
         assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
     }
     // An expression with a nested pair composed of previously used symbols cannot be interpreted as a program unless their concepts are composed of any concrete concepts.
@@ -82,33 +79,33 @@ proptest! {
         assume_abstract!(c);
         prop_assume!((a != b) && (b != c) && (c != a));
         let mut cont = Context::new();
-        let_reduction!(cont, a, b);
-        let_reduction!(cont, b, c);
+        reduce_pair!(cont, a, b, c);
         let command = format!("{} ({} {})", a, b, c);
         assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
     }
     #[test]
-    fn symbol_whose_normal_form_is_a_program_is_a_program(a in "\\PC*", b in "\\PC*") {
-        assume_symbols!(a, b);
+    fn symbol_whose_normal_form_is_a_program_is_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+        assume_symbols!(a, b, c);
         let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let ({} (-> ((label_of {}) ->)))", a, b)), "");
-        assert_eq!(cont.execute(&a), ZiaError::NotAProgram.to_string());
-        assert_eq!(cont.execute(&format!("{} ->", a)), b);
+        assert_eq!(cont.execute(&format!("let (({} {}) (-> ((label_of {}) ->)))", a, b, c)), "");
+        assert_eq!(cont.execute(&format!("({} {}) ->", a, b)), c);
     }
     #[test]
     fn symbol_whose_definition_is_a_program_is_a_program(a in "\\PC*", b in "\\PC*") {
         assume_symbols!(a, b);
         prop_assume!(a != b);
         let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let ({} (:= ((label_of({} :=))->))", a, b)), "");
+        assert_eq!(cont.execute(&format!("let ({} (:= ((label_of {}) ->)))", a, b)), "");
         assert_eq!(cont.execute(&a), b);
     }
     #[test]
-    fn symbol_whose_normal_form_is_a_builtin_concept(a in "\\PC*", b in "\\PC*") {
-        assume_symbols!(a, b);
+    fn pair_whose_normal_form_is_a_builtin_concept(a in "\\PC*", b in "\\PC*", d in "\\PC*") {
+        assume_symbol!(d);
         let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let ({} (-> :=))", a)), "");
+        let c = ":=";
+        reduce_pair!(cont, a, b, c);
         assert_eq!(cont.execute(&format!("{} {}", a, b)), ZiaError::NotAProgram.to_string());
-        assert_eq!(cont.execute(&format!("(label_of (({} {}) ->)) ->", b, a)), b);
+        assert_eq!(cont.execute(&format!("let ({} (({} {}) {})) ->", d, a, b, b)), "");
+        assert_eq!(cont.execute(&format!("(label_of ({} {})) ->", a, d)), c);
     }
 }
