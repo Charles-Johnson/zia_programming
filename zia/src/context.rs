@@ -77,16 +77,16 @@ where
     type Delta = ContextDelta<T>;
     fn apply(&mut self, delta: &ContextDelta<T>) {
         match delta {
-            ContextDelta::<T>::String(s, sd) => match sd {
+            ContextDelta::String(s, sd) => match sd {
                 StringDelta::Insert(id) => self.add_string(*id, &s),
                 StringDelta::Remove => self.remove_string(&s),
             },
-            ContextDelta::<T>::Concept(id, cd) => match cd {
-                ConceptDelta::<T>::Insert(c) => {
+            ContextDelta::Concept(id, cd) => match cd {
+                ConceptDelta::Insert(c) => {
                     self.add_concept(c.clone());
                 }
-                ConceptDelta::<T>::Remove => self.blindly_remove_concept(*id),
-                ConceptDelta::<T>::Update(d) => self.write_concept(*id).apply(d),
+                ConceptDelta::Remove => self.blindly_remove_concept(*id),
+                ConceptDelta::Update(d) => self.write_concept(*id).apply(d),
             },
         };
     }
@@ -116,7 +116,7 @@ where
     T: Delta + Clone,
 {
     fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
-        ContextDelta::<T>::String(string.to_string(), StringDelta::Insert(string_id))
+        ContextDelta::String(string.to_string(), StringDelta::Insert(string_id))
     }
 }
 
@@ -144,23 +144,23 @@ where
         let concept_delta1 = try!(self
             .read_concept(&deltas, concept)
             .set_definition_delta(lefthand, righthand));
-        deltas.push(ContextDelta::<T>::Concept(
+        deltas.push(ContextDelta::Concept(
             concept,
-            ConceptDelta::<T>::Update(concept_delta1),
+            ConceptDelta::Update(concept_delta1),
         ));
         let concept_delta2 = self
             .read_concept(&deltas, lefthand)
             .add_as_lefthand_of_delta(concept);
-        deltas.push(ContextDelta::<T>::Concept(
+        deltas.push(ContextDelta::Concept(
             lefthand,
-            ConceptDelta::<T>::Update(concept_delta2),
+            ConceptDelta::Update(concept_delta2),
         ));
         let concept_delta3 = self
             .read_concept(&deltas, righthand)
             .add_as_righthand_of_delta(concept);
-        deltas.push(ContextDelta::<T>::Concept(
+        deltas.push(ContextDelta::Concept(
             righthand,
-            ConceptDelta::<T>::Update(concept_delta3),
+            ConceptDelta::Update(concept_delta3),
         ));
         Ok(deltas)
     }
@@ -176,7 +176,7 @@ where
             None => None,
         };
         for delta in deltas {
-            if let ContextDelta::<T>::Concept(index, cd) = delta {
+            if let ContextDelta::Concept(index, cd) = delta {
                 if *index == id {
                     match cd {
                         ConceptDelta::Insert(c) => concept_if_still_exists = Some(c.clone()),
@@ -245,7 +245,7 @@ where
         let mut new_concept_length = self.concepts.len();
         for delta in deltas {
             match delta {
-                ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Insert(_)) => {
+                ContextDelta::Concept(id, ConceptDelta::Insert(_)) => {
                     if *id < new_concept_length {
                         removed_gaps.insert(*id);
                     } else if *id == new_concept_length {
@@ -254,7 +254,7 @@ where
                         panic!("Deltas imply that a new concept has been given too large an id.")
                     }
                 }
-                ContextDelta::<T>::Concept(id, ConceptDelta::<T>::Remove) => {
+                ContextDelta::Concept(id, ConceptDelta::Remove) => {
                     added_gaps.push(*id);
                     removed_gaps.remove(&id);
                 }
@@ -301,7 +301,7 @@ where
         }
         (
             index,
-            ContextDelta::<T>::Concept(index, ConceptDelta::Insert(concept)),
+            ContextDelta::Concept(index, ConceptDelta::Insert(concept)),
         )
     }
 }
