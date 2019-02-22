@@ -1,6 +1,13 @@
 [package]
 name = "test_zia"
 version = "0.1.0"
+authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
+description = "Test Library for the Zia Programming Language"
+repository = "https://github.com/Charles-Johnson/zia_programming"
+license = "GPL-3.0"
+
+[badges]
+maintenance = {status = "actively-developed"}
 
 [lib]
 name = "test_zia"
