@@ -147,39 +147,6 @@ where
 	}
 }
 
-#[cfg(test)]
-mod delta_tests {
-	use {Context, Concept};
-	use adding::DefaultMaker;
-	use concepts::AbstractPart;
-	use context::{ContextDelta, ConceptDelta};
-	use delta::Delta;
-	use writing::SetConceptDefinitionDeltas;
-	#[test] 
-	fn delta_test() {
-		let mut cont = Context::default();
-		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
-		cont.apply(&delta);
-		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
-		cont.apply(&delta);
-		let delta = cont.new_default::<AbstractPart>(&vec!()).1;
-		cont.apply(&delta);
-		for delta in cont.set_concept_definition_deltas(0, 1, 2).unwrap() {
-			match delta {
-				ContextDelta::Concept(concept, cd) => {
-					println!("Concept: {}", concept);
-					match cd {
-						ConceptDelta::<Concept>::Update(_) => println!("Updated"),
-						ConceptDelta::<Concept>::Remove => println!("Removed"),
-						ConceptDelta::<Concept>::Insert(_) => println!("Inserted",)
-					};
-				},
-				_ => (),
-			};
-		}
-	}
-}
-
 impl<T> ConceptReader<T> for Context<T> 
 where
 	T: Delta + Clone,
@@ -306,39 +273,6 @@ where
 	}
 }
 
-#[cfg(test)]
-mod add_concept_delta_test {
-	use {Concept, Context};
-	use adding::{ConceptAdderDelta, ContextMaker};
-	use concepts::AbstractPart;
-	use context::{ContextDelta, ConceptDelta};
-	#[test]
-	fn test() {
-		let cont = Context::new();
-		match cont.add_concept_delta(&vec!(), Concept::from(AbstractPart::default())){
-			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
-			_ => (),
-		};
-		match cont.add_concept_delta(&vec!(ContextDelta::<Concept>::Concept(9, ConceptDelta::Remove)), Concept::from(AbstractPart::default())){
-			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
-			_ => (),
-		};
-		match cont.add_concept_delta(&vec!(
-			ContextDelta::<Concept>::Concept(9, ConceptDelta::Remove),
-			ContextDelta::<Concept>::Concept(9, ConceptDelta::Insert(Concept::from(AbstractPart::default()))),
-		), Concept::from(AbstractPart::default())){
-			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
-			_ => (),
-		};
-		match cont.add_concept_delta(&vec!(
-			ContextDelta::<Concept>::Concept(12, ConceptDelta::Insert(Concept::from(AbstractPart::default()))),
-		), Concept::from(AbstractPart::default())){
-			(_, ContextDelta::<Concept>::Concept(index, ConceptDelta::Insert(_))) => println!("concept: {} inserted", index),
-			_ => (),
-		};
-	}
-}
-
 impl<T> StringConcept for Context<T> {
     fn get_string_concept(&self, s: &str) -> Option<usize> {
         match self.string_map.get(s) {
@@ -346,82 +280,4 @@ impl<T> StringConcept for Context<T> {
             Some(sr) => Some(*sr),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-	use adding::{StringAdder, ConceptAdder};
-	use concepts::{Concept, AbstractPart};
-	use context::Context;
-	use reading::{ConceptReader, GetReduction};
-	use removing::{BlindConceptRemover, StringRemover};
-	use translating::StringConcept;
-	use writing::{ConceptWriter, SetReduction};
-	proptest!{
-		#[test]
-		fn getting_the_string_that_was_added(id: usize, string: String) {
-			let mut cont = Context::<Concept>::default();
-			cont.add_string(id, &string);
-			assert_eq!(cont.get_string_concept(&string), Some(id))
-		}
-		#[test]
-		fn not_getting_the_string_that_was_not_added(string: String) {
-			let cont = Context::<Concept>::default();
-			assert_eq!(cont.get_string_concept(&string), None);
-		}
-		#[test]
-		fn not_getting_the_string_that_was_removed(id: usize, string: String) {
-			let mut cont = Context::<Concept>::default();
-			cont.add_string(id, &string);
-			cont.remove_string(&string);
-			assert_eq!(cont.get_string_concept(&string), None);
-		}
-		#[test]
-		#[should_panic]
-		fn removing_a_string_that_was_not_added(string: String) {
-			let mut cont = Context::<Concept>::default();
-			cont.remove_string(&string);
-		}
-		#[test]
-		fn reading_and_writing_a_concept_that_was_added(reduction: usize) {
-			let mut cont = Context::<Concept>::default();
-			let concept_id = cont.add_concept(AbstractPart::default().into());
-			try!(cont.write_concept(concept_id).make_reduce_to(reduction));
-			assert_eq!(cont.read_concept(&vec!(), concept_id).get_reduction(), Some(reduction));
-		}
-		#[test]
-		#[should_panic]
-		fn reading_a_concept_that_was_not_added(id: usize) {
-			let cont = Context::<Concept>::default();
-			cont.read_concept(&vec!(), id);		
-		}
-		#[test]
-		#[should_panic]
-		fn writing_a_concept_that_was_not_added(id: usize) {
-			let mut cont = Context::<Concept>::default();
-			cont.write_concept(id);		
-		}
-		#[test]
-		#[should_panic]
-		fn removing_a_concept_that_was_not_added(id: usize) {
-			let mut cont = Context::<Concept>::default();
-			cont.blindly_remove_concept(id);
-		}
-	}
-	#[test]
-	#[should_panic]
-	fn reading_a_concept_that_was_removed() {
-		let mut cont = Context::<Concept>::default();
-		let concept_id = cont.add_concept(AbstractPart::default().into());
-		cont.blindly_remove_concept(concept_id);
-		cont.read_concept(&vec!(), concept_id);
-	}
-	#[test]
-	#[should_panic]
-	fn writing_a_concept_that_was_removed() {
-		let mut cont = Context::<Concept>::default();
-		let concept_id = cont.add_concept(AbstractPart::default().into());
-		cont.blindly_remove_concept(concept_id);
-		cont.write_concept(concept_id);
-	}
 }

@@ -93,10 +93,6 @@
 extern crate slog;
 extern crate slog_term;
 
-#[cfg(test)]
-#[macro_use]
-extern crate proptest; 
-
 /// Traits for adding concepts to the context.
 mod adding;
 

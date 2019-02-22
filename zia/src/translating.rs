@@ -69,27 +69,6 @@ where
 {
 }
 
-#[cfg(test)]
-mod tokens {
-    use super::parse_line;
-    #[test]
-    fn pair() {
-        let parsed_line = parse_line("(not true)->");
-        assert_eq!(parsed_line, ["not true", "->"].to_vec());
-    }
-    #[test]
-    fn triplet() {
-        assert_eq!(parse_line("(0 + 1)->"), ["0 + 1", "->"].to_vec());
-    }
-    #[test]
-    fn lambda() {
-        assert_eq!(
-            parse_line("((lambda x_)(_f _x))_y ->"),
-            ["(lambda x_)(_f _x)", "_y", "->"].to_vec()
-        );
-    }
-}
-
 pub fn parse_line(buffer: &str) -> Vec<String> {
     let mut tokens: Vec<String> = [].to_vec();
     let mut token = String::new();
