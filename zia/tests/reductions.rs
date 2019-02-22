@@ -25,7 +25,7 @@ use test_zia::CONCRETE_SYMBOLS;
 use zia::{Context, ContextMaker, Execute, ZiaError};
 
 proptest! {
-    // If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol. 
+    // If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol.
     #[test]
     fn pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();

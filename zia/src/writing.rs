@@ -185,16 +185,16 @@ where
     }
     fn parent_already_has_reduction(&self, concept: usize) -> bool {
         for parent in self.read_concept(&[], concept).get_lefthand_of() {
-            if let Some(_) = self.read_concept(&[], concept).get_reduction() {
-                return true;
-            } else if self.parent_already_has_reduction(parent) {
+            if self.read_concept(&[], parent).get_reduction().is_some()
+                || self.parent_already_has_reduction(parent)
+            {
                 return true;
             }
         }
         for parent in self.read_concept(&[], concept).get_righthand_of() {
-            if let Some(_) = self.read_concept(&[], concept).get_reduction() {
-                return true;
-            } else if self.parent_already_has_reduction(parent) {
+            if self.read_concept(&[], parent).get_reduction().is_some()
+                || self.parent_already_has_reduction(parent)
+            {
                 return true;
             }
         }

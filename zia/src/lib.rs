@@ -24,7 +24,7 @@
 //! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.  
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions
-//! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect 
+//! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect
 //! binary tree of height 2 with leaves `"ll"`, `"lr"`, `"rl"`, `"rr"` going from left to right.
 //!
 //! The leaves of the tree can be any unicode string without spaces or parentheses. These symbols may
@@ -37,8 +37,8 @@
 //! in parentheses will be alleviated by functionality to set the relative precedence and associativity
 //! of concepts.
 //!
-//! So far there are 4 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`, 
-//! `"->"`, `":="`, `"let"`, but the labels can be changed to different symbols (e.g. for different 
+//! So far there are 4 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
+//! `"->"`, `":="`, `"let"`, but the labels can be changed to different symbols (e.g. for different
 //! languages or disciplines).
 //!
 //! # Examples
@@ -302,7 +302,7 @@ where
                                         } else {
                                             Ok(label)
                                         }
-                                    }, 
+                                    }
                                 };
                             }
                         }
