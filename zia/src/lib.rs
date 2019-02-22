@@ -20,11 +20,12 @@
 //! Instead of storing the source code as plain text and editing the raw text (which can easily break
 //! the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
 //! used in other programs. All the programming is done using an interactive shell such as
-//! [IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are interpreted based on the
-//! `Context`. They are used to incrementally modify, test and debug the `Context`.  
+//! [IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
+//! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.  
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions
-//! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect binary tree of height 2 with leaves `"ll"`, `"lr"`, `"rl"`, `"rr"` going from left to right.
+//! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect 
+//! binary tree of height 2 with leaves `"ll"`, `"lr"`, `"rl"`, `"rr"` going from left to right.
 //!
 //! The leaves of the tree can be any unicode string without spaces or parentheses. These symbols may
 //! be recognised by the intepreter as concepts or if not used to label new concepts.
@@ -36,7 +37,9 @@
 //! in parentheses will be alleviated by functionality to set the relative precedence and associativity
 //! of concepts.
 //!
-//! So far there are 4 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`, `"->"`, `":="`, `"let"`, but the labels can be changed to different symbols (e.g. for different languages or disciplines).
+//! So far there are 4 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`, 
+//! `"->"`, `":="`, `"let"`, but the labels can be changed to different symbols (e.g. for different 
+//! languages or disciplines).
 //!
 //! # Examples
 //!
@@ -47,46 +50,35 @@
 //! // Construct a new `Context` using the `new` method of the `ContextMaker` trait
 //! let mut context = Context::new();
 //!
-//! // Specify the rule that the concept "a" reduces to concept "b"
-//! context.execute("let (a (-> b))");
-//! assert_eq!(context.execute("(label_of (a ->)) ->"), "b");
+//! // Specify the rule that the concept "a b" reduces to concept "c"
+//! context.execute("let ((a b) (-> c))");
+//! assert_eq!(context.execute("(label_of (a b)) ->"), "c");
 //!
-//! // Change the rule so that concept "a" instead reduces to concept "c"
-//! context.execute("let (a (-> c))");
-//! assert_eq!(context.execute("(label_of (a ->)) ->"), "c");
+//! // Change the rule so that concept "a b" instead reduces to concept "d"
+//! context.execute("let ((a b) (-> d))");
+//! assert_eq!(context.execute("(label_of (a b)) ->"), "d");
 //!
-//! // Change the rule so "a" doesn't reduce to anything
-//! context.execute("let (a (-> a))");
-//! assert_eq!(context.execute("(label_of (a ->)) ->"), "a");
+//! // Change the rule so "a b" doesn't reduce any further
+//! context.execute("let ((a b) (-> (a b)))");
+//! assert_eq!(context.execute("(label_of (a b)) ->"), "a");
 //!
 //! // Try to specify a rule that already exists
-//! assert_eq!(context.execute("let (a (-> a))"), ZiaError::RedundantReduction.to_string());
-//! context.execute("let (a (-> b))");
-//! assert_eq!(context.execute("let (a (-> b))"), ZiaError::RedundantReduction.to_string());
+//! assert_eq!(context.execute("let ((a b) (-> (a b)))"), ZiaError::RedundantReduction.to_string());
+//! context.execute("let ((a b) (-> c))");
+//! assert_eq!(context.execute("let ((a b) (-> c))"), ZiaError::RedundantReduction.to_string());
 //!
-//! // Specify the composition of "c"
-//! context.execute("let(c (:= (a b)))");
-//! assert_eq!(context.execute("(label_of (c :=)) ->"), "a b");
+//! // Relabel "label_of" to "표시"
+//! context.execute("let (표시 (:= label_of))");
+//! assert_eq!(context.execute("(표시 (a b)) ->"), "c");
 //!
-//! // Print the label of the expansion of a concept with no composition
-//! assert_eq!(context.execute("(label_of (a :=)) ->"), "a");
-//!
-//! // Relabel "b" to "e"
-//! context.execute("let (e (:= b))");
-//! assert_eq!(context.execute("(label_of (c :=)) ->"), "a e");
-//! assert_eq!(context.execute("(label_of (c ->)) ->"), "e e");
-//!
-//! // Try to specify the rule to reduce a concept whose composition reduces to something else
-//! assert_eq!(context.execute("let (c (-> f))"), ZiaError::MultipleReductionPaths.to_string());
+//! // Try to specify the rule to reduce a labelled concept
+//! assert_eq!(context.execute("let (a (-> d))"), ZiaError::MultipleReductionPaths.to_string());
 //!
 //! // Try to specify the composition of a concept in terms of itself
-//! assert_eq!(context.execute("let (i (:= (i j)))"), ZiaError::InfiniteDefinition.to_string());
+//! assert_eq!(context.execute("let (b (:= (a b)))"), ZiaError::InfiniteDefinition.to_string());
 //!
 //! // Try to specify the reduction of concept in terms of itself
-//! assert_eq!(context.execute("let (i (-> (i j)))"), ZiaError::ExpandingReduction.to_string());
-//!
-//! // Try to specify the composition of a concept in terms of something that reduces to itself
-//! assert_eq!(context.execute("let (e (:= (a d)))"), ZiaError::ExpandingReduction.to_string());
+//! assert_eq!(context.execute("let ((c d) (-> ((c d) e))"), ZiaError::ExpandingReduction.to_string());
 //! ```
 
 #[macro_use]
