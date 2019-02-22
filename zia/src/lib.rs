@@ -60,7 +60,7 @@
 //!
 //! // Change the rule so "a b" doesn't reduce any further
 //! context.execute("let ((a b) (-> (a b)))");
-//! assert_eq!(context.execute("(label_of (a b)) ->"), "a");
+//! assert_eq!(context.execute("(label_of (a b)) ->"), ZiaError::NotAProgram.to_string());
 //!
 //! // Try to specify a rule that already exists
 //! assert_eq!(context.execute("let ((a b) (-> (a b)))"), ZiaError::RedundantReduction.to_string());
@@ -293,7 +293,10 @@ where
                     if let Some((leftleft, leftright)) = left.get_expansion() {
                         if let Some(con) = leftleft.get_concept() {
                             if con == LABEL {
-                                return self.reduce_label_of(&leftright);
+                                return Ok(match self.reduce(&leftright) {
+                                    Some(r) => r.to_string(),
+                                    None => leftright.to_string(), 
+                                });
                             }
                         }
                     };
