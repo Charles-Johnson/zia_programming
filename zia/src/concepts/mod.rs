@@ -17,8 +17,8 @@
 mod abstract_part;
 mod common_part;
 
-pub use self::abstract_part::{AbstractPart, AbstractDelta};
-pub use self::common_part::{CommonPart, CommonDelta};
+pub use self::abstract_part::{AbstractDelta, AbstractPart};
+pub use self::common_part::{CommonDelta, CommonPart};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
@@ -58,7 +58,7 @@ impl Delta for Concept {
             ConceptDelta::Abstract(ad) => match self.specific_part {
                 SpecificPart::Abstract(ref mut ap) => ap.apply(ad),
                 _ => panic!("AbstractDelta applied to concrete concept."),
-                }
+            },
             ConceptDelta::Common(cd) => self.common_part.apply(cd),
         };
     }
@@ -153,7 +153,7 @@ impl SetDefinition for Concept {
             SpecificPart::Abstract(ref mut c) => {
                 c.set_definition(lefthand, righthand);
                 Ok(())
-            },
+            }
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
@@ -162,7 +162,9 @@ impl SetDefinition for Concept {
 impl SetDefinitionDelta for Concept {
     fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> ZiaResult<ConceptDelta> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(ConceptDelta::Abstract(c.set_definition_delta(lefthand, righthand))),
+            SpecificPart::Abstract(ref c) => Ok(ConceptDelta::Abstract(
+                c.set_definition_delta(lefthand, righthand),
+            )),
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
@@ -198,7 +200,7 @@ impl SetReduction for Concept {
             SpecificPart::Abstract(ref mut c) => {
                 c.make_reduce_to(concept);
                 Ok(())
-            },
+            }
             _ => Err(ZiaError::ConcreteReduction),
         }
     }

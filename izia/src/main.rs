@@ -17,11 +17,11 @@
 */
 //! # Interactive Shell for the Zia Programming Language.
 
-extern crate zia;
 extern crate linefeed;
+extern crate zia;
 
-use zia::{Context, Execute, ContextMaker};
 use linefeed::{Interface, ReadResult};
+use zia::{Context, ContextMaker, Execute};
 
 fn main() {
     let reader = Interface::new("IZia").unwrap();

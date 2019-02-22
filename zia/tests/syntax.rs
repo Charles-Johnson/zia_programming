@@ -27,14 +27,14 @@ fn empty_parentheses() {
     let mut cont = Context::new();
     assert_eq!(cont.execute("()"), ZiaError::EmptyParentheses.to_string());
 }
-proptest!{
-	#[test]
-	fn ambiguous_expression(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-		assume_symbols!(a, b, c);
-		let mut cont = Context::new();
-		assert_eq!(
-		    cont.execute(&format!("({} {} {})", a, b, c)),
-		    ZiaError::AmbiguousExpression.to_string()
-		);
-	}
+proptest! {
+    #[test]
+    fn ambiguous_expression(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+        assume_symbols!(a, b, c);
+        let mut cont = Context::new();
+        assert_eq!(
+            cont.execute(&format!("({} {} {})", a, b, c)),
+            ZiaError::AmbiguousExpression.to_string()
+        );
+    }
 }

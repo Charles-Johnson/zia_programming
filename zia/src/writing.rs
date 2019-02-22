@@ -15,9 +15,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use logging::Logger;
 pub use delta::Delta;
 pub use errors::{ZiaError, ZiaResult};
+use logging::Logger;
 pub use reading::{
     ConceptReader, FindDefinition, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction,
     MaybeConcept,
@@ -56,7 +56,7 @@ where
         }
     }
     fn delete_reduction(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(&vec!(), concept).get_reduction() {
+        match self.read_concept(&[], concept).get_reduction() {
             None => Err(ZiaError::RedundantReduction),
             Some(n) => {
                 self.write_concept(n).no_longer_reduces_from(concept);
@@ -101,37 +101,62 @@ where
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
         if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
-                trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)", concept, reduction);
+                trace!(
+                    self.logger(),
+                    "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)",
+                    concept,
+                    reduction
+                );
                 return Err(ZiaError::CyclicReduction);
             }
         }
-        if let Some(r) = self.read_concept(&vec!(), concept).get_reduction() {
+        if let Some(r) = self.read_concept(&[], concept).get_reduction() {
             if r == reduction {
-                trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction);
+                trace!(
+                    self.logger(),
+                    "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
+                    concept,
+                    reduction
+                );
                 return Err(ZiaError::RedundantReduction);
             }
         }
         let r = try!(self.get_reduction_of_composition(concept));
         if r == reduction {
-            trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction);
+            trace!(
+                self.logger(),
+                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
+                concept,
+                reduction
+            );
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
-            trace!(self.logger(), "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)", concept, reduction);
+            trace!(
+                self.logger(),
+                "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
+                concept,
+                reduction
+            );
             return Err(ZiaError::MultipleReductionPaths);
         }
         try!(self.write_concept(concept).make_reduce_to(reduction));
         self.write_concept(reduction).make_reduce_from(concept);
-        trace!(self.logger(), "update_reduction({}, {}) -> Ok(())", concept, reduction);
+        trace!(
+            self.logger(),
+            "update_reduction({}, {}) -> Ok(())",
+            concept,
+            reduction
+        );
         Ok(())
     }
     fn get_reduction_of_composition(&self, concept: usize) -> ZiaResult<usize> {
-        if let Some((left, right)) = self.read_concept(&vec!(), concept).get_definition() {
-            let lc = if let Some(l) = self.read_concept(&vec!(), left).get_reduction() {
+        if let Some((left, right)) = self.read_concept(&[], concept).get_definition() {
+            let lc = if let Some(l) = self.read_concept(&[], left).get_reduction() {
                 l
             } else {
                 try!(self.get_reduction_of_composition(left))
             };
-            let rc = if let Some(r) = self.read_concept(&vec!(), right).get_reduction() {
+            let rc = if let Some(r) = self.read_concept(&[], right).get_reduction() {
                 r
             } else {
                 try!(self.get_reduction_of_composition(right))
@@ -169,14 +194,13 @@ where
         } else {
             try!(self.check_reductions(definition, lefthand));
             try!(self.check_reductions(definition, righthand));
-            let deltas = try!(self
-                .set_concept_definition_deltas(definition, lefthand, righthand));
+            let deltas = try!(self.set_concept_definition_deltas(definition, lefthand, righthand));
             self.apply_all(&deltas);
             Ok(())
         }
     }
     fn check_reductions(&self, outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(&vec!(), inner_concept).get_reduction() {
+        if let Some(r) = self.read_concept(&[], inner_concept).get_reduction() {
             if r == outer_concept || self.contains(r, outer_concept) {
                 Err(ZiaError::ExpandingReduction)
             } else {
@@ -207,14 +231,14 @@ pub trait NoLongerReducesFrom {
     fn no_longer_reduces_from(&mut self, usize);
 }
 
-pub trait SetConceptDefinitionDeltas 
+pub trait SetConceptDefinitionDeltas
 where
     Self: Delta,
 {
     fn set_concept_definition_deltas(&self, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
 }
 
-pub trait SetDefinitionDelta 
+pub trait SetDefinitionDelta
 where
     Self: Delta,
 {
@@ -230,7 +254,7 @@ pub trait SetAsDefinitionOf {
     fn add_as_righthand_of(&mut self, usize);
 }
 
-pub trait SetAsDefinitionOfDelta 
+pub trait SetAsDefinitionOfDelta
 where
     Self: Delta,
 {

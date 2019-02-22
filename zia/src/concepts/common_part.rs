@@ -17,7 +17,10 @@
 use delta::Delta;
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
-use writing::{MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf, SetAsDefinitionOfDelta};
+use writing::{
+    MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf,
+    SetAsDefinitionOfDelta,
+};
 
 #[derive(Default, Clone)]
 pub struct CommonPart {
