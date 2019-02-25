@@ -48,6 +48,7 @@ proptest! {
     fn cycle(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
         // to prevent redundant reduction
         prop_assume!(a != b);
+        assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
         let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
@@ -81,6 +82,7 @@ proptest! {
     fn broken_end_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*", e in "\\PC*") {
         // to prevent rendundant reductions and looping reductions
         prop_assume!(a != b && b != c && c != a);
+        assume_symbols!(a, b, c, d, e);
         let mut cont = Context::new();
         let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
@@ -96,6 +98,7 @@ proptest! {
     fn broken_middle_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*", e in "\\PC*", f in "\\PC*", g in "\\PC*") {
         // to prevent rendundant reductions and looping reductions
         prop_assume!(a != b && b != c && c != d && c != a && d != a && d != b);
+        assume_symbols!(a, b, c, d, e, f, g);
         let mut cont = Context::new();
         let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
@@ -124,6 +127,7 @@ proptest! {
     fn leapfrog_reduction_rule(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*", e in "\\PC*") {
         // `a`, `b` and `c` all need to be unique to prevent redundant reductions and looping reductions.
         prop_assume!(a != b && b != c && c != a);
+        assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
         let reduction = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
         assert_eq!(cont.execute(&reduction), "");
@@ -134,6 +138,7 @@ proptest! {
     #[test]
     fn redundancy(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
         prop_assume!(a != b);
+        assume_symbol!(d);
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         let reduction = format!("let (({} {}) (-> {}))", a, b, c);

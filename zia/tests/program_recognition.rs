@@ -91,21 +91,13 @@ proptest! {
         assert_eq!(cont.execute(&format!("({} {}) ->", a, b)), c);
     }
     #[test]
-    fn symbol_whose_definition_is_a_program_is_a_program(a in "\\PC*", b in "\\PC*") {
-        assume_symbols!(a, b);
-        prop_assume!(a != b);
-        let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let ({} (:= ((label_of {}) ->)))", a, b)), "");
-        assert_eq!(cont.execute(&a), b);
-    }
-    #[test]
     fn pair_whose_normal_form_is_a_builtin_concept(a in "\\PC*", b in "\\PC*", d in "\\PC*") {
         assume_symbol!(d);
         let mut cont = Context::new();
         let c = ":=";
         reduce_pair!(cont, a, b, c);
         assert_eq!(cont.execute(&format!("{} {}", a, b)), ZiaError::NotAProgram.to_string());
-        assert_eq!(cont.execute(&format!("let ({} (({} {}) {})) ->", d, a, b, b)), "");
+        assert_eq!(cont.execute(&format!("let ({} (({} {}) {}))", d, a, b, b)), "");
         assert_eq!(cont.execute(&format!("(label_of ({} {})) ->", a, d)), c);
     }
 }
