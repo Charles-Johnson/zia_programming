@@ -81,23 +81,4 @@ macro_rules! let_definition {
         prop_assert_eq!($cont.execute(&let_command), "");
     };
 }
-// Common pattern in tests where a concept's label is reduced to a pair
-#[macro_export]
-macro_rules! print_pair_expansion {
-    ($cont:ident, $a:ident, $b:ident, $c:ident) => {
-        let print_command = format!("(label_of ({} :=)) ->", $a);
-        let result = format!("{} {}", $b, $c);
-        prop_assert_eq!($cont.execute(&print_command), result);
-    };
-}
 
-// Common pattern in tests where a symbol reduces to another symbol
-#[macro_export]
-macro_rules! let_reduction {
-    ($cont:ident, $a:ident, $b:ident) => {
-        assume_symbols!($a, $b);
-        assume_abstract!($a);
-        let reduction = format!("let ({} (-> {}))", $a, $b);
-        prop_assert_eq!($cont.execute(&reduction), "");
-    };
-}
