@@ -38,58 +38,13 @@ labels can be changed to different symbols (e.g. for different languages or disc
 
 Let concept, symbol: `let`
 
-`let` is used to set a relation as true. It can be further explained in its use below.
-
 Label concept, symbol: `label_of`
-
-`label_of a` is the expression for the label of the concept which is labelled with the symbol `a`.
-It can be further explained in its use below.
 
 Reduction concept, symbol: `->`
 
-`->` can be used to specify reduction rules for concepts given by expressions. `let (a (-> b))`
- represents the command to specify the rule that the concept labelled by `a` reduces to the 
-concept labelled by `b`.
-
-`->` is also used to express the reduction of a concept. `a ->` expresses the concept `b` because 
-of the previous command but `b ->` expresses `b` because no reduction rule exists for `b`. 
-
-Labels of concepts reduce to a command to print the symbol that the concept is labelled with.
-`(label_of a) ->` expresses the command to print `a` as output. `(label_of (a ->)) ->` expresses
-the command to print `b` as output.
-
-You can modify existing reduction rules. For example you can change the reduction rule for `a` by 
-`let (a (-> c))`; `(label_of (a ->)) ->` will now print `c`. You could also execute 
-`let (a (-> a))` and so `(label_of (a ->)) ->` now prints `a`.
-
-The intepreter will let you know if reduction rule commands are redundant. `let (a (-> a))` is 
-redundant because `a` already reduces to itself. Executing `let (a (-> b))` twice will print an 
-error on the second time.
-
 Definition concept, symbol: `:=`
 
-`:=` can be used to label a binary tree of concepts or relabel a concept. For example 
-`let (c (:= (a b)))` means graphically:
-```
- c
-/ \
-a b
-```
-The command `(label_of (c :=)) ->` then prints `a b`. The command `(label_of (a :=)) ->` prints 
-`a`. We can change the symbol of `b` to `e` using `let (e (:= b))`. `(label_of (c :=)) ->` would 
-then print `a e` and `(label_of (a ->)) ->` would print `e`. Because `a` reduces to `e`, 
-`(label_of (c ->)) ->` prints `e e`. If `let (c (-> f))` is executed, an error message is printed 
-explaining some of the components of `c` (`a` and `e`) reduce. This would break the coherence 
-between the reduction of a concept and its composition's reductions. Should `c` reduce to `f` or 
-`e e`? Maintaining this coherence is important for a consistent lazy reduction of syntax trees.
-
-To make sure concepts can be fully reduced, commands like `let (i (:= (i j)))` are not accepted by
-the interpreter nor are commands like `let (i (-> (i j)))`. More subtley `let (e (:= (a d)))` is 
-not accepted because the reduction of `a d` is `e d` and so `(label_of (e ->)) ->` would print 
-`e d`, `(label_of ((e d) ->)) ->` would print `(e d) d` etc. Successive reductions could never 
-terminate if this kind of command was accepted. 
-
-# API  
+# Public API  
 
 The current implementation exposes the `Context` type that can be used in an interface such as 
 [IZia](https://github.com/Charles-Johnson/izia). Importing the following traits allows the 
