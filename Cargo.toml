@@ -2,6 +2,7 @@
 
 members = [
 	"izia",
+	"presentations",
 	"test_zia",
 	"zia",
 ]
