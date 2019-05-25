@@ -4,8 +4,9 @@ The Zia project aims to develop a programming language that can be used to progr
 Instead of storing the source code as plain text and editing the raw text (which can easily break 
 the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and 
 used in other programs. All the programming is done using an interactive shell such as
-[IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are interpreted based on the `Context`. They are used to 
-incrementally modify, test and debug the `Context`.  
+[IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
+interpreted based on the `Context`. They are used to incrementally modify, test and debug the 
+`Context`.  
 
 Expressions for Zia commands represent a binary tree where parentheses group a pair of 
 expressions and a space separates a pair of expressions.
@@ -63,4 +64,53 @@ trait Execute<T> {
 		// `String` that maybe empty, an error message or the answer to a query.
 	}
 }
+```
+
+# Testing
+
+To test all non-ignored tests:
+```bash
+cargo test
+```
+
+To test all tests in the documentation:
+```bash
+cargo test --doc
+```
+
+To test a specific test:
+```bash
+cargo test specific_test
+```
+
+To run a set of integration tests:
+```bash
+cargo test --test integration_test_filename
+```
+
+# Documentation
+
+To generate documentation for Public API:
+```bash
+cargo doc
+```
+You can then view `./target/doc/zia/index.html` in a web browser
+
+To generate internal documentation:
+```bash
+cargo doc --document-private-items
+```
+
+# Releasing New Versions
+In `./Cargo.toml`:
+```toml
+[package]
+version = x.y.z
+```
+Then run in the terminal the following
+```bash
+git commit -a -m "Releasing zia-x.y.z"
+git tag -a zia-x.y.z HEAD
+cargo package
+cargo publish
 ```
