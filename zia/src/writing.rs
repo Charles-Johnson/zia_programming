@@ -23,9 +23,10 @@ pub use reading::{
     MaybeConcept,
 };
 use reading::{Container, GetConceptOfLabel};
+use std::fmt::Debug;
 pub trait Unlabeller<T>
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinition + GetDefinitionOf,
+    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinition + GetDefinitionOf + Debug,
     Self: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
@@ -38,7 +39,7 @@ where
 
 impl<S, T> Unlabeller<T> for S
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinitionOf + GetDefinition,
+    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinitionOf + GetDefinition + Debug,
     S: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
 }
@@ -99,14 +100,14 @@ where
     Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
 {
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
-        trace!(
+        info!(
             self.logger(),
             "update_reduction({}, {})",
             concept,
             reduction
         );
         if self.parent_already_has_reduction(concept) {
-            trace!(
+            info!(
                 self.logger(),
                 "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
                 concept,
@@ -115,7 +116,7 @@ where
             return Err(ZiaError::MultipleReductionPaths);
         } else if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
-                trace!(
+                info!(
                     self.logger(),
                     "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)",
                     concept,
@@ -126,7 +127,7 @@ where
         }
         if let Some(r) = self.read_concept(&[], concept).get_reduction() {
             if r == reduction {
-                trace!(
+                info!(
                     self.logger(),
                     "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
                     concept,
@@ -137,7 +138,7 @@ where
         }
         let r = try!(self.get_reduction_of_composition(concept));
         if r == reduction {
-            trace!(
+            info!(
                 self.logger(),
                 "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
                 concept,
@@ -145,7 +146,7 @@ where
             );
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
-            trace!(
+            info!(
                 self.logger(),
                 "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
                 concept,
@@ -155,7 +156,7 @@ where
         }
         try!(self.write_concept(concept).make_reduce_to(reduction));
         self.write_concept(reduction).make_reduce_from(concept);
-        trace!(
+        info!(
             self.logger(),
             "update_reduction({}, {}) -> Ok(())",
             concept,

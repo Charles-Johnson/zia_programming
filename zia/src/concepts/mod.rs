@@ -29,13 +29,13 @@ use writing::{
 };
 
 /// Data type for any type of concept.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Concept {
     common_part: CommonPart,
     specific_part: SpecificPart,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,

@@ -22,7 +22,7 @@ use writing::{
     SetAsDefinitionOfDelta,
 };
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct CommonPart {
     /// Set of all indices of the concepts which have this concept as the lefthand of their definition
     lefthand_of: HashSet<usize>,

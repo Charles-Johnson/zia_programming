@@ -50,7 +50,7 @@ where
     Self::S: Container + PartialEq + DisplayJoint,
 {
     fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "execute_reduction({}, {})",
             syntax.display_joint(),
@@ -128,7 +128,7 @@ where
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
-            trace!(
+            info!(
                 self.logger(),
                 "concept_from_ast({}) -> Ok({})",
                 ast.display_joint(),
@@ -136,7 +136,7 @@ where
             );
             Ok(c)
         } else if let Some(c) = self.concept_from_label(&ast.display_joint()) {
-            trace!(
+            info!(
                 self.logger(),
                 "concept_from_ast({}) -> Ok({})",
                 ast.display_joint(),
@@ -148,7 +148,7 @@ where
             match ast.get_expansion() {
                 None => {
                     let new_concept = try!(self.new_labelled_default(string));
-                    trace!(
+                    info!(
                         self.logger(),
                         "concept_from_ast({}) -> Ok({})",
                         ast.display_joint(),
@@ -163,7 +163,7 @@ where
                     if !string.contains(' ') {
                         try!(self.label(concept, string));
                     }
-                    trace!(
+                    info!(
                         self.logger(),
                         "concept_from_ast({}) -> Ok({})",
                         ast.display_joint(),
@@ -196,7 +196,7 @@ where
     fn new() -> Self {
         let mut cont = Self::default();
         cont.setup().unwrap();
-        trace!(cont.logger(), "Setup a new context");
+        info!(cont.logger(), "Setup a new context");
         cont
     }
 }

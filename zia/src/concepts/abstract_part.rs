@@ -20,7 +20,7 @@ use reading::{GetDefinition, GetReduction};
 use writing::{RemoveDefinition, RemoveReduction};
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
     definition: Option<(usize, usize)>,
