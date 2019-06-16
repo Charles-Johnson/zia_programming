@@ -272,7 +272,13 @@ where
         }
         match ast.get_expansion() {
             Some((ref left, ref right)) => self.call_pair(left, right),
-            None => self.try_expanding_then_call(ast),
+            None => {
+                let result = self.try_expanding_then_call(ast);
+                match result {
+                    Err(ZiaError::CannotExpandFurther) => Ok(ast.to_string()),
+                    _ => result,
+                }
+            },
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
