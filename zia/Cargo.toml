@@ -18,7 +18,7 @@ name = "zia"
 crate-type = ["lib"]
 
 [dependencies]
-slog = { version="2.4.1", features=["max_level_error", "release_max_level_warn"]}
+slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}
 slog-term = "2.4.0"
 
 [dev-dependencies]
