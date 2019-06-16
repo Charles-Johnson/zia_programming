@@ -38,7 +38,7 @@ proptest! {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, c, b);
-        let print = format!("{}({} {}))", a, a, b);
+        let print = format!("{} ({} {})", a, a, b);
         prop_assert_eq!(cont.execute(&print), b);
     }
     // A concept should not be able to reduce to a concept whose normal form is the former concept.
