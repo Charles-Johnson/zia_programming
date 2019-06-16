@@ -77,7 +77,7 @@ proptest! {
         let reduction = format!("let (({} {}) (-> {}))", c, d, e);
         assert_eq!(
             cont.execute(&reduction),
-            ZiaError::MultipleReductionPaths.to_string()
+            ""
         );
     }
 }

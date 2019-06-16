@@ -72,7 +72,7 @@
 //! assert_eq!(context.execute("표시 (a b)"), "\'c\'");
 //!
 //! // Try to specify the rule to reduce a labelled concept
-//! assert_eq!(context.execute("let (a (-> d))"), ZiaError::MultipleReductionPaths.to_string());
+//! assert_eq!(context.execute("let (a (-> d))"), "");
 //!
 //! // Try to specify the composition of a concept in terms of itself
 //! assert_eq!(context.execute("let (b (:= (a b)))"), ZiaError::InfiniteDefinition.to_string());

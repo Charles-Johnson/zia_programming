@@ -1,6 +1,6 @@
 [package]
 name = "zia"
-version = "0.2.1"
+version = "0.3.2"
 authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
 description = "Interpreter Library for the Zia Programming Language"
 repository = "https://github.com/Charles-Johnson/zia_programming"
@@ -18,7 +18,7 @@ name = "zia"
 crate-type = ["lib"]
 
 [dependencies]
-slog = { version="2.4.1", features=["max_level_debug", "release_max_level_warn"]}
+slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}
 slog-term = "2.4.0"
 
 [dev-dependencies]

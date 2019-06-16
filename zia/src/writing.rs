@@ -119,15 +119,7 @@ where
             self.logger(),
             "update_reduction({}, {})", concept, reduction
         );
-        if self.parent_already_has_reduction(concept) {
-            info!(
-                self.logger(),
-                "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
-                concept,
-                reduction
-            );
-            return Err(ZiaError::MultipleReductionPaths);
-        } else if let Some(n) = self.get_normal_form(reduction) {
+        if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
                 info!(
                     self.logger(),
@@ -192,23 +184,6 @@ where
         } else {
             Ok(concept)
         }
-    }
-    fn parent_already_has_reduction(&self, concept: usize) -> bool {
-        for parent in self.read_concept(&[], concept).get_lefthand_of() {
-            if self.read_concept(&[], parent).get_reduction().is_some()
-                || self.parent_already_has_reduction(parent)
-            {
-                return true;
-            }
-        }
-        for parent in self.read_concept(&[], concept).get_righthand_of() {
-            if self.read_concept(&[], parent).get_reduction().is_some()
-                || self.parent_already_has_reduction(parent)
-            {
-                return true;
-            }
-        }
-        false
     }
 }
 

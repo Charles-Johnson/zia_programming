@@ -3,9 +3,12 @@ extern crate zia;
 use zia::{Context, ContextMaker, Execute};
 
 fn main() {
-    let contents = include_str!("../../zia/src/lib.rs").split("//! ```\n").into_iter().nth(1).unwrap();
+    let contents = include_str!("../../zia/src/lib.rs")
+        .split("//! ```\n")
+        .nth(1)
+        .unwrap();
     let code_blocks = contents.split("//!\n");
-    let mut presentation = String::new() + "
+    let presentation = String::new() + "
 # Zia programming language
 A programming language to program itself.
 
@@ -161,21 +164,20 @@ context.execute(\"let (표시 (:= label_of))\");
         block += "```rust\n";
         for line in code_block.split("//! ") {
             block += line;
-            match line.split("context.execute(\"").into_iter().nth(1) {
+            match line.split("context.execute(\"").nth(1) {
                 None => (),
-                Some(s) => match s.split("\")").into_iter().nth(0) {
+                Some(s) => match s.split("\")").nth(0) {
                     Some(s) => commands.push(s.to_string()),
                     None => (),
-                }
+                },
             };
         }
         block += "```\n";
         blocks.push(block);
-    };
+    }
     let mut context = Context::new();
     for command in commands {
         context.execute(&command);
     }
     println!("{}", presentation);
 }
-
