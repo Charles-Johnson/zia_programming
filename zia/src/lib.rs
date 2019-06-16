@@ -271,8 +271,25 @@ where
             }
         }
         match ast.get_expansion() {
-            Some((ref left, ref right)) => self.call_pair(left, right),
+            Some((ref left, ref right)) => {
+                let result = self.call_pair(left, right);
+                match result {
+                    Err(ZiaError::CannotReduceFurther) => {
+                        let result = self.try_reducing_then_call(ast);
+                        match result {
+                            Err(ZiaError::CannotReduceFurther) => Ok(self.contract_pair(left, right).to_string()),
+                            _ => result,
+                        }
+                    }
+                    _ => result,
+                }
+            },
             None => {
+                let result = self.try_reducing_then_call(ast);
+                match result {
+                    Err(ZiaError::CannotReduceFurther) => (),
+                    _ => return result,
+                };
                 let result = self.try_expanding_then_call(ast);
                 match result {
                     Err(ZiaError::CannotExpandFurther) => Ok(ast.to_string()),
@@ -315,7 +332,7 @@ where
     }
     fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
         match (self.reduce(left), self.reduce(right)) {
-            (None, None) => Ok(self.contract_pair(left, right).to_string()),
+            (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
             (None, Some(rr)) => self.call_pair(left, &rr),
             (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
@@ -486,6 +503,7 @@ where
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<String> {
+        info!(self.logger(), "execute_definition({}, {})", new, old);
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {

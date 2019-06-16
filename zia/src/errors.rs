@@ -39,7 +39,7 @@ pub enum ZiaError {
     CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.  
     ExpandingReduction,
-    /// When a concept is contained within its definition.
+    /// When a concept is contained within the normal form of its definition.
     InfiniteDefinition,
     /// When a command contains a pair of parentheses with no syntax inside.
     EmptyParentheses,
@@ -79,7 +79,7 @@ impl fmt::Display for ZiaError {
             ZiaError::CannotReduceFurther => "Cannot reduce syntax further",
 	        ZiaError::CyclicReduction => "Cannot allow a chain of reduction rules to loop.",
 	        ZiaError::ExpandingReduction => "Cannot reduce a concept to an expression containing itself.",
-	        ZiaError::InfiniteDefinition => "Cannot define a concept as an expression containing itself.",
+	        ZiaError::InfiniteDefinition => "Cannot define a concept as an expression whose normal form contains itself.",
 			ZiaError::EmptyParentheses => "Parentheses need to contain a symbol or expression.",
 			ZiaError::AmbiguousExpression => "Ambiguity due to lack of precedence or associativity defined for the symbols in that expression.",
 			ZiaError::DefinitionCollision => "Cannot define a used symbol as another used symbol or expression.",

@@ -56,7 +56,7 @@ proptest! {
         let definition = format!("let ({} (:= ({} ({} {}))))", a, b, c, d);
         assert_eq!(
             cont.execute(&definition),
-            ZiaError::ExpandingReduction.to_string()
+            ZiaError::InfiniteDefinition.to_string()
         );
     }
     // A reduction defined for a concept which is used to compose labelled concepts should not be accepted by the interpreter.
@@ -70,6 +70,7 @@ proptest! {
     ) {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d, e);
+        prop_assume!(a != b && a != c && a != d);
         let mut cont = Context::new();
         let definition = format!("let ({} (:= ({} ({} {}))))", a, b, c, d);
         assert_eq!(cont.execute(&definition), "");

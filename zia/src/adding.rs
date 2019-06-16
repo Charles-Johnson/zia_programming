@@ -56,9 +56,7 @@ where
             syntax.display_joint(),
             normal_form.display_joint()
         );
-        if !syntax.to_string().contains(' ') {
-            Err(ZiaError::MultipleReductionPaths)
-        } else if normal_form.contains(syntax) {
+        if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
             try!(self.try_removing_reduction::<Self::S>(syntax));

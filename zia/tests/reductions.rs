@@ -89,9 +89,9 @@ proptest! {
         let reduction2 = format!("let (({} {}) (-> ({} {})))", c, d, c, d);
         assert_eq!(cont.execute(&reduction2), "");
         let print = format!("{} {}", a, b);
-        assert_eq!(cont.execute(&print), e);
+        assert_eq!(cont.execute(&print), format!("{} {}", c, d));
     }
-    // A concept that used to triply reduce but whose first reduction no longer reduces should triply reduce to its first reduction.
+    // A concept that used to triply reduce but whose second reduction no longer reduces should triply reduce to its second reduction.
     #[test]
     fn broken_middle_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*", e in "\\PC*", f in "\\PC*", g in "\\PC*") {
         // to prevent rendundant reductions and looping reductions
@@ -107,7 +107,7 @@ proptest! {
         let reduction3 = format!("let (({} {}) (-> ({} {})))", e, f, e, f);
         assert_eq!(cont.execute(&reduction3), "");
         let print = format!("{} {}", a, b);
-        assert_eq!(cont.execute(&print), g);
+        assert_eq!(cont.execute(&print), format!("{} {}", e, f));
     }
     // Checking that reduction rules can be changed correctly
     #[test]
