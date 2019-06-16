@@ -27,7 +27,7 @@ use std::{collections::HashSet, fmt, rc::Rc};
 pub trait SyntaxReader<T>
 where
     Self: GetLabel<T> + Combine<T>,
-    T: GetDefinitionOf + GetDefinition + GetReduction + MaybeString,
+    T: GetDefinitionOf + GetDefinition + GetReduction + MaybeString + fmt::Debug,
 {
     /// Expands syntax by definition of its associated concept.
     fn expand<
@@ -184,13 +184,13 @@ where
 impl<S, T> SyntaxReader<T> for S
 where
     S: GetLabel<T> + Combine<T>,
-    T: GetDefinitionOf + GetDefinition + MaybeString + GetReduction,
+    T: GetDefinitionOf + GetDefinition + MaybeString + GetReduction + fmt::Debug,
 {
 }
 pub trait Display<T>
 where
     Self: GetLabel<T>,
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
+    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
 {
     fn display(&self, concept: usize) -> String {
         match self.read_concept(&[], concept).get_string() {
@@ -219,17 +219,23 @@ where
 impl<S, T> Display<T> for S
 where
     S: GetLabel<T>,
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
+    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
 {
 }
 pub trait GetLabel<T>
 where
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
+    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
     Self: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
     fn get_label(&self, concept: usize) -> Option<String> {
         match self.get_concept_of_label(concept) {
-            None => None,
+            None => {
+                let r = self.read_concept(&[], concept).get_reduction();
+                match r {
+                    Some(rr) => self.get_label(rr),
+                    None => None,
+                }
+            }
             Some(d) => match self.get_normal_form(d) {
                 None => None,
                 Some(n) => self.read_concept(&[], n).get_string(),
@@ -240,7 +246,7 @@ where
 
 impl<S, T> GetLabel<T> for S
 where
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction,
+    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
     S: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
 }
@@ -333,7 +339,7 @@ where
 
 pub trait GetConceptOfLabel<T>
 where
-    T: GetDefinition + GetDefinitionOf,
+    T: GetDefinition + GetDefinitionOf + fmt::Debug,
     Self: ConceptReader<T>,
 {
     fn get_concept_of_label(&self, concept: usize) -> Option<usize> {
@@ -353,7 +359,7 @@ where
 
 impl<S, T> GetConceptOfLabel<T> for S
 where
-    T: GetDefinition + GetDefinitionOf,
+    T: GetDefinition + GetDefinitionOf + fmt::Debug,
     S: ConceptReader<T>,
 {
 }

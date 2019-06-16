@@ -23,9 +23,15 @@ pub use reading::{
     MaybeConcept,
 };
 use reading::{Container, GetConceptOfLabel};
+use std::fmt::{Debug, Display};
 pub trait Unlabeller<T>
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinition + GetDefinitionOf,
+    T: GetReduction
+        + RemoveReduction
+        + NoLongerReducesFrom
+        + GetDefinition
+        + GetDefinitionOf
+        + Debug,
     Self: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
@@ -38,7 +44,12 @@ where
 
 impl<S, T> Unlabeller<T> for S
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinitionOf + GetDefinition,
+    T: GetReduction
+        + RemoveReduction
+        + NoLongerReducesFrom
+        + GetDefinitionOf
+        + GetDefinition
+        + Debug,
     S: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
 }
@@ -46,9 +57,14 @@ where
 pub trait DeleteReduction<T>
 where
     T: GetReduction + RemoveReduction + NoLongerReducesFrom,
-    Self: ConceptWriter<T> + ConceptReader<T>,
+    Self: ConceptWriter<T> + ConceptReader<T> + Logger,
 {
-    fn try_removing_reduction<U: MaybeConcept>(&mut self, syntax: &U) -> ZiaResult<()> {
+    fn try_removing_reduction<U: MaybeConcept + Display>(&mut self, syntax: &U) -> ZiaResult<()> {
+        info!(
+            self.logger(),
+            "try_removing_reduction({})",
+            syntax,
+        );
         if let Some(c) = syntax.get_concept() {
             self.delete_reduction(c)
         } else {
@@ -69,7 +85,7 @@ where
 
 impl<S, T> DeleteReduction<T> for S
 where
-    S: ConceptWriter<T> + ConceptReader<T>,
+    S: ConceptWriter<T> + ConceptReader<T> + Logger,
     T: GetReduction + RemoveReduction + NoLongerReducesFrom,
 {
 }
@@ -99,14 +115,12 @@ where
     Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
 {
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
-        trace!(
+        info!(
             self.logger(),
-            "update_reduction({}, {})",
-            concept,
-            reduction
+            "update_reduction({}, {})", concept, reduction
         );
         if self.parent_already_has_reduction(concept) {
-            trace!(
+            info!(
                 self.logger(),
                 "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
                 concept,
@@ -115,7 +129,7 @@ where
             return Err(ZiaError::MultipleReductionPaths);
         } else if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
-                trace!(
+                info!(
                     self.logger(),
                     "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)",
                     concept,
@@ -126,7 +140,7 @@ where
         }
         if let Some(r) = self.read_concept(&[], concept).get_reduction() {
             if r == reduction {
-                trace!(
+                info!(
                     self.logger(),
                     "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
                     concept,
@@ -137,15 +151,13 @@ where
         }
         let r = try!(self.get_reduction_of_composition(concept));
         if r == reduction {
-            trace!(
+            info!(
                 self.logger(),
-                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
-                concept,
-                reduction
+                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction
             );
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
-            trace!(
+            info!(
                 self.logger(),
                 "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
                 concept,
@@ -155,11 +167,9 @@ where
         }
         try!(self.write_concept(concept).make_reduce_to(reduction));
         self.write_concept(reduction).make_reduce_from(concept);
-        trace!(
+        info!(
             self.logger(),
-            "update_reduction({}, {}) -> Ok(())",
-            concept,
-            reduction
+            "update_reduction({}, {}) -> Ok(())", concept, reduction
         );
         Ok(())
     }
@@ -212,7 +222,7 @@ where
 pub trait InsertDefinition<T>
 where
     T: Sized + GetDefinition + GetReduction,
-    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas,
+    Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
 {
     fn insert_definition(
         &mut self,
@@ -220,6 +230,7 @@ where
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<()> {
+        info!(self.logger(), "insert_definition({}, {}, {})", definition, lefthand, righthand);
         if self.contains(lefthand, definition) || self.contains(righthand, definition) {
             Err(ZiaError::InfiniteDefinition)
         } else {
@@ -233,7 +244,7 @@ where
     fn check_reductions(&self, outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
         if let Some(r) = self.read_concept(&[], inner_concept).get_reduction() {
             if r == outer_concept || self.contains(r, outer_concept) {
-                Err(ZiaError::ExpandingReduction)
+                Err(ZiaError::InfiniteDefinition)
             } else {
                 self.check_reductions(outer_concept, r)
             }
@@ -246,7 +257,7 @@ where
 impl<S, T> InsertDefinition<T> for S
 where
     T: Sized + GetDefinition + GetReduction,
-    S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas,
+    S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
 {
 }
 

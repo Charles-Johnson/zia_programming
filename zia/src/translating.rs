@@ -54,7 +54,7 @@ where
         &self,
         t: &str,
     ) -> ZiaResult<Rc<U>> {
-        if t.contains(' ') || t.contains("(") || t.contains(")") {
+        if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression::<U>(t)
         } else {
             Ok(Rc::new(self.ast_from_symbol::<U>(t)))

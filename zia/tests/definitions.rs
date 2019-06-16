@@ -30,8 +30,8 @@ proptest! {
     fn fresh_symbol(a in "\\PC*") {
         assume_symbol!(a);
         let mut cont = Context::new();
-        let command = format!("(label_of ({})) ->", a);
-        prop_assert_eq!(cont.execute(&command), a);
+        let command = format!("label_of {}", a);
+        prop_assert_eq!(cont.execute(&command), "'".to_string() + &a + "'");
     }
     // The label of the expansion of a previously used concept which is composed of a pair of previously used concepts should reduce to the string representation of the pair.
     // The interpreter should not accept a definition where the lefthand side is not a symbol

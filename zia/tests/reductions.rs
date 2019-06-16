@@ -28,7 +28,7 @@ proptest! {
     fn pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
-        let print = format!("(label_of ({} {})) ->", a, b);
+        let print = format!("{} {}", a, b);
         prop_assert_eq!(cont.execute(&print), c);
     }
     // Checking whether two reduction rules can be correctly chained together for an expression with a nested pair.
@@ -38,7 +38,7 @@ proptest! {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, c, b);
-        let print = format!("((label_of ({}({} {}))) ->)-> ", a, a, b);
+        let print = format!("{} ({} {})", a, a, b);
         prop_assert_eq!(cont.execute(&print), b);
     }
     // A concept should not be able to reduce to a concept whose normal form is the former concept.
@@ -61,7 +61,7 @@ proptest! {
     fn trivial_parentheses(a in "\\PC*") {
         let mut cont = Context::new();
         assume_symbol!(a);
-        let print = format!("(label_of(({})))->", a);
+        let print = format!("({})", a);
         prop_assert_eq!(cont.execute(&print), a);
     }
     // A concept should not be able to reduce to something composed of that concept.
@@ -88,10 +88,10 @@ proptest! {
         assert_eq!(cont.execute(&reduction1), "");
         let reduction2 = format!("let (({} {}) (-> ({} {})))", c, d, c, d);
         assert_eq!(cont.execute(&reduction2), "");
-        let print = format!("((label_of ({} {})) ->) ->", a, b);
-        assert_eq!(cont.execute(&print), ZiaError::NotAProgram.to_string());
+        let print = format!("{} {}", a, b);
+        assert_eq!(cont.execute(&print), format!("{} {}", c, d));
     }
-    // A concept that used to triply reduce but whose first reduction no longer reduces should triply reduce to its first reduction.
+    // A concept that used to triply reduce but whose second reduction no longer reduces should triply reduce to its second reduction.
     #[test]
     fn broken_middle_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*", e in "\\PC*", f in "\\PC*", g in "\\PC*") {
         // to prevent rendundant reductions and looping reductions
@@ -106,8 +106,8 @@ proptest! {
         assert_eq!(cont.execute(&reduction2), "");
         let reduction3 = format!("let (({} {}) (-> ({} {})))", e, f, e, f);
         assert_eq!(cont.execute(&reduction3), "");
-        let print = format!("(((label_of ({} {})) ->) ->) ->", a, b);
-        assert_eq!(cont.execute(&print), ZiaError::NotAProgram.to_string());
+        let print = format!("{} {}", a, b);
+        assert_eq!(cont.execute(&print), format!("{} {}", e, f));
     }
     // Checking that reduction rules can be changed correctly
     #[test]
@@ -117,7 +117,7 @@ proptest! {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, b, d);
-        let print = format!("((label_of ({} {})) ->) ->", a, b);
+        let print = format!("{} {}", a, b);
         assert_eq!(cont.execute(&print), d);
     }
     // It is not necessarily redundant to make a concept reduce to its normal form.

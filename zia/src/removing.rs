@@ -17,6 +17,7 @@
 
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, MaybeDisconnected, MaybeString};
+use std::fmt::Debug;
 use writing::{
     ConceptReader, DeleteDefinition, GetDefinition, GetDefinitionOf, GetReduction,
     NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction, Unlabeller,
@@ -33,7 +34,8 @@ where
         + GetDefinition
         + FindWhatReducesToIt
         + GetReduction
-        + MaybeString,
+        + MaybeString
+        + Debug,
 {
     fn cleanly_delete_definition(&mut self, concept: usize) -> ZiaResult<()> {
         match self.read_concept(&[], concept).get_definition() {
@@ -66,7 +68,8 @@ where
         + GetDefinition
         + FindWhatReducesToIt
         + GetReduction
-        + MaybeString,
+        + MaybeString
+        + Debug,
 {
 }
 

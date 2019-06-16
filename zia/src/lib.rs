@@ -52,15 +52,15 @@
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
 //! assert_eq!(context.execute("let ((a b) (-> c))"), "");
-//! assert_eq!(context.execute("(label_of (a b)) ->"), "c");
+//! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
 //! assert_eq!(context.execute("let ((a b) (-> d))"), "");
-//! assert_eq!(context.execute("(label_of (a b)) ->"), "d");
+//! assert_eq!(context.execute("a b"), "d");
 //!
 //! // Change the rule so "a b" doesn't reduce any further
 //! assert_eq!(context.execute("let ((a b) (-> (a b)))"), "");
-//! assert_eq!(context.execute("(label_of (a b)) ->"), ZiaError::NotAProgram.to_string());
+//! assert_eq!(context.execute("a b"), "a b");
 //!
 //! // Try to specify a rule that already exists
 //! assert_eq!(context.execute("let ((a b) (-> (a b)))"), ZiaError::RedundantReduction.to_string());
@@ -69,7 +69,7 @@
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let (표시 (:= label_of))"), "");
-//! assert_eq!(context.execute("(표시 (a b)) ->"), "c");
+//! assert_eq!(context.execute("표시 (a b)"), "\'c\'");
 //!
 //! // Try to specify the rule to reduce a labelled concept
 //! assert_eq!(context.execute("let (a (-> d))"), ZiaError::MultipleReductionPaths.to_string());
@@ -165,7 +165,8 @@ where
         + MaybeString
         + GetDefinitionOf
         + GetReduction
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Debug,
     Self::S: Container
         + Pair<Self::S>
         + Debug
@@ -175,7 +176,7 @@ where
         + PartialEq<Self::S>,
 {
     fn execute(&mut self, command: &str) -> String {
-        trace!(self.logger(), "execute({})", command);
+        info!(self.logger(), "execute({})", command);
         let ast = match self.ast_from_expression(command) {
             Ok(a) => a,
             Err(e) => return e.to_string(),
@@ -204,7 +205,8 @@ where
         + MaybeString
         + GetDefinitionOf
         + GetReduction
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Debug,
     S: Call<T> + SyntaxConverter<T> + Logger,
     S::S: Container
         + Pair<S::S>
@@ -250,7 +252,8 @@ where
         + GetReduction
         + GetDefinition
         + GetDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + Debug,
     Self::S: Container
         + Pair<Self::S>
         + Clone
@@ -261,61 +264,78 @@ where
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        trace!(self.logger(), "call({})", ast.display_joint());
+        info!(self.logger(), "call({})", ast.display_joint());
         if let Some(c) = ast.get_concept() {
             if let Some(s) = self.read_concept(&[], c).get_string() {
                 return Ok(s);
             }
         }
         match ast.get_expansion() {
-            Some((ref left, ref right)) => self.call_pair(left, right),
-            None => self.try_expanding_then_call(ast),
+            Some((ref left, ref right)) => {
+                let result = self.call_pair(left, right);
+                match result {
+                    Err(ZiaError::CannotReduceFurther) => {
+                        let result = self.try_reducing_then_call(ast);
+                        match result {
+                            Err(ZiaError::CannotReduceFurther) => Ok(self.contract_pair(left, right).to_string()),
+                            _ => result,
+                        }
+                    }
+                    _ => result,
+                }
+            },
+            None => {
+                let result = self.try_reducing_then_call(ast);
+                match result {
+                    Err(ZiaError::CannotReduceFurther) => (),
+                    _ => return result,
+                };
+                let result = self.try_expanding_then_call(ast);
+                match result {
+                    Err(ZiaError::CannotExpandFurther) => Ok(ast.to_string()),
+                    _ => result,
+                }
+            },
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "call_pair({}, {})",
             left.display_joint(),
             right.display_joint()
         );
-        if let Some(c) = left.get_concept() {
-            if c == LET {
+        if let Some(lc) = left.get_concept() {
+            if lc == LET {
                 if let Some((ref rightleft, ref rightright)) = right.get_expansion() {
                     return self.call_as_righthand(rightleft, rightright);
                 }
+            } else if lc == LABEL {
+                info!(self.logger(), "lefthand side is LABEL");
+                if let Some(rc) = right.get_concept() {
+                    info!(self.logger(), "righthand side is concept number {}", rc);
+                    if let Some(s) = self.get_label(rc) {
+                        return Ok("'".to_string() + &s + "'");
+                    }
+                }
+                return Ok("'".to_string() + &right.to_string() + "'");
             }
         }
         match right.get_concept() {
             Some(c) => match c {
-                REDUCTION => {
-                    if let Some((leftleft, leftright)) = left.get_expansion() {
-                        if let Some(con) = leftleft.get_concept() {
-                            if con == LABEL {
-                                return match self.reduce(&leftright) {
-                                    Some(r) => Ok(r.to_string()),
-                                    None => {
-                                        let label = leftright.to_string();
-                                        if label.contains(' ') {
-                                            Err(ZiaError::NotAProgram)
-                                        } else {
-                                            Ok(label)
-                                        }
-                                    }
-                                };
-                            }
-                        }
-                    };
-                    let reduced_syntax = match self.reduce(left) {
-                        None => left.clone(),
-                        Some(rleft) => rleft,
-                    };
-                    self.call(&reduced_syntax)
-                }
-                _ => Err(ZiaError::NotAProgram),
+                REDUCTION => self.try_reducing_then_call(&left),
+                _ => self.reduce_and_call_pair(left, right),
             },
-            None => Err(ZiaError::NotAProgram),
+            None => self.reduce_and_call_pair(left, right),
+        }
+    }
+    fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
+        match (self.reduce(left), self.reduce(right)) {
+            (None, None) => Err(ZiaError::CannotReduceFurther),
+            (Some(rl), None) => self.call_pair(&rl, right),
+            (None, Some(rr)) => self.call_pair(left, &rr),
+            (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
         }
     }
     fn reduce_label_of(&self, ast: &Rc<Self::S>) -> ZiaResult<String> {
@@ -336,7 +356,7 @@ where
     }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "try_expanding_then_call({})",
             ast.display_joint()
@@ -345,12 +365,12 @@ where
         if expansion != ast {
             self.call(expansion)
         } else {
-            Err(ZiaError::NotAProgram)
+            Err(ZiaError::CannotExpandFurther)
         }
     }
-    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::NotAProgram)` is returned
+    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "try_reducing_then_call({})",
             ast.display_joint()
@@ -359,12 +379,12 @@ where
         if normal_form != ast {
             self.call(normal_form)
         } else {
-            Err(ZiaError::NotAProgram)
+            Err(ZiaError::CannotReduceFurther)
         }
     }
-    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::NotAProgram)` is returned.
+    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn call_as_righthand(&mut self, left: &Self::S, right: &Self::S) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "call_as_righthand({}, {})",
             left.display_joint(),
@@ -374,7 +394,7 @@ where
             Some((ref rightleft, ref rightright)) => {
                 self.match_righthand_pair(left, rightleft, rightright)
             }
-            None => Err(ZiaError::NotAProgram),
+            None => Err(ZiaError::CannotExpandFurther),
         }
     }
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
@@ -386,7 +406,7 @@ where
         rightleft: &Self::S,
         rightright: &Self::S,
     ) -> ZiaResult<String> {
-        trace!(
+        info!(
             self.logger(),
             "match_righthand_pair({}, {}, {})",
             left.display_joint(),
@@ -403,26 +423,26 @@ where
                         let ast = self.to_ast::<Self::S>(r);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
-                        trace!(
+                        info!(
                             self.logger(),
                             "match_righthand_pair({}, {}, {}) -> Err(ZiaError::NotAProgram)",
                             left.display_joint(),
                             rightleft.display_joint(),
                             rightright.display_joint()
                         );
-                        Err(ZiaError::NotAProgram)
+                        Err(ZiaError::CannotReduceFurther)
                     }
                 }
             },
             None => {
-                trace!(
+                info!(
                     self.logger(),
                     "match_righthand_pair({}, {}, {}) -> Err(ZiaError::NotAProgram)",
                     left.display_joint(),
                     rightleft.display_joint(),
                     rightright.display_joint()
                 );
-                Err(ZiaError::NotAProgram)
+                Err(ZiaError::UnusedSymbol)
             }
         }
     }
@@ -446,7 +466,8 @@ where
         + GetReduction
         + GetDefinition
         + GetDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + Debug,
     S::S: Container
         + Pair<S::S>
         + Clone
@@ -475,12 +496,14 @@ where
         + GetReduction
         + GetDefinition
         + GetDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + Debug,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
     Self::S: Pair<Self::S> + Container,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<String> {
+        info!(self.logger(), "execute_definition({}, {})", new, old);
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
@@ -579,7 +602,8 @@ where
         + GetReduction
         + GetDefinition
         + GetDefinitionOf
-        + MaybeString,
+        + MaybeString
+        + Debug,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
     S::S: Pair<S::S> + Container,
 {
