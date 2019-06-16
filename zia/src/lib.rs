@@ -69,7 +69,7 @@
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let (표시 (:= label_of))"), "");
-//! assert_eq!(context.execute("표시 (a b)"), "\"c\""");
+//! assert_eq!(context.execute("표시 (a b)"), "\'c\'");
 //!
 //! // Try to specify the rule to reduce a labelled concept
 //! assert_eq!(context.execute("let (a (-> d))"), ZiaError::MultipleReductionPaths.to_string());
