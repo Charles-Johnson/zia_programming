@@ -26,7 +26,12 @@ use reading::{Container, GetConceptOfLabel};
 use std::fmt::Debug;
 pub trait Unlabeller<T>
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinition + GetDefinitionOf + Debug,
+    T: GetReduction
+        + RemoveReduction
+        + NoLongerReducesFrom
+        + GetDefinition
+        + GetDefinitionOf
+        + Debug,
     Self: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
@@ -39,7 +44,12 @@ where
 
 impl<S, T> Unlabeller<T> for S
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom + GetDefinitionOf + GetDefinition + Debug,
+    T: GetReduction
+        + RemoveReduction
+        + NoLongerReducesFrom
+        + GetDefinitionOf
+        + GetDefinition
+        + Debug,
     S: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
 }
@@ -102,9 +112,7 @@ where
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
         info!(
             self.logger(),
-            "update_reduction({}, {})",
-            concept,
-            reduction
+            "update_reduction({}, {})", concept, reduction
         );
         if self.parent_already_has_reduction(concept) {
             info!(
@@ -140,9 +148,7 @@ where
         if r == reduction {
             info!(
                 self.logger(),
-                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
-                concept,
-                reduction
+                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction
             );
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
@@ -158,9 +164,7 @@ where
         self.write_concept(reduction).make_reduce_from(concept);
         info!(
             self.logger(),
-            "update_reduction({}, {}) -> Ok(())",
-            concept,
-            reduction
+            "update_reduction({}, {}) -> Ok(())", concept, reduction
         );
         Ok(())
     }

@@ -233,9 +233,9 @@ where
                 let r = self.read_concept(&[], concept).get_reduction();
                 match r {
                     Some(rr) => self.get_label(rr),
-                    None => None
+                    None => None,
                 }
-            },
+            }
             Some(d) => match self.get_normal_form(d) {
                 None => None,
                 Some(n) => self.read_concept(&[], n).get_string(),

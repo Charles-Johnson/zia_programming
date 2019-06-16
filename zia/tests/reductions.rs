@@ -89,7 +89,7 @@ proptest! {
         let reduction2 = format!("let (({} {}) (-> ({} {})))", c, d, c, d);
         assert_eq!(cont.execute(&reduction2), "");
         let print = format!("{} {}", a, b);
-        assert_eq!(cont.execute(&print), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&print), e);
     }
     // A concept that used to triply reduce but whose first reduction no longer reduces should triply reduce to its first reduction.
     #[test]
@@ -107,7 +107,7 @@ proptest! {
         let reduction3 = format!("let (({} {}) (-> ({} {})))", e, f, e, f);
         assert_eq!(cont.execute(&reduction3), "");
         let print = format!("{} {}", a, b);
-        assert_eq!(cont.execute(&print), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&print), g);
     }
     // Checking that reduction rules can be changed correctly
     #[test]

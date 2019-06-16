@@ -301,33 +301,18 @@ where
         }
         match right.get_concept() {
             Some(c) => match c {
-                REDUCTION => {
-                    if let Some((leftleft, leftright)) = left.get_expansion() {
-                        if let Some(con) = leftleft.get_concept() {
-                            if con == LABEL {
-                                return match self.reduce(&leftright) {
-                                    Some(r) => Ok(r.to_string()),
-                                    None => {
-                                        let label = leftright.to_string();
-                                        if label.contains(' ') {
-                                            Err(ZiaError::NotAProgram)
-                                        } else {
-                                            Ok(label)
-                                        }
-                                    }
-                                };
-                            }
-                        }
-                    };
-                    let reduced_syntax = match self.reduce(left) {
-                        None => left.clone(),
-                        Some(rleft) => rleft,
-                    };
-                    self.call(&reduced_syntax)
-                }
-                _ => Err(ZiaError::NotAProgram),
+                REDUCTION => self.try_reducing_then_call(&left),
+                _ => self.reduce_and_call_pair(left, right),
             },
-            None => Err(ZiaError::NotAProgram),
+            None => self.reduce_and_call_pair(left, right),
+        }
+    }
+    fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
+        match (self.reduce(left), self.reduce(right)) {
+            (None, None) => Ok(self.contract_pair(left, right).to_string()),
+            (Some(rl), None) => self.call_pair(&rl, right),
+            (None, Some(rr)) => self.call_pair(left, &rr),
+            (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
         }
     }
     fn reduce_label_of(&self, ast: &Rc<Self::S>) -> ZiaResult<String> {
@@ -357,10 +342,10 @@ where
         if expansion != ast {
             self.call(expansion)
         } else {
-            Err(ZiaError::NotAProgram)
+            Err(ZiaError::CannotExpandFurther)
         }
     }
-    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::NotAProgram)` is returned
+    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
         info!(
             self.logger(),
@@ -371,10 +356,10 @@ where
         if normal_form != ast {
             self.call(normal_form)
         } else {
-            Err(ZiaError::NotAProgram)
+            Err(ZiaError::CannotReduceFurther)
         }
     }
-    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::NotAProgram)` is returned.
+    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn call_as_righthand(&mut self, left: &Self::S, right: &Self::S) -> ZiaResult<String> {
         info!(
             self.logger(),
@@ -386,7 +371,7 @@ where
             Some((ref rightleft, ref rightright)) => {
                 self.match_righthand_pair(left, rightleft, rightright)
             }
-            None => Err(ZiaError::NotAProgram),
+            None => Err(ZiaError::CannotExpandFurther),
         }
     }
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
@@ -422,7 +407,7 @@ where
                             rightleft.display_joint(),
                             rightright.display_joint()
                         );
-                        Err(ZiaError::NotAProgram)
+                        Err(ZiaError::CannotReduceFurther)
                     }
                 }
             },
@@ -434,7 +419,7 @@ where
                     rightleft.display_joint(),
                     rightright.display_joint()
                 );
-                Err(ZiaError::NotAProgram)
+                Err(ZiaError::UnusedSymbol)
             }
         }
     }

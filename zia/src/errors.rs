@@ -29,12 +29,14 @@ pub enum ZiaError {
     RedundantRefactor,
     /// When removing a definition from a concept with no definition.
     RedundantDefinitionRemoval,
-    /// When the command cannot be interpreted as a routine.
-    NotAProgram,
     /// When defining an expanded expression.
     BadDefinition,
     /// When the command would complete a cycle of chained reduction rules.
     CyclicReduction,
+    /// When syntax tree cannot be expanded further
+    CannotExpandFurther,
+    /// When syntax tree cannot be reduced further
+    CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.  
     ExpandingReduction,
     /// When a concept is contained within its definition.
@@ -51,6 +53,8 @@ pub enum ZiaError {
     ConcreteReduction,
     /// When trying to specify a reduction rule for a concept whose components reduce to something else.
     MultipleReductionPaths,
+    /// When symbol is expected to be used by a concept but isn't.
+    UnusedSymbol,
 }
 
 impl Error for ZiaError {
@@ -70,8 +74,9 @@ impl fmt::Display for ZiaError {
 			ZiaError::RedundantDefinition => "That definition already exists.",
 			ZiaError::RedundantRefactor => "Relabelling something that doesn't yet exist has no effect.",
 			ZiaError::RedundantDefinitionRemoval => "Removing a definition that doesn't exist is redundant.",
-	        ZiaError::NotAProgram => "No program exists for this syntax.",
 	        ZiaError::BadDefinition => "Cannot define expressions.",
+            ZiaError::CannotExpandFurther => "Cannot expand syntax further",
+            ZiaError::CannotReduceFurther => "Cannot reduce syntax further",
 	        ZiaError::CyclicReduction => "Cannot allow a chain of reduction rules to loop.",
 	        ZiaError::ExpandingReduction => "Cannot reduce a concept to an expression containing itself.",
 	        ZiaError::InfiniteDefinition => "Cannot define a concept as an expression containing itself.",
@@ -80,7 +85,8 @@ impl fmt::Display for ZiaError {
 			ZiaError::DefinitionCollision => "Cannot define a used symbol as another used symbol or expression.",
 			ZiaError::SettingDefinitionOfConcrete => "Cannot set a definition of a concrete concept",
 			ZiaError::ConcreteReduction => "Cannot reduce a concrete concept", 
-			ZiaError::MultipleReductionPaths => "Concept is already composed of concepts with their own reduction rules."
+			ZiaError::MultipleReductionPaths => "Concept is already composed of concepts with their own reduction rules.",
+            ZiaError::UnusedSymbol => "Symbol was expected to be used to label a concept but isn't."
 	    })
     }
 }
