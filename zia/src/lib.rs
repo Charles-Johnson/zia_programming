@@ -293,9 +293,10 @@ where
                 if let Some(rc) = right.get_concept() {
                     info!(self.logger(), "righthand side is concept number {}", rc);
                     if let Some(s) = self.get_label(rc) {
-                        return Ok(s);
+                        return Ok("'".to_string() + &s + "'");
                     }
                 }
+                return Ok("'".to_string() + &right.to_string() + "'");
             }
         }
         match right.get_concept() {
