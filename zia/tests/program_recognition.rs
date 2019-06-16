@@ -22,56 +22,56 @@ extern crate zia;
 
 // Needed for assume_abstract macro which is needed for let_definition macro
 use test_zia::CONCRETE_SYMBOLS;
-use zia::{Context, ContextMaker, Execute, ZiaError};
+use zia::{Context, ContextMaker, Execute};
 
 proptest! {
-    // A previously unused symbol cannot be interpreted as a program
+    // A previously unused symbol cannotreduce
     #[test]
     fn fresh_symbol_is_not_a_program(a in "\\PC*") {
         assume_abstract!(a);
         assume_symbol!(a);
         let mut cont = Context::new();
-        assert_eq!(cont.execute(&a), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&a), a);
     }
-    // A pair of previously unused symbols cannot be interpreted as a program
+    // A pair of previously unused symbols cannot reduce
     #[test]
-    fn fresh_pair_is_not_a_program(a in "\\PC*", b in "\\PC*") {
+    fn fresh_pair_does_not_reduce(a in "\\PC*", b in "\\PC*") {
         assume_abstract!(a);
         assume_abstract!(b);
         assume_symbols!(a, b);
         let mut cont = Context::new();
         let command = format!("{} {}", a, b);
-        assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&command), command);
     }
-    // An expression of previously unused symbols containing a nested pair cannot be interpreted as a program
+    // An expression of previously unused symbols containing a nested pair cannot reduce
     #[test]
-    fn fresh_nested_pair_is_not_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn fresh_nested_pair_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         assume_abstract!(a);
         assume_abstract!(b);
         assume_abstract!(c);
         assume_symbols!(a, b, c);
         let mut cont = Context::new();
         let command = format!("{} ({} {})", a, b, c);
-        assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&command), command);
     }
-    // A previously used symbol cannot be interpreted as a program unless the concept is composed of any concrete concepts.
+    // A previously used symbol cannot reduce unless it is a reducible concepts.
     #[test]
-    fn used_symbol_is_not_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn used_symbol_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
-        assert_eq!(cont.execute(&c), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&c), c);
     }
-    // A pair of previously used symbols cannot be interpreted as a program unless their concepts are composed of any concrete concepts.
+    // A pair of previously used symbols cannot reduce unless their concepts are composed of any reducible concepts.
     #[test]
-    fn used_symbol_in_a_pair_is_not_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn used_symbol_in_a_pair_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         let command = format!("{} {}", a, c);
-        assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
+        assert_eq!(cont.execute(&command), command);
     }
-    // An expression with a nested pair composed of previously used symbols cannot be interpreted as a program unless their concepts are composed of any concrete concepts.
+    // An expression with a nested pair composed of previously used symbols cannot reduce unless their concepts are composed of any reducible concepts.
     #[test]
-    fn used_symbol_in_a_nested_pair_is_not_a_program(
+    fn used_symbol_in_a_nested_pair_does_not_reduce(
         a in "\\PC*",
         b in "\\PC*",
         c in "\\PC*",
@@ -81,23 +81,6 @@ proptest! {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         let command = format!("{} ({} {})", a, b, c);
-        assert_eq!(cont.execute(&command), ZiaError::NotAProgram.to_string());
-    }
-    #[test]
-    fn symbol_whose_normal_form_is_a_program_is_a_program(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_symbols!(a, b, c);
-        let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let (({} {}) (-> ((label_of {}) ->)))", a, b, c)), "");
-        assert_eq!(cont.execute(&format!("({} {}) ->", a, b)), c);
-    }
-    #[test]
-    fn pair_whose_normal_form_is_a_builtin_concept(a in "\\PC*", b in "\\PC*", d in "\\PC*") {
-        assume_symbol!(d);
-        let mut cont = Context::new();
-        let c = ":=";
-        reduce_pair!(cont, a, b, c);
-        assert_eq!(cont.execute(&format!("{} {}", a, b)), ZiaError::NotAProgram.to_string());
-        assert_eq!(cont.execute(&format!("let ({} (({} {}) {}))", d, a, b, b)), "");
-        assert_eq!(cont.execute(&format!("(label_of ({} {})) ->", a, d)), c);
+        assert_eq!(cont.execute(&command), command);
     }
 }

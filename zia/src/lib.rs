@@ -52,15 +52,15 @@
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
 //! assert_eq!(context.execute("let ((a b) (-> c))"), "");
-//! assert_eq!(context.execute("label_of (a b)"), "c");
+//! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
 //! assert_eq!(context.execute("let ((a b) (-> d))"), "");
-//! assert_eq!(context.execute("label_of (a b)"), "d");
+//! assert_eq!(context.execute("a b"), "d");
 //!
 //! // Change the rule so "a b" doesn't reduce any further
 //! assert_eq!(context.execute("let ((a b) (-> (a b)))"), "");
-//! assert_eq!(context.execute("label_of (a b)"), ZiaError::NotAProgram.to_string());
+//! assert_eq!(context.execute("a b"), "a b");
 //!
 //! // Try to specify a rule that already exists
 //! assert_eq!(context.execute("let ((a b) (-> (a b)))"), ZiaError::RedundantReduction.to_string());
@@ -69,7 +69,7 @@
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let (표시 (:= label_of))"), "");
-//! assert_eq!(context.execute("표시 (a b)"), "c");
+//! assert_eq!(context.execute("표시 (a b)"), "\"c\""");
 //!
 //! // Try to specify the rule to reduce a labelled concept
 //! assert_eq!(context.execute("let (a (-> d))"), ZiaError::MultipleReductionPaths.to_string());

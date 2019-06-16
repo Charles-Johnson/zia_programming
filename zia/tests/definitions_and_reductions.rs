@@ -39,7 +39,7 @@ proptest! {
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, d, e, f);
         let_definition!(cont, g, c, f);
-        let print = format!("(label_of (({} {}) ({} {}))) ->", a, b, d, e);
+        let print = format!("({} {}) ({} {})", a, b, d, e);
         assert_eq!(
             cont.execute(&print),
             g
