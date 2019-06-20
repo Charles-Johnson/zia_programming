@@ -48,7 +48,7 @@ where
         + MaybeString
         + FindWhatReducesToIt,
     Self::S: Container + PartialEq + DisplayJoint,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
         info!(
@@ -89,7 +89,7 @@ where
         + MaybeString
         + FindWhatReducesToIt,
     S::S: Container + PartialEq<S::S> + DisplayJoint,
-    S::Delta: Clone,
+    S::Delta: Clone + fmt::Debug,
 {
 }
 
@@ -124,14 +124,14 @@ where
         + FindWhatReducesToIt,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::S: DisplayJoint,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
             info!(
                 self.logger(),
-                "concept_from_ast({}) -> Ok({})",
+                "concept_from_ast({}) -> Ok({}): already included in ast",
                 ast.display_joint(),
                 c
             );
@@ -139,7 +139,7 @@ where
         } else if let Some(c) = self.concept_from_label(&ast.display_joint()) {
             info!(
                 self.logger(),
-                "concept_from_ast({}) -> Ok({})",
+                "concept_from_ast({}) -> Ok({}): derived from label",
                 ast.display_joint(),
                 c
             );
@@ -151,7 +151,7 @@ where
                     let new_concept = try!(self.new_labelled_default(string));
                     info!(
                         self.logger(),
-                        "concept_from_ast({}) -> Ok({})",
+                        "concept_from_ast({}) -> Ok({}): new concept created",
                         ast.display_joint(),
                         new_concept
                     );
@@ -160,13 +160,14 @@ where
                 Some((ref left, ref right)) => {
                     let mut leftc = try!(self.concept_from_ast(left));
                     let mut rightc = try!(self.concept_from_ast(right));
-                    let concept = try!(self.find_or_insert_definition(leftc, rightc));
+                    let (deltas, concept) = try!(self.find_or_insert_definition(leftc, rightc));
+                    self.apply_all(&deltas);
                     if !string.contains(' ') {
                         try!(self.label(concept, string));
                     }
                     info!(
                         self.logger(),
-                        "concept_from_ast({}) -> Ok({})",
+                        "concept_from_ast({}) -> Ok({}): derived from definition",
                         ast.display_joint(),
                         concept
                     );
@@ -193,7 +194,7 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + FindWhatReducesToIt,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     fn new() -> Self {
         let mut cont = Self::default();
@@ -218,7 +219,7 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + FindWhatReducesToIt,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
 }
 
@@ -237,12 +238,13 @@ where
         + From<Self::C>
         + From<Self::A>,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     type C: Default;
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
-        let definition = try!(self.find_or_insert_definition(LABEL, concept));
-        let (string_id, deltas) = self.new_string(&[], string);
+        let (mut deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
+        let (string_id, more_deltas) = self.new_string(&deltas, string);
+        deltas.extend(more_deltas);
         self.apply_all(&deltas);
         self.update_reduction(definition, string_id)
     }
@@ -280,22 +282,20 @@ where
         + SetAsDefinitionOf
         + GetDefinitionOf,
     Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
-    Self::Delta: Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<usize> {
+    fn find_or_insert_definition(&self, lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         let pair = self.find_definition(lefthand, righthand);
         match pair {
             None => {
                 let mut deltas = Vec::<Self::Delta>::new();
                 let (definition, delta) = self.new_default::<Self::A>(&[]);
                 deltas.push(delta);
-                let more_deltas = try!(self.insert_definition(&deltas, definition, lefthand, righthand));
-                deltas.extend(more_deltas);
-                self.apply_all(&deltas);
-                Ok(definition)
+                let new_deltas = try!(self.insert_definition(&deltas, definition, lefthand, righthand));
+                Ok((new_deltas, definition))
             }
-            Some(def) => Ok(def),
+            Some(def) => Ok((vec!(), def)),
         }
     }
 }

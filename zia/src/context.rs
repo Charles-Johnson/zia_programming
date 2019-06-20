@@ -23,7 +23,7 @@ use reading::ConceptReader;
 use removing::{BlindConceptRemover, StringRemover};
 use slog;
 use slog::Drain;
-use std::collections::{HashMap, HashSet};
+use std::{fmt::Debug, collections::{HashMap, HashSet}};
 use translating::StringConcept;
 use writing::{
     ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta,
@@ -48,27 +48,27 @@ impl<T> Logger for Context<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ContextDelta<T>
 where
     T: Delta,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     String(String, StringDelta),
     Concept(usize, ConceptDelta<T>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StringDelta {
     Insert(usize),
     Remove,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ConceptDelta<T>
 where
     T: Delta,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     Insert(T),
     Remove,
@@ -78,7 +78,7 @@ where
 impl<T> Delta for Context<T>
 where
     T: Delta + Clone,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     type Delta = ContextDelta<T>;
     fn apply(&mut self, delta: &ContextDelta<T>) {
@@ -123,7 +123,7 @@ impl<T> StringAdder for Context<T> {
 impl<T> StringAdderDelta for Context<T>
 where
     T: Delta + Clone,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
         ContextDelta::String(string.to_string(), StringDelta::Insert(string_id))
@@ -143,7 +143,7 @@ impl<T> SetConceptDefinitionDeltas for Context<T>
 where
     Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
     T: SetDefinitionDelta + SetAsDefinitionOfDelta + Clone,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     fn set_concept_definition_deltas(
         &self,
@@ -181,7 +181,7 @@ where
 impl<T> ConceptReader<T> for Context<T>
 where
     T: Delta + Clone,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     fn read_concept(&self, deltas: &[ContextDelta<T>], id: usize) -> T {
         let mut concept_if_still_exists = match &self.concepts.get(id) {
@@ -247,7 +247,7 @@ impl<T> ConceptAdder<T> for Context<T> {
 impl<T> ConceptAdderDelta<T> for Context<T>
 where
     T: Delta + Clone,
-    T::Delta: Clone,
+    T::Delta: Clone + Debug,
 {
     fn add_concept_delta(
         &self,

@@ -174,7 +174,7 @@ where
         + From<(String, Option<usize>)>
         + DisplayJoint
         + PartialEq<Self::S>,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
@@ -216,7 +216,7 @@ where
         + DisplayJoint
         + Debug
         + PartialEq<Self::S>,
-    S::Delta: Clone,
+    S::Delta: Clone + Debug,
 {
 }
 
@@ -263,7 +263,7 @@ where
         + DisplayJoint
         + PartialEq<Self::S>
         + Debug,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
@@ -334,7 +334,12 @@ where
         }
     }
     fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
-        match (self.reduce(left), self.reduce(right)) {
+        info!(self.logger(), "reduce_and_call_pair({}, {})", left.display_joint(), right.display_joint());
+        let reduced_left = self.reduce(left);
+        info!(self.logger(), "reduce({}) -> {}", left.display_joint(), &match reduced_left.clone() {None => "None".to_string(), Some(rl) => rl.display_joint(),});
+        let reduced_right = self.reduce(right);
+        info!(self.logger(), "reduce({}) -> {}", right.display_joint(), &match reduced_right.clone() {None => "None".to_string(), Some(rr) => rr.display_joint(),});
+        match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
             (None, Some(rr)) => self.call_pair(left, &rr),
@@ -478,7 +483,7 @@ where
         + From<(String, Option<usize>)>
         + DisplayJoint
         + PartialEq<Self::S>,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
 }
 
@@ -504,7 +509,7 @@ where
         + Debug,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
     Self::S: Pair<Self::S> + Container,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<String> {
@@ -612,6 +617,6 @@ where
         + Debug,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
     S::S: Pair<S::S> + Container,
-    S::Delta: Clone,
+    S::Delta: Clone + Debug,
 {
 }

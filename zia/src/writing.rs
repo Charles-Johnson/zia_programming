@@ -198,7 +198,7 @@ pub trait InsertDefinition<T>
 where
     T: Sized + GetDefinition + GetReduction,
     Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
     fn insert_definition(
         &self,
@@ -212,9 +212,7 @@ where
         } else {
             try!(self.check_reductions(deltas, definition, lefthand));
             try!(self.check_reductions(deltas, definition, righthand));
-            let more_deltas = try!(self.set_concept_definition_deltas(deltas, definition, lefthand, righthand));
-            let mut new_deltas = deltas.clone();
-            new_deltas.extend(more_deltas);
+            let new_deltas = try!(self.set_concept_definition_deltas(deltas, definition, lefthand, righthand));
             Ok(new_deltas)
         }
     }
@@ -235,7 +233,7 @@ impl<S, T> InsertDefinition<T> for S
 where
     T: Sized + GetDefinition + GetReduction,
     S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
-    Self::Delta: Clone,
+    Self::Delta: Clone + Debug,
 {
 }
 
