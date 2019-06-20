@@ -46,6 +46,7 @@ impl Delta for CommonPart {
     }
 }
 
+#[derive(Clone)]
 pub enum CommonDelta {
     AddLeft(usize),
     AddRight(usize),

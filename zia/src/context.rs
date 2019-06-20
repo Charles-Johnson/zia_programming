@@ -48,22 +48,27 @@ impl<T> Logger for Context<T> {
     }
 }
 
+#[derive(Clone)]
 pub enum ContextDelta<T>
 where
     T: Delta,
+    T::Delta: Clone,
 {
     String(String, StringDelta),
     Concept(usize, ConceptDelta<T>),
 }
 
+#[derive(Clone)]
 pub enum StringDelta {
     Insert(usize),
     Remove,
 }
 
+#[derive(Clone)]
 pub enum ConceptDelta<T>
 where
     T: Delta,
+    T::Delta: Clone,
 {
     Insert(T),
     Remove,
@@ -73,12 +78,16 @@ where
 impl<T> Delta for Context<T>
 where
     T: Delta + Clone,
+    T::Delta: Clone,
 {
     type Delta = ContextDelta<T>;
     fn apply(&mut self, delta: &ContextDelta<T>) {
         match delta {
             ContextDelta::String(s, sd) => match sd {
-                StringDelta::Insert(id) => self.add_string(*id, &s),
+                StringDelta::Insert(id) => {
+                    info!(self.logger, "add_string({}, {})", id, &s);
+                    self.add_string(*id, &s);
+                },
                 StringDelta::Remove => self.remove_string(&s),
             },
             ContextDelta::Concept(id, cd) => match cd {
@@ -114,6 +123,7 @@ impl<T> StringAdder for Context<T> {
 impl<T> StringAdderDelta for Context<T>
 where
     T: Delta + Clone,
+    T::Delta: Clone,
 {
     fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
         ContextDelta::String(string.to_string(), StringDelta::Insert(string_id))
@@ -133,47 +143,50 @@ impl<T> SetConceptDefinitionDeltas for Context<T>
 where
     Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
     T: SetDefinitionDelta + SetAsDefinitionOfDelta + Clone,
+    T::Delta: Clone,
 {
     fn set_concept_definition_deltas(
         &self,
+        deltas: &Vec<Self::Delta>,
         concept: usize,
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<Vec<ContextDelta<T>>> {
-        let mut deltas = Vec::<ContextDelta<T>>::new();
+        let mut new_deltas = deltas.clone();
         let concept_delta1 = try!(self
-            .read_concept(&deltas, concept)
+            .read_concept(&new_deltas, concept)
             .set_definition_delta(lefthand, righthand));
-        deltas.push(ContextDelta::Concept(
+        new_deltas.push(ContextDelta::Concept(
             concept,
             ConceptDelta::Update(concept_delta1),
         ));
         let concept_delta2 = self
-            .read_concept(&deltas, lefthand)
+            .read_concept(&new_deltas, lefthand)
             .add_as_lefthand_of_delta(concept);
-        deltas.push(ContextDelta::Concept(
+        new_deltas.push(ContextDelta::Concept(
             lefthand,
             ConceptDelta::Update(concept_delta2),
         ));
         let concept_delta3 = self
-            .read_concept(&deltas, righthand)
+            .read_concept(&new_deltas, righthand)
             .add_as_righthand_of_delta(concept);
-        deltas.push(ContextDelta::Concept(
+        new_deltas.push(ContextDelta::Concept(
             righthand,
             ConceptDelta::Update(concept_delta3),
         ));
-        Ok(deltas)
+        Ok(new_deltas)
     }
 }
 
 impl<T> ConceptReader<T> for Context<T>
 where
     T: Delta + Clone,
+    T::Delta: Clone,
 {
     fn read_concept(&self, deltas: &[ContextDelta<T>], id: usize) -> T {
-        let mut concept_if_still_exists = match &self.concepts[id] {
-            Some(c) => Some(c.clone()),
-            None => None,
+        let mut concept_if_still_exists = match &self.concepts.get(id) {
+            Some(Some(ref c)) => Some(c.clone()),
+            _ => None,
         };
         for delta in deltas {
             if let ContextDelta::Concept(index, cd) = delta {
@@ -234,6 +247,7 @@ impl<T> ConceptAdder<T> for Context<T> {
 impl<T> ConceptAdderDelta<T> for Context<T>
 where
     T: Delta + Clone,
+    T::Delta: Clone,
 {
     fn add_concept_delta(
         &self,

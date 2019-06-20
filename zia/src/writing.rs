@@ -198,30 +198,32 @@ pub trait InsertDefinition<T>
 where
     T: Sized + GetDefinition + GetReduction,
     Self: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
+    Self::Delta: Clone,
 {
     fn insert_definition(
-        &mut self,
+        &self,
+        deltas: &Vec<Self::Delta>,        
         definition: usize,
         lefthand: usize,
         righthand: usize,
-    ) -> ZiaResult<()> {
-        info!(self.logger(), "insert_definition({}, {}, {})", definition, lefthand, righthand);
-        if self.contains(lefthand, definition) || self.contains(righthand, definition) {
+    ) -> ZiaResult<Vec<Self::Delta>> {
+        if self.contains(deltas, lefthand, definition) || self.contains(deltas, righthand, definition) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            try!(self.check_reductions(definition, lefthand));
-            try!(self.check_reductions(definition, righthand));
-            let deltas = try!(self.set_concept_definition_deltas(definition, lefthand, righthand));
-            self.apply_all(&deltas);
-            Ok(())
+            try!(self.check_reductions(deltas, definition, lefthand));
+            try!(self.check_reductions(deltas, definition, righthand));
+            let more_deltas = try!(self.set_concept_definition_deltas(deltas, definition, lefthand, righthand));
+            let mut new_deltas = deltas.clone();
+            new_deltas.extend(more_deltas);
+            Ok(new_deltas)
         }
     }
-    fn check_reductions(&self, outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(&[], inner_concept).get_reduction() {
-            if r == outer_concept || self.contains(r, outer_concept) {
+    fn check_reductions(&self, deltas: &[Self::Delta], outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
+        if let Some(r) = self.read_concept(deltas, inner_concept).get_reduction() {
+            if r == outer_concept || self.contains(deltas, r, outer_concept) {
                 Err(ZiaError::InfiniteDefinition)
             } else {
-                self.check_reductions(outer_concept, r)
+                self.check_reductions(deltas, outer_concept, r)
             }
         } else {
             Ok(())
@@ -233,6 +235,7 @@ impl<S, T> InsertDefinition<T> for S
 where
     T: Sized + GetDefinition + GetReduction,
     S: ConceptWriter<T> + Container<T> + SetConceptDefinitionDeltas + Logger,
+    Self::Delta: Clone,
 {
 }
 
@@ -252,7 +255,7 @@ pub trait SetConceptDefinitionDeltas
 where
     Self: Delta,
 {
-    fn set_concept_definition_deltas(&self, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+    fn set_concept_definition_deltas(&self, &Vec<Self::Delta>, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
 }
 
 pub trait SetDefinitionDelta

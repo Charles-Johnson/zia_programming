@@ -454,12 +454,12 @@ where
     Self: ConceptReader<T>,
     T: GetDefinition,
 {
-    fn contains(&self, outer: usize, inner: usize) -> bool {
-        if let Some((left, right)) = self.read_concept(&[], outer).get_definition() {
+    fn contains(&self, deltas: &[Self::Delta], outer: usize, inner: usize) -> bool {
+        if let Some((left, right)) = self.read_concept(deltas, outer).get_definition() {
             left == inner
                 || right == inner
-                || self.contains(left, inner)
-                || self.contains(right, inner)
+                || self.contains(deltas, left, inner)
+                || self.contains(deltas, right, inner)
         } else {
             false
         }

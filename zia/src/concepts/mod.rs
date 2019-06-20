@@ -46,6 +46,7 @@ enum SpecificPart {
     String(String),
 }
 
+#[derive(Clone)]
 pub enum ConceptDelta {
     Abstract(AbstractDelta),
     Common(CommonDelta),

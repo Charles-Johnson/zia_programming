@@ -174,6 +174,7 @@ where
         + From<(String, Option<usize>)>
         + DisplayJoint
         + PartialEq<Self::S>,
+    Self::Delta: Clone,
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
@@ -215,6 +216,7 @@ where
         + DisplayJoint
         + Debug
         + PartialEq<Self::S>,
+    S::Delta: Clone,
 {
 }
 
@@ -261,6 +263,7 @@ where
         + DisplayJoint
         + PartialEq<Self::S>
         + Debug,
+    Self::Delta: Clone,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
@@ -475,6 +478,7 @@ where
         + From<(String, Option<usize>)>
         + DisplayJoint
         + PartialEq<Self::S>,
+    Self::Delta: Clone,
 {
 }
 
@@ -500,6 +504,7 @@ where
         + Debug,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
     Self::S: Pair<Self::S> + Container,
+    Self::Delta: Clone,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<String> {
@@ -558,7 +563,8 @@ where
         } else {
             let left_concept = try!(self.concept_from_ast(left));
             let right_concept = try!(self.concept_from_ast(right));
-            try!(self.insert_definition(concept, left_concept, right_concept));
+            let deltas = try!(self.insert_definition(&vec!(), concept, left_concept, right_concept));
+            self.apply_all(&deltas);
             Ok(())
         }
     }
@@ -606,5 +612,6 @@ where
         + Debug,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
     S::S: Pair<S::S> + Container,
+    S::Delta: Clone,
 {
 }

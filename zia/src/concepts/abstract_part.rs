@@ -40,6 +40,7 @@ impl Delta for AbstractPart {
     }
 }
 
+#[derive(Clone)]
 pub enum AbstractDelta {
     SetDefinition(usize, usize),
     RemoveDefinition,
