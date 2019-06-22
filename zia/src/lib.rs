@@ -566,8 +566,10 @@ where
             try!(self.relabel(left_concept, &left.to_string()));
             self.relabel(right_concept, &right.to_string())
         } else {
-            let left_concept = try!(self.concept_from_ast(left));
-            let right_concept = try!(self.concept_from_ast(right));
+            let (deltas1, left_concept) = try!(self.concept_from_ast(left));
+            self.apply_all(&deltas1);
+            let (deltas2, right_concept) = try!(self.concept_from_ast(right));
+            self.apply_all(&deltas2);
             let deltas = try!(self.insert_definition(&vec!(), concept, left_concept, right_concept));
             self.apply_all(&deltas);
             Ok(())
@@ -592,7 +594,9 @@ where
                 None
             };
         let new_syntax_tree = Self::S::from_pair((syntax, definition_concept), left, right);
-        self.concept_from_ast(&new_syntax_tree)
+        let (deltas, concept) = self.concept_from_ast(&new_syntax_tree)?;
+        self.apply_all(&deltas);
+        Ok(concept)
     }
 }
 

@@ -63,8 +63,10 @@ where
             try!(self.try_removing_reduction::<Self::S>(syntax));
             Ok("".to_string())
         } else {
-            let syntax_concept = try!(self.concept_from_ast(syntax));
-            let normal_form_concept = try!(self.concept_from_ast(normal_form));
+            let (deltas1, syntax_concept) = try!(self.concept_from_ast(syntax));
+            self.apply_all(&deltas1);
+            let (deltas2, normal_form_concept) = try!(self.concept_from_ast(normal_form));
+            self.apply_all(&deltas2);
             try!(self.update_reduction(syntax_concept, normal_form_concept));
             Ok("".to_string())
         }
@@ -127,7 +129,7 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
+    fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         if let Some(c) = ast.get_concept() {
             info!(
                 self.logger(),
@@ -135,7 +137,7 @@ where
                 ast.display_joint(),
                 c
             );
-            Ok(c)
+            Ok((vec!(), c))
         } else if let Some(c) = self.concept_from_label(&ast.display_joint()) {
             info!(
                 self.logger(),
@@ -143,7 +145,7 @@ where
                 ast.display_joint(),
                 c
             );
-            Ok(c)
+            Ok((vec!(), c))
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
@@ -155,11 +157,13 @@ where
                         ast.display_joint(),
                         new_concept
                     );
-                    Ok(new_concept)
+                    Ok((vec!(), new_concept))
                 }
                 Some((ref left, ref right)) => {
-                    let mut leftc = try!(self.concept_from_ast(left));
-                    let mut rightc = try!(self.concept_from_ast(right));
+                    let (deltas1, mut leftc) = try!(self.concept_from_ast(left));
+                    self.apply_all(&deltas1);
+                    let (deltas2, mut rightc) = try!(self.concept_from_ast(right));
+                    self.apply_all(&deltas2);
                     let (deltas, concept) = try!(self.find_or_insert_definition(leftc, rightc));
                     self.apply_all(&deltas);
                     if !string.contains(' ') {
@@ -171,7 +175,7 @@ where
                         ast.display_joint(),
                         concept
                     );
-                    Ok(concept)
+                    Ok((vec!(), concept))
                 }
             }
         }
