@@ -67,7 +67,8 @@ where
             self.apply_all(&deltas1);
             let (deltas2, normal_form_concept) = try!(self.concept_from_ast(normal_form));
             self.apply_all(&deltas2);
-            try!(self.update_reduction(syntax_concept, normal_form_concept));
+            let more_deltas = self.update_reduction(syntax_concept, normal_form_concept)?;
+            self.apply_all(&more_deltas);
             Ok("".to_string())
         }
     }
@@ -249,7 +250,9 @@ where
         let (deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, new_deltas) = self.new_string(&deltas, string);
         self.apply_all(&new_deltas);
-        self.update_reduction(definition, string_id)
+        let more_deltas = self.update_reduction(definition, string_id)?;
+        self.apply_all(&more_deltas);
+        Ok(())
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
         let (new_default, deltas) = self.new_default::<Self::A>(&[]);

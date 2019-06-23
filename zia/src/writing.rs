@@ -112,58 +112,26 @@ where
 pub trait UpdateReduction<T>
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger + SetConceptReductionDelta,
+    Self: GetNormalForm<T> + FindDefinition<T> + SetConceptReductionDelta,
 {
-    fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
-        info!(
-            self.logger(),
-            "update_reduction({}, {})", concept, reduction
-        );
+    fn update_reduction(&self, concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
         if let Some(n) = self.get_normal_form(reduction) {
             if concept == n {
-                info!(
-                    self.logger(),
-                    "update_reduction({}, {}) -> Err(ZiaError::CyclicReduction)",
-                    concept,
-                    reduction
-                );
                 return Err(ZiaError::CyclicReduction);
             }
         }
         if let Some(r) = self.read_concept(&[], concept).get_reduction() {
             if r == reduction {
-                info!(
-                    self.logger(),
-                    "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)",
-                    concept,
-                    reduction
-                );
                 return Err(ZiaError::RedundantReduction);
             }
         }
         let r = try!(self.get_reduction_of_composition(concept));
         if r == reduction {
-            info!(
-                self.logger(),
-                "update_reduction({}, {}) -> Err(ZiaError::RedundantReduction)", concept, reduction
-            );
             return Err(ZiaError::RedundantReduction);
         } else if r != concept {
-            info!(
-                self.logger(),
-                "update_reduction({}, {}) -> Err(ZiaError::MultipleReductionPaths)",
-                concept,
-                reduction
-            );
             return Err(ZiaError::MultipleReductionPaths);
         }
-        let deltas = self.concept_reduction_deltas(concept, reduction)?;
-        self.apply_all(&deltas);
-        info!(
-            self.logger(),
-            "update_reduction({}, {}) -> Ok(())", concept, reduction
-        );
-        Ok(())
+        self.concept_reduction_deltas(concept, reduction)
     }
     fn get_reduction_of_composition(&self, concept: usize) -> ZiaResult<usize> {
         if let Some((left, right)) = self.read_concept(&[], concept).get_definition() {
