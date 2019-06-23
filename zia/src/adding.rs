@@ -151,7 +151,7 @@ where
             let string = &ast.to_string();
             match ast.get_expansion() {
                 None => {
-                    let (new_concept, deltas) = try!(self.new_labelled_default(string));
+                    let (new_concept, deltas) = try!(self.new_labelled_default(&[], string));
                     self.apply_all(&deltas);
                     info!(
                         self.logger(),
@@ -254,8 +254,8 @@ where
         let (string_id, new_deltas) = self.new_string(&deltas, string);
         self.update_reduction(&new_deltas, definition, string_id)
     }
-    fn new_labelled_default(&self, string: &str) -> ZiaResult<(usize, Vec<Self::Delta>)> {
-        let (new_default, deltas) = self.new_default::<Self::A>(&[]);
+    fn new_labelled_default(&self, previous_deltas: &[Self::Delta], string: &str) -> ZiaResult<(usize, Vec<Self::Delta>)> {
+        let (new_default, deltas) = self.new_default::<Self::A>(previous_deltas);
         let more_deltas = self.label(&deltas, new_default, string)?;
         Ok((new_default, more_deltas))
     }
