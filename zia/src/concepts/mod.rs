@@ -25,7 +25,8 @@ use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction,
 use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
-    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
+    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction, SetReductionDelta,
+    MakeReduceFromDelta,
 };
 
 /// Data type for any type of concept.
@@ -119,6 +120,12 @@ impl MakeReduceFrom for Concept {
     }
 }
 
+impl MakeReduceFromDelta for Concept {
+    fn make_reduce_from_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta::Common(self.common_part.make_reduce_from_delta(index))
+    }
+}
+
 impl SetAsDefinitionOf for Concept {
     fn add_as_lefthand_of(&mut self, index: usize) {
         self.common_part.add_as_lefthand_of(index);
@@ -202,6 +209,17 @@ impl SetReduction for Concept {
                 c.make_reduce_to(concept);
                 Ok(())
             }
+            _ => Err(ZiaError::ConcreteReduction),
+        }
+    }
+}
+
+impl SetReductionDelta for Concept {
+    fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => Ok(ConceptDelta::Abstract(
+                c.make_reduce_to_delta(concept)
+            )),
             _ => Err(ZiaError::ConcreteReduction),
         }
     }

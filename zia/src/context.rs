@@ -26,7 +26,7 @@ use slog::Drain;
 use std::{fmt::Debug, collections::{HashMap, HashSet}};
 use translating::StringConcept;
 use writing::{
-    ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta,
+    ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta, SetConceptReductionDelta, SetReductionDelta, MakeReduceFromDelta,
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
@@ -175,6 +175,22 @@ where
             ConceptDelta::Update(concept_delta3),
         ));
         Ok(new_deltas)
+    }
+}
+
+impl<T> SetConceptReductionDelta for Context<T>
+where
+    T: Delta + SetReductionDelta + MakeReduceFromDelta,
+    Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
+    T::Delta: Clone + Debug,
+{
+    fn concept_reduction_deltas(&self, concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
+        let concept_delta1 = self.read_concept(&[], concept).make_reduce_to_delta(reduction)?;
+        let concept_delta2 = self.read_concept(&[], reduction).make_reduce_from_delta(concept);
+        Ok(vec!(
+            ContextDelta::Concept(concept, ConceptDelta::Update(concept_delta1)),
+            ContextDelta::Concept(reduction, ConceptDelta::Update(concept_delta2)),
+        ))
     }
 }
 

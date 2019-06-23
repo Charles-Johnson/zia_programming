@@ -248,7 +248,7 @@ where
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let (deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, new_deltas) = self.new_string(&deltas, string);
-        self.apply_all(&dbg!(new_deltas));
+        self.apply_all(&new_deltas);
         self.update_reduction(definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {

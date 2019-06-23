@@ -112,7 +112,7 @@ where
 pub trait UpdateReduction<T>
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
+    Self: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger + SetConceptReductionDelta,
 {
     fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
         info!(
@@ -157,8 +157,8 @@ where
             );
             return Err(ZiaError::MultipleReductionPaths);
         }
-        try!(self.write_concept(concept).make_reduce_to(reduction));
-        self.write_concept(reduction).make_reduce_from(concept);
+        let deltas = self.concept_reduction_deltas(concept, reduction)?;
+        self.apply_all(&deltas);
         info!(
             self.logger(),
             "update_reduction({}, {}) -> Ok(())", concept, reduction
@@ -190,7 +190,7 @@ where
 impl<S, T> UpdateReduction<T> for S
 where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
-    S: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger,
+    S: ConceptWriter<T> + GetNormalForm<T> + FindDefinition<T> + Logger + SetConceptReductionDelta,
 {
 }
 
@@ -284,8 +284,29 @@ pub trait SetReduction {
     fn make_reduce_to(&mut self, usize) -> ZiaResult<()>;
 }
 
+pub trait SetReductionDelta 
+where
+    Self: Delta,
+{
+    fn make_reduce_to_delta(&self, usize) -> ZiaResult<Self::Delta>;
+}
+
+pub trait SetConceptReductionDelta
+where
+    Self: Delta,
+{
+    fn concept_reduction_deltas(&self, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+}
+
 pub trait MakeReduceFrom {
     fn make_reduce_from(&mut self, usize);
+}
+
+pub trait MakeReduceFromDelta 
+where
+    Self: Delta,
+{
+    fn make_reduce_from_delta(&self, usize) -> Self::Delta;
 }
 
 pub trait RemoveDefinition {

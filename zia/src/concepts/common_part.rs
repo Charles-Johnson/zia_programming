@@ -19,7 +19,7 @@ use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf,
-    SetAsDefinitionOfDelta,
+    SetAsDefinitionOfDelta, MakeReduceFromDelta,
 };
 
 #[derive(Default, Clone, Debug)]
@@ -92,6 +92,12 @@ impl SetAsDefinitionOfDelta for CommonPart {
 impl MakeReduceFrom for CommonPart {
     fn make_reduce_from(&mut self, index: usize) {
         self.reduces_from.insert(index);
+    }
+}
+
+impl MakeReduceFromDelta for CommonPart {
+    fn make_reduce_from_delta(&self, index: usize) -> CommonDelta {
+        CommonDelta::AddReducesFrom(index)
     }
 }
 
