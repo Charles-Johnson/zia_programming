@@ -531,7 +531,9 @@ where
                 (None, Some(b), None) => self.relabel(b, &new.to_string()),
                 (None, Some(b), Some(_)) => {
                     if self.get_label(b).is_none() {
-                        self.label(b, &new.to_string())
+                        let deltas = self.label(b, &new.to_string())?;
+                        self.apply_all(&deltas);
+                        Ok(())
                     } else {
                         self.relabel(b, &new.to_string())
                     }
@@ -578,7 +580,9 @@ where
     /// Unlabels a concept and gives it a new label.
     fn relabel(&mut self, concept: usize, new_label: &str) -> ZiaResult<()> {
         try!(self.unlabel(concept));
-        self.label(concept, new_label)
+        let deltas = self.label(concept, new_label)?;
+        self.apply_all(&deltas);
+        Ok(())
     }
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(

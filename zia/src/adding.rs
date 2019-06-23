@@ -164,10 +164,11 @@ where
                     self.apply_all(&deltas1);
                     let (deltas2, mut rightc) = try!(self.concept_from_ast(right));
                     self.apply_all(&deltas2);
-                    let (deltas, concept) = try!(self.find_or_insert_definition(leftc, rightc));
-                    self.apply_all(&deltas);
+                    let (deltas3, concept) = try!(self.find_or_insert_definition(leftc, rightc));
+                    self.apply_all(&deltas3);
                     if !string.contains(' ') {
-                        try!(self.label(concept, string));
+                        let deltas = self.label(concept, string)?;
+                        self.apply_all(&deltas);
                     }
                     info!(
                         self.logger(),
@@ -245,17 +246,16 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type C: Default;
-    fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
+    fn label(&self, concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
         let (deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, new_deltas) = self.new_string(&deltas, string);
-        let more_deltas = self.update_reduction(&new_deltas, definition, string_id)?;
-        self.apply_all(&more_deltas);
-        Ok(())
+        self.update_reduction(&new_deltas, definition, string_id)
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
         let (new_default, deltas) = self.new_default::<Self::A>(&[]);
         self.apply_all(&deltas);
-        try!(self.label(new_default, string));
+        let more_deltas = self.label(new_default, string)?;
+        self.apply_all(&more_deltas);
         Ok(new_default)
     }
     fn setup(&mut self) -> ZiaResult<()> {
@@ -264,10 +264,16 @@ where
         let (reduction_concept, deltas3) = self.new_default::<Self::C>(&deltas2);
         let (let_concept, deltas4) = self.new_default::<Self::C>(&deltas3);
         self.apply_all(&deltas4);
-        try!(self.label(label_concept, "label_of"));
-        try!(self.label(define_concept, ":="));
-        try!(self.label(reduction_concept, "->"));
-        self.label(let_concept, "let")
+        let deltas5 = self.label(label_concept, "label_of")?;
+        self.apply_all(&deltas5);
+        let deltas6 = self.label(define_concept, ":=")?;
+        self.apply_all(&deltas6);
+        let deltas7 = self.label(reduction_concept, "->")?;
+        self.apply_all(&deltas7);
+        let deltas8 = self.label(let_concept, "let")?;
+        self.apply_all(&deltas8);
+        Ok(())
+
     }
 }
 
