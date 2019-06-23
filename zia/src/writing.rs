@@ -131,7 +131,7 @@ where
         } else if r != concept {
             return Err(ZiaError::MultipleReductionPaths);
         }
-        self.concept_reduction_deltas(concept, reduction)
+        self.concept_reduction_deltas(&[], concept, reduction)
     }
     fn get_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> ZiaResult<usize> {
         if let Some((left, right)) = self.read_concept(deltas, concept).get_definition() {
@@ -263,7 +263,7 @@ pub trait SetConceptReductionDelta
 where
     Self: Delta,
 {
-    fn concept_reduction_deltas(&self, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+    fn concept_reduction_deltas(&self, &[Self::Delta], usize, usize) -> ZiaResult<Vec<Self::Delta>>;
 }
 
 pub trait MakeReduceFrom {

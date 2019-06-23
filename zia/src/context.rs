@@ -180,17 +180,19 @@ where
 
 impl<T> SetConceptReductionDelta for Context<T>
 where
-    T: Delta + SetReductionDelta + MakeReduceFromDelta,
+    T: Delta + SetReductionDelta + MakeReduceFromDelta + Clone,
     Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
     T::Delta: Clone + Debug,
 {
-    fn concept_reduction_deltas(&self, concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
-        let concept_delta1 = self.read_concept(&[], concept).make_reduce_to_delta(reduction)?;
-        let concept_delta2 = self.read_concept(&[], reduction).make_reduce_from_delta(concept);
-        Ok(vec!(
+    fn concept_reduction_deltas(&self, deltas: &[Self::Delta], concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
+        let concept_delta1 = self.read_concept(deltas, concept).make_reduce_to_delta(reduction)?;
+        let concept_delta2 = self.read_concept(deltas, reduction).make_reduce_from_delta(concept);
+        let mut new_deltas = deltas.to_vec();
+        new_deltas.extend(vec!(
             ContextDelta::Concept(concept, ConceptDelta::Update(concept_delta1)),
             ContextDelta::Concept(reduction, ConceptDelta::Update(concept_delta2)),
-        ))
+        ));
+        Ok(new_deltas)
     }
 }
 
