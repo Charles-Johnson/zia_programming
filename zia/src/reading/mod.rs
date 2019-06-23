@@ -286,10 +286,10 @@ where
     T: GetDefinition + FindWhatReducesToIt,
     Self: FindWhatItsANormalFormOf<T>,
 {
-    fn get_labellee(&self, concept: usize) -> Option<usize> {
+    fn get_labellee(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
-        for label in self.find_what_its_a_normal_form_of(&[], concept) {
-            match self.read_concept(&[], label).get_definition() {
+        for label in self.find_what_its_a_normal_form_of(deltas, concept) {
+            match self.read_concept(deltas, label).get_definition() {
                 None => continue,
                 Some((r, x)) => {
                     if r == LABEL {

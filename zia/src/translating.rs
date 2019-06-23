@@ -121,7 +121,7 @@ where
     fn concept_from_label(&self, s: &str) -> Option<usize> {
         match self.get_string_concept(s) {
             None => None,
-            Some(c) => self.get_labellee(c),
+            Some(c) => self.get_labellee(&[], c),
         }
     }
     fn ast_from_symbol<U: From<(String, Option<usize>)>>(&self, s: &str) -> U {
