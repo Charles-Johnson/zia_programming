@@ -249,11 +249,11 @@ where
     T: Delta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn add_concept_delta(
+    fn add_concept_deltas(
         &self,
         deltas: &[ContextDelta<T>],
         concept: T,
-    ) -> (usize, ContextDelta<T>) {
+    ) -> (usize, Vec<ContextDelta<T>>) {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
@@ -313,9 +313,11 @@ where
                 },
             };
         }
+        let mut new_deltas = deltas.to_vec();
+        new_deltas.push(ContextDelta::Concept(index, ConceptDelta::Insert(concept)));
         (
             index,
-            ContextDelta::Concept(index, ConceptDelta::Insert(concept)),
+            new_deltas,
         )
     }
 }
