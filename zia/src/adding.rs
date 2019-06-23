@@ -66,8 +66,7 @@ where
             let (deltas1, syntax_concept) = try!(self.concept_from_ast(syntax));
             self.apply_all(&deltas1);
             let (deltas2, normal_form_concept) = try!(self.concept_from_ast(normal_form));
-            self.apply_all(&deltas2);
-            let more_deltas = self.update_reduction(syntax_concept, normal_form_concept)?;
+            let more_deltas = self.update_reduction(&deltas2, syntax_concept, normal_form_concept)?;
             self.apply_all(&more_deltas);
             Ok("".to_string())
         }
@@ -249,8 +248,7 @@ where
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let (deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
         let (string_id, new_deltas) = self.new_string(&deltas, string);
-        self.apply_all(&new_deltas);
-        let more_deltas = self.update_reduction(definition, string_id)?;
+        let more_deltas = self.update_reduction(&new_deltas, definition, string_id)?;
         self.apply_all(&more_deltas);
         Ok(())
     }
