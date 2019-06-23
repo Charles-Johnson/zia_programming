@@ -204,7 +204,8 @@ where
 {
     fn new() -> Self {
         let mut cont = Self::default();
-        cont.setup().unwrap();
+        let deltas = cont.setup().unwrap();
+        cont.apply_all(&deltas);
         info!(cont.logger(), "Setup a new context");
         cont
     }
@@ -258,7 +259,7 @@ where
         self.apply_all(&more_deltas);
         Ok(new_default)
     }
-    fn setup(&mut self) -> ZiaResult<()> {
+    fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let (label_concept, deltas1) = self.new_default::<Self::C>(&[]);
         let (define_concept, deltas2) = self.new_default::<Self::C>(&deltas1);
         let (reduction_concept, deltas3) = self.new_default::<Self::C>(&deltas2);
@@ -266,10 +267,7 @@ where
         let deltas5 = self.label(&deltas4, label_concept, "label_of")?;
         let deltas6 = self.label(&deltas5, define_concept, ":=")?;
         let deltas7 = self.label(&deltas6, reduction_concept, "->")?;
-        let deltas8 = self.label(&deltas7,let_concept, "let")?;
-        self.apply_all(&deltas8);
-        Ok(())
-
+        self.label(&deltas7,let_concept, "let")
     }
 }
 
