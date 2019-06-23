@@ -166,7 +166,7 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt
-        + Debug,
+        + Debug + Clone,
     Self::S: Container
         + Pair<Self::S>
         + Debug
@@ -207,7 +207,7 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt
-        + Debug,
+        + Debug + Clone,
     S: Call<T> + SyntaxConverter<T> + Logger,
     S::S: Container
         + Pair<S::S>
@@ -255,7 +255,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug,
+        + Debug + Clone,
     Self::S: Container
         + Pair<Self::S>
         + Clone
@@ -475,7 +475,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug,
+        + Debug + Clone,
     S::S: Container
         + Pair<S::S>
         + Clone
@@ -506,7 +506,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug,
+        + Debug + Clone,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
     Self::S: Pair<Self::S> + Container,
     Self::Delta: Clone + Debug,
@@ -622,7 +622,7 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug,
+        + Debug + Clone,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
     S::S: Pair<S::S> + Container,
     S::Delta: Clone + Debug,

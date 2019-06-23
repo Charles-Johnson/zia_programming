@@ -46,7 +46,7 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt + Clone,
     Self::S: Container + PartialEq + DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
 {
@@ -89,7 +89,7 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt + Clone,
     S::S: Container + PartialEq<S::S> + DisplayJoint,
     S::Delta: Clone + fmt::Debug,
 {
@@ -123,7 +123,8 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + GetReduction
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Clone,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::S: DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
@@ -164,7 +165,7 @@ where
                     self.apply_all(&deltas1);
                     let (deltas2, mut rightc) = try!(self.concept_from_ast(right));
                     self.apply_all(&deltas2);
-                    let (deltas3, concept) = try!(self.find_or_insert_definition(leftc, rightc));
+                    let (deltas3, concept) = try!(self.find_or_insert_definition(&[], leftc, rightc));
                     self.apply_all(&deltas3);
                     if !string.contains(' ') {
                         let deltas = self.label(concept, string)?;
@@ -198,7 +199,7 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt + Clone,
     Self::Delta: Clone + fmt::Debug,
 {
     fn new() -> Self {
@@ -223,7 +224,7 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt + Clone,
     Self::Delta: Clone + fmt::Debug,
 {
 }
@@ -241,13 +242,13 @@ where
         + GetReduction
         + MaybeString
         + From<Self::C>
-        + From<Self::A>,
+        + From<Self::A> + Clone,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
     Self::Delta: Clone + fmt::Debug,
 {
     type C: Default;
     fn label(&self, concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
-        let (deltas, definition) = try!(self.find_or_insert_definition(LABEL, concept));
+        let (deltas, definition) = try!(self.find_or_insert_definition(&[], LABEL, concept));
         let (string_id, new_deltas) = self.new_string(&deltas, string);
         self.update_reduction(&new_deltas, definition, string_id)
     }
@@ -284,20 +285,20 @@ where
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
-        + GetDefinitionOf,
+        + GetDefinitionOf + Clone,
     Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
     Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&self, lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let pair = self.find_definition(&[], lefthand, righthand);
+    fn find_or_insert_definition(&self, deltas: &[Self::Delta], lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+        let pair = self.find_definition(deltas, lefthand, righthand);
         match pair {
             None => {
-                let (definition, deltas) = self.new_default::<Self::A>(&[]);
-                let new_deltas = try!(self.insert_definition(&deltas, definition, lefthand, righthand));
+                let (definition, more_deltas) = self.new_default::<Self::A>(deltas);
+                let new_deltas = try!(self.insert_definition(&more_deltas, definition, lefthand, righthand));
                 Ok((new_deltas, definition))
             }
-            Some(def) => Ok((vec!(), def)),
+            Some(def) => Ok((deltas.to_vec(), def)),
         }
     }
 }
