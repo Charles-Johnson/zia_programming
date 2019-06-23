@@ -236,7 +236,7 @@ where
                     None => None,
                 }
             }
-            Some(d) => match self.get_normal_form(d) {
+            Some(d) => match self.get_normal_form(&[], d) {
                 None => None,
                 Some(n) => self.read_concept(&[], n).get_string(),
             },
@@ -317,12 +317,12 @@ where
 pub trait GetNormalForm<T>
 where
     T: GetReduction,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T> + Delta,
 {
-    fn get_normal_form(&self, concept: usize) -> Option<usize> {
-        match self.read_concept(&[], concept).get_reduction() {
+    fn get_normal_form(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
+        match self.read_concept(deltas, concept).get_reduction() {
             None => None,
-            Some(n) => match self.get_normal_form(n) {
+            Some(n) => match self.get_normal_form(deltas, n) {
                 None => Some(n),
                 Some(m) => Some(m),
             },

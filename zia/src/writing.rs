@@ -115,7 +115,7 @@ where
     Self: GetNormalForm<T> + FindDefinition<T> + SetConceptReductionDelta,
 {
     fn update_reduction(&self, concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
-        if let Some(n) = self.get_normal_form(reduction) {
+        if let Some(n) = self.get_normal_form(&[], reduction) {
             if concept == n {
                 return Err(ZiaError::CyclicReduction);
             }
