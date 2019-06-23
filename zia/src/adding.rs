@@ -286,7 +286,7 @@ where
 {
     type A: Default;
     fn find_or_insert_definition(&self, lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let pair = self.find_definition(lefthand, righthand);
+        let pair = self.find_definition(&[], lefthand, righthand);
         match pair {
             None => {
                 let (definition, deltas) = self.new_default::<Self::A>(&[]);

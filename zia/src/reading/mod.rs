@@ -160,7 +160,7 @@ where
     ) -> Rc<U> {
         let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
             (Some(lc), Some(rc)) => {
-                let maydef = self.find_definition(lc, rc);
+                let maydef = self.find_definition(&[], lc, rc);
                 (
                     match maydef {
                         Some(def) => match self.get_label(def) {
@@ -263,7 +263,7 @@ where
         let left_string = ast.display_joint();
         let right_string = other.display_joint();
         let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
-            self.find_definition(l, r)
+            self.find_definition(&[], l, r)
         } else {
             None
         };
@@ -403,9 +403,9 @@ where
     T: GetDefinitionOf,
     Self: ConceptReader<T>,
 {
-    fn find_definition(&self, lefthand: usize, righthand: usize) -> Option<usize> {
-        let has_lefthand = self.read_concept(&[], lefthand).get_lefthand_of();
-        let has_righthand = self.read_concept(&[], righthand).get_righthand_of();
+    fn find_definition(&self, deltas: &[Self::Delta], lefthand: usize, righthand: usize) -> Option<usize> {
+        let has_lefthand = self.read_concept(deltas, lefthand).get_lefthand_of();
+        let has_righthand = self.read_concept(deltas, righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
         match candidates.next() {
             None => None,

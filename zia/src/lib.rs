@@ -589,7 +589,7 @@ where
     ) -> ZiaResult<usize> {
         let definition_concept =
             if let (Some(l), Some(r)) = (left.get_concept(), right.get_concept()) {
-                self.find_definition(l, r)
+                self.find_definition(&[], l, r)
             } else {
                 None
             };

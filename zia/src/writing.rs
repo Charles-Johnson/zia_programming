@@ -145,7 +145,7 @@ where
             } else {
                 try!(self.get_reduction_of_composition(right))
             };
-            match self.find_definition(lc, rc) {
+            match self.find_definition(&[], lc, rc) {
                 Some(dc) => Ok(dc),
                 None => Err(ZiaError::MultipleReductionPaths),
             }
