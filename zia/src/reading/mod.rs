@@ -288,7 +288,7 @@ where
 {
     fn get_labellee(&self, concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
-        for label in self.find_what_its_a_normal_form_of(concept) {
+        for label in self.find_what_its_a_normal_form_of(&[], concept) {
             match self.read_concept(&[], label).get_definition() {
                 None => continue,
                 Some((r, x)) => {
@@ -429,12 +429,12 @@ where
 pub trait FindWhatItsANormalFormOf<T>
 where
     T: FindWhatReducesToIt,
-    Self: ConceptReader<T>,
+    Self: ConceptReader<T> + Delta,
 {
-    fn find_what_its_a_normal_form_of(&self, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(&[], con).find_what_reduces_to_it();
+    fn find_what_its_a_normal_form_of(&self, deltas: &[Self::Delta], con: usize) -> HashSet<usize> {
+        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it();
         for concept in normal_form_of.clone().iter() {
-            for concept2 in self.find_what_its_a_normal_form_of(*concept).iter() {
+            for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
                 normal_form_of.insert(*concept2);
             }
         }
