@@ -35,10 +35,8 @@ where
     Self: DeleteReduction<T> + GetConceptOfLabel<T>,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.get_concept_of_label(concept) {
-            None => panic!("No label to remove"),
-            Some(d) => self.delete_reduction(d),
-        }
+        let concept_of_label = self.get_concept_of_label(concept).expect("No label to remove");
+        self.delete_reduction(concept_of_label)
     }
 }
 
