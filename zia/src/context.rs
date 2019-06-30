@@ -333,6 +333,6 @@ where
 
 impl<T> StringConcept for Context<T> {
     fn get_string_concept(&self, s: &str) -> Option<usize> {
-        self.string_map.get(s).map(|sr| *sr)
+        self.string_map.get(s).cloned()
     }
 }
