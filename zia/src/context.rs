@@ -342,9 +342,6 @@ where
 
 impl<T> StringConcept for Context<T> {
     fn get_string_concept(&self, s: &str) -> Option<usize> {
-        match self.string_map.get(s) {
-            None => None,
-            Some(sr) => Some(*sr),
-        }
+        self.string_map.get(s).map(|sr| *sr)
     }
 }
