@@ -343,20 +343,15 @@ where
         }
     }
     fn reduce_label_of(&self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        if let Some((left, right)) = ast.get_expansion() {
-            if let Some(concept) = right.get_concept() {
-                if concept == REDUCTION {
-                    return self.reduce_label_of(&match self.reduce(&left) {
-                        None => left,
-                        Some(reduction) => reduction,
-                    });
+        ast.get_expansion().map(
+            |(left, right)| right.get_concept().map(
+                |concept| match concept {
+                    REDUCTION => Some(self.reduce_label_of(&self.reduce(&left).unwrap_or_else(|| left))),
+                    DEFINE => Some(Ok(self.expand(&left).to_string())),
+                    _ => None,
                 }
-                if concept == DEFINE {
-                    return Ok(self.expand(&left).to_string());
-                }
-            }
-        }
-        Ok(ast.to_string())
+            ).filter(|option| option.is_some()).map(|option| option.unwrap())
+        ).filter(|option| option.is_some()).map(|option| option.unwrap()).unwrap_or_else(|| Ok(ast.to_string())) 
     }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
