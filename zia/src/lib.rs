@@ -276,30 +276,28 @@ where
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
         info!(self.logger(), "call({})", ast.display_joint());
-        if let Some(c) = ast.get_concept() {
-            if let Some(s) = self.read_concept(&[], c).get_string() {
-                return Ok(s);
-            }
-        }
-        match ast.get_expansion() {
-            Some((ref left, ref right)) => map_err_variant(
-                self.call_pair(left, right),
-                ZiaError::CannotReduceFurther,
-                || map_err_variant (
+        match ast.get_concept().map(|c| self.read_concept(&[], c).get_string()) {
+            Some(Some(s)) => Ok(s),
+            _ => match ast.get_expansion() {
+                Some((ref left, ref right)) => map_err_variant(
+                    self.call_pair(left, right),
+                    ZiaError::CannotReduceFurther,
+                    || map_err_variant (
+                        self.try_reducing_then_call(ast),
+                        ZiaError::CannotReduceFurther,
+                        || Ok(self.contract_pair(left, right).to_string()),
+                    )
+                ),
+                None => map_err_variant(
                     self.try_reducing_then_call(ast),
                     ZiaError::CannotReduceFurther,
-                    || Ok(self.contract_pair(left, right).to_string()),
-                )
-            ),
-            None => map_err_variant(
-                self.try_reducing_then_call(ast),
-                ZiaError::CannotReduceFurther,
-                || map_err_variant(
-                    self.try_expanding_then_call(ast),
-                    ZiaError::CannotExpandFurther,
-                    || Ok(ast.to_string()),
-                )
-            ),
+                    || map_err_variant(
+                        self.try_expanding_then_call(ast),
+                        ZiaError::CannotExpandFurther,
+                        || Ok(ast.to_string()),
+                    )
+                ),
+            },
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
