@@ -127,32 +127,26 @@ where
             } else {
                 None
             }
-        ).unwrap_or_else(|| if reduction == self.get_reduction_of_composition(deltas, concept)? {
+        ).unwrap_or_else(|| if reduction == self.get_reduction_of_composition(deltas, concept) {
             Err(ZiaError::RedundantReduction)
         } else {
             self.concept_reduction_deltas(deltas, concept, reduction)
         })
         )
     }
-    fn get_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> ZiaResult<usize> {
-        if let Some((left, right)) = self.read_concept(deltas, concept).get_definition() {
-            let lc = if let Some(l) = self.read_concept(deltas, left).get_reduction() {
-                l
-            } else {
-                try!(self.get_reduction_of_composition(deltas, left))
-            };
-            let rc = if let Some(r) = self.read_concept(deltas, right).get_reduction() {
-                r
-            } else {
-                try!(self.get_reduction_of_composition(deltas, right))
-            };
-            match self.find_definition(deltas, lc, rc) {
-                Some(dc) => Ok(dc),
-                None => Err(ZiaError::MultipleReductionPaths),
-            }
-        } else {
-            Ok(concept)
-        }
+    fn get_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> usize {
+        self.read_concept(deltas, concept).get_definition().and_then(|(left, right)|
+            self.find_definition(
+                deltas,
+                self.get_reduction_or_reduction_of_composition(deltas, left),
+                self.get_reduction_or_reduction_of_composition(deltas, right),
+            )
+        ).unwrap_or(concept)
+    }
+    fn get_reduction_or_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> usize {
+        self.read_concept(deltas, concept).get_reduction().unwrap_or_else(||
+            self.get_reduction_of_composition(deltas, concept)
+        )
     }
 }
 
