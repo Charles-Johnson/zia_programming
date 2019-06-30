@@ -288,7 +288,7 @@ where
         match pair {
             None => {
                 let (definition, more_deltas) = self.new_default::<Self::A>(deltas);
-                let new_deltas = self.insert_definition(&more_deltas, definition, lefthand, righthand)?;
+                let new_deltas = self.insert_definition(more_deltas, definition, lefthand, righthand)?;
                 Ok((new_deltas, definition))
             }
             Some(def) => Ok((deltas.to_vec(), def)),

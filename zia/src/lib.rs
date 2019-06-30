@@ -548,7 +548,7 @@ where
             self.apply_all(&deltas1);
             let (deltas2, right_concept) = self.concept_from_ast(right)?;
             self.apply_all(&deltas2);
-            let deltas = self.insert_definition(&vec!(), concept, left_concept, right_concept)?;
+            let deltas = self.insert_definition(vec!(), concept, left_concept, right_concept)?;
             self.apply_all(&deltas);
             Ok(())
         }

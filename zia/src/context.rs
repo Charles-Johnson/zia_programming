@@ -147,34 +147,33 @@ where
 {
     fn set_concept_definition_deltas(
         &self,
-        deltas: &Vec<Self::Delta>,
+        mut deltas: Vec<Self::Delta>,
         concept: usize,
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<Vec<ContextDelta<T>>> {
-        let mut new_deltas = deltas.clone();
         let concept_delta1 = try!(self
-            .read_concept(&new_deltas, concept)
+            .read_concept(&deltas, concept)
             .set_definition_delta(lefthand, righthand));
-        new_deltas.push(ContextDelta::Concept(
+        deltas.push(ContextDelta::Concept(
             concept,
             ConceptDelta::Update(concept_delta1),
         ));
         let concept_delta2 = self
-            .read_concept(&new_deltas, lefthand)
+            .read_concept(&deltas, lefthand)
             .add_as_lefthand_of_delta(concept);
-        new_deltas.push(ContextDelta::Concept(
+        deltas.push(ContextDelta::Concept(
             lefthand,
             ConceptDelta::Update(concept_delta2),
         ));
         let concept_delta3 = self
-            .read_concept(&new_deltas, righthand)
+            .read_concept(&deltas, righthand)
             .add_as_righthand_of_delta(concept);
-        new_deltas.push(ContextDelta::Concept(
+        deltas.push(ContextDelta::Concept(
             righthand,
             ConceptDelta::Update(concept_delta3),
         ));
-        Ok(new_deltas)
+        Ok(deltas)
     }
 }
 

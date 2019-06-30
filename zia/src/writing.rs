@@ -163,16 +163,16 @@ where
 {
     fn insert_definition(
         &self,
-        deltas: &Vec<Self::Delta>,        
+        deltas: Vec<Self::Delta>,        
         definition: usize,
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<Vec<Self::Delta>> {
-        if self.contains(deltas, lefthand, definition) || self.contains(deltas, righthand, definition) {
+        if self.contains(&deltas, lefthand, definition) || self.contains(&deltas, righthand, definition) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            self.check_reductions(deltas, definition, lefthand)?;
-            self.check_reductions(deltas, definition, righthand)?;
+            self.check_reductions(&deltas, definition, lefthand)?;
+            self.check_reductions(&deltas, definition, righthand)?;
             self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)
         }
     }
@@ -213,7 +213,7 @@ pub trait SetConceptDefinitionDeltas
 where
     Self: Delta,
 {
-    fn set_concept_definition_deltas(&self, &Vec<Self::Delta>, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+    fn set_concept_definition_deltas(&self, Vec<Self::Delta>, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
 }
 
 pub trait SetDefinitionDelta
