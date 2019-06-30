@@ -60,12 +60,12 @@ where
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            try!(self.try_removing_reduction::<Self::S>(syntax));
+            self.try_removing_reduction::<Self::S>(syntax)?;
             Ok("".to_string())
         } else {
-            let (deltas1, syntax_concept) = try!(self.concept_from_ast(syntax));
+            let (deltas1, syntax_concept) = self.concept_from_ast(syntax)?;
             self.apply_all(&deltas1);
-            let (deltas2, normal_form_concept) = try!(self.concept_from_ast(normal_form));
+            let (deltas2, normal_form_concept) = self.concept_from_ast(normal_form)?;
             let more_deltas = self.update_reduction(&deltas2, syntax_concept, normal_form_concept)?;
             self.apply_all(&more_deltas);
             Ok("".to_string())
@@ -151,7 +151,7 @@ where
             let string = &ast.to_string();
             match ast.get_expansion() {
                 None => {
-                    let (new_concept, deltas) = try!(self.new_labelled_default(&[], string));
+                    let (new_concept, deltas) = self.new_labelled_default(&[], string)?;
                     self.apply_all(&deltas);
                     info!(
                         self.logger(),
@@ -162,11 +162,11 @@ where
                     Ok((vec!(), new_concept))
                 }
                 Some((ref left, ref right)) => {
-                    let (deltas1, mut leftc) = try!(self.concept_from_ast(left));
+                    let (deltas1, mut leftc) = self.concept_from_ast(left)?;
                     self.apply_all(&deltas1);
-                    let (deltas2, mut rightc) = try!(self.concept_from_ast(right));
+                    let (deltas2, mut rightc) = self.concept_from_ast(right)?;
                     self.apply_all(&deltas2);
-                    let (deltas3, concept) = try!(self.find_or_insert_definition(&[], leftc, rightc));
+                    let (deltas3, concept) = self.find_or_insert_definition(&[], leftc, rightc)?;
                     self.apply_all(&deltas3);
                     if !string.contains(' ') {
                         let deltas = self.label(&[], concept, string)?;
@@ -250,7 +250,7 @@ where
 {
     type C: Default;
     fn label(&self, previous_deltas: &[Self::Delta], concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
-        let (deltas, definition) = try!(self.find_or_insert_definition(previous_deltas, LABEL, concept));
+        let (deltas, definition) = self.find_or_insert_definition(previous_deltas, LABEL, concept)?;
         let (string_id, new_deltas) = self.new_string(&deltas, string);
         self.update_reduction(&new_deltas, definition, string_id)
     }
@@ -288,7 +288,7 @@ where
         match pair {
             None => {
                 let (definition, more_deltas) = self.new_default::<Self::A>(deltas);
-                let new_deltas = try!(self.insert_definition(&more_deltas, definition, lefthand, righthand));
+                let new_deltas = self.insert_definition(&more_deltas, definition, lefthand, righthand)?;
                 Ok((new_deltas, definition))
             }
             Some(def) => Ok((deltas.to_vec(), def)),

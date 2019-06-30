@@ -46,8 +46,8 @@ where
         left: &str,
         right: &str,
     ) -> ZiaResult<Rc<U>> {
-        let lefthand = try!(self.ast_from_token(left));
-        let righthand = try!(self.ast_from_token(right));
+        let lefthand = self.ast_from_token(left)?;
+        let righthand = self.ast_from_token(right)?;
         Ok(self.combine(&lefthand, &righthand))
     }
     fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>>(

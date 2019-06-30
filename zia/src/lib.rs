@@ -493,7 +493,7 @@ where
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            try!(self.define(new, old));
+            self.define(new, old)?;
             Ok("".to_string())
         }
     }
@@ -515,7 +515,7 @@ where
                     }
                 }
                 (None, None, Some((ref left, ref right))) => {
-                    try!(self.define_new_syntax(new.to_string(), left, right));
+                    self.define_new_syntax(new.to_string(), left, right)?;
                     Ok(())
                 }
                 (Some(a), Some(b), None) => {
@@ -541,21 +541,21 @@ where
         if let Some((left_concept, right_concept)) =
             self.read_concept(&[], concept).get_definition()
         {
-            try!(self.relabel(left_concept, &left.to_string()));
+            self.relabel(left_concept, &left.to_string())?;
             self.relabel(right_concept, &right.to_string())
         } else {
-            let (deltas1, left_concept) = try!(self.concept_from_ast(left));
+            let (deltas1, left_concept) = self.concept_from_ast(left)?;
             self.apply_all(&deltas1);
-            let (deltas2, right_concept) = try!(self.concept_from_ast(right));
+            let (deltas2, right_concept) = self.concept_from_ast(right)?;
             self.apply_all(&deltas2);
-            let deltas = try!(self.insert_definition(&vec!(), concept, left_concept, right_concept));
+            let deltas = self.insert_definition(&vec!(), concept, left_concept, right_concept)?;
             self.apply_all(&deltas);
             Ok(())
         }
     }
     /// Unlabels a concept and gives it a new label.
     fn relabel(&mut self, concept: usize, new_label: &str) -> ZiaResult<()> {
-        try!(self.unlabel(concept));
+        self.unlabel(concept)?;
         let deltas = self.label(&[], concept, new_label)?;
         self.apply_all(&deltas);
         Ok(())

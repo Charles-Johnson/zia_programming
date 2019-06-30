@@ -171,10 +171,9 @@ where
         if self.contains(deltas, lefthand, definition) || self.contains(deltas, righthand, definition) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            try!(self.check_reductions(deltas, definition, lefthand));
-            try!(self.check_reductions(deltas, definition, righthand));
-            let new_deltas = try!(self.set_concept_definition_deltas(deltas, definition, lefthand, righthand));
-            Ok(new_deltas)
+            self.check_reductions(deltas, definition, lefthand)?;
+            self.check_reductions(deltas, definition, righthand)?;
+            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)
         }
     }
     fn check_reductions(&self, deltas: &[Self::Delta], outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
