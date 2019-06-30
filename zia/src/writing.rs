@@ -115,23 +115,24 @@ where
     Self: GetNormalForm<T> + FindDefinition<T> + SetConceptReductionDelta,
 {
     fn update_reduction(&self, deltas: &[Self::Delta], concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
-        if let Some(n) = self.get_normal_form(deltas, reduction) {
+        self.get_normal_form(deltas, reduction).and_then(|n|
             if concept == n {
-                return Err(ZiaError::CyclicReduction);
+                Some(Err(ZiaError::CyclicReduction))
+            } else {
+                None
             }
-        }
-        if let Some(r) = self.read_concept(deltas, concept).get_reduction() {
+        ).unwrap_or_else(|| self.read_concept(deltas, concept).get_reduction().and_then(|r|
             if r == reduction {
-                return Err(ZiaError::RedundantReduction);
+                Some(Err(ZiaError::RedundantReduction))
+            } else {
+                None
             }
-        }
-        let r = try!(self.get_reduction_of_composition(deltas, concept));
-        if r == reduction {
-            return Err(ZiaError::RedundantReduction);
-        } else if r != concept {
-            return Err(ZiaError::MultipleReductionPaths);
-        }
-        self.concept_reduction_deltas(deltas, concept, reduction)
+        ).unwrap_or_else(|| if reduction == self.get_reduction_of_composition(deltas, concept)? {
+            Err(ZiaError::RedundantReduction)
+        } else {
+            self.concept_reduction_deltas(deltas, concept, reduction)
+        })
+        )
     }
     fn get_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> ZiaResult<usize> {
         if let Some((left, right)) = self.read_concept(deltas, concept).get_definition() {
