@@ -20,7 +20,7 @@ pub type ZiaResult<T> = Result<T, ZiaError>;
 
 pub fn map_err_variant<T, E, F>(
     result: Result<T, E>,
-    error_variant: E,
+    error_variant: &E,
     result_on_error: F,
 ) -> Result<T, E> 
 where
@@ -28,7 +28,7 @@ where
     E: PartialEq + Clone,
 {
     match result {
-        Err(ref err) if err.clone() == error_variant => result_on_error(),
+        Err(ref err) if err == error_variant => result_on_error(),
         _ => result
     }
 }

@@ -281,19 +281,19 @@ where
             _ => match ast.get_expansion() {
                 Some((ref left, ref right)) => map_err_variant(
                     self.call_pair(left, right),
-                    ZiaError::CannotReduceFurther,
+                    &ZiaError::CannotReduceFurther,
                     || map_err_variant (
                         self.try_reducing_then_call(ast),
-                        ZiaError::CannotReduceFurther,
+                        &ZiaError::CannotReduceFurther,
                         || Ok(self.contract_pair(left, right).to_string()),
                     )
                 ),
                 None => map_err_variant(
                     self.try_reducing_then_call(ast),
-                    ZiaError::CannotReduceFurther,
+                    &ZiaError::CannotReduceFurther,
                     || map_err_variant(
                         self.try_expanding_then_call(ast),
-                        ZiaError::CannotExpandFurther,
+                        &ZiaError::CannotExpandFurther,
                         || Ok(ast.to_string()),
                     )
                 ),
