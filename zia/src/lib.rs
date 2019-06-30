@@ -178,14 +178,22 @@ where
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
-        let ast = match self.ast_from_expression(command) {
-            Ok(a) => a,
-            Err(e) => return e.to_string(),
-        };
-        match self.call(&ast) {
-            Ok(s) => s,
-            Err(e) => e.to_string(),
-        }
+        unwrap_nested_or_else(
+            self.ast_from_expression(command).map(
+                |a| self.call(&a)
+            ),
+            |e| e.to_string(),
+        )
+    }
+}
+
+fn unwrap_nested_or_else<T, E, F>(nested_result: Result<Result<T, E>, E>, op: F) -> T
+where
+    F: FnOnce(E) -> T,
+{
+    match nested_result {
+        Ok(result) => result.unwrap_or_else(op),
+        Err(e) => op(e),
     }
 }
 
