@@ -343,17 +343,9 @@ where
     Self: ConceptReader<T>,
 {
     fn get_concept_of_label(&self, concept: usize) -> Option<usize> {
-        for candidate in self.read_concept(&[], concept).get_righthand_of().iter() {
-            match self.read_concept(&[], *candidate).get_definition() {
-                None => panic!("Candidate should have a definition!"),
-                Some((left, _)) => {
-                    if left == LABEL {
-                        return Some(*candidate);
-                    }
-                }
-            };
-        }
-        None
+        self.read_concept(&[], concept).get_righthand_of().iter().filter(|candidate|
+            self.read_concept(&[], **candidate).get_definition().expect("Candidate should have a definition!").0 == LABEL
+        ).nth(0).cloned()
     }
 }
 
@@ -380,14 +372,11 @@ where
                 .is_empty()
     }
     fn righthand_of_without_label_is_empty(&self, con: usize) -> bool {
-        for concept in self.read_concept(&[], con).get_righthand_of().iter() {
-            if let Some((left, _)) = self.read_concept(&[], *concept).get_definition() {
-                if left != LABEL {
-                    return false;
-                }
-            }
-        }
-        true
+        self.read_concept(&[], con).get_righthand_of().iter().filter_map(|concept|
+            self.read_concept(&[], *concept).get_definition().filter(|(left, _)|
+                *left != LABEL
+            )
+        ).nth(0).is_none()
     }
 }
 
