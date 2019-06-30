@@ -325,11 +325,8 @@ where
             }
         }
         match right.get_concept() {
-            Some(c) => match c {
-                REDUCTION => self.try_reducing_then_call(&left),
-                _ => self.reduce_and_call_pair(left, right),
-            },
-            None => self.reduce_and_call_pair(left, right),
+            Some(c) if c == REDUCTION => self.try_reducing_then_call(&left),
+            _ => self.reduce_and_call_pair(left, right),
         }
     }
     fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
