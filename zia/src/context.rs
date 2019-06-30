@@ -239,10 +239,7 @@ impl<T> BlindConceptRemover for Context<T> {
 
 impl<T> StringRemover for Context<T> {
     fn remove_string(&mut self, string: &str) {
-        match self.string_map.remove(string) {
-            Some(_) => (),
-            None => panic!("No string to remove!"),
-        };
+        self.string_map.remove(string).expect("No string to remove!");
     }
 }
 
