@@ -300,34 +300,28 @@ where
             Some(self.gaps.len() - 1)
         };
         loop {
-            match added_gaps.pop() {
-                Some(id) => {
-                    if removed_gaps.contains(&id) {
-                        continue;
-                    } else {
-                        index = id;
-                        break;
-                    }
-                }
-                None => match gap_index {
-                    Some(gi) => {
-                        if removed_gaps.contains(&self.gaps[gi]) {
-                            if gi == 0 {
-                                index = new_concept_length;
-                                break;
-                            } else {
-                                gap_index = Some(gi - 1);
-                                continue;
-                            }
-                        } else {
-                            index = self.gaps[gi];
-                            break;
-                        }
-                    }
-                    None => {
+            match (added_gaps.pop(), gap_index) {
+                (Some(id), _) => if removed_gaps.contains(&id) {
+                    continue;
+                } else {
+                    index = id;
+                    break;
+                },
+                (None, Some(gi)) => if removed_gaps.contains(&self.gaps[gi]) {
+                    if gi == 0 {
                         index = new_concept_length;
                         break;
+                    } else {
+                        gap_index = Some(gi - 1);
+                        continue;
                     }
+                } else {
+                    index = self.gaps[gi];
+                    break;
+                },
+                (None, None) => {
+                    index = new_concept_length;
+                    break;
                 },
             };
         }
