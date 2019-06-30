@@ -308,26 +308,24 @@ where
             left.display_joint(),
             right.display_joint()
         );
-        if let Some(lc) = left.get_concept() {
-            if lc == LET {
-                if let Some((ref rightleft, ref rightright)) = right.get_expansion() {
-                    return self.call_as_righthand(rightleft, rightright);
-                }
-            } else if lc == LABEL {
-                info!(self.logger(), "lefthand side is LABEL");
-                if let Some(rc) = right.get_concept() {
-                    info!(self.logger(), "righthand side is concept number {}", rc);
-                    if let Some(s) = self.get_label(rc) {
-                        return Ok("'".to_string() + &s + "'");
-                    }
-                }
-                return Ok("'".to_string() + &right.to_string() + "'");
+        left.get_concept().and_then(
+            |lc| match lc {
+                LET => right.get_expansion().map(
+                    |(left, right)| self.call_as_righthand(&left, &right)
+                ),
+                LABEL => Some(Ok(right.get_concept().and_then(
+                    |c| self.get_label(c)
+                ).map(|s| "'".to_string() + &s + "'").unwrap_or_else(
+                    || "'".to_string() + &right.to_string() + "'"
+                ))),
+                _ => None,
             }
-        }
-        match right.get_concept() {
-            Some(c) if c == REDUCTION => self.try_reducing_then_call(&left),
-            _ => self.reduce_and_call_pair(left, right),
-        }
+        ).unwrap_or_else(
+            || match right.get_concept() {
+                Some(c) if c == REDUCTION => self.try_reducing_then_call(&left),
+                _ => self.reduce_and_call_pair(left, right),
+            }
+        )
     }
     fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
         info!(self.logger(), "reduce_and_call_pair({}, {})", left.display_joint(), right.display_joint());
