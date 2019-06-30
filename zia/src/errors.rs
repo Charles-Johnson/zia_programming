@@ -18,6 +18,20 @@ use std::{error::Error, fmt};
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
+pub fn map_err_variant<T, E, F>(
+    result: Result<T, E>,
+    error_variant: E,
+    result_on_error: F,
+) -> Result<T, E> 
+where
+    F: FnOnce() -> Result<T, E>,
+{
+    match result {
+        Err(error_variant) => result_on_error(),
+        _ => result
+    }
+}
+
 /// All the expected ways a Zia command could be invalid.
 #[derive(Debug)]
 pub enum ZiaError {
