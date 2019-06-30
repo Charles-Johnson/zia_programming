@@ -25,15 +25,16 @@ pub fn map_err_variant<T, E, F>(
 ) -> Result<T, E> 
 where
     F: FnOnce() -> Result<T, E>,
+    E: PartialEq + Clone,
 {
     match result {
-        Err(error_variant) => result_on_error(),
+        Err(ref err) if err.clone() == error_variant => result_on_error(),
         _ => result
     }
 }
 
 /// All the expected ways a Zia command could be invalid.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ZiaError {
     /// When specifying a reduction rule that already exists.
     RedundantReduction,
