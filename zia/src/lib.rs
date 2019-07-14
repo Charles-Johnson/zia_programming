@@ -520,7 +520,7 @@ where
                 }
                 (Some(a), Some(b), None) => {
                     if a == b {
-                        self.cleanly_delete_definition(a)
+                        self.cleanly_delete_definition(&[], a)
                     } else {
                         Err(ZiaError::DefinitionCollision)
                     }

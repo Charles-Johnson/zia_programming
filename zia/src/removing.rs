@@ -37,8 +37,8 @@ where
         + MaybeString
         + Debug,
 {
-    fn cleanly_delete_definition(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(&[], concept).get_definition() {
+    fn cleanly_delete_definition(&mut self, deltas: &[Self::Delta], concept: usize) -> ZiaResult<()> {
+        match self.read_concept(deltas, concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
                 self.delete_definition(concept, left, right);
