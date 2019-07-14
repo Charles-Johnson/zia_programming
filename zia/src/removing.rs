@@ -76,12 +76,13 @@ where
 
 pub trait ConceptRemover<T>
 where
-    Self: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemover,
+    Self: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemoverDeltas,
     T: MaybeString,
 {
     fn remove_concept(&mut self, concept: usize) {
         if let Some(ref s) = self.read_concept(&[], concept).get_string() {
-            self.remove_string(s);
+            let deltas = self.remove_string_deltas(vec!(), s);
+            self.apply_all(&deltas);
         }
         let deltas = self.blindly_remove_concept_deltas(vec!(), concept);
         self.apply_all(&deltas);
@@ -90,7 +91,7 @@ where
 
 impl<S, T> ConceptRemover<T> for S
 where
-    S: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemover,
+    S: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemoverDeltas,
     T: MaybeString,
 {
 }
@@ -108,4 +109,11 @@ where
 
 pub trait StringRemover {
     fn remove_string(&mut self, &str);
+}
+
+pub trait StringRemoverDeltas 
+where
+    Self: Delta,
+{
+    fn remove_string_deltas(&self, deltas: Vec<Self::Delta>, &str) -> Vec<Self::Delta>;
 }

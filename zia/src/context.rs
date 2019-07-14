@@ -20,7 +20,7 @@ use delta::Delta;
 use errors::ZiaResult;
 use logging::Logger;
 use reading::ConceptReader;
-use removing::{BlindConceptRemover, BlindConceptRemoverDeltas, StringRemover};
+use removing::{BlindConceptRemover, BlindConceptRemoverDeltas, StringRemover, StringRemoverDeltas};
 use slog;
 use slog::Drain;
 use std::{fmt::Debug, collections::{HashMap, HashSet}};
@@ -262,6 +262,29 @@ impl<T> BlindConceptRemover for Context<T> {
 impl<T> StringRemover for Context<T> {
     fn remove_string(&mut self, string: &str) {
         self.string_map.remove(string).expect("No string to remove!");
+    }
+}
+
+impl<T> StringRemoverDeltas for Context<T> 
+where
+    T: Delta + Clone,
+    T::Delta: Clone + Debug,
+{
+    fn remove_string_deltas(&self, mut deltas: Vec<ContextDelta<T>>, string: &str) -> Vec<ContextDelta<T>> {
+        let mut string_may_exist = true;
+        for delta in &deltas {
+            match delta {
+                ContextDelta::String(s, StringDelta::Insert(_)) if s == string => string_may_exist = true,
+                ContextDelta::String(s, StringDelta::Remove) if s == string => string_may_exist = false,
+                _ => ()
+            };
+        }
+        if string_may_exist {
+            deltas.push(ContextDelta::String(string.to_string(), StringDelta::Remove));
+            deltas
+        } else {
+            panic!("string already removed");
+        }
     }
 }
 
