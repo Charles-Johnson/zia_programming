@@ -330,8 +330,24 @@ where
     }
 }
 
-impl<T> StringConcept for Context<T> {
-    fn get_string_concept(&self, s: &str) -> Option<usize> {
-        self.string_map.get(s).cloned()
+impl<T> StringConcept for Context<T> 
+where
+    T: Delta + Clone,
+    T::Delta: Debug + Clone,
+{
+    fn get_string_concept(&self, deltas: Vec<ContextDelta<T>>, s: &str) -> Option<usize> {
+        let mut candidate: Option<usize> = None;
+        for delta in deltas {
+            match delta {
+                ContextDelta::String(string, string_delta) => if string == *s {
+                    match string_delta {
+                        StringDelta::Insert(concept) => candidate = Some(concept),
+                        StringDelta::Remove => candidate = None,
+                    };
+                },
+                _ => (),
+            };
+        }
+        candidate.or_else(|| self.string_map.get(s).cloned())
     }
 }
