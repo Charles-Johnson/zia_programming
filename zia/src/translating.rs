@@ -119,11 +119,11 @@ where
     Self: StringConcept + Label<T>,
     T: FindWhatReducesToIt + GetDefinition,
 {
-    fn concept_from_label(&self, deltas: Vec<Self::Delta>, s: &str) -> Option<usize> {
-        self.get_string_concept(deltas, s).and_then(|c| self.get_labellee(&[], c))
+    fn concept_from_label(&self, deltas: &[Self::Delta], s: &str) -> Option<usize> {
+        self.get_string_concept(deltas, s).and_then(|c| self.get_labellee(deltas, c))
     }
     fn ast_from_symbol<U: From<(String, Option<usize>)>>(&self, s: &str) -> U {
-        let concept_if_exists = self.concept_from_label(vec!(), s);
+        let concept_if_exists = self.concept_from_label(&vec!(), s);
         U::from((s.to_string(), concept_if_exists))
     }
 }
@@ -139,5 +139,5 @@ pub trait StringConcept
 where
     Self: Delta,
 {
-    fn get_string_concept(&self, Vec<Self::Delta>, &str) -> Option<usize>;
+    fn get_string_concept(&self, &[Self::Delta], &str) -> Option<usize>;
 }

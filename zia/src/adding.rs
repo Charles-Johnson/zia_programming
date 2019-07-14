@@ -139,7 +139,7 @@ where
                 c
             );
             Ok((vec!(), c))
-        } else if let Some(c) = self.concept_from_label(vec!(), &ast.display_joint()) {
+        } else if let Some(c) = self.concept_from_label(&vec!(), &ast.display_joint()) {
             info!(
                 self.logger(),
                 "concept_from_ast({}) -> Ok({}): derived from label",
