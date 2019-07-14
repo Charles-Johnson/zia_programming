@@ -130,47 +130,22 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&mut self, deltas: Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    fn concept_from_ast(&self, deltas: Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         if let Some(c) = ast.get_concept() {
-            info!(
-                self.logger(),
-                "concept_from_ast({}) -> Ok({}): already included in ast",
-                ast.display_joint(),
-                c
-            );
-            Ok((vec!(), c))
+            Ok((deltas, c))
         } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
-            info!(
-                self.logger(),
-                "concept_from_ast({}) -> Ok({}): derived from label",
-                ast.display_joint(),
-                c
-            );
-            Ok((vec!(), c))
+            Ok((deltas, c))
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
                 None => {
                     let (new_concept, new_deltas) = self.new_labelled_default(&deltas, string)?;
-                    self.apply_all(&new_deltas);
-                    info!(
-                        self.logger(),
-                        "concept_from_ast({}) -> Ok({}): new concept created",
-                        ast.display_joint(),
-                        new_concept
-                    );
-                    Ok((vec!(), new_concept))
+                    Ok((new_deltas, new_concept))
                 }
                 Some((ref left, ref right)) => {
                     let (deltas1, mut leftc) = self.concept_from_ast(deltas, left)?;
                     let (deltas2, mut rightc) = self.concept_from_ast(deltas1, right)?;
                     let (deltas3, concept) = self.find_or_insert_definition(&deltas2, leftc, rightc)?;
-                    info!(
-                        self.logger(),
-                        "concept_from_ast({}) -> Ok({}): derived from definition",
-                        ast.display_joint(),
-                        concept
-                    );
                     if !string.contains(' ') {
                         let deltas4 = self.label(&deltas3, concept, string)?;
                         Ok((deltas4, concept))
