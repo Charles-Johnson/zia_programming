@@ -119,11 +119,11 @@ where
     Self: StringConcept + Label<T>,
     T: FindWhatReducesToIt + GetDefinition,
 {
-    fn concept_from_label(&self, s: &str) -> Option<usize> {
-        self.get_string_concept(vec!(), s).and_then(|c| self.get_labellee(&[], c))
+    fn concept_from_label(&self, deltas: Vec<Self::Delta>, s: &str) -> Option<usize> {
+        self.get_string_concept(deltas, s).and_then(|c| self.get_labellee(&[], c))
     }
     fn ast_from_symbol<U: From<(String, Option<usize>)>>(&self, s: &str) -> U {
-        let concept_if_exists = self.concept_from_label(s);
+        let concept_if_exists = self.concept_from_label(vec!(), s);
         U::from((s.to_string(), concept_if_exists))
     }
 }
