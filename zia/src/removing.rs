@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, MaybeDisconnected, MaybeString};
 use std::fmt::Debug;
@@ -75,26 +76,34 @@ where
 
 pub trait ConceptRemover<T>
 where
-    Self: BlindConceptRemover + ConceptReader<T> + StringRemover,
+    Self: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemover,
     T: MaybeString,
 {
     fn remove_concept(&mut self, concept: usize) {
         if let Some(ref s) = self.read_concept(&[], concept).get_string() {
             self.remove_string(s);
         }
-        self.blindly_remove_concept(concept);
+        let deltas = self.blindly_remove_concept_deltas(vec!(), concept);
+        self.apply_all(&deltas);
     }
 }
 
 impl<S, T> ConceptRemover<T> for S
 where
-    S: BlindConceptRemover + ConceptReader<T> + StringRemover,
+    S: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemover,
     T: MaybeString,
 {
 }
 
 pub trait BlindConceptRemover {
     fn blindly_remove_concept(&mut self, usize);
+}
+
+pub trait BlindConceptRemoverDeltas 
+where
+    Self: Delta,
+{
+    fn blindly_remove_concept_deltas(&self, Vec<Self::Delta>, usize) -> Vec<Self::Delta>;
 }
 
 pub trait StringRemover {

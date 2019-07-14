@@ -20,7 +20,7 @@ use delta::Delta;
 use errors::ZiaResult;
 use logging::Logger;
 use reading::ConceptReader;
-use removing::{BlindConceptRemover, StringRemover};
+use removing::{BlindConceptRemover, BlindConceptRemoverDeltas, StringRemover};
 use slog;
 use slog::Drain;
 use std::{fmt::Debug, collections::{HashMap, HashSet}};
@@ -225,6 +225,29 @@ where
         match concept_if_still_exists {
             Some(c) => c,
             None => panic!("No concept with id = {}", id),
+        }
+    }
+}
+
+impl<T> BlindConceptRemoverDeltas for Context<T> 
+where
+    T: Delta + Clone,
+    T::Delta: Clone + Debug,
+{
+    fn blindly_remove_concept_deltas(&self, mut deltas: Vec<ContextDelta<T>>, id: usize) -> Vec<ContextDelta<T>> {
+        let mut removed = false;
+        for delta in &deltas {
+            match delta {
+                ContextDelta::Concept(concept, ConceptDelta::Insert(_)) => if *concept == id {removed = false},
+                ContextDelta::Concept(concept, ConceptDelta::Remove) => if *concept == id {removed = true},
+                _ => (),
+            };
+        }
+        if removed {
+            panic!("Concept will be already removed!");
+        } else {
+            deltas.push(ContextDelta::Concept(id, ConceptDelta::Remove));
+            deltas
         }
     }
 }
