@@ -63,9 +63,9 @@ where
             self.try_removing_reduction::<Self::S>(syntax)?;
             Ok("".to_string())
         } else {
-            let (deltas1, syntax_concept) = self.concept_from_ast(syntax)?;
+            let (deltas1, syntax_concept) = self.concept_from_ast(vec!(), syntax)?;
             self.apply_all(&deltas1);
-            let (deltas2, normal_form_concept) = self.concept_from_ast(normal_form)?;
+            let (deltas2, normal_form_concept) = self.concept_from_ast(vec!(), normal_form)?;
             let more_deltas = self.update_reduction(&deltas2, syntax_concept, normal_form_concept)?;
             self.apply_all(&more_deltas);
             Ok("".to_string())
@@ -130,7 +130,7 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    fn concept_from_ast(&mut self, deltas: Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         if let Some(c) = ast.get_concept() {
             info!(
                 self.logger(),
@@ -139,7 +139,7 @@ where
                 c
             );
             Ok((vec!(), c))
-        } else if let Some(c) = self.concept_from_label(&vec!(), &ast.display_joint()) {
+        } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
             info!(
                 self.logger(),
                 "concept_from_ast({}) -> Ok({}): derived from label",
@@ -151,8 +151,8 @@ where
             let string = &ast.to_string();
             match ast.get_expansion() {
                 None => {
-                    let (new_concept, deltas) = self.new_labelled_default(&[], string)?;
-                    self.apply_all(&deltas);
+                    let (new_concept, new_deltas) = self.new_labelled_default(&deltas, string)?;
+                    self.apply_all(&new_deltas);
                     info!(
                         self.logger(),
                         "concept_from_ast({}) -> Ok({}): new concept created",
@@ -162,23 +162,21 @@ where
                     Ok((vec!(), new_concept))
                 }
                 Some((ref left, ref right)) => {
-                    let (deltas1, mut leftc) = self.concept_from_ast(left)?;
-                    self.apply_all(&deltas1);
-                    let (deltas2, mut rightc) = self.concept_from_ast(right)?;
-                    self.apply_all(&deltas2);
-                    let (deltas3, concept) = self.find_or_insert_definition(&[], leftc, rightc)?;
-                    self.apply_all(&deltas3);
-                    if !string.contains(' ') {
-                        let deltas = self.label(&[], concept, string)?;
-                        self.apply_all(&deltas);
-                    }
+                    let (deltas1, mut leftc) = self.concept_from_ast(deltas, left)?;
+                    let (deltas2, mut rightc) = self.concept_from_ast(deltas1, right)?;
+                    let (deltas3, concept) = self.find_or_insert_definition(&deltas2, leftc, rightc)?;
                     info!(
                         self.logger(),
                         "concept_from_ast({}) -> Ok({}): derived from definition",
                         ast.display_joint(),
                         concept
                     );
-                    Ok((vec!(), concept))
+                    if !string.contains(' ') {
+                        let deltas4 = self.label(&deltas3, concept, string)?;
+                        Ok((deltas4, concept))
+                    } else {
+                        Ok((deltas3, concept))
+                    }
                 }
             }
         }
