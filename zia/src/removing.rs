@@ -52,7 +52,8 @@ where
     fn try_delete_concept(&mut self, concept: usize) -> ZiaResult<()> {
         if self.is_disconnected(concept) {
             self.unlabel(concept)?;
-            self.remove_concept(concept);
+            let deltas = self.remove_concept(vec!(), concept);
+            self.apply_all(&deltas);
         }
         Ok(())
     }
@@ -79,13 +80,11 @@ where
     Self: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemoverDeltas,
     T: MaybeString,
 {
-    fn remove_concept(&mut self, concept: usize) {
-        if let Some(ref s) = self.read_concept(&[], concept).get_string() {
-            let deltas = self.remove_string_deltas(vec!(), s);
-            self.apply_all(&deltas);
+    fn remove_concept(&self, mut deltas: Vec<Self::Delta>, concept: usize) -> Vec<Self::Delta> {
+        if let Some(ref s) = self.read_concept(&deltas, concept).get_string() {
+            deltas = self.remove_string_deltas(deltas, s);
         }
-        let deltas = self.blindly_remove_concept_deltas(vec!(), concept);
-        self.apply_all(&deltas);
+        self.blindly_remove_concept_deltas(deltas, concept)
     }
 }
 
