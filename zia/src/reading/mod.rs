@@ -228,7 +228,7 @@ where
     Self: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
     fn get_label(&self, concept: usize) -> Option<String> {
-        match self.get_concept_of_label(concept) {
+        match self.get_concept_of_label(&[], concept) {
             None => {
                 let r = self.read_concept(&[], concept).get_reduction();
                 match r {
@@ -342,9 +342,9 @@ where
     T: GetDefinition + GetDefinitionOf + fmt::Debug,
     Self: ConceptReader<T>,
 {
-    fn get_concept_of_label(&self, concept: usize) -> Option<usize> {
-        self.read_concept(&[], concept).get_righthand_of().iter().filter(|candidate|
-            self.read_concept(&[], **candidate).get_definition().expect("Candidate should have a definition!").0 == LABEL
+    fn get_concept_of_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
+        self.read_concept(deltas, concept).get_righthand_of().iter().filter(|candidate|
+            self.read_concept(deltas, **candidate).get_definition().expect("Candidate should have a definition!").0 == LABEL
         ).nth(0).cloned()
     }
 }
