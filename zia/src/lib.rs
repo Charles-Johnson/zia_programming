@@ -178,7 +178,7 @@ where
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
-        self.ast_from_expression(command).and_then(
+        self.ast_from_expression(&[], command).and_then(
             |a| self.call(&a)
         ).unwrap_or_else(|e| e.to_string())
     }

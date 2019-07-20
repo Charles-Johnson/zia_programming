@@ -32,33 +32,36 @@ where
         U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint,
     >(
         &self,
+        deltas: &[Self::Delta],
         s: &str,
     ) -> ZiaResult<Rc<U>> {
         let tokens: Vec<String> = parse_line(s);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token::<U>(&tokens[0]),
-            2 => self.ast_from_pair::<U>(&tokens[0], &tokens[1]),
+            1 => self.ast_from_token::<U>(deltas, &tokens[0]),
+            2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
             _ => Err(ZiaError::AmbiguousExpression),
         }
     }
     fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>>(
         &self,
+        deltas: &[Self::Delta],
         left: &str,
         right: &str,
     ) -> ZiaResult<Rc<U>> {
-        let lefthand = self.ast_from_token(left)?;
-        let righthand = self.ast_from_token(right)?;
-        Ok(self.combine(&[], &lefthand, &righthand))
+        let lefthand = self.ast_from_token(deltas, left)?;
+        let righthand = self.ast_from_token(deltas, right)?;
+        Ok(self.combine(deltas, &lefthand, &righthand))
     }
     fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>>(
         &self,
+        deltas: &[Self::Delta],
         t: &str,
     ) -> ZiaResult<Rc<U>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression::<U>(t)
+            self.ast_from_expression::<U>(deltas, t)
         } else {
-            Ok(Rc::new(self.ast_from_symbol::<U>(&vec!(), t)))
+            Ok(Rc::new(self.ast_from_symbol::<U>(deltas, t)))
         }
     }
 }
