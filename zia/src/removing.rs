@@ -43,19 +43,21 @@ where
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
                 self.delete_definition(concept, left, right);
-                self.try_delete_concept(concept)?;
-                self.try_delete_concept(left)?;
-                self.try_delete_concept(right)
+                let deltas1 = self.try_delete_concept(vec!(), concept)?;
+                let deltas2 = self.try_delete_concept(deltas1, left)?;
+                let deltas3 = self.try_delete_concept(deltas2, right)?;
+                self.apply_all(&deltas3);
+                Ok(())
             }
         }
     }
-    fn try_delete_concept(&mut self, concept: usize) -> ZiaResult<()> {
+    fn try_delete_concept(&self, previous_deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
         if self.is_disconnected(concept) {
-            let initial_deltas = self.unlabel(vec!(), concept)?;
-            let deltas = self.remove_concept(initial_deltas, concept);
-            self.apply_all(&deltas);
+            let initial_deltas = self.unlabel(previous_deltas, concept)?;
+            Ok(self.remove_concept(initial_deltas, concept))
+        } else {
+            Ok(vec!())
         }
-        Ok(())
     }
 }
 
