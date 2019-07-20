@@ -320,9 +320,9 @@ where
     }
     fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
         info!(self.logger(), "reduce_and_call_pair({}, {})", left.display_joint(), right.display_joint());
-        let reduced_left = self.reduce(left);
+        let reduced_left = self.reduce(&[], left);
         info!(self.logger(), "reduce({}) -> {}", left.display_joint(), &match reduced_left.clone() {None => "None".to_string(), Some(rl) => rl.display_joint(),});
-        let reduced_right = self.reduce(right);
+        let reduced_right = self.reduce(&[], right);
         info!(self.logger(), "reduce({}) -> {}", right.display_joint(), &match reduced_right.clone() {None => "None".to_string(), Some(rr) => rr.display_joint(),});
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
@@ -335,7 +335,7 @@ where
         ast.get_expansion().and_then(
             |(left, right)| right.get_concept().and_then(
                 |concept| match concept {
-                    REDUCTION => Some(self.reduce_label_of(&self.reduce(&left).unwrap_or_else(|| left))),
+                    REDUCTION => Some(self.reduce_label_of(&self.reduce(&[], &left).unwrap_or_else(|| left))),
                     DEFINE => Some(Ok(self.expand(&[], &left).to_string())),
                     _ => None,
                 }

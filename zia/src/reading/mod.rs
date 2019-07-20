@@ -70,7 +70,7 @@ where
         &self,
         ast: &Rc<U>,
     ) -> Rc<U> {
-        match self.reduce(ast) {
+        match self.reduce(&[], ast) {
             Some(ref a) => self.recursively_reduce(a),
             None => ast.clone(),
         }
@@ -85,14 +85,15 @@ where
             + DisplayJoint,
     >(
         &self,
+        deltas: &[Self::Delta],
         ast: &Rc<U>,
     ) -> Option<Rc<U>> {
         match ast.get_concept() {
-            Some(c) => self.reduce_concept::<U>(&[], c),
+            Some(c) => self.reduce_concept::<U>(deltas, c),
             None => match ast.get_expansion() {
                 None => None,
                 Some((ref left, ref right)) => {
-                    self.match_left_right::<U>(&[], self.reduce(left), self.reduce(right), left, right)
+                    self.match_left_right::<U>(deltas, self.reduce(deltas, left), self.reduce(deltas, right), left, right)
                 }
             },
         }
