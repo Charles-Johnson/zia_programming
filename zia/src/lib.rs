@@ -404,7 +404,11 @@ where
                     self.apply_all(&deltas);
                     Ok(string)
                 },
-                DEFINE => self.execute_definition(left, rightright),
+                DEFINE => {
+                    let deltas = self.execute_definition(vec!(), left, rightright)?;
+                    self.apply_all(&deltas);
+                    Ok("".to_string())
+                },
                 _ => {
                     let rightleft_reduction = self.read_concept(&[], c).get_reduction();
                     if let Some(r) = rightleft_reduction {
@@ -492,14 +496,11 @@ where
     Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<String> {
-        info!(self.logger(), "execute_definition({}, {})", new, old);
+    fn execute_definition(&self, deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            let deltas = self.define(vec!(), new, old)?;
-            self.apply_all(&deltas);
-            Ok("".to_string())
+            self.define(deltas, new, old)
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
