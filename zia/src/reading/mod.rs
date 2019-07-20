@@ -68,10 +68,11 @@ where
             + DisplayJoint,
     >(
         &self,
+        deltas: &[Self::Delta],
         ast: &Rc<U>,
     ) -> Rc<U> {
-        match self.reduce(&[], ast) {
-            Some(ref a) => self.recursively_reduce(a),
+        match self.reduce(deltas, ast) {
+            Some(ref a) => self.recursively_reduce(deltas, a),
             None => ast.clone(),
         }
     }

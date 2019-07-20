@@ -363,7 +363,7 @@ where
             "try_reducing_then_call({})",
             ast.display_joint()
         );
-        let normal_form = &self.recursively_reduce(ast);
+        let normal_form = &self.recursively_reduce(&[], ast);
         if normal_form != ast {
             self.call(normal_form)
         } else {
