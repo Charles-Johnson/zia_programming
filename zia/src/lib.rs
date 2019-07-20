@@ -376,7 +376,9 @@ where
         );
         match right.get_expansion() {
             Some((ref rightleft, ref rightright)) => {
-                self.match_righthand_pair(left, rightleft, rightright)
+                let deltas = self.match_righthand_pair(vec!(), left, rightleft, rightright)?;
+                self.apply_all(&deltas);
+                Ok("".to_string())
             }
             None => Err(ZiaError::CannotExpandFurther),
         }
@@ -385,57 +387,27 @@ where
     /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
-        &mut self,
+        &self,
+        deltas: Vec<Self::Delta>,
         left: &Self::S,
         rightleft: &Self::S,
         rightright: &Self::S,
-    ) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "match_righthand_pair({}, {}, {})",
-            left.display_joint(),
-            rightleft.display_joint(),
-            rightright.display_joint()
-        );
+    ) -> ZiaResult<Vec<Self::Delta>> {
         match rightleft.get_concept() {
             Some(c) => match c {
-                REDUCTION => {
-                    let (deltas, string) = self.execute_reduction(vec!(), left, rightright)?;
-                    self.apply_all(&deltas);
-                    Ok(string)
-                },
-                DEFINE => {
-                    let deltas = self.execute_definition(vec!(), left, rightright)?;
-                    self.apply_all(&deltas);
-                    Ok("".to_string())
-                },
+                REDUCTION => self.execute_reduction(deltas, left, rightright),
+                DEFINE => self.execute_definition(deltas, left, rightright),
                 _ => {
-                    let rightleft_reduction = self.read_concept(&[], c).get_reduction();
+                    let rightleft_reduction = self.read_concept(&deltas, c).get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast::<Self::S>(&[], r);
-                        self.match_righthand_pair(left, &ast, rightright)
+                        let ast = self.to_ast::<Self::S>(&deltas, r);
+                        self.match_righthand_pair(deltas, left, &ast, rightright)
                     } else {
-                        info!(
-                            self.logger(),
-                            "match_righthand_pair({}, {}, {}) -> Err(ZiaError::NotAProgram)",
-                            left.display_joint(),
-                            rightleft.display_joint(),
-                            rightright.display_joint()
-                        );
                         Err(ZiaError::CannotReduceFurther)
                     }
                 }
             },
-            None => {
-                info!(
-                    self.logger(),
-                    "match_righthand_pair({}, {}, {}) -> Err(ZiaError::NotAProgram)",
-                    left.display_joint(),
-                    rightleft.display_joint(),
-                    rightright.display_joint()
-                );
-                Err(ZiaError::UnusedSymbol)
-            }
+            None => Err(ZiaError::UnusedSymbol),
         }
     }
 }

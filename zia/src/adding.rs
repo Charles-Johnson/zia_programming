@@ -48,17 +48,15 @@ where
     Self::S: Container + PartialEq + DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
 {
-    fn execute_reduction(&self, deltas: Vec<Self::Delta>, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<(Vec<Self::Delta>, String)> {
+    fn execute_reduction(&self, deltas: Vec<Self::Delta>, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            let deltas = self.try_removing_reduction::<Self::S>(deltas, syntax)?;
-            Ok((deltas, "".to_string()))
+            self.try_removing_reduction::<Self::S>(deltas, syntax)
         } else {
             let (deltas1, syntax_concept) = self.concept_from_ast(deltas, syntax)?;
             let (deltas2, normal_form_concept) = self.concept_from_ast(deltas1, normal_form)?;
-            let more_deltas = self.update_reduction(&deltas2, syntax_concept, normal_form_concept)?;
-            Ok((more_deltas, "".to_string()))
+            self.update_reduction(&deltas2, syntax_concept, normal_form_concept)
         }
     }
 }
