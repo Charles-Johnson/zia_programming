@@ -504,14 +504,14 @@ where
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => self.relabel(b, &new.to_string()),
+                (None, Some(b), None) => self.relabel(vec!(), b, &new.to_string()),
                 (None, Some(b), Some(_)) => {
                     if self.get_label(b).is_none() {
                         let deltas = self.label(&[], b, &new.to_string())?;
                         self.apply_all(&deltas);
                         Ok(())
                     } else {
-                        self.relabel(b, &new.to_string())
+                        self.relabel(vec!(), b, &new.to_string())
                     }
                 }
                 (None, None, Some((ref left, ref right))) => {
@@ -541,8 +541,8 @@ where
         if let Some((left_concept, right_concept)) =
             self.read_concept(&[], concept).get_definition()
         {
-            self.relabel(left_concept, &left.to_string())?;
-            self.relabel(right_concept, &right.to_string())
+            self.relabel(vec!(), left_concept, &left.to_string())?;
+            self.relabel(vec!(), right_concept, &right.to_string())
         } else {
             let (deltas1, left_concept) = self.concept_from_ast(vec!(), left)?;
             self.apply_all(&deltas1);
@@ -554,8 +554,8 @@ where
         }
     }
     /// Unlabels a concept and gives it a new label.
-    fn relabel(&mut self, concept: usize, new_label: &str) -> ZiaResult<()> {
-        let initial_deltas = self.unlabel(vec!(), concept)?;
+    fn relabel(&mut self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<()> {
+        let initial_deltas = self.unlabel(previous_deltas, concept)?;
         let deltas = self.label(&initial_deltas, concept, new_label)?;
         self.apply_all(&deltas);
         Ok(())
