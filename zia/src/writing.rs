@@ -57,9 +57,9 @@ where
     T: GetReduction,
     Self: ConceptWriter<T> + ConceptReader<T> + Delta + RemoveConceptReduction,
 {
-    fn try_removing_reduction<U: MaybeConcept + Display>(&self, syntax: &U) -> ZiaResult<Vec<Self::Delta>> {
+    fn try_removing_reduction<U: MaybeConcept + Display>(&self, deltas: Vec<Self::Delta>, syntax: &U) -> ZiaResult<Vec<Self::Delta>> {
         if let Some(c) = syntax.get_concept() {
-            self.delete_reduction(vec!(), c)
+            self.delete_reduction(deltas, c)
         } else {
             Err(ZiaError::RedundantReduction)
         }
