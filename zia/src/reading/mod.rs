@@ -147,25 +147,26 @@ where
     ) -> Option<Rc<U>> {
         match (left, right) {
             (None, None) => None,
-            (Some(new_left), None) => Some(self.contract_pair::<U>(&new_left, original_right)),
-            (None, Some(new_right)) => Some(self.contract_pair::<U>(original_left, &new_right)),
+            (Some(new_left), None) => Some(self.contract_pair::<U>(&[], &new_left, original_right)),
+            (None, Some(new_right)) => Some(self.contract_pair::<U>(&[], original_left, &new_right)),
             (Some(new_left), Some(new_right)) => {
-                Some(self.contract_pair::<U>(&new_left, &new_right))
+                Some(self.contract_pair::<U>(&[], &new_left, &new_right))
             }
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
     fn contract_pair<U: MaybeConcept + Pair<U> + DisplayJoint>(
         &self,
+        deltas: &[Self::Delta],
         lefthand: &Rc<U>,
         righthand: &Rc<U>,
     ) -> Rc<U> {
         let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
             (Some(lc), Some(rc)) => {
-                let maydef = self.find_definition(&[], lc, rc);
+                let maydef = self.find_definition(deltas, lc, rc);
                 (
                     match maydef {
-                        Some(def) => match self.get_label(&[], def) {
+                        Some(def) => match self.get_label(deltas, def) {
                             Some(a) => a,
                             None => lefthand.display_joint() + " " + &righthand.display_joint(),
                         },

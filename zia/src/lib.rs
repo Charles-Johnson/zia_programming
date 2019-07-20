@@ -272,7 +272,7 @@ where
                     || map_err_variant (
                         self.try_reducing_then_call(ast),
                         &ZiaError::CannotReduceFurther,
-                        || Ok(self.contract_pair(left, right).to_string()),
+                        || Ok(self.contract_pair(&[], left, right).to_string()),
                     )
                 ),
                 None => map_err_variant(
