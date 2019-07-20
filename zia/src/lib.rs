@@ -178,9 +178,12 @@ where
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
-        self.ast_from_expression(&[], command).and_then(
-            |a| self.call(&a)
-        ).unwrap_or_else(|e| e.to_string())
+        let (deltas, string) = self.ast_from_expression(&[], command).and_then(
+            |a| self.call(vec!(), &a)
+        ).unwrap_or_else(|e| (vec!(), e.to_string()));
+        info!(self.logger(), "execute({}) -> {:?}", command, deltas);
+        self.apply_all(&deltas);
+        string
     }
 }
 
@@ -261,100 +264,76 @@ where
     Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        info!(self.logger(), "call({})", ast.display_joint());
-        match ast.get_concept().and_then(|c| self.read_concept(&[], c).get_string()) {
-            Some(s) => Ok(s),
+    fn call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        match ast.get_concept().and_then(|c| self.read_concept(&deltas, c).get_string()) {
+            Some(s) => Ok((vec!(), s)),
             None => match ast.get_expansion() {
                 Some((ref left, ref right)) => map_err_variant(
-                    self.call_pair(left, right),
+                    self.call_pair(deltas.clone(), left, right),
                     &ZiaError::CannotReduceFurther,
                     || map_err_variant (
-                        self.try_reducing_then_call(ast),
+                        self.try_reducing_then_call(deltas.clone(), ast),
                         &ZiaError::CannotReduceFurther,
-                        || Ok(self.contract_pair(&[], left, right).to_string()),
+                        || Ok((vec!(), self.contract_pair(&deltas, left, right).to_string())),
                     )
                 ),
                 None => map_err_variant(
-                    self.try_reducing_then_call(ast),
+                    self.try_reducing_then_call(deltas.clone(), ast),
                     &ZiaError::CannotReduceFurther,
                     || map_err_variant(
-                        self.try_expanding_then_call(ast),
+                        self.try_expanding_then_call(deltas, ast),
                         &ZiaError::CannotExpandFurther,
-                        || Ok(ast.to_string()),
+                        || Ok((vec!(), ast.to_string())),
                     )
                 ),
             }
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "call_pair({}, {})",
-            left.display_joint(),
-            right.display_joint()
-        );
+    fn call_pair(&self, deltas: Vec<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
         left.get_concept().and_then(
             |lc| match lc {
                 LET => right.get_expansion().map(
-                    |(left, right)| {
-                        let deltas = self.call_as_righthand(vec!(), &left, &right)?;
-                        self.apply_all(&deltas);
-                        Ok("".to_string())
-                    }
+                    |(left, right)| Ok((self.call_as_righthand(deltas.clone(), &left, &right)?, "".to_string()))
                 ),
-                LABEL => Some(Ok(right.get_concept().and_then(
-                    |c| self.get_label(&[], c)
+                LABEL => Some(Ok((vec!(), right.get_concept().and_then(
+                    |c| self.get_label(&deltas, c)
                 ).map(|s| "'".to_string() + &s + "'").unwrap_or_else(
                     || "'".to_string() + &right.to_string() + "'"
-                ))),
+                )))),
                 _ => None,
             }
         ).unwrap_or_else(
             || match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(&left),
-                _ => self.reduce_and_call_pair(left, right),
+                Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
+                _ => self.reduce_and_call_pair(deltas, left, right),
             }
         )
     }
-    fn reduce_and_call_pair(&mut self, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<String> {
-        info!(self.logger(), "reduce_and_call_pair({}, {})", left.display_joint(), right.display_joint());
-        let reduced_left = self.reduce(&[], left);
-        info!(self.logger(), "reduce({}) -> {}", left.display_joint(), &match reduced_left.clone() {None => "None".to_string(), Some(rl) => rl.display_joint(),});
-        let reduced_right = self.reduce(&[], right);
-        info!(self.logger(), "reduce({}) -> {}", right.display_joint(), &match reduced_right.clone() {None => "None".to_string(), Some(rr) => rr.display_joint(),});
+    fn reduce_and_call_pair(&self, deltas: Vec::<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        let reduced_left = self.reduce(&deltas, left);
+        let reduced_right = self.reduce(&deltas, right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
-            (Some(rl), None) => self.call_pair(&rl, right),
-            (None, Some(rr)) => self.call_pair(left, &rr),
-            (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
+            (Some(rl), None) => self.call_pair(deltas, &rl, right),
+            (None, Some(rr)) => self.call_pair(deltas, left, &rr),
+            (Some(rl), Some(rr)) => self.call_pair(deltas, &rl, &rr),
         }
     }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "try_expanding_then_call({})",
-            ast.display_joint()
-        );
-        let expansion = &self.expand(&[], ast);
+    fn try_expanding_then_call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        let expansion = &self.expand(&deltas, ast);
         if expansion != ast {
-            self.call(expansion)
+            self.call(deltas, expansion)
         } else {
             Err(ZiaError::CannotExpandFurther)
         }
     }
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "try_reducing_then_call({})",
-            ast.display_joint()
-        );
-        let normal_form = &self.recursively_reduce(&[], ast);
+    fn try_reducing_then_call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        let normal_form = &self.recursively_reduce(&deltas, ast);
         if normal_form != ast {
-            self.call(normal_form)
+            self.call(deltas, normal_form)
         } else {
             Err(ZiaError::CannotReduceFurther)
         }
