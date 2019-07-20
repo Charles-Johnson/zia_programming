@@ -497,29 +497,29 @@ where
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            let deltas = self.define(new, old)?;
+            let deltas = self.define(vec!(), new, old)?;
             self.apply_all(&deltas);
             Ok("".to_string())
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn define(&self, deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => self.relabel(vec!(), b, &new.to_string()),
-                (None, Some(b), Some(_)) => if self.get_label(&[], b).is_none() {
-                    self.label(&[], b, &new.to_string())
+                (None, Some(b), None) => self.relabel(deltas, b, &new.to_string()),
+                (None, Some(b), Some(_)) => if self.get_label(&deltas, b).is_none() {
+                    self.label(&deltas, b, &new.to_string())
                 } else {
-                    self.relabel(vec!(), b, &new.to_string())
+                    self.relabel(deltas, b, &new.to_string())
                 },
                 (None, None, Some((ref left, ref right))) => {
-                    self.define_new_syntax(vec!(), new.to_string(), left, right)
+                    self.define_new_syntax(deltas, new.to_string(), left, right)
                 }
                 (Some(a), Some(b), None) => if a == b {
-                    self.cleanly_delete_definition(vec!(), a)
+                    self.cleanly_delete_definition(deltas, a)
                 } else {
                     Err(ZiaError::DefinitionCollision)
                 },
@@ -529,7 +529,7 @@ where
                     Err(ZiaError::DefinitionCollision)
                 },
                 (Some(a), None, Some((ref left, ref right))) => {
-                    self.redefine(vec!(), a, left, right)
+                    self.redefine(deltas, a, left, right)
                 },
             }
         }
