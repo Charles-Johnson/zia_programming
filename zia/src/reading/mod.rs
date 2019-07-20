@@ -46,6 +46,7 @@ where
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
                 self.combine(
+                    deltas,
                     &self.expand(deltas, &self.to_ast::<U>(deltas, left)),
                     &self.expand(deltas, &self.to_ast::<U>(deltas, right)),
                 )
@@ -53,7 +54,7 @@ where
                 self.to_ast::<U>(deltas, con)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
-            self.combine(&self.expand(deltas, left), &self.expand(deltas, right))
+            self.combine(deltas, &self.expand(deltas, left), &self.expand(deltas, right))
         } else {
             ast.clone()
         }
@@ -135,7 +136,7 @@ where
             Some(s) => Rc::new(U::from((s, Some(concept)))),
             None => match self.read_concept(deltas, concept).get_definition() {
                 Some((left, right)) => {
-                    self.combine(&self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
+                    self.combine(deltas, &self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
                 }
                 None => panic!("Unlabelled concept with no definition"),
             },
@@ -265,13 +266,14 @@ where
 {
     fn combine<U: DisplayJoint + MaybeConcept + Pair<U> + Sized>(
         &self,
+        deltas: &[Self::Delta],
         ast: &Rc<U>,
         other: &Rc<U>,
     ) -> Rc<U> {
         let left_string = ast.display_joint();
         let right_string = other.display_joint();
         let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
-            self.find_definition(&[], l, r)
+            self.find_definition(deltas, l, r)
         } else {
             None
         };
