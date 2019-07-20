@@ -26,7 +26,9 @@ use slog::Drain;
 use std::{fmt::Debug, collections::{HashMap, HashSet}};
 use translating::StringConcept;
 use writing::{
-    ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta, SetConceptReductionDelta, SetReductionDelta, MakeReduceFromDelta,
+    ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta,
+    SetConceptReductionDelta, SetReductionDelta, MakeReduceFromDelta, RemoveConceptReduction,
+    RemoveReductionDelta
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
@@ -395,5 +397,44 @@ where
             };
         }
         candidate.or_else(|| self.string_map.get(s).cloned())
+    }
+}
+
+impl<T> RemoveConceptReduction for Context<T> 
+where
+    T: Delta + Clone + RemoveReductionDelta,
+    T::Delta: Clone + Debug,
+{
+    fn remove_concept_reduction(&self, mut deltas: Vec<ContextDelta<T>>, concept: usize, reduction: usize) -> Vec<ContextDelta<T>> {
+        let mut edited_concept: Option<T> = Some(self.read_concept(&deltas, concept));
+        let mut edited_reduction: Option<T> = Some(self.read_concept(&deltas, reduction));
+        let mut concept_deltas = Vec::<T::Delta>::new();
+        let mut reduction_deltas = Vec::<T::Delta>::new();
+        for delta in &deltas {
+            match delta {
+                ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == concept => concept_deltas.push(d.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == reduction => reduction_deltas.push(d.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == concept => edited_concept = Some(t.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == reduction => edited_reduction = Some(t.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == reduction => {
+                    edited_concept = None;
+                    concept_deltas = vec!();
+                },
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == reduction => {
+                    edited_reduction = None;
+                    reduction_deltas = vec!();
+                },
+                _ => (),
+            };
+        }
+        deltas.push(ContextDelta::Concept(
+            concept,
+            ConceptDelta::Update(edited_concept.expect("Concept previously removed!").make_reduce_to_none_delta(&concept_deltas))
+        ));
+        deltas.push(ContextDelta::Concept(
+            reduction,
+            ConceptDelta::Update(edited_reduction.expect("Reduction previously removed!").no_longer_reduces_from_delta(&reduction_deltas, concept))
+        ));
+        deltas
     }
 }

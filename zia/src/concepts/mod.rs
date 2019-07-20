@@ -26,7 +26,7 @@ use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
     SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction, SetReductionDelta,
-    MakeReduceFromDelta,
+    MakeReduceFromDelta, RemoveReductionDelta,
 };
 
 /// Data type for any type of concept.
@@ -252,5 +252,32 @@ impl MaybeString for Concept {
             SpecificPart::String(ref s) => Some(s.clone()),
             _ => None,
         }
+    }
+}
+
+impl RemoveReductionDelta for Concept {
+    fn no_longer_reduces_from_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
+        let mut reduces_from_concept = true;
+        for delta in deltas {
+            match delta {
+                ConceptDelta::Common(CommonDelta::RemoveReducesFrom(c)) if *c == concept => reduces_from_concept = false,
+                ConceptDelta::Common(CommonDelta::AddReducesFrom(c)) if *c == concept => reduces_from_concept = true,
+                _ => (),
+            };
+        }
+        assert!(reduces_from_concept);
+        ConceptDelta::Common(CommonDelta::RemoveReducesFrom(concept))
+    }
+    fn make_reduce_to_none_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
+        let mut reduces = true;
+        for delta in deltas {
+            match delta {
+                ConceptDelta::Abstract(AbstractDelta::RemoveReduction) => reduces = false,
+                ConceptDelta::Abstract(AbstractDelta::SetReduction(_)) => reduces = true,
+                _ => (),
+            };
+        }
+        assert!(reduces);
+        ConceptDelta::Abstract(AbstractDelta::RemoveReduction)
     }
 }

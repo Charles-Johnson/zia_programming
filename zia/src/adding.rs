@@ -60,7 +60,8 @@ where
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            self.try_removing_reduction::<Self::S>(syntax)?;
+            let deltas = self.try_removing_reduction::<Self::S>(syntax)?;
+            self.apply_all(&deltas);
             Ok("".to_string())
         } else {
             let (deltas1, syntax_concept) = self.concept_from_ast(vec!(), syntax)?;

@@ -27,16 +27,16 @@ use std::fmt::{Debug, Display};
 pub trait Unlabeller<T>
 where
     T: GetReduction
-        + RemoveReduction
-        + NoLongerReducesFrom
         + GetDefinition
         + GetDefinitionOf
         + Debug,
-    Self: DeleteReduction<T> + GetConceptOfLabel<T>,
+    Self: DeleteReduction<T> + GetConceptOfLabel<T> + Delta,
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
         let concept_of_label = self.get_concept_of_label(concept).expect("No label to remove");
-        self.delete_reduction(concept_of_label)
+        let deltas = self.delete_reduction(concept_of_label)?;
+        self.apply_all(&deltas);
+        Ok(())
     }
 }
 
@@ -54,28 +54,21 @@ where
 
 pub trait DeleteReduction<T>
 where
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom,
-    Self: ConceptWriter<T> + ConceptReader<T> + Logger,
+    T: GetReduction,
+    Self: ConceptWriter<T> + ConceptReader<T> + Delta + RemoveConceptReduction,
 {
-    fn try_removing_reduction<U: MaybeConcept + Display>(&mut self, syntax: &U) -> ZiaResult<()> {
-        info!(
-            self.logger(),
-            "try_removing_reduction({})",
-            syntax,
-        );
+    fn try_removing_reduction<U: MaybeConcept + Display>(&self, syntax: &U) -> ZiaResult<Vec<Self::Delta>> {
         if let Some(c) = syntax.get_concept() {
             self.delete_reduction(c)
         } else {
             Err(ZiaError::RedundantReduction)
         }
     }
-    fn delete_reduction(&mut self, concept: usize) -> ZiaResult<()> {
+    fn delete_reduction(&self, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
         match self.read_concept(&[], concept).get_reduction() {
             None => Err(ZiaError::RedundantReduction),
             Some(n) => {
-                self.write_concept(n).no_longer_reduces_from(concept);
-                self.write_concept(concept).make_reduce_to_none();
-                Ok(())
+                Ok(self.remove_concept_reduction(vec!(), concept, n))
             }
         }
     }
@@ -83,8 +76,8 @@ where
 
 impl<S, T> DeleteReduction<T> for S
 where
-    S: ConceptWriter<T> + ConceptReader<T> + Logger,
-    T: GetReduction + RemoveReduction + NoLongerReducesFrom,
+    S: ConceptWriter<T> + ConceptReader<T> + RemoveConceptReduction,
+    T: GetReduction,
 {
 }
 
@@ -276,4 +269,19 @@ pub trait RemoveDefinition {
 pub trait RemoveAsDefinitionOf {
     fn remove_as_lefthand_of(&mut self, usize);
     fn remove_as_righthand_of(&mut self, usize);
+}
+
+pub trait RemoveConceptReduction 
+where
+    Self: Delta,
+{
+    fn remove_concept_reduction(&self, Vec<Self::Delta>, usize, usize) -> Vec<Self::Delta>;
+}
+
+pub trait RemoveReductionDelta
+where
+    Self: Delta,
+{
+    fn no_longer_reduces_from_delta(&self, &[Self::Delta], usize) -> Self::Delta;
+    fn make_reduce_to_none_delta(&self, &[Self::Delta]) -> Self::Delta;
 }
