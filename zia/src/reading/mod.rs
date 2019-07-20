@@ -125,7 +125,7 @@ where
         &self,
         concept: usize,
     ) -> Rc<U> {
-        match self.get_label(concept) {
+        match self.get_label(&[], concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
             None => match self.read_concept(&[], concept).get_definition() {
                 Some((left, right)) => {
@@ -163,7 +163,7 @@ where
                 let maydef = self.find_definition(&[], lc, rc);
                 (
                     match maydef {
-                        Some(def) => match self.get_label(def) {
+                        Some(def) => match self.get_label(&[], def) {
                             Some(a) => a,
                             None => lefthand.display_joint() + " " + &righthand.display_joint(),
                         },
@@ -195,7 +195,7 @@ where
     fn display(&self, concept: usize) -> String {
         match self.read_concept(&[], concept).get_string() {
             Some(s) => "\"".to_string() + &s + "\"",
-            None => match self.get_label(concept) {
+            None => match self.get_label(&[], concept) {
                 Some(l) => l,
                 None => match self.read_concept(&[], concept).get_definition() {
                     Some((left, right)) => {
@@ -227,18 +227,18 @@ where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
     Self: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
-    fn get_label(&self, concept: usize) -> Option<String> {
-        match self.get_concept_of_label(&[], concept) {
+    fn get_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<String> {
+        match self.get_concept_of_label(deltas, concept) {
             None => {
-                let r = self.read_concept(&[], concept).get_reduction();
+                let r = self.read_concept(deltas, concept).get_reduction();
                 match r {
-                    Some(rr) => self.get_label(rr),
+                    Some(rr) => self.get_label(deltas, rr),
                     None => None,
                 }
             }
-            Some(d) => match self.get_normal_form(&[], d) {
+            Some(d) => match self.get_normal_form(deltas, d) {
                 None => None,
-                Some(n) => self.read_concept(&[], n).get_string(),
+                Some(n) => self.read_concept(deltas, n).get_string(),
             },
         }
     }

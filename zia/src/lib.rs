@@ -301,7 +301,7 @@ where
                     |(left, right)| self.call_as_righthand(&left, &right)
                 ),
                 LABEL => Some(Ok(right.get_concept().and_then(
-                    |c| self.get_label(c)
+                    |c| self.get_label(&[], c)
                 ).map(|s| "'".to_string() + &s + "'").unwrap_or_else(
                     || "'".to_string() + &right.to_string() + "'"
                 ))),
@@ -510,7 +510,7 @@ where
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
                 (None, Some(b), None) => self.relabel(vec!(), b, &new.to_string()),
-                (None, Some(b), Some(_)) => if self.get_label(b).is_none() {
+                (None, Some(b), Some(_)) => if self.get_label(&[], b).is_none() {
                     self.label(&[], b, &new.to_string())
                 } else {
                     self.relabel(vec!(), b, &new.to_string())
