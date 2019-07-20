@@ -40,19 +40,20 @@ where
             + From<(String, Option<usize>)>,
     >(
         &self,
+        deltas: &[Self::Delta],
         ast: &Rc<U>,
     ) -> Rc<U> {
         if let Some(con) = ast.get_concept() {
-            if let Some((left, right)) = self.read_concept(&[], con).get_definition() {
+            if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
                 self.combine(
-                    &self.expand(&self.to_ast::<U>(&[], left)),
-                    &self.expand(&self.to_ast::<U>(&[], right)),
+                    &self.expand(deltas, &self.to_ast::<U>(deltas, left)),
+                    &self.expand(deltas, &self.to_ast::<U>(deltas, right)),
                 )
             } else {
-                self.to_ast::<U>(&[], con)
+                self.to_ast::<U>(deltas, con)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
-            self.combine(&self.expand(left), &self.expand(right))
+            self.combine(&self.expand(deltas, left), &self.expand(deltas, right))
         } else {
             ast.clone()
         }

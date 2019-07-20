@@ -336,7 +336,7 @@ where
             |(left, right)| right.get_concept().and_then(
                 |concept| match concept {
                     REDUCTION => Some(self.reduce_label_of(&self.reduce(&left).unwrap_or_else(|| left))),
-                    DEFINE => Some(Ok(self.expand(&left).to_string())),
+                    DEFINE => Some(Ok(self.expand(&[], &left).to_string())),
                     _ => None,
                 }
             )
@@ -349,7 +349,7 @@ where
             "try_expanding_then_call({})",
             ast.display_joint()
         );
-        let expansion = &self.expand(ast);
+        let expansion = &self.expand(&[], ast);
         if expansion != ast {
             self.call(expansion)
         } else {
