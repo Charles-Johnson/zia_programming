@@ -331,17 +331,6 @@ where
             (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
         }
     }
-    fn reduce_label_of(&self, ast: &Rc<Self::S>) -> ZiaResult<String> {
-        ast.get_expansion().and_then(
-            |(left, right)| right.get_concept().and_then(
-                |concept| match concept {
-                    REDUCTION => Some(self.reduce_label_of(&self.reduce(&[], &left).unwrap_or_else(|| left))),
-                    DEFINE => Some(Ok(self.expand(&[], &left).to_string())),
-                    _ => None,
-                }
-            )
-        ).unwrap_or_else(|| Ok(ast.to_string())) 
-    }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(&mut self, ast: &Rc<Self::S>) -> ZiaResult<String> {
         info!(
