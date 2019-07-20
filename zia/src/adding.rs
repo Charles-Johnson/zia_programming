@@ -26,21 +26,19 @@ use std::{fmt, rc::Rc};
 use translating::SyntaxFinder;
 use writing::{
     DeleteReduction, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction, InsertDefinition,
-    MakeReduceFrom, MaybeConcept, NoLongerReducesFrom, RemoveReduction, SetAsDefinitionOf,
+    MakeReduceFrom, MaybeConcept, SetAsDefinitionOf,
     SetDefinition, SetReduction, UpdateReduction,
 };
 
 pub trait ExecuteReduction<T>
 where
-    Self: ConceptMaker<T> + DeleteReduction<T> + Logger,
+    Self: ConceptMaker<T> + DeleteReduction<T>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
         + MakeReduceFrom
         + GetDefinitionOf
         + From<String>
-        + RemoveReduction
-        + NoLongerReducesFrom
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
@@ -50,41 +48,30 @@ where
     Self::S: Container + PartialEq + DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
 {
-    fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "execute_reduction({}, {})",
-            syntax.display_joint(),
-            normal_form.display_joint()
-        );
+    fn execute_reduction(&self, deltas: Vec<Self::Delta>, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<(Vec<Self::Delta>, String)> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            let deltas = self.try_removing_reduction::<Self::S>(vec!(), syntax)?;
-            self.apply_all(&deltas);
-            Ok("".to_string())
+            let deltas = self.try_removing_reduction::<Self::S>(deltas, syntax)?;
+            Ok((deltas, "".to_string()))
         } else {
-            let (deltas1, syntax_concept) = self.concept_from_ast(vec!(), syntax)?;
-            self.apply_all(&deltas1);
-            let (deltas2, normal_form_concept) = self.concept_from_ast(vec!(), normal_form)?;
+            let (deltas1, syntax_concept) = self.concept_from_ast(deltas, syntax)?;
+            let (deltas2, normal_form_concept) = self.concept_from_ast(deltas1, normal_form)?;
             let more_deltas = self.update_reduction(&deltas2, syntax_concept, normal_form_concept)?;
-            self.apply_all(&more_deltas);
-            Ok("".to_string())
+            Ok((more_deltas, "".to_string()))
         }
     }
 }
 
 impl<S, T> ExecuteReduction<T> for S
 where
-    S: ConceptMaker<T> + DeleteReduction<T> + Logger,
+    S: ConceptMaker<T> + DeleteReduction<T>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
         + From<S::C>
         + From<S::A>
         + From<String>
-        + RemoveReduction
-        + NoLongerReducesFrom
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf

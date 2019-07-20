@@ -399,7 +399,11 @@ where
         );
         match rightleft.get_concept() {
             Some(c) => match c {
-                REDUCTION => self.execute_reduction(left, rightright),
+                REDUCTION => {
+                    let (deltas, string) = self.execute_reduction(vec!(), left, rightright)?;
+                    self.apply_all(&deltas);
+                    Ok(string)
+                },
                 DEFINE => self.execute_definition(left, rightright),
                 _ => {
                     let rightleft_reduction = self.read_concept(&[], c).get_reduction();
