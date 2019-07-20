@@ -298,7 +298,11 @@ where
         left.get_concept().and_then(
             |lc| match lc {
                 LET => right.get_expansion().map(
-                    |(left, right)| self.call_as_righthand(&left, &right)
+                    |(left, right)| {
+                        let deltas = self.call_as_righthand(vec!(), &left, &right)?;
+                        self.apply_all(&deltas);
+                        Ok("".to_string())
+                    }
                 ),
                 LABEL => Some(Ok(right.get_concept().and_then(
                     |c| self.get_label(&[], c)
@@ -367,19 +371,9 @@ where
         }
     }
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn call_as_righthand(&mut self, left: &Self::S, right: &Self::S) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "call_as_righthand({}, {})",
-            left.display_joint(),
-            right.display_joint()
-        );
+    fn call_as_righthand(&self, deltas: Vec<Self::Delta>, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         match right.get_expansion() {
-            Some((ref rightleft, ref rightright)) => {
-                let deltas = self.match_righthand_pair(vec!(), left, rightleft, rightright)?;
-                self.apply_all(&deltas);
-                Ok("".to_string())
-            }
+            Some((ref rightleft, ref rightright)) => self.match_righthand_pair(deltas, left, rightleft, rightright),
             None => Err(ZiaError::CannotExpandFurther),
         }
     }
