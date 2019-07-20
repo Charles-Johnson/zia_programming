@@ -497,52 +497,39 @@ where
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            self.define(new, old)?;
+            let deltas = self.define(new, old)?;
+            self.apply_all(&deltas);
             Ok("".to_string())
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&mut self, new: &Self::S, old: &Self::S) -> ZiaResult<()> {
+    fn define(&self, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => {
-                    let deltas = self.relabel(vec!(), b, &new.to_string())?;
-                    Ok(self.apply_all(&deltas))
+                (None, Some(b), None) => self.relabel(vec!(), b, &new.to_string()),
+                (None, Some(b), Some(_)) => if self.get_label(b).is_none() {
+                    self.label(&[], b, &new.to_string())
+                } else {
+                    self.relabel(vec!(), b, &new.to_string())
                 },
-                (None, Some(b), Some(_)) => {
-                    if self.get_label(b).is_none() {
-                        let deltas = self.label(&[], b, &new.to_string())?;
-                        Ok(self.apply_all(&deltas))
-                    } else {
-                        let deltas = self.relabel(vec!(), b, &new.to_string())?;
-                        Ok(self.apply_all(&deltas))
-                    }
-                }
                 (None, None, Some((ref left, ref right))) => {
-                    let (deltas, _) = self.define_new_syntax(vec!(), new.to_string(), left, right)?;
-                    Ok(self.apply_all(&deltas))
+                    self.define_new_syntax(vec!(), new.to_string(), left, right)
                 }
-                (Some(a), Some(b), None) => {
-                    if a == b {
-                        let deltas = self.cleanly_delete_definition(vec!(), a)?;
-                        Ok(self.apply_all(&deltas))
-                    } else {
-                        Err(ZiaError::DefinitionCollision)
-                    }
-                }
-                (Some(a), Some(b), Some(_)) => {
-                    if a == b {
-                        Err(ZiaError::RedundantDefinition)
-                    } else {
-                        Err(ZiaError::DefinitionCollision)
-                    }
-                }
+                (Some(a), Some(b), None) => if a == b {
+                    self.cleanly_delete_definition(vec!(), a)
+                } else {
+                    Err(ZiaError::DefinitionCollision)
+                },
+                (Some(a), Some(b), Some(_)) => if a == b {
+                    Err(ZiaError::RedundantDefinition)
+                } else {
+                    Err(ZiaError::DefinitionCollision)
+                },
                 (Some(a), None, Some((ref left, ref right))) => {
-                    let deltas = self.redefine(vec!(), a, left, right)?;
-                    Ok(self.apply_all(&deltas))
+                    self.redefine(vec!(), a, left, right)
                 },
             }
         }
@@ -572,7 +559,7 @@ where
         syntax: String,
         left: &Rc<Self::S>,
         right: &Rc<Self::S>,
-    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    ) -> ZiaResult<Vec<Self::Delta>> {
         let definition_concept =
             if let (Some(l), Some(r)) = (left.get_concept(), right.get_concept()) {
                 self.find_definition(&previous_deltas, l, r)
@@ -580,7 +567,7 @@ where
                 None
             };
         let new_syntax_tree = Self::S::from_pair((syntax, definition_concept), left, right);
-        self.concept_from_ast(previous_deltas, &new_syntax_tree)
+        Ok(self.concept_from_ast(previous_deltas, &new_syntax_tree)?.0)
     }
 }
 
