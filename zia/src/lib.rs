@@ -540,26 +540,24 @@ where
                         Err(ZiaError::DefinitionCollision)
                     }
                 }
-                (Some(a), None, Some((ref left, ref right))) => self.redefine(a, left, right),
+                (Some(a), None, Some((ref left, ref right))) => {
+                    let deltas = self.redefine(vec!(), a, left, right)?;
+                    Ok(self.apply_all(&deltas))
+                },
             }
         }
     }
     /// Defining a concept as a composition whose syntax is given by `left` and `right`. If the concept already has a definition, then the concepts of this composition are relabelled with `left` and `right`. Otherwise new concepts are made from `left` and `right` to define the concept.
-    fn redefine(&mut self, concept: usize, left: &Self::S, right: &Self::S) -> ZiaResult<()> {
+    fn redefine(&self, deltas: Vec<Self::Delta>, concept: usize, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if let Some((left_concept, right_concept)) =
-            self.read_concept(&[], concept).get_definition()
+            self.read_concept(&deltas, concept).get_definition()
         {
-            let deltas1 = self.relabel(vec!(), left_concept, &left.to_string())?;
-            let deltas2 = self.relabel(deltas1, right_concept, &right.to_string())?;
-            Ok(self.apply_all(&deltas2))
+            let deltas1 = self.relabel(deltas, left_concept, &left.to_string())?;
+            self.relabel(deltas1, right_concept, &right.to_string())
         } else {
-            let (deltas1, left_concept) = self.concept_from_ast(vec!(), left)?;
-            self.apply_all(&deltas1);
-            let (deltas2, right_concept) = self.concept_from_ast(vec!(), right)?;
-            self.apply_all(&deltas2);
-            let deltas = self.insert_definition(vec!(), concept, left_concept, right_concept)?;
-            self.apply_all(&deltas);
-            Ok(())
+            let (deltas1, left_concept) = self.concept_from_ast(deltas, left)?;
+            let (deltas2, right_concept) = self.concept_from_ast(deltas1, right)?;
+            self.insert_definition(deltas2, concept, left_concept, right_concept)
         }
     }
     /// Unlabels a concept and gives it a new label.
