@@ -34,7 +34,7 @@ where
 {
     fn unlabel(&mut self, concept: usize) -> ZiaResult<()> {
         let concept_of_label = self.get_concept_of_label(concept).expect("No label to remove");
-        let deltas = self.delete_reduction(concept_of_label)?;
+        let deltas = self.delete_reduction(vec!(), concept_of_label)?;
         self.apply_all(&deltas);
         Ok(())
     }
@@ -59,16 +59,16 @@ where
 {
     fn try_removing_reduction<U: MaybeConcept + Display>(&self, syntax: &U) -> ZiaResult<Vec<Self::Delta>> {
         if let Some(c) = syntax.get_concept() {
-            self.delete_reduction(c)
+            self.delete_reduction(vec!(), c)
         } else {
             Err(ZiaError::RedundantReduction)
         }
     }
-    fn delete_reduction(&self, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
-        match self.read_concept(&[], concept).get_reduction() {
+    fn delete_reduction(&self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
+        match self.read_concept(&deltas, concept).get_reduction() {
             None => Err(ZiaError::RedundantReduction),
             Some(n) => {
-                Ok(self.remove_concept_reduction(vec!(), concept, n))
+                Ok(self.remove_concept_reduction(deltas, concept, n))
             }
         }
     }
