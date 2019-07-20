@@ -508,13 +508,17 @@ where
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => self.relabel(vec!(), b, &new.to_string()),
+                (None, Some(b), None) => {
+                    let deltas = self.relabel(vec!(), b, &new.to_string())?;
+                    Ok(self.apply_all(&deltas))
+                },
                 (None, Some(b), Some(_)) => {
                     if self.get_label(b).is_none() {
                         let deltas = self.label(&[], b, &new.to_string())?;
                         Ok(self.apply_all(&deltas))
                     } else {
-                        self.relabel(vec!(), b, &new.to_string())
+                        let deltas = self.relabel(vec!(), b, &new.to_string())?;
+                        Ok(self.apply_all(&deltas))
                     }
                 }
                 (None, None, Some((ref left, ref right))) => {
@@ -545,8 +549,9 @@ where
         if let Some((left_concept, right_concept)) =
             self.read_concept(&[], concept).get_definition()
         {
-            self.relabel(vec!(), left_concept, &left.to_string())?;
-            self.relabel(vec!(), right_concept, &right.to_string())
+            let deltas1 = self.relabel(vec!(), left_concept, &left.to_string())?;
+            let deltas2 = self.relabel(deltas1, right_concept, &right.to_string())?;
+            Ok(self.apply_all(&deltas2))
         } else {
             let (deltas1, left_concept) = self.concept_from_ast(vec!(), left)?;
             self.apply_all(&deltas1);
@@ -558,11 +563,9 @@ where
         }
     }
     /// Unlabels a concept and gives it a new label.
-    fn relabel(&mut self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<()> {
+    fn relabel(&self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<Vec<Self::Delta>> {
         let initial_deltas = self.unlabel(previous_deltas, concept)?;
-        let deltas = self.label(&initial_deltas, concept, new_label)?;
-        self.apply_all(&deltas);
-        Ok(())
+        self.label(&initial_deltas, concept, new_label)
     }
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(
