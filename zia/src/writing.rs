@@ -32,11 +32,9 @@ where
         + Debug,
     Self: DeleteReduction<T> + GetConceptOfLabel<T> + Delta,
 {
-    fn unlabel(&mut self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
+    fn unlabel(&self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
         let concept_of_label = self.get_concept_of_label(&deltas, concept).expect("No label to remove");
-        let deltas = self.delete_reduction(deltas, concept_of_label)?;
-        self.apply_all(&deltas);
-        Ok(())
+        self.delete_reduction(deltas, concept_of_label)
     }
 }
 
