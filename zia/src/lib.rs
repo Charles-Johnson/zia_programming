@@ -518,8 +518,8 @@ where
                     }
                 }
                 (None, None, Some((ref left, ref right))) => {
-                    self.define_new_syntax(new.to_string(), left, right)?;
-                    Ok(())
+                    let (deltas, _) = self.define_new_syntax(vec!(), new.to_string(), left, right)?;
+                    Ok(self.apply_all(&deltas))
                 }
                 (Some(a), Some(b), None) => {
                     if a == b {
@@ -566,21 +566,20 @@ where
     }
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(
-        &mut self,
+        &self,
+        previous_deltas: Vec<Self::Delta>,
         syntax: String,
         left: &Rc<Self::S>,
         right: &Rc<Self::S>,
-    ) -> ZiaResult<usize> {
+    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         let definition_concept =
             if let (Some(l), Some(r)) = (left.get_concept(), right.get_concept()) {
-                self.find_definition(&[], l, r)
+                self.find_definition(&previous_deltas, l, r)
             } else {
                 None
             };
         let new_syntax_tree = Self::S::from_pair((syntax, definition_concept), left, right);
-        let (deltas, concept) = self.concept_from_ast(vec!(), &new_syntax_tree)?;
-        self.apply_all(&deltas);
-        Ok(concept)
+        self.concept_from_ast(previous_deltas, &new_syntax_tree)
     }
 }
 
