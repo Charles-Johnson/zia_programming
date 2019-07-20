@@ -92,7 +92,7 @@ where
             None => match ast.get_expansion() {
                 None => None,
                 Some((ref left, ref right)) => {
-                    self.match_left_right::<U>(self.reduce(left), self.reduce(right), left, right)
+                    self.match_left_right::<U>(&[], self.reduce(left), self.reduce(right), left, right)
                 }
             },
         }
@@ -110,6 +110,7 @@ where
                     let left_result = self.reduce_concept::<U>(left);
                     let right_result = self.reduce_concept::<U>(right);
                     self.match_left_right::<U>(
+                        &[],
                         left_result,
                         right_result,
                         &self.to_ast::<U>(&[], left),
@@ -140,6 +141,7 @@ where
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
     fn match_left_right<U: Pair<U> + MaybeConcept + DisplayJoint>(
         &self,
+        deltas: &[Self::Delta],
         left: Option<Rc<U>>,
         right: Option<Rc<U>>,
         original_left: &Rc<U>,
@@ -147,10 +149,10 @@ where
     ) -> Option<Rc<U>> {
         match (left, right) {
             (None, None) => None,
-            (Some(new_left), None) => Some(self.contract_pair::<U>(&[], &new_left, original_right)),
-            (None, Some(new_right)) => Some(self.contract_pair::<U>(&[], original_left, &new_right)),
+            (Some(new_left), None) => Some(self.contract_pair::<U>(deltas, &new_left, original_right)),
+            (None, Some(new_right)) => Some(self.contract_pair::<U>(deltas, original_left, &new_right)),
             (Some(new_left), Some(new_right)) => {
-                Some(self.contract_pair::<U>(&[], &new_left, &new_right))
+                Some(self.contract_pair::<U>(deltas, &new_left, &new_right))
             }
         }
     }
