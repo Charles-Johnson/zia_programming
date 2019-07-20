@@ -412,7 +412,7 @@ where
                 _ => {
                     let rightleft_reduction = self.read_concept(&[], c).get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast::<Self::S>(r);
+                        let ast = self.to_ast::<Self::S>(&[], r);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
                         info!(

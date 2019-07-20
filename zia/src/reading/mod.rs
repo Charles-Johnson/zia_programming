@@ -45,11 +45,11 @@ where
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(&[], con).get_definition() {
                 self.combine(
-                    &self.expand(&self.to_ast::<U>(left)),
-                    &self.expand(&self.to_ast::<U>(right)),
+                    &self.expand(&self.to_ast::<U>(&[], left)),
+                    &self.expand(&self.to_ast::<U>(&[], right)),
                 )
             } else {
-                self.to_ast::<U>(con)
+                self.to_ast::<U>(&[], con)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
             self.combine(&self.expand(left), &self.expand(right))
@@ -111,25 +111,26 @@ where
                     self.match_left_right::<U>(
                         left_result,
                         right_result,
-                        &self.to_ast::<U>(left),
-                        &self.to_ast::<U>(right),
+                        &self.to_ast::<U>(&[], left),
+                        &self.to_ast::<U>(&[], right),
                     )
                 }
                 None => None,
             },
-            Some(n) => Some(self.to_ast::<U>(n)),
+            Some(n) => Some(self.to_ast::<U>(&[], n)),
         }
     }
     /// Returns the syntax for a concept.
     fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint>(
         &self,
+        deltas: &[Self::Delta],
         concept: usize,
     ) -> Rc<U> {
-        match self.get_label(&[], concept) {
+        match self.get_label(deltas, concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
-            None => match self.read_concept(&[], concept).get_definition() {
+            None => match self.read_concept(deltas, concept).get_definition() {
                 Some((left, right)) => {
-                    self.combine(&self.to_ast::<U>(left), &self.to_ast::<U>(right))
+                    self.combine(&self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
                 }
                 None => panic!("Unlabelled concept with no definition"),
             },
