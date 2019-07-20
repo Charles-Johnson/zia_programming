@@ -512,8 +512,7 @@ where
                 (None, Some(b), Some(_)) => {
                     if self.get_label(b).is_none() {
                         let deltas = self.label(&[], b, &new.to_string())?;
-                        self.apply_all(&deltas);
-                        Ok(())
+                        Ok(self.apply_all(&deltas))
                     } else {
                         self.relabel(vec!(), b, &new.to_string())
                     }
@@ -524,7 +523,8 @@ where
                 }
                 (Some(a), Some(b), None) => {
                     if a == b {
-                        self.cleanly_delete_definition(vec!(), a)
+                        let deltas = self.cleanly_delete_definition(vec!(), a)?;
+                        Ok(self.apply_all(&deltas))
                     } else {
                         Err(ZiaError::DefinitionCollision)
                     }
