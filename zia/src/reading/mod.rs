@@ -88,7 +88,7 @@ where
         ast: &Rc<U>,
     ) -> Option<Rc<U>> {
         match ast.get_concept() {
-            Some(c) => self.reduce_concept::<U>(c),
+            Some(c) => self.reduce_concept::<U>(&[], c),
             None => match ast.get_expansion() {
                 None => None,
                 Some((ref left, ref right)) => {
@@ -102,24 +102,25 @@ where
         U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint,
     >(
         &self,
+        deltas: &[Self::Delta],
         concept: usize,
     ) -> Option<Rc<U>> {
-        match self.read_concept(&[], concept).get_reduction() {
-            None => match self.read_concept(&[], concept).get_definition() {
+        match self.read_concept(deltas, concept).get_reduction() {
+            None => match self.read_concept(deltas, concept).get_definition() {
                 Some((left, right)) => {
-                    let left_result = self.reduce_concept::<U>(left);
-                    let right_result = self.reduce_concept::<U>(right);
+                    let left_result = self.reduce_concept::<U>(deltas, left);
+                    let right_result = self.reduce_concept::<U>(deltas, right);
                     self.match_left_right::<U>(
-                        &[],
+                        deltas,
                         left_result,
                         right_result,
-                        &self.to_ast::<U>(&[], left),
-                        &self.to_ast::<U>(&[], right),
+                        &self.to_ast::<U>(deltas, left),
+                        &self.to_ast::<U>(deltas, right),
                     )
                 }
                 None => None,
             },
-            Some(n) => Some(self.to_ast::<U>(&[], n)),
+            Some(n) => Some(self.to_ast::<U>(deltas, n)),
         }
     }
     /// Returns the syntax for a concept.
