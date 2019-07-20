@@ -555,7 +555,7 @@ where
     }
     /// Unlabels a concept and gives it a new label.
     fn relabel(&mut self, concept: usize, new_label: &str) -> ZiaResult<()> {
-        self.unlabel(concept)?;
+        self.unlabel(vec!(), concept)?;
         let deltas = self.label(&[], concept, new_label)?;
         self.apply_all(&deltas);
         Ok(())

@@ -51,7 +51,7 @@ where
     }
     fn try_delete_concept(&mut self, concept: usize) -> ZiaResult<()> {
         if self.is_disconnected(concept) {
-            self.unlabel(concept)?;
+            self.unlabel(vec!(), concept)?;
             let deltas = self.remove_concept(vec!(), concept);
             self.apply_all(&deltas);
         }
