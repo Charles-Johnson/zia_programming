@@ -28,7 +28,7 @@ use translating::StringConcept;
 use writing::{
     ConceptWriter, SetAsDefinitionOfDelta, SetConceptDefinitionDeltas, SetDefinitionDelta,
     SetConceptReductionDelta, SetReductionDelta, MakeReduceFromDelta, RemoveConceptReduction,
-    RemoveReductionDelta
+    RemoveReductionDelta, DeleteDefinition, RemoveDefinitionDelta
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
@@ -416,7 +416,7 @@ where
                 ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == reduction => reduction_deltas.push(d.clone()),
                 ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == concept => edited_concept = Some(t.clone()),
                 ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == reduction => edited_reduction = Some(t.clone()),
-                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == reduction => {
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == concept => {
                     edited_concept = None;
                     concept_deltas = vec!();
                 },
@@ -434,6 +434,57 @@ where
         deltas.push(ContextDelta::Concept(
             reduction,
             ConceptDelta::Update(edited_reduction.expect("Reduction previously removed!").no_longer_reduces_from_delta(&reduction_deltas, concept))
+        ));
+        deltas
+    }
+}
+
+impl<T> DeleteDefinition<T> for Context<T>
+where
+    T: Delta + RemoveDefinitionDelta + Clone,
+    T::Delta: Clone + Debug,
+{
+    fn delete_definition(&self, mut deltas: Vec<Self::Delta>, concept: usize, left: usize, right: usize) -> Vec<Self::Delta> {
+        let mut edited_concept: Option<T> = Some(self.read_concept(&deltas, concept));
+        let mut edited_left: Option<T> = Some(self.read_concept(&deltas, left));
+        let mut edited_right: Option<T> = Some(self.read_concept(&deltas, right));
+        let mut concept_deltas = Vec::<T::Delta>::new();
+        let mut left_deltas = Vec::<T::Delta>::new();
+        let mut right_deltas = Vec::<T::Delta>::new();
+        for delta in &deltas {
+            match delta {
+                ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == concept => concept_deltas.push(d.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == left => left_deltas.push(d.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == right => right_deltas.push(d.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == concept => edited_concept = Some(t.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == left => edited_left = Some(t.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Insert(t)) if *c == right => edited_right = Some(t.clone()),
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == concept => {
+                    edited_concept = None;
+                    concept_deltas = vec!();
+                },
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == left => {
+                    edited_left = None;
+                    left_deltas = vec!();
+                },
+                ContextDelta::Concept(c, ConceptDelta::Remove) if *c == right => {
+                    edited_right = None;
+                    right_deltas = vec!();
+                },
+                _ => (),
+            };
+        }
+        deltas.push(ContextDelta::Concept(
+            concept,
+            ConceptDelta::Update(edited_concept.expect("Concept previously removed!").remove_definition_delta(concept_deltas))
+        ));
+        deltas.push(ContextDelta::Concept(
+            left,
+            ConceptDelta::Update(edited_left.expect("Left previously removed!").remove_as_lefthand_of_delta(left_deltas, concept))
+        ));
+        deltas.push(ContextDelta::Concept(
+            right,
+            ConceptDelta::Update(edited_right.expect("Right previously removed!").remove_as_righthand_of_delta(right_deltas, concept))
         ));
         deltas
     }

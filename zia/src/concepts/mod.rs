@@ -26,7 +26,7 @@ use std::collections::HashSet;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
     SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction, SetReductionDelta,
-    MakeReduceFromDelta, RemoveReductionDelta,
+    MakeReduceFromDelta, RemoveReductionDelta, RemoveDefinitionDelta
 };
 
 /// Data type for any type of concept.
@@ -279,5 +279,45 @@ impl RemoveReductionDelta for Concept {
         }
         assert!(reduces);
         ConceptDelta::Abstract(AbstractDelta::RemoveReduction)
+    }
+}
+
+impl RemoveDefinitionDelta for Concept
+{
+    fn remove_as_lefthand_of_delta(&self, deltas: Vec<Self::Delta>, concept: usize) -> Self::Delta {
+        let mut lefthand_of_concept = true;
+        for delta in &deltas {
+            match delta {
+                ConceptDelta::Common(CommonDelta::RemoveLeft(c)) if *c == concept => lefthand_of_concept = false,
+                ConceptDelta::Common(CommonDelta::AddLeft(c)) if *c == concept => lefthand_of_concept = true,
+                _ => (),
+            };
+        }
+        assert!(lefthand_of_concept);
+        ConceptDelta::Common(CommonDelta::RemoveLeft(concept))
+    }
+    fn remove_as_righthand_of_delta(&self, deltas: Vec<Self::Delta>, concept: usize) -> Self::Delta {
+        let mut righthand_of_concept = true;
+        for delta in &deltas {
+            match delta {
+                ConceptDelta::Common(CommonDelta::RemoveRight(c)) if *c == concept => righthand_of_concept = false,
+                ConceptDelta::Common(CommonDelta::AddRight(c)) if *c == concept => righthand_of_concept = true,
+                _ => (),
+            };
+        }
+        assert!(righthand_of_concept);
+        ConceptDelta::Common(CommonDelta::RemoveRight(concept))
+    }
+    fn remove_definition_delta(&self, deltas: Vec<Self::Delta>) -> Self::Delta {
+        let mut definition = true;
+        for delta in deltas {
+            match delta {
+                ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => definition = false,
+                ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => definition = true,
+                _ => (),
+            };
+        }
+        assert!(definition);
+        ConceptDelta::Abstract(AbstractDelta::RemoveDefinition)
     }
 }

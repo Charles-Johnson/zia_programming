@@ -38,12 +38,12 @@ where
         + MaybeString
         + Debug,
 {
-    fn cleanly_delete_definition(&mut self, deltas: &[Self::Delta], concept: usize) -> ZiaResult<()> {
-        match self.read_concept(deltas, concept).get_definition() {
+    fn cleanly_delete_definition(&mut self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
+        match self.read_concept(&deltas, concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
-                self.delete_definition(concept, left, right);
-                let deltas1 = self.try_delete_concept(vec!(), concept)?;
+                let deltas0 = self.delete_definition(deltas, concept, left, right);
+                let deltas1 = self.try_delete_concept(deltas0, concept)?;
                 let deltas2 = self.try_delete_concept(deltas1, left)?;
                 let deltas3 = self.try_delete_concept(deltas2, right)?;
                 self.apply_all(&deltas3);

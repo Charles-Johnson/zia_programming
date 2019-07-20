@@ -81,21 +81,9 @@ where
 
 pub trait DeleteDefinition<T>
 where
-    T: GetDefinition + RemoveDefinition + RemoveAsDefinitionOf + Sized,
-    Self: ConceptReader<T> + ConceptWriter<T>,
+    Self: Delta,
 {
-    fn delete_definition(&mut self, concept: usize, left: usize, right: usize) {
-        self.write_concept(left).remove_as_lefthand_of(concept);
-        self.write_concept(right).remove_as_righthand_of(concept);
-        self.write_concept(concept).remove_definition();
-    }
-}
-
-impl<S, T> DeleteDefinition<T> for S
-where
-    T: GetDefinition + RemoveDefinition + RemoveAsDefinitionOf + Sized,
-    S: ConceptReader<T> + ConceptWriter<T>,
-{
+    fn delete_definition(&self, Vec<Self::Delta>, usize, usize, usize) -> Vec<Self::Delta>;
 }
 
 pub trait UpdateReduction<T>
@@ -282,4 +270,13 @@ where
 {
     fn no_longer_reduces_from_delta(&self, &[Self::Delta], usize) -> Self::Delta;
     fn make_reduce_to_none_delta(&self, &[Self::Delta]) -> Self::Delta;
+}
+
+pub trait RemoveDefinitionDelta 
+where
+    Self: Delta,
+{
+    fn remove_as_lefthand_of_delta(&self, Vec<Self::Delta>, usize) -> Self::Delta;
+    fn remove_as_righthand_of_delta(&self, Vec<Self::Delta>, usize) -> Self::Delta;
+    fn remove_definition_delta(&self, Vec<Self::Delta>) -> Self::Delta;
 }
