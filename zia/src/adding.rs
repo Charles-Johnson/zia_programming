@@ -166,7 +166,7 @@ where
         let mut cont = Self::default();
         let deltas = cont.setup().unwrap();
         cont.apply_all(&deltas);
-        info!(cont.logger(), "Setup a new context");
+        info!(cont.logger(), "Setup a new context: {:?}", deltas);
         cont
     }
 }

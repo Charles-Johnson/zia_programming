@@ -196,41 +196,7 @@ where
     T: GetDefinitionOf + GetDefinition + MaybeString + GetReduction + fmt::Debug,
 {
 }
-pub trait Display<T>
-where
-    Self: GetLabel<T>,
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
-{
-    fn display(&self, concept: usize) -> String {
-        match self.read_concept(&[], concept).get_string() {
-            Some(s) => "\"".to_string() + &s + "\"",
-            None => match self.get_label(&[], concept) {
-                Some(l) => l,
-                None => match self.read_concept(&[], concept).get_definition() {
-                    Some((left, right)) => {
-                        let mut left_string = self.display(left);
-                        if left_string.contains(' ') {
-                            left_string = "(".to_string() + &left_string;
-                        }
-                        let mut right_string = self.display(right);
-                        if right_string.contains(' ') {
-                            right_string += ")";
-                        }
-                        left_string + " " + &right_string
-                    }
-                    None => panic!("Unlabelled concept with no definition!"),
-                },
-            },
-        }
-    }
-}
 
-impl<S, T> Display<T> for S
-where
-    S: GetLabel<T>,
-    T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
-{
-}
 pub trait GetLabel<T>
 where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
