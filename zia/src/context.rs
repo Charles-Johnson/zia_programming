@@ -300,13 +300,13 @@ where
 {
     fn add_concept_deltas(
         &self,
-        deltas: &[ContextDelta<T>],
+        mut deltas: Vec<ContextDelta<T>>,
         concept: T,
     ) -> (usize, Vec<ContextDelta<T>>) {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for delta in deltas {
+        for delta in &deltas {
             match delta {
                 ContextDelta::Concept(id, ConceptDelta::Insert(_)) => {
                     if *id < new_concept_length {
@@ -356,11 +356,10 @@ where
                 },
             };
         }
-        let mut new_deltas = deltas.to_vec();
-        new_deltas.push(ContextDelta::Concept(index, ConceptDelta::Insert(concept)));
+        deltas.push(ContextDelta::Concept(index, ConceptDelta::Insert(concept)));
         (
             index,
-            new_deltas,
+            deltas,
         )
     }
 }

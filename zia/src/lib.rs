@@ -446,7 +446,7 @@ where
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
                 (None, Some(b), None) => self.relabel(deltas, b, &new.to_string()),
                 (None, Some(b), Some(_)) => if self.get_label(&deltas, b).is_none() {
-                    self.label(&deltas, b, &new.to_string())
+                    self.label(deltas, b, &new.to_string())
                 } else {
                     self.relabel(deltas, b, &new.to_string())
                 },
@@ -484,8 +484,7 @@ where
     }
     /// Unlabels a concept and gives it a new label.
     fn relabel(&self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<Vec<Self::Delta>> {
-        let initial_deltas = self.unlabel(previous_deltas, concept)?;
-        self.label(&initial_deltas, concept, new_label)
+        self.label(self.unlabel(previous_deltas, concept)?, concept, new_label)
     }
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(

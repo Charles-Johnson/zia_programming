@@ -124,13 +124,13 @@ where
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => self.new_labelled_default(&deltas, string),
+                None => self.new_labelled_default(deltas, string),
                 Some((ref left, ref right)) => {
                     let (deltas1, leftc) = self.concept_from_ast(deltas, left)?;
                     let (deltas2, rightc) = self.concept_from_ast(deltas1, right)?;
-                    let (deltas3, concept) = self.find_or_insert_definition(&deltas2, leftc, rightc)?;
+                    let (deltas3, concept) = self.find_or_insert_definition(deltas2, leftc, rightc)?;
                     Ok((if !string.contains(' ') {
-                        self.label(&deltas3, concept, string)?
+                        self.label(deltas3, concept, string)?
                     } else {
                         deltas3
                     }, concept))
@@ -204,25 +204,25 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type C: Default;
-    fn label(&self, previous_deltas: &[Self::Delta], concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
+    fn label(&self, previous_deltas: Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
         let (deltas, definition) = self.find_or_insert_definition(previous_deltas, LABEL, concept)?;
-        let (string_id, new_deltas) = self.new_string(&deltas, string);
+        let (string_id, new_deltas) = self.new_string(deltas, string);
         self.update_reduction(&new_deltas, definition, string_id)
     }
-    fn new_labelled_default(&self, previous_deltas: &[Self::Delta], string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    fn new_labelled_default(&self, previous_deltas: Vec<Self::Delta>, string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         let (new_default, deltas) = self.new_default::<Self::A>(previous_deltas);
-        let more_deltas = self.label(&deltas, new_default, string)?;
+        let more_deltas = self.label(deltas, new_default, string)?;
         Ok((more_deltas, new_default))
     }
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
-        let (label_concept, deltas1) = self.new_default::<Self::C>(&[]);
-        let (define_concept, deltas2) = self.new_default::<Self::C>(&deltas1);
-        let (reduction_concept, deltas3) = self.new_default::<Self::C>(&deltas2);
-        let (let_concept, deltas4) = self.new_default::<Self::C>(&deltas3);
-        let deltas5 = self.label(&deltas4, label_concept, "label_of")?;
-        let deltas6 = self.label(&deltas5, define_concept, ":=")?;
-        let deltas7 = self.label(&deltas6, reduction_concept, "->")?;
-        self.label(&deltas7,let_concept, "let")
+        let (label_concept, deltas1) = self.new_default::<Self::C>(vec!());
+        let (define_concept, deltas2) = self.new_default::<Self::C>(deltas1);
+        let (reduction_concept, deltas3) = self.new_default::<Self::C>(deltas2);
+        let (let_concept, deltas4) = self.new_default::<Self::C>(deltas3);
+        let deltas5 = self.label(deltas4, label_concept, "label_of")?;
+        let deltas6 = self.label(deltas5, define_concept, ":=")?;
+        let deltas7 = self.label(deltas6, reduction_concept, "->")?;
+        self.label(deltas7,let_concept, "let")
     }
 }
 
@@ -238,8 +238,8 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&self, deltas: &[Self::Delta], lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let pair = self.find_definition(deltas, lefthand, righthand);
+    fn find_or_insert_definition(&self, deltas: Vec<Self::Delta>, lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+        let pair = self.find_definition(&deltas, lefthand, righthand);
         match pair {
             None => {
                 let (definition, more_deltas) = self.new_default::<Self::A>(deltas);
@@ -256,7 +256,7 @@ where
     T: From<String>,
     Self: ConceptAdderDelta<T> + StringAdderDelta,
 {
-    fn new_string(&self, deltas: &[Self::Delta], string: &str) -> (usize, Vec<Self::Delta>) {
+    fn new_string(&self, deltas: Vec<Self::Delta>, string: &str) -> (usize, Vec<Self::Delta>) {
         let string_concept = string.to_string().into();
         let (index, mut new_deltas) = self.add_concept_deltas(deltas, string_concept);
         let string_delta = Self::add_string_delta(index, string);
@@ -276,7 +276,7 @@ pub trait DefaultMaker<T>
 where
     Self: ConceptAdderDelta<T>,
 {
-    fn new_default<V: Default + Into<T>>(&self, deltas: &[Self::Delta]) -> (usize, Vec<Self::Delta>) {
+    fn new_default<V: Default + Into<T>>(&self, deltas: Vec<Self::Delta>) -> (usize, Vec<Self::Delta>) {
         let concept: T = V::default().into();
         self.add_concept_deltas(deltas, concept)
     }
@@ -299,7 +299,7 @@ pub trait ConceptAdderDelta<T>
 where
     Self: Delta,
 {
-    fn add_concept_deltas(&self, &[Self::Delta], T) -> (usize, Vec<Self::Delta>);
+    fn add_concept_deltas(&self, Vec<Self::Delta>, T) -> (usize, Vec<Self::Delta>);
 }
 
 pub trait ConceptAdder<T> {
