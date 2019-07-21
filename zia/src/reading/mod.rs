@@ -92,12 +92,9 @@ where
     ) -> Option<Rc<U>> {
         match ast.get_concept() {
             Some(c) => self.reduce_concept::<U>(deltas, c),
-            None => match ast.get_expansion() {
-                None => None,
-                Some((ref left, ref right)) => {
-                    self.match_left_right::<U>(deltas, self.reduce(deltas, left), self.reduce(deltas, right), left, right)
-                }
-            },
+            None => ast.get_expansion().and_then(|(ref left, ref right)|
+                self.match_left_right::<U>(deltas, self.reduce(deltas, left), self.reduce(deltas, right), left, right)
+            ),
         }
     }
     /// Returns the syntax for the reduction of a concept.
@@ -109,20 +106,17 @@ where
         concept: usize,
     ) -> Option<Rc<U>> {
         match self.read_concept(deltas, concept).get_reduction() {
-            None => match self.read_concept(deltas, concept).get_definition() {
-                Some((left, right)) => {
-                    let left_result = self.reduce_concept::<U>(deltas, left);
-                    let right_result = self.reduce_concept::<U>(deltas, right);
-                    self.match_left_right::<U>(
-                        deltas,
-                        left_result,
-                        right_result,
-                        &self.to_ast::<U>(deltas, left),
-                        &self.to_ast::<U>(deltas, right),
-                    )
-                }
-                None => None,
-            },
+            None => self.read_concept(deltas, concept).get_definition().and_then(|(left, right)| {
+                let left_result = self.reduce_concept::<U>(deltas, left);
+                let right_result = self.reduce_concept::<U>(deltas, right);
+                self.match_left_right::<U>(
+                    deltas,
+                    left_result,
+                    right_result,
+                    &self.to_ast::<U>(deltas, left),
+                    &self.to_ast::<U>(deltas, right),
+                )
+            }),
             Some(n) => Some(self.to_ast::<U>(deltas, n)),
         }
     }
@@ -204,17 +198,12 @@ where
 {
     fn get_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<String> {
         match self.get_concept_of_label(deltas, concept) {
-            None => {
-                let r = self.read_concept(deltas, concept).get_reduction();
-                match r {
-                    Some(rr) => self.get_label(deltas, rr),
-                    None => None,
-                }
-            }
-            Some(d) => match self.get_normal_form(deltas, d) {
-                None => None,
-                Some(n) => self.read_concept(deltas, n).get_string(),
-            },
+            None => self.read_concept(deltas, concept).get_reduction().and_then(|r|
+                self.get_label(deltas, r)
+            ),
+            Some(d) => self.get_normal_form(deltas, d).and_then(|n|
+                self.read_concept(deltas, n).get_string()
+            ),
         }
     }
 }
@@ -296,13 +285,12 @@ where
     Self: ConceptReader<T> + Delta,
 {
     fn get_normal_form(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
-        match self.read_concept(deltas, concept).get_reduction() {
-            None => None,
-            Some(n) => match self.get_normal_form(deltas, n) {
+        self.read_concept(deltas, concept).get_reduction().and_then(|n|
+            match self.get_normal_form(deltas, n) {
                 None => Some(n),
                 Some(m) => Some(m),
-            },
-        }
+            }
+        )
     }
 }
 
@@ -372,15 +360,12 @@ where
         let has_lefthand = self.read_concept(deltas, lefthand).get_lefthand_of();
         let has_righthand = self.read_concept(deltas, righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
-        match candidates.next() {
-            None => None,
-            Some(index) => match candidates.next() {
-                None => Some(*index),
-                Some(_) => {
-                    panic!("Multiple definitions with the same lefthand and righthand pair exist.")
-                }
-            },
-        }
+        candidates.next().and_then(|index| match candidates.next() {
+            None => Some(*index),
+            Some(_) => {
+                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
+            }
+        })
     }
 }
 
