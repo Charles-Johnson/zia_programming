@@ -124,20 +124,16 @@ where
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => {
-                    let (new_concept, new_deltas) = self.new_labelled_default(&deltas, string)?;
-                    Ok((new_deltas, new_concept))
-                }
+                None => self.new_labelled_default(&deltas, string),
                 Some((ref left, ref right)) => {
-                    let (deltas1, mut leftc) = self.concept_from_ast(deltas, left)?;
-                    let (deltas2, mut rightc) = self.concept_from_ast(deltas1, right)?;
+                    let (deltas1, leftc) = self.concept_from_ast(deltas, left)?;
+                    let (deltas2, rightc) = self.concept_from_ast(deltas1, right)?;
                     let (deltas3, concept) = self.find_or_insert_definition(&deltas2, leftc, rightc)?;
-                    if !string.contains(' ') {
-                        let deltas4 = self.label(&deltas3, concept, string)?;
-                        Ok((deltas4, concept))
+                    Ok((if !string.contains(' ') {
+                        self.label(&deltas3, concept, string)?
                     } else {
-                        Ok((deltas3, concept))
-                    }
+                        deltas3
+                    }, concept))
                 }
             }
         }
@@ -213,10 +209,10 @@ where
         let (string_id, new_deltas) = self.new_string(&deltas, string);
         self.update_reduction(&new_deltas, definition, string_id)
     }
-    fn new_labelled_default(&self, previous_deltas: &[Self::Delta], string: &str) -> ZiaResult<(usize, Vec<Self::Delta>)> {
+    fn new_labelled_default(&self, previous_deltas: &[Self::Delta], string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         let (new_default, deltas) = self.new_default::<Self::A>(previous_deltas);
         let more_deltas = self.label(&deltas, new_default, string)?;
-        Ok((new_default, more_deltas))
+        Ok((more_deltas, new_default))
     }
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let (label_concept, deltas1) = self.new_default::<Self::C>(&[]);
