@@ -105,8 +105,8 @@ where
         deltas: &[Self::Delta],
         concept: usize,
     ) -> Option<Rc<U>> {
-        match self.read_concept(deltas, concept).get_reduction() {
-            None => self.read_concept(deltas, concept).get_definition().and_then(|(left, right)| {
+        self.read_concept(deltas, concept).get_reduction().map(|n| self.to_ast::<U>(deltas, n)).or_else(|| {
+            self.read_concept(deltas, concept).get_definition().and_then(|(left, right)| {
                 let left_result = self.reduce_concept::<U>(deltas, left);
                 let right_result = self.reduce_concept::<U>(deltas, right);
                 self.match_left_right::<U>(
@@ -116,9 +116,8 @@ where
                     &self.to_ast::<U>(deltas, left),
                     &self.to_ast::<U>(deltas, right),
                 )
-            }),
-            Some(n) => Some(self.to_ast::<U>(deltas, n)),
-        }
+            })
+        })
     }
     /// Returns the syntax for a concept.
     fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint>(
