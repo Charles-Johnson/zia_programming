@@ -127,12 +127,12 @@ where
     ) -> Rc<U> {
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
-            None => match self.read_concept(deltas, concept).get_definition() {
-                Some((left, right)) => {
-                    self.combine(deltas, &self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
-                }
-                None => panic!("Unlabelled concept with no definition"),
-            },
+            None => {
+                let (left, right) = self.read_concept(deltas, concept).get_definition().expect(
+                    "Unlabelled concept with no definition"
+                );
+                self.combine(deltas, &self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
+            }
         }
     }
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
@@ -160,24 +160,16 @@ where
         lefthand: &Rc<U>,
         righthand: &Rc<U>,
     ) -> Rc<U> {
+        let display_joint = || lefthand.display_joint() + " " + &righthand.display_joint();
         let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
             (Some(lc), Some(rc)) => {
                 let maydef = self.find_definition(deltas, lc, rc);
                 (
-                    match maydef {
-                        Some(def) => match self.get_label(deltas, def) {
-                            Some(a) => a,
-                            None => lefthand.display_joint() + " " + &righthand.display_joint(),
-                        },
-                        None => lefthand.display_joint() + " " + &righthand.display_joint(),
-                    },
+                    maydef.and_then(|def| self.get_label(deltas, def)).unwrap_or_else(display_joint),
                     maydef,
                 )
             }
-            _ => (
-                lefthand.display_joint() + " " + &righthand.display_joint(),
-                None,
-            ),
+            _ => (display_joint(), None),
         };
         Rc::new(U::from_pair(syntax, lefthand, righthand))
     }
