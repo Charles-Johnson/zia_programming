@@ -63,12 +63,9 @@ where
         }
     }
     fn delete_reduction(&self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
-        match self.read_concept(&deltas, concept).get_reduction() {
-            None => Err(ZiaError::RedundantReduction),
-            Some(n) => {
-                Ok(self.remove_concept_reduction(deltas, concept, n))
-            }
-        }
+        self.read_concept(&deltas, concept).get_reduction().map(
+            |n| self.remove_concept_reduction(deltas, concept, n)
+        ).ok_or(ZiaError::RedundantReduction)
     }
 }
 

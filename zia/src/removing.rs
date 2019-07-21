@@ -50,12 +50,12 @@ where
         }
     }
     fn try_delete_concept(&self, previous_deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
-        if self.is_disconnected(&previous_deltas, concept) {
+        Ok(if self.is_disconnected(&previous_deltas, concept) {
             let initial_deltas = self.unlabel(previous_deltas, concept)?;
-            Ok(self.remove_concept(initial_deltas, concept))
+            self.remove_concept(initial_deltas, concept)
         } else {
-            Ok(vec!())
-        }
+            vec!()
+        })
     }
 }
 

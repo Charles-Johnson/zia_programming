@@ -222,7 +222,7 @@ where
                     }
                 },
                 _ => concept_if_still_exists
-        }).expect(&format!("No concept with id = {}", id))
+        }).unwrap_or_else(|| panic!("No concept with id = {}", id))
     }
 }
 
