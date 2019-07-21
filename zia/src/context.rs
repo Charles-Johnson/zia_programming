@@ -370,19 +370,13 @@ where
     T::Delta: Debug + Clone,
 {
     fn get_string_concept(&self, deltas: &[ContextDelta<T>], s: &str) -> Option<usize> {
-        let mut candidate: Option<usize> = None;
-        for delta in deltas {
-            match delta {
-                ContextDelta::String(string, string_delta) => if string == s {
-                    match string_delta {
-                        StringDelta::Insert(concept) => candidate = Some(*concept),
-                        StringDelta::Remove => candidate = None,
-                    };
-                },
-                _ => (),
-            };
-        }
-        candidate.or_else(|| self.string_map.get(s).cloned())
+        deltas.iter().fold(None, |candidate, delta| match delta {
+            ContextDelta::String(string, string_delta) if string == s => match string_delta {
+                StringDelta::Insert(concept) => Some(*concept),
+                StringDelta::Remove => None,
+            },
+            _ => candidate
+        }).or_else(|| self.string_map.get(s).cloned())
     }
 }
 
