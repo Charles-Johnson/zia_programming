@@ -291,24 +291,18 @@ where
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(&self, deltas: Vec<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
-        left.get_concept().and_then(
-            |lc| match lc {
-                LET => right.get_expansion().map(
-                    |(left, right)| Ok((self.call_as_righthand(deltas.clone(), &left, &right)?, "".to_string()))
-                ),
-                LABEL => Some(Ok((vec!(), right.get_concept().and_then(
-                    |c| self.get_label(&deltas, c)
-                ).map(|s| "'".to_string() + &s + "'").unwrap_or_else(
-                    || "'".to_string() + &right.to_string() + "'"
-                )))),
-                _ => None,
-            }
-        ).unwrap_or_else(
-            || match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
-                _ => self.reduce_and_call_pair(deltas, left, right),
-            }
-        )
+        left.get_concept().and_then(|lc| match lc {
+            LET => right.get_expansion().map(
+                |(left, right)| Ok((self.call_as_righthand(deltas.clone(), &left, &right)?, "".to_string()))
+            ),
+            LABEL => Some(Ok((vec!(), "'".to_string() + &right.get_concept().and_then(
+                |c| self.get_label(&deltas, c)
+            ).unwrap_or_else(|| right.to_string()) + "'"))),
+            _ => None,
+        }).unwrap_or_else(|| match right.get_concept() {
+            Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
+            _ => self.reduce_and_call_pair(deltas, left, right),
+        })
     }
     fn reduce_and_call_pair(&self, deltas: Vec::<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
         let reduced_left = self.reduce(&deltas, left);
