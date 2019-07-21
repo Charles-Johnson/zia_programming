@@ -264,15 +264,11 @@ where
     T::Delta: Clone + Debug,
 {
     fn remove_string_deltas(&self, mut deltas: Vec<ContextDelta<T>>, string: &str) -> Vec<ContextDelta<T>> {
-        let mut string_may_exist = true;
-        for delta in &deltas {
-            match delta {
-                ContextDelta::String(s, StringDelta::Insert(_)) if s == string => string_may_exist = true,
-                ContextDelta::String(s, StringDelta::Remove) if s == string => string_may_exist = false,
-                _ => ()
-            };
-        }
-        if string_may_exist {
+        if deltas.iter().fold(true, |string_may_exist, delta| match delta {
+            ContextDelta::String(s, StringDelta::Insert(_)) if s == string => true,
+            ContextDelta::String(s, StringDelta::Remove) if s == string => false,
+            _ => string_may_exist
+        }) {
             deltas.push(ContextDelta::String(string.to_string(), StringDelta::Remove));
             deltas
         } else {
