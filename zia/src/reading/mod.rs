@@ -284,11 +284,8 @@ where
     Self: ConceptReader<T> + Delta,
 {
     fn get_normal_form(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
-        self.read_concept(deltas, concept).get_reduction().and_then(|n|
-            match self.get_normal_form(deltas, n) {
-                None => Some(n),
-                Some(m) => Some(m),
-            }
+        self.read_concept(deltas, concept).get_reduction().map(|n|
+            self.get_normal_form(deltas, n).unwrap_or(n)
         )
     }
 }
@@ -359,12 +356,10 @@ where
         let has_lefthand = self.read_concept(deltas, lefthand).get_lefthand_of();
         let has_righthand = self.read_concept(deltas, righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
-        candidates.next().and_then(|index| match candidates.next() {
-            None => Some(*index),
-            Some(_) => {
-                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
-            }
-        })
+        candidates.next().map(|index| candidates.next().map_or(
+            *index,
+            |_| panic!("Multiple definitions with the same lefthand and righthand pair exist.")
+        ))
     }
 }
 
