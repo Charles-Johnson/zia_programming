@@ -337,19 +337,19 @@ where
     T: GetReduction + FindWhatReducesToIt + GetDefinition + GetDefinitionOf,
     Self: ConceptReader<T>,
 {
-    fn is_disconnected(&self, concept: usize) -> bool {
-        self.read_concept(&[], concept).get_reduction().is_none()
-            && self.read_concept(&[], concept).get_definition().is_none()
-            && self.read_concept(&[], concept).get_lefthand_of().is_empty()
-            && self.righthand_of_without_label_is_empty(concept)
+    fn is_disconnected(&self, deltas: &[Self::Delta], concept: usize) -> bool {
+        self.read_concept(deltas, concept).get_reduction().is_none()
+            && self.read_concept(deltas, concept).get_definition().is_none()
+            && self.read_concept(deltas, concept).get_lefthand_of().is_empty()
+            && self.righthand_of_without_label_is_empty(deltas, concept)
             && self
-                .read_concept(&[], concept)
+                .read_concept(deltas, concept)
                 .find_what_reduces_to_it()
                 .is_empty()
     }
-    fn righthand_of_without_label_is_empty(&self, con: usize) -> bool {
-        self.read_concept(&[], con).get_righthand_of().iter().filter_map(|concept|
-            self.read_concept(&[], *concept).get_definition().filter(|(left, _)|
+    fn righthand_of_without_label_is_empty(&self, deltas: &[Self::Delta], con: usize) -> bool {
+        self.read_concept(deltas, con).get_righthand_of().iter().filter_map(|concept|
+            self.read_concept(deltas, *concept).get_definition().filter(|(left, _)|
                 *left != LABEL
             )
         ).nth(0).is_none()
