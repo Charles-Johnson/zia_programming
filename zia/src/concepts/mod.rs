@@ -158,10 +158,7 @@ impl SetDefinition for Concept {
     /// Sets the definition of the concept if abstract, otherwise returns an error.
     fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
         match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.set_definition(lefthand, righthand);
-                Ok(())
-            }
+            SpecificPart::Abstract(ref mut c) => Ok(c.set_definition(lefthand, righthand)),
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
@@ -205,10 +202,7 @@ impl SetReduction for Concept {
     /// Sets the index of the concept that `self` reduces to if abstract. Otherwise returns an error.
     fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
         match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.make_reduce_to(concept);
-                Ok(())
-            }
+            SpecificPart::Abstract(ref mut c) => Ok(c.make_reduce_to(concept)),
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
@@ -257,27 +251,19 @@ impl MaybeString for Concept {
 
 impl RemoveReductionDelta for Concept {
     fn no_longer_reduces_from_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        let mut reduces_from_concept = true;
-        for delta in deltas {
-            match delta {
-                ConceptDelta::Common(CommonDelta::RemoveReducesFrom(c)) if *c == concept => reduces_from_concept = false,
-                ConceptDelta::Common(CommonDelta::AddReducesFrom(c)) if *c == concept => reduces_from_concept = true,
-                _ => (),
-            };
-        }
-        assert!(reduces_from_concept);
+        assert!(deltas.iter().fold(true, |reduces_from_concept, delta| match delta {
+            ConceptDelta::Common(CommonDelta::RemoveReducesFrom(c)) if *c == concept => false,
+            ConceptDelta::Common(CommonDelta::AddReducesFrom(c)) if *c == concept => true,
+            _ => reduces_from_concept,
+        }));
         ConceptDelta::Common(CommonDelta::RemoveReducesFrom(concept))
     }
     fn make_reduce_to_none_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
-        let mut reduces = true;
-        for delta in deltas {
-            match delta {
-                ConceptDelta::Abstract(AbstractDelta::RemoveReduction) => reduces = false,
-                ConceptDelta::Abstract(AbstractDelta::SetReduction(_)) => reduces = true,
-                _ => (),
-            };
-        }
-        assert!(reduces);
+        assert!(deltas.iter().fold(true, |reduces, delta| match delta {
+            ConceptDelta::Abstract(AbstractDelta::RemoveReduction) => false,
+            ConceptDelta::Abstract(AbstractDelta::SetReduction(_)) => true,
+            _ => reduces,
+        }));
         ConceptDelta::Abstract(AbstractDelta::RemoveReduction)
     }
 }
@@ -285,39 +271,27 @@ impl RemoveReductionDelta for Concept {
 impl RemoveDefinitionDelta for Concept
 {
     fn remove_as_lefthand_of_delta(&self, deltas: Vec<Self::Delta>, concept: usize) -> Self::Delta {
-        let mut lefthand_of_concept = true;
-        for delta in &deltas {
-            match delta {
-                ConceptDelta::Common(CommonDelta::RemoveLeft(c)) if *c == concept => lefthand_of_concept = false,
-                ConceptDelta::Common(CommonDelta::AddLeft(c)) if *c == concept => lefthand_of_concept = true,
-                _ => (),
-            };
-        }
-        assert!(lefthand_of_concept);
+        assert!(deltas.iter().fold(true, |lefthand_of_concept, delta| match delta {
+            ConceptDelta::Common(CommonDelta::RemoveLeft(c)) if *c == concept => false,
+            ConceptDelta::Common(CommonDelta::AddLeft(c)) if *c == concept => true,
+            _ => lefthand_of_concept,
+        }));
         ConceptDelta::Common(CommonDelta::RemoveLeft(concept))
     }
     fn remove_as_righthand_of_delta(&self, deltas: Vec<Self::Delta>, concept: usize) -> Self::Delta {
-        let mut righthand_of_concept = true;
-        for delta in &deltas {
-            match delta {
-                ConceptDelta::Common(CommonDelta::RemoveRight(c)) if *c == concept => righthand_of_concept = false,
-                ConceptDelta::Common(CommonDelta::AddRight(c)) if *c == concept => righthand_of_concept = true,
-                _ => (),
-            };
-        }
-        assert!(righthand_of_concept);
+        assert!(deltas.iter().fold(true, |righthand_of_concept, delta| match delta {
+            ConceptDelta::Common(CommonDelta::RemoveRight(c)) if *c == concept => false,
+            ConceptDelta::Common(CommonDelta::AddRight(c)) if *c == concept => true,
+            _ => righthand_of_concept,
+        }));
         ConceptDelta::Common(CommonDelta::RemoveRight(concept))
     }
     fn remove_definition_delta(&self, deltas: Vec<Self::Delta>) -> Self::Delta {
-        let mut definition = true;
-        for delta in deltas {
-            match delta {
-                ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => definition = false,
-                ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => definition = true,
-                _ => (),
-            };
-        }
-        assert!(definition);
+        assert!(deltas.iter().fold(true, |definition, delta| match delta {
+            ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => false,
+            ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => true,
+            _ => definition,
+        }));
         ConceptDelta::Abstract(AbstractDelta::RemoveDefinition)
     }
 }
