@@ -232,15 +232,11 @@ where
     T::Delta: Clone + Debug,
 {
     fn blindly_remove_concept_deltas(&self, mut deltas: Vec<ContextDelta<T>>, id: usize) -> Vec<ContextDelta<T>> {
-        let mut removed = false;
-        for delta in &deltas {
-            match delta {
-                ContextDelta::Concept(concept, ConceptDelta::Insert(_)) => if *concept == id {removed = false},
-                ContextDelta::Concept(concept, ConceptDelta::Remove) => if *concept == id {removed = true},
-                _ => (),
-            };
-        }
-        if removed {
+        if deltas.iter().fold(false, |removed, delta| match delta {
+            ContextDelta::Concept(concept, ConceptDelta::Insert(_)) if *concept == id => false,
+            ContextDelta::Concept(concept, ConceptDelta::Remove) if *concept == id => true,
+            _ => removed,
+        }) {
             panic!("Concept will be already removed!");
         } else {
             deltas.push(ContextDelta::Concept(id, ConceptDelta::Remove));
