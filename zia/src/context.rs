@@ -203,31 +203,26 @@ where
     T::Delta: Clone + Debug,
 {
     fn read_concept(&self, deltas: &[ContextDelta<T>], id: usize) -> T {
-        let mut concept_if_still_exists = match &self.concepts.get(id) {
+        let concept_if_still_exists = match &self.concepts.get(id) {
             Some(Some(ref c)) => Some(c.clone()),
             _ => None,
         };
-        for delta in deltas {
-            if let ContextDelta::Concept(index, cd) = delta {
-                if *index == id {
-                    match cd {
-                        ConceptDelta::Insert(c) => concept_if_still_exists = Some(c.clone()),
-                        ConceptDelta::Remove => concept_if_still_exists = None,
-                        ConceptDelta::Update(d) => {
-                            if let Some(ref mut c) = concept_if_still_exists {
-                                c.apply(d)
-                            } else {
-                                panic!("Deltas imply that a concept that doesn't exist will be updated!")
-                            }
-                        }
+        deltas.iter().fold(
+            concept_if_still_exists,
+            |concept_if_still_exists, delta| match delta {
+                ContextDelta::Concept(index, cd) if *index == id => match cd {
+                    ConceptDelta::Insert(c) => Some(c.clone()),
+                    ConceptDelta::Remove => None,
+                    ConceptDelta::Update(d) => {
+                        let mut concept = concept_if_still_exists.expect(
+                            "Deltas imply that a concept that doesn't exist will be updated!"
+                        );
+                        concept.apply(d);
+                        Some(concept)
                     }
-                }
-            };
-        }
-        match concept_if_still_exists {
-            Some(c) => c,
-            None => panic!("No concept with id = {}", id),
-        }
+                },
+                _ => concept_if_still_exists
+        }).expect(&format!("No concept with id = {}", id))
     }
 }
 
