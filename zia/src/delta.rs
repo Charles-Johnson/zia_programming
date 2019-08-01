@@ -22,4 +22,13 @@ pub trait Delta {
             self.apply(delta);
         }
     }
+    fn fuse<F>(&self, deltas: Vec<Self::Delta>, mut fs: Vec<F>) -> Vec<usize>
+    where
+        F: FnMut(&mut [Self::Delta]) -> usize,
+    {
+        fs.iter_mut().scan(deltas, |deltas, f| {
+            let result = f(deltas);
+            Some(result)
+        }).collect()
+    }
 }
