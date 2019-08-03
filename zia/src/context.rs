@@ -149,33 +149,33 @@ where
 {
     fn set_concept_definition_deltas(
         &self,
-        mut deltas: Vec<Self::Delta>,
+        deltas: &mut Vec<Self::Delta>,
         concept: usize,
         lefthand: usize,
         righthand: usize,
-    ) -> ZiaResult<Vec<ContextDelta<T>>> {
+    ) -> ZiaResult<()> {
         let concept_delta1 = try!(self
-            .read_concept(&deltas, concept)
+            .read_concept(deltas, concept)
             .set_definition_delta(lefthand, righthand));
         deltas.push(ContextDelta::Concept(
             concept,
             ConceptDelta::Update(concept_delta1),
         ));
         let concept_delta2 = self
-            .read_concept(&deltas, lefthand)
+            .read_concept(deltas, lefthand)
             .add_as_lefthand_of_delta(concept);
         deltas.push(ContextDelta::Concept(
             lefthand,
             ConceptDelta::Update(concept_delta2),
         ));
         let concept_delta3 = self
-            .read_concept(&deltas, righthand)
+            .read_concept(deltas, righthand)
             .add_as_righthand_of_delta(concept);
         deltas.push(ContextDelta::Concept(
             righthand,
             ConceptDelta::Update(concept_delta3),
         ));
-        Ok(deltas)
+        Ok(())
     }
 }
 
@@ -185,15 +185,14 @@ where
     Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
     T::Delta: Clone + Debug,
 {
-    fn concept_reduction_deltas(&self, deltas: &[Self::Delta], concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
+    fn concept_reduction_deltas(&self, deltas: &mut Vec<Self::Delta>, concept: usize, reduction: usize) -> ZiaResult<()> {
         let concept_delta1 = self.read_concept(deltas, concept).make_reduce_to_delta(reduction)?;
         let concept_delta2 = self.read_concept(deltas, reduction).make_reduce_from_delta(concept);
-        let mut new_deltas = deltas.to_vec();
-        new_deltas.extend(vec!(
+        deltas.extend(vec!(
             ContextDelta::Concept(concept, ConceptDelta::Update(concept_delta1)),
             ContextDelta::Concept(reduction, ConceptDelta::Update(concept_delta2)),
         ));
-        Ok(new_deltas)
+        Ok(())
     }
 }
 

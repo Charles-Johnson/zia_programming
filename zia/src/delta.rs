@@ -14,6 +14,10 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
+use errors::ZiaResult;
+use std::iter::from_fn;
+
 pub trait Delta {
     type Delta;
     fn apply(&mut self, &Self::Delta);
@@ -23,14 +27,19 @@ pub trait Delta {
         }
     }
     // Repeat mutation, f, n times on self and return vector of n results
-    fn repeat<F>(deltas: &mut Vec<Self::Delta>, f: F, n: usize) -> Vec<usize> 
+    fn repeat<F>(deltas: &mut Vec<Self::Delta>, mut f: F, n: usize) -> Vec<usize> 
     where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize + Clone,
+        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize,
     {
-        let mut fs = vec![f; n];
-        fs.iter_mut().scan(deltas, |deltas, f| {
-            let result = f(*deltas);
-            Some(result)
-        }).collect()
+        let mut counter = 0;
+        from_fn(|| if counter < n {counter += 1; Some(f(deltas))} else {None}).collect()
+    }
+    fn multiply<F>(deltas: &mut Vec<Self::Delta>, mut f: F, ns: Vec<usize>, ms: Vec<&str>) -> ZiaResult<()>
+    where
+        F: for<'a> FnMut(&'a mut Vec<Self::Delta>, usize, &str) -> ZiaResult<()>,
+    {
+        ns.iter().zip(ms).try_for_each(|(n, m)| {
+            f(deltas, *n, m)
+        })
     }
 }

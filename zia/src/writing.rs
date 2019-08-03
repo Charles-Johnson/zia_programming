@@ -88,7 +88,7 @@ where
     T: SetReduction + MakeReduceFrom + GetReduction + GetDefinition + GetDefinitionOf,
     Self: GetNormalForm<T> + FindDefinition<T> + SetConceptReductionDelta,
 {
-    fn update_reduction(&self, deltas: &[Self::Delta], concept: usize, reduction: usize) -> ZiaResult<Vec<Self::Delta>> {
+    fn update_reduction(&self, deltas: &mut Vec<Self::Delta>, concept: usize, reduction: usize) -> ZiaResult<()> {
         self.get_normal_form(deltas, reduction).and_then(|n|
             if concept == n {
                 Some(Err(ZiaError::CyclicReduction))
@@ -139,17 +139,18 @@ where
 {
     fn insert_definition(
         &self,
-        deltas: Vec<Self::Delta>,        
+        deltas: &mut Vec<Self::Delta>,        
         definition: usize,
         lefthand: usize,
         righthand: usize,
-    ) -> ZiaResult<Vec<Self::Delta>> {
-        if self.contains(&deltas, lefthand, definition) || self.contains(&deltas, righthand, definition) {
+    ) -> ZiaResult<()> {
+        if self.contains(deltas, lefthand, definition) || self.contains(deltas, righthand, definition) {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            self.check_reductions(&deltas, definition, lefthand)?;
-            self.check_reductions(&deltas, definition, righthand)?;
-            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)
+            self.check_reductions(deltas, definition, lefthand)?;
+            self.check_reductions(deltas, definition, righthand)?;
+            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)?;
+            Ok(())
         }
     }
     fn check_reductions(&self, deltas: &[Self::Delta], outer_concept: usize, inner_concept: usize) -> ZiaResult<()> {
@@ -189,7 +190,7 @@ pub trait SetConceptDefinitionDeltas
 where
     Self: Delta,
 {
-    fn set_concept_definition_deltas(&self, Vec<Self::Delta>, usize, usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+    fn set_concept_definition_deltas(&self, &mut Vec<Self::Delta>, usize, usize, usize) -> ZiaResult<()>;
 }
 
 pub trait SetDefinitionDelta
@@ -231,7 +232,7 @@ pub trait SetConceptReductionDelta
 where
     Self: Delta,
 {
-    fn concept_reduction_deltas(&self, &[Self::Delta], usize, usize) -> ZiaResult<Vec<Self::Delta>>;
+    fn concept_reduction_deltas(&self, &mut Vec<Self::Delta>, usize, usize) -> ZiaResult<()>;
 }
 
 pub trait MakeReduceFrom {

@@ -55,8 +55,9 @@ where
             self.try_removing_reduction::<Self::S>(deltas, syntax)
         } else {
             let (deltas1, syntax_concept) = self.concept_from_ast(deltas, syntax)?;
-            let (deltas2, normal_form_concept) = self.concept_from_ast(deltas1, normal_form)?;
-            self.update_reduction(&deltas2, syntax_concept, normal_form_concept)
+            let (mut deltas2, normal_form_concept) = self.concept_from_ast(deltas1, normal_form)?;
+            self.update_reduction(&mut deltas2, syntax_concept, normal_form_concept)?;
+            Ok(deltas2)
         }
     }
 }
@@ -127,13 +128,12 @@ where
                 None => self.new_labelled_default(deltas, string),
                 Some((ref left, ref right)) => {
                     let (deltas1, leftc) = self.concept_from_ast(deltas, left)?;
-                    let (deltas2, rightc) = self.concept_from_ast(deltas1, right)?;
-                    let (deltas3, concept) = self.find_or_insert_definition(deltas2, leftc, rightc)?;
-                    Ok((if !string.contains(' ') {
-                        self.label(deltas3, concept, string)?
-                    } else {
-                        deltas3
-                    }, concept))
+                    let (mut deltas2, rightc) = self.concept_from_ast(deltas1, right)?;
+                    let concept = self.find_or_insert_definition(&mut deltas2, leftc, rightc)?;
+                    if !string.contains(' ') {
+                        self.label(&mut deltas2, concept, string)?;
+                    }
+                    Ok((deltas2, concept))
                 }
             }
         }
@@ -201,27 +201,28 @@ where
         + From<Self::C>
         + From<Self::A> + Clone,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Sized,
 {
     type C: Default;
-    fn label(&self, previous_deltas: Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<Vec<Self::Delta>> {
-        let (deltas, definition) = self.find_or_insert_definition(previous_deltas, LABEL, concept)?;
-        let (string_id, new_deltas) = self.new_string(deltas, string);
-        self.update_reduction(&new_deltas, definition, string_id)
+    fn label(&self, deltas: &mut Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<()> {
+        let definition = self.find_or_insert_definition(deltas, LABEL, concept)?;
+        let string_id = self.new_string(deltas, string);
+        self.update_reduction(deltas, definition, string_id)?;
+        Ok(())
     }
-    fn new_labelled_default(&self, mut previous_deltas: Vec<Self::Delta>, string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let new_default = self.new_default::<Self::A>(&mut previous_deltas);
-        let more_deltas = self.label(previous_deltas, new_default, string)?;
-        Ok((more_deltas, new_default))
+    fn new_labelled_default(&self, mut deltas: Vec<Self::Delta>, string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+        let new_default = self.new_default::<Self::A>(&mut deltas);
+        self.label(&mut deltas, new_default, string)?;
+        Ok((deltas, new_default))
     }
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let mut deltas = vec![];
-        let concrete_constructor = |x: &mut Vec<Self::Delta>| self.new_default::<Self::C>(x);
+        let concrete_constructor = |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
         let concepts = Self::repeat(&mut deltas, concrete_constructor, 4);
-        let deltas5 = self.label(deltas, concepts[0], "label_of")?;
-        let deltas6 = self.label(deltas5, concepts[1], ":=")?;
-        let deltas7 = self.label(deltas6, concepts[2], "->")?;
-        self.label(deltas7, concepts[3], "let")
+        let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| self.label(local_deltas, concept, string);
+        let labels = vec!["label_of", ":=", "->", "let"];
+        Self::multiply(&mut deltas, label, concepts, labels)?;
+        Ok(deltas)
     }
 }
 
@@ -237,15 +238,15 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&self, mut deltas: Vec<Self::Delta>, lefthand: usize, righthand: usize) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let pair = self.find_definition(&deltas, lefthand, righthand);
+    fn find_or_insert_definition(&self, deltas: &mut Vec<Self::Delta>, lefthand: usize, righthand: usize) -> ZiaResult<usize> {
+        let pair = self.find_definition(deltas, lefthand, righthand);
         match pair {
             None => {
-                let definition = self.new_default::<Self::A>(&mut deltas);
-                let new_deltas = self.insert_definition(deltas, definition, lefthand, righthand)?;
-                Ok((new_deltas, definition))
+                let definition = self.new_default::<Self::A>(deltas);
+                self.insert_definition(deltas, definition, lefthand, righthand)?;
+                Ok(definition)
             }
-            Some(def) => Ok((deltas.to_vec(), def)),
+            Some(def) => Ok(def),
         }
     }
 }
@@ -255,13 +256,13 @@ where
     T: From<String>,
     Self: ConceptAdderDelta<T> + StringAdderDelta,
 {
-    fn new_string(&self, mut deltas: Vec<Self::Delta>, string: &str) -> (usize, Vec<Self::Delta>) {
+    fn new_string(&self, deltas: &mut Vec<Self::Delta>, string: &str) -> usize {
         let string_concept = string.to_string().into();
-        let (delta, index) = self.add_concept_delta(&deltas, string_concept);
+        let (delta, index) = self.add_concept_delta(deltas, string_concept);
         deltas.push(delta);
         let string_delta = Self::add_string_delta(index, string);
         deltas.push(string_delta);
-        (index, deltas)
+        index
     }
 }
 

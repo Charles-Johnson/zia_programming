@@ -432,7 +432,7 @@ where
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn define(&self, mut deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
@@ -440,7 +440,8 @@ where
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
                 (None, Some(b), None) => self.relabel(deltas, b, &new.to_string()),
                 (None, Some(b), Some(_)) => if self.get_label(&deltas, b).is_none() {
-                    self.label(deltas, b, &new.to_string())
+                    self.label(&mut deltas, b, &new.to_string())?;
+                    Ok(deltas)
                 } else {
                     self.relabel(deltas, b, &new.to_string())
                 },
@@ -472,13 +473,16 @@ where
             self.relabel(deltas1, right_concept, &right.to_string())
         } else {
             let (deltas1, left_concept) = self.concept_from_ast(deltas, left)?;
-            let (deltas2, right_concept) = self.concept_from_ast(deltas1, right)?;
-            self.insert_definition(deltas2, concept, left_concept, right_concept)
+            let (mut deltas2, right_concept) = self.concept_from_ast(deltas1, right)?;
+            self.insert_definition(&mut deltas2, concept, left_concept, right_concept)?;
+            Ok(deltas2)
         }
     }
     /// Unlabels a concept and gives it a new label.
     fn relabel(&self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<Vec<Self::Delta>> {
-        self.label(self.unlabel(previous_deltas, concept)?, concept, new_label)
+        let mut deltas = self.unlabel(previous_deltas, concept)?;
+        self.label(&mut deltas, concept, new_label)?;
+        Ok(deltas)
     }
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(
