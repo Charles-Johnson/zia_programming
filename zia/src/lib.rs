@@ -71,7 +71,7 @@
 //! assert_eq!(context.execute("let (표시 (:= label_of))"), "");
 //! assert_eq!(context.execute("표시 (a b)"), "\'c\'");
 //!
-//! // Try to specify the rule to reduce a labelled concept
+//! // You can reduce a labelled concept
 //! assert_eq!(context.execute("let (a (-> d))"), "");
 //!
 //! // Try to specify the composition of a concept in terms of itself
@@ -79,6 +79,9 @@
 //!
 //! // Try to specify the reduction of concept in terms of itself
 //! assert_eq!(context.execute("let ((c d) (-> ((c d) e))"), ZiaError::ExpandingReduction.to_string());
+//! 
+//! // Determine the truth of a reduction
+//! assert_eq!(context.execute("a (-> d)"), "true")
 //! ```
 
 #[macro_use]
@@ -125,7 +128,7 @@ pub use adding::ContextMaker;
 use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
 use concepts::{AbstractPart, CommonPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION};
+use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE, FALSE};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
 use errors::{ZiaResult, map_err_variant};
@@ -293,12 +296,17 @@ where
     fn call_pair(&self, deltas: Vec<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
         left.get_concept().and_then(|lc| match lc {
             LET => right.get_expansion().map(
-                |(left, right)| Ok((self.call_as_righthand(deltas.clone(), &left, &right)?, "".to_string()))
+                |(left, right)| Ok((self.execute_let(deltas.clone(), &left, &right)?, "".to_string()))
             ),
             LABEL => Some(Ok((vec!(), "'".to_string() + &right.get_concept().and_then(
                 |c| self.get_label(&deltas, c)
             ).unwrap_or_else(|| right.to_string()) + "'"))),
-            _ => None,
+            _ => right.get_expansion().and_then(
+                |(rightleft, rightright)| rightleft.get_concept().and_then(|rlc| match rlc {
+                    REDUCTION => self.determine_reduction_truth(&deltas, left, &rightright),
+                    _ => None, 
+                }).map(|s| Ok((deltas.clone(), s)))
+            ),
         }).unwrap_or_else(|| match right.get_concept() {
             Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
             _ => self.reduce_and_call_pair(deltas, left, right),
@@ -333,7 +341,7 @@ where
         }
     }
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn call_as_righthand(&self, deltas: Vec<Self::Delta>, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn execute_let(&self, deltas: Vec<Self::Delta>, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
         match right.get_expansion() {
             Some((ref rightleft, ref rightright)) => self.match_righthand_pair(deltas, left, rightleft, rightright),
             None => Err(ZiaError::CannotExpandFurther),
@@ -365,6 +373,17 @@ where
             },
             None => Err(ZiaError::UnusedSymbol),
         }
+    }
+    fn determine_reduction_truth(&self, deltas: &[Self::Delta], left: &Rc<Self::S>, right: &Rc<Self::S>) -> Option<String> {
+        self.reduce(deltas, left).and_then(|reduced_left| if &reduced_left == right {
+            Some(self.get_label(deltas, TRUE).expect("TRUE concept is unlabelled"))
+        } else {
+            self.determine_reduction_truth(deltas, &reduced_left, right).or_else(|| self.reduce(deltas, right).and_then(|reduced_right| if &reduced_right == left {
+                Some(self.get_label(deltas, FALSE).expect("FALSE concept is unlabelled"))
+            } else {
+                self.determine_reduction_truth(deltas, left, &reduced_right)
+            }))
+        })
     }
 }
 

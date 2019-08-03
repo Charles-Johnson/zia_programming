@@ -218,9 +218,9 @@ where
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let mut deltas = vec![];
         let concrete_constructor = |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
-        let concepts = Self::repeat(&mut deltas, concrete_constructor, 4);
+        let concepts = Self::repeat(&mut deltas, concrete_constructor, 6);
         let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| self.label(local_deltas, concept, string);
-        let labels = vec!["label_of", ":=", "->", "let"];
+        let labels = vec!["label_of", ":=", "->", "let", "true", "false"];
         Self::multiply(&mut deltas, label, concepts, labels)?;
         Ok(deltas)
     }
