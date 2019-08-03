@@ -22,10 +22,12 @@ pub trait Delta {
             self.apply(delta);
         }
     }
-    fn scan<F>(&self, deltas: &mut Vec<Self::Delta>, mut fs: Vec<F>) -> Vec<usize>
+    // Repeat mutation, f, n times on self and return vector of n results
+    fn repeat<F>(deltas: &mut Vec<Self::Delta>, f: F, n: usize) -> Vec<usize> 
     where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize,
+        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize + Clone,
     {
+        let mut fs = vec![f; n];
         fs.iter_mut().scan(deltas, |deltas, f| {
             let result = f(*deltas);
             Some(result)
