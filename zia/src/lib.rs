@@ -286,7 +286,7 @@ where
             .get_concept()
             .and_then(|c| self.read_concept(&deltas, c).get_string())
         {
-            Some(s) => Ok((vec![], s)),
+            Some(s) => Ok((deltas, s)),
             None => match ast.get_expansion() {
                 Some((ref left, ref right)) => map_err_variant(
                     self.call_pair(deltas.clone(), left, right),
@@ -295,7 +295,7 @@ where
                         map_err_variant(
                             self.try_reducing_then_call(deltas.clone(), ast),
                             &ZiaError::CannotReduceFurther,
-                            || Ok((vec![], self.contract_pair(&deltas, left, right).to_string())),
+                            || Ok((deltas.clone(), self.contract_pair(&deltas, left, right).to_string())),
                         )
                     },
                 ),
@@ -304,9 +304,9 @@ where
                     &ZiaError::CannotReduceFurther,
                     || {
                         map_err_variant(
-                            self.try_expanding_then_call(deltas, ast),
+                            self.try_expanding_then_call(deltas.clone(), ast),
                             &ZiaError::CannotExpandFurther,
-                            || Ok((vec![], ast.to_string())),
+                            || Ok((deltas, ast.to_string())),
                         )
                     },
                 ),
@@ -329,7 +329,7 @@ where
                     ))
                 }),
                 LABEL => Some(Ok((
-                    vec![],
+                    deltas.clone(),
                     "'".to_string()
                         + &right
                             .get_concept()

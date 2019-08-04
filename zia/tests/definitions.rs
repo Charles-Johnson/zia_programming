@@ -49,6 +49,8 @@ proptest! {
     #[test]
     fn fresh_refactor(a in "\\PC*", b in "\\PC*") {
         assume_symbols!(a, b);
+        assume_abstract!(a);
+        assume_abstract!(b);
         // if `a == b` then the definition is redundant, not the refactor
         prop_assume!(a != b);
         let mut cont = Context::new();

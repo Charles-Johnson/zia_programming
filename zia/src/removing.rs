@@ -62,7 +62,7 @@ where
             let initial_deltas = self.unlabel(previous_deltas, concept)?;
             self.remove_concept(initial_deltas, concept)
         } else {
-            vec![]
+            previous_deltas
         })
     }
 }
