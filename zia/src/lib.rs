@@ -79,14 +79,14 @@
 //!
 //! // Try to specify the reduction of concept in terms of itself
 //! assert_eq!(context.execute("let ((c d) (-> ((c d) e))"), ZiaError::ExpandingReduction.to_string());
-//! 
+//!
 //! // Determine the truth of a reduction
 //! assert_eq!(context.execute("a (-> d)"), "true");
 //! assert_eq!(context.execute("d (-> a)"), "false");
-//! 
+//!
 //! // A concept never reduces to itself
 //! assert_eq!(context.execute("a (-> a)"), "false");
-//! 
+//!
 //! assert_eq!(context.execute("d (-> f)"), "d (-> f)");
 //! ```
 
@@ -134,10 +134,10 @@ pub use adding::ContextMaker;
 use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
 use concepts::{AbstractPart, CommonPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE, FALSE};
+use constants::{DEFINE, FALSE, LABEL, LET, REDUCTION, TRUE};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
-use errors::{ZiaResult, map_err_variant};
+use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
     DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
@@ -175,7 +175,8 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt
-        + Debug + Clone,
+        + Debug
+        + Clone,
     Self::S: Container
         + Pair<Self::S>
         + Debug
@@ -187,9 +188,10 @@ where
 {
     fn execute(&mut self, command: &str) -> String {
         info!(self.logger(), "execute({})", command);
-        let (deltas, string) = self.ast_from_expression(&[], command).and_then(
-            |a| self.call(vec!(), &a)
-        ).unwrap_or_else(|e| (vec!(), e.to_string()));
+        let (deltas, string) = self
+            .ast_from_expression(&[], command)
+            .and_then(|a| self.call(vec![], &a))
+            .unwrap_or_else(|e| (vec![], e.to_string()));
         info!(self.logger(), "execute({}) -> {:?}", command, deltas);
         self.apply_all(&deltas);
         string
@@ -214,7 +216,8 @@ where
         + GetDefinitionOf
         + GetReduction
         + FindWhatReducesToIt
-        + Debug + Clone,
+        + Debug
+        + Clone,
     S: Call<T> + SyntaxConverter<T> + Logger,
     S::S: Container
         + Pair<S::S>
@@ -262,7 +265,8 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug + Clone,
+        + Debug
+        + Clone,
     Self::S: Container
         + Pair<Self::S>
         + Clone
@@ -273,56 +277,95 @@ where
     Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
-        match ast.get_concept().and_then(|c| self.read_concept(&deltas, c).get_string()) {
-            Some(s) => Ok((vec!(), s)),
+    fn call(
+        &self,
+        deltas: Vec<Self::Delta>,
+        ast: &Rc<Self::S>,
+    ) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        match ast
+            .get_concept()
+            .and_then(|c| self.read_concept(&deltas, c).get_string())
+        {
+            Some(s) => Ok((vec![], s)),
             None => match ast.get_expansion() {
                 Some((ref left, ref right)) => map_err_variant(
                     self.call_pair(deltas.clone(), left, right),
                     &ZiaError::CannotReduceFurther,
-                    || map_err_variant (
-                        self.try_reducing_then_call(deltas.clone(), ast),
-                        &ZiaError::CannotReduceFurther,
-                        || Ok((vec!(), self.contract_pair(&deltas, left, right).to_string())),
-                    )
+                    || {
+                        map_err_variant(
+                            self.try_reducing_then_call(deltas.clone(), ast),
+                            &ZiaError::CannotReduceFurther,
+                            || Ok((vec![], self.contract_pair(&deltas, left, right).to_string())),
+                        )
+                    },
                 ),
                 None => map_err_variant(
                     self.try_reducing_then_call(deltas.clone(), ast),
                     &ZiaError::CannotReduceFurther,
-                    || map_err_variant(
-                        self.try_expanding_then_call(deltas, ast),
-                        &ZiaError::CannotExpandFurther,
-                        || Ok((vec!(), ast.to_string())),
-                    )
+                    || {
+                        map_err_variant(
+                            self.try_expanding_then_call(deltas, ast),
+                            &ZiaError::CannotExpandFurther,
+                            || Ok((vec![], ast.to_string())),
+                        )
+                    },
                 ),
-            }
+            },
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(&self, deltas: Vec<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
-        left.get_concept().and_then(|lc| match lc {
-            LET => right.get_expansion().map(
-                |(left, right)| Ok((self.execute_let(deltas.clone(), &left, &right)?, "".to_string()))
-            ),
-            LABEL => Some(Ok((vec!(), "'".to_string() + &right.get_concept().and_then(
-                |c| self.get_label(&deltas, c)
-            ).unwrap_or_else(|| right.to_string()) + "'"))),
-            _ => right.get_expansion().and_then(
-                |(rightleft, rightright)| rightleft.get_concept().and_then(|rlc| match rlc {
-                    REDUCTION => self.determine_reduction_truth(&deltas, left, &rightright).map(|x| if x {
-                        self.get_label(&deltas, TRUE).expect("TRUE is unlabelled")
-                    } else {
-                        self.get_label(&deltas, FALSE).expect("FALSE is unlabelled")
-                    }),
-                    _ => None, 
-                }).map(|s| Ok((deltas.clone(), s)))
-            ),
-        }).unwrap_or_else(|| match right.get_concept() {
-            Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
-            _ => self.reduce_and_call_pair(deltas, left, right),
-        })
+    fn call_pair(
+        &self,
+        deltas: Vec<Self::Delta>,
+        left: &Rc<Self::S>,
+        right: &Rc<Self::S>,
+    ) -> ZiaResult<(Vec<Self::Delta>, String)> {
+        left.get_concept()
+            .and_then(|lc| match lc {
+                LET => right.get_expansion().map(|(left, right)| {
+                    Ok((
+                        self.execute_let(deltas.clone(), &left, &right)?,
+                        "".to_string(),
+                    ))
+                }),
+                LABEL => Some(Ok((
+                    vec![],
+                    "'".to_string()
+                        + &right
+                            .get_concept()
+                            .and_then(|c| self.get_label(&deltas, c))
+                            .unwrap_or_else(|| right.to_string())
+                        + "'",
+                ))),
+                _ => right.get_expansion().and_then(|(rightleft, rightright)| {
+                    rightleft
+                        .get_concept()
+                        .and_then(|rlc| match rlc {
+                            REDUCTION => self
+                                .determine_reduction_truth(&deltas, left, &rightright)
+                                .map(|x| {
+                                    if x {
+                                        self.get_label(&deltas, TRUE).expect("TRUE is unlabelled")
+                                    } else {
+                                        self.get_label(&deltas, FALSE).expect("FALSE is unlabelled")
+                                    }
+                                }),
+                            _ => None,
+                        })
+                        .map(|s| Ok((deltas.clone(), s)))
+                }),
+            })
+            .unwrap_or_else(|| match right.get_concept() {
+                Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
+                _ => self.reduce_and_call_pair(deltas, left, right),
+            })
     }
-    fn reduce_and_call_pair(&self, deltas: Vec::<Self::Delta>, left: &Rc<Self::S>, right: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+    fn reduce_and_call_pair(
+        &self,
+        deltas: Vec<Self::Delta>,
+        left: &Rc<Self::S>,
+        right: &Rc<Self::S>,
+    ) -> ZiaResult<(Vec<Self::Delta>, String)> {
         let reduced_left = self.reduce(&deltas, left);
         let reduced_right = self.reduce(&deltas, right);
         match (reduced_left, reduced_right) {
@@ -333,7 +376,11 @@ where
         }
     }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+    fn try_expanding_then_call(
+        &self,
+        deltas: Vec<Self::Delta>,
+        ast: &Rc<Self::S>,
+    ) -> ZiaResult<(Vec<Self::Delta>, String)> {
         let expansion = &self.expand(&deltas, ast);
         if expansion != ast {
             self.call(deltas, expansion)
@@ -342,7 +389,11 @@ where
         }
     }
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(&self, deltas: Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<(Vec<Self::Delta>, String)> {
+    fn try_reducing_then_call(
+        &self,
+        deltas: Vec<Self::Delta>,
+        ast: &Rc<Self::S>,
+    ) -> ZiaResult<(Vec<Self::Delta>, String)> {
         let normal_form = &self.recursively_reduce(&deltas, ast);
         if normal_form != ast {
             self.call(deltas, normal_form)
@@ -351,9 +402,16 @@ where
         }
     }
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn execute_let(&self, deltas: Vec<Self::Delta>, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn execute_let(
+        &self,
+        deltas: Vec<Self::Delta>,
+        left: &Self::S,
+        right: &Self::S,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         match right.get_expansion() {
-            Some((ref rightleft, ref rightright)) => self.match_righthand_pair(deltas, left, rightleft, rightright),
+            Some((ref rightleft, ref rightright)) => {
+                self.match_righthand_pair(deltas, left, rightleft, rightright)
+            }
             None => Err(ZiaError::CannotExpandFurther),
         }
     }
@@ -384,21 +442,34 @@ where
             None => Err(ZiaError::UnusedSymbol),
         }
     }
-    fn determine_reduction_truth(&self, deltas: &[Self::Delta], left: &Rc<Self::S>, right: &Rc<Self::S>) -> Option<bool> {
+    fn determine_reduction_truth(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<Self::S>,
+        right: &Rc<Self::S>,
+    ) -> Option<bool> {
         if left == right {
             Some(false)
         } else {
-            self.determine_evidence_of_reduction(deltas, left, right).or_else(|| 
-                self.determine_evidence_of_reduction(deltas, right, left).map(|x| !x)
-            )
+            self.determine_evidence_of_reduction(deltas, left, right)
+                .or_else(|| {
+                    self.determine_evidence_of_reduction(deltas, right, left)
+                        .map(|x| !x)
+                })
         }
     }
-    fn determine_evidence_of_reduction(&self, deltas: &[Self::Delta], left: &Rc<Self::S>, right: &Rc<Self::S>) -> Option<bool> {
-        self.reduce(deltas, left).and_then(|reduced_left| if &reduced_left == right {
-            Some(true)
-        } else {
-            dbg!("Left reduces but not to right");
-            self.determine_evidence_of_reduction(deltas, &reduced_left, right)
+    fn determine_evidence_of_reduction(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<Self::S>,
+        right: &Rc<Self::S>,
+    ) -> Option<bool> {
+        self.reduce(deltas, left).and_then(|reduced_left| {
+            if &reduced_left == right {
+                Some(true)
+            } else {
+                self.determine_evidence_of_reduction(deltas, &reduced_left, right)
+            }
         })
     }
 }
@@ -422,7 +493,8 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug + Clone,
+        + Debug
+        + Clone,
     S::S: Container
         + Pair<S::S>
         + Clone
@@ -453,13 +525,19 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug + Clone,
+        + Debug
+        + Clone,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
     Self::S: Pair<Self::S> + Container,
     Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(&self, deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn execute_definition(
+        &self,
+        deltas: Vec<Self::Delta>,
+        new: &Self::S,
+        old: &Self::S,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
@@ -467,40 +545,57 @@ where
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, mut deltas: Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn define(
+        &self,
+        mut deltas: Vec<Self::Delta>,
+        new: &Self::S,
+        old: &Self::S,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
                 (None, Some(b), None) => self.relabel(deltas, b, &new.to_string()),
-                (None, Some(b), Some(_)) => if self.get_label(&deltas, b).is_none() {
-                    self.label(&mut deltas, b, &new.to_string())?;
-                    Ok(deltas)
-                } else {
-                    self.relabel(deltas, b, &new.to_string())
-                },
+                (None, Some(b), Some(_)) => {
+                    if self.get_label(&deltas, b).is_none() {
+                        self.label(&mut deltas, b, &new.to_string())?;
+                        Ok(deltas)
+                    } else {
+                        self.relabel(deltas, b, &new.to_string())
+                    }
+                }
                 (None, None, Some((ref left, ref right))) => {
                     self.define_new_syntax(deltas, new.to_string(), left, right)
                 }
-                (Some(a), Some(b), None) => if a == b {
-                    self.cleanly_delete_definition(deltas, a)
-                } else {
-                    Err(ZiaError::DefinitionCollision)
-                },
-                (Some(a), Some(b), Some(_)) => if a == b {
-                    Err(ZiaError::RedundantDefinition)
-                } else {
-                    Err(ZiaError::DefinitionCollision)
-                },
+                (Some(a), Some(b), None) => {
+                    if a == b {
+                        self.cleanly_delete_definition(deltas, a)
+                    } else {
+                        Err(ZiaError::DefinitionCollision)
+                    }
+                }
+                (Some(a), Some(b), Some(_)) => {
+                    if a == b {
+                        Err(ZiaError::RedundantDefinition)
+                    } else {
+                        Err(ZiaError::DefinitionCollision)
+                    }
+                }
                 (Some(a), None, Some((ref left, ref right))) => {
                     self.redefine(deltas, a, left, right)
-                },
+                }
             }
         }
     }
     /// Defining a concept as a composition whose syntax is given by `left` and `right`. If the concept already has a definition, then the concepts of this composition are relabelled with `left` and `right`. Otherwise new concepts are made from `left` and `right` to define the concept.
-    fn redefine(&self, deltas: Vec<Self::Delta>, concept: usize, left: &Self::S, right: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn redefine(
+        &self,
+        deltas: Vec<Self::Delta>,
+        concept: usize,
+        left: &Self::S,
+        right: &Self::S,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         if let Some((left_concept, right_concept)) =
             self.read_concept(&deltas, concept).get_definition()
         {
@@ -514,7 +609,12 @@ where
         }
     }
     /// Unlabels a concept and gives it a new label.
-    fn relabel(&self, previous_deltas: Vec<Self::Delta>, concept: usize, new_label: &str) -> ZiaResult<Vec<Self::Delta>> {
+    fn relabel(
+        &self,
+        previous_deltas: Vec<Self::Delta>,
+        concept: usize,
+        new_label: &str,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         let mut deltas = self.unlabel(previous_deltas, concept)?;
         self.label(&mut deltas, concept, new_label)?;
         Ok(deltas)
@@ -556,7 +656,8 @@ where
         + GetDefinition
         + GetDefinitionOf
         + MaybeString
-        + Debug + Clone,
+        + Debug
+        + Clone,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
     S::S: Pair<S::S> + Container,
     S::Delta: Clone + Debug,

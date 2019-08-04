@@ -18,8 +18,8 @@ use delta::Delta;
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
 use writing::{
-    MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf,
-    SetAsDefinitionOfDelta, MakeReduceFromDelta,
+    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
+    SetAsDefinitionOf, SetAsDefinitionOfDelta,
 };
 
 #[derive(Default, Clone, Debug)]

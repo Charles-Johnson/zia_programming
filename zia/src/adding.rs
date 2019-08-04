@@ -26,8 +26,7 @@ use std::{fmt, rc::Rc};
 use translating::SyntaxFinder;
 use writing::{
     DeleteReduction, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction, InsertDefinition,
-    MakeReduceFrom, MaybeConcept, SetAsDefinitionOf,
-    SetDefinition, SetReduction, UpdateReduction,
+    MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
 };
 
 pub trait ExecuteReduction<T>
@@ -44,11 +43,17 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt + Clone,
+        + FindWhatReducesToIt
+        + Clone,
     Self::S: Container + PartialEq + DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
 {
-    fn execute_reduction(&self, deltas: Vec<Self::Delta>, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<Vec<Self::Delta>> {
+    fn execute_reduction(
+        &self,
+        deltas: Vec<Self::Delta>,
+        syntax: &Self::S,
+        normal_form: &Self::S,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
@@ -76,7 +81,8 @@ where
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt + Clone,
+        + FindWhatReducesToIt
+        + Clone,
     S::S: Container + PartialEq<S::S> + DisplayJoint,
     S::Delta: Clone + fmt::Debug,
 {
@@ -117,7 +123,11 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&self, deltas: Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    fn concept_from_ast(
+        &self,
+        deltas: Vec<Self::Delta>,
+        ast: &Self::S,
+    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         if let Some(c) = ast.get_concept() {
             Ok((deltas, c))
         } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
@@ -155,7 +165,8 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt + Clone,
+        + FindWhatReducesToIt
+        + Clone,
     Self::Delta: Clone + fmt::Debug,
 {
     fn new() -> Self {
@@ -181,7 +192,8 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt + Clone,
+        + FindWhatReducesToIt
+        + Clone,
     Self::Delta: Clone + fmt::Debug,
 {
 }
@@ -199,7 +211,8 @@ where
         + GetReduction
         + MaybeString
         + From<Self::C>
-        + From<Self::A> + Clone,
+        + From<Self::A>
+        + Clone,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
     Self::Delta: Clone + fmt::Debug + Sized,
 {
@@ -210,16 +223,23 @@ where
         self.update_reduction(deltas, definition, string_id)?;
         Ok(())
     }
-    fn new_labelled_default(&self, mut deltas: Vec<Self::Delta>, string: &str) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    fn new_labelled_default(
+        &self,
+        mut deltas: Vec<Self::Delta>,
+        string: &str,
+    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
         let new_default = self.new_default::<Self::A>(&mut deltas);
         self.label(&mut deltas, new_default, string)?;
         Ok((deltas, new_default))
     }
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let mut deltas = vec![];
-        let concrete_constructor = |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
+        let concrete_constructor =
+            |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
         let concepts = Self::repeat(&mut deltas, concrete_constructor, 6);
-        let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| self.label(local_deltas, concept, string);
+        let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| {
+            self.label(local_deltas, concept, string)
+        };
         let labels = vec!["label_of", ":=", "->", "let", "true", "false"];
         Self::multiply(&mut deltas, label, concepts, labels)?;
         Ok(deltas)
@@ -233,12 +253,18 @@ where
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
-        + GetDefinitionOf + Clone,
+        + GetDefinitionOf
+        + Clone,
     Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
     Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&self, deltas: &mut Vec<Self::Delta>, lefthand: usize, righthand: usize) -> ZiaResult<usize> {
+    fn find_or_insert_definition(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        lefthand: usize,
+        righthand: usize,
+    ) -> ZiaResult<usize> {
         let pair = self.find_definition(deltas, lefthand, righthand);
         match pair {
             None => {

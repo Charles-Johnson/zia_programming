@@ -54,7 +54,11 @@ where
                 self.to_ast::<U>(deltas, con)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
-            self.combine(deltas, &self.expand(deltas, left), &self.expand(deltas, right))
+            self.combine(
+                deltas,
+                &self.expand(deltas, left),
+                &self.expand(deltas, right),
+            )
         } else {
             ast.clone()
         }
@@ -92,9 +96,15 @@ where
     ) -> Option<Rc<U>> {
         match ast.get_concept() {
             Some(c) => self.reduce_concept::<U>(deltas, c),
-            None => ast.get_expansion().and_then(|(ref left, ref right)|
-                self.match_left_right::<U>(deltas, self.reduce(deltas, left), self.reduce(deltas, right), left, right)
-            ),
+            None => ast.get_expansion().and_then(|(ref left, ref right)| {
+                self.match_left_right::<U>(
+                    deltas,
+                    self.reduce(deltas, left),
+                    self.reduce(deltas, right),
+                    left,
+                    right,
+                )
+            }),
         }
     }
     /// Returns the syntax for the reduction of a concept.
@@ -105,19 +115,24 @@ where
         deltas: &[Self::Delta],
         concept: usize,
     ) -> Option<Rc<U>> {
-        self.read_concept(deltas, concept).get_reduction().map(|n| self.to_ast::<U>(deltas, n)).or_else(|| {
-            self.read_concept(deltas, concept).get_definition().and_then(|(left, right)| {
-                let left_result = self.reduce_concept::<U>(deltas, left);
-                let right_result = self.reduce_concept::<U>(deltas, right);
-                self.match_left_right::<U>(
-                    deltas,
-                    left_result,
-                    right_result,
-                    &self.to_ast::<U>(deltas, left),
-                    &self.to_ast::<U>(deltas, right),
-                )
+        self.read_concept(deltas, concept)
+            .get_reduction()
+            .map(|n| self.to_ast::<U>(deltas, n))
+            .or_else(|| {
+                self.read_concept(deltas, concept)
+                    .get_definition()
+                    .and_then(|(left, right)| {
+                        let left_result = self.reduce_concept::<U>(deltas, left);
+                        let right_result = self.reduce_concept::<U>(deltas, right);
+                        self.match_left_right::<U>(
+                            deltas,
+                            left_result,
+                            right_result,
+                            &self.to_ast::<U>(deltas, left),
+                            &self.to_ast::<U>(deltas, right),
+                        )
+                    })
             })
-        })
     }
     /// Returns the syntax for a concept.
     fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint>(
@@ -128,10 +143,15 @@ where
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(U::from((s, Some(concept)))),
             None => {
-                let (left, right) = self.read_concept(deltas, concept).get_definition().expect(
-                    "Unlabelled concept with no definition"
-                );
-                self.combine(deltas, &self.to_ast::<U>(deltas, left), &self.to_ast::<U>(deltas, right))
+                let (left, right) = self
+                    .read_concept(deltas, concept)
+                    .get_definition()
+                    .expect("Unlabelled concept with no definition");
+                self.combine(
+                    deltas,
+                    &self.to_ast::<U>(deltas, left),
+                    &self.to_ast::<U>(deltas, right),
+                )
             }
         }
     }
@@ -146,8 +166,12 @@ where
     ) -> Option<Rc<U>> {
         match (left, right) {
             (None, None) => None,
-            (Some(new_left), None) => Some(self.contract_pair::<U>(deltas, &new_left, original_right)),
-            (None, Some(new_right)) => Some(self.contract_pair::<U>(deltas, original_left, &new_right)),
+            (Some(new_left), None) => {
+                Some(self.contract_pair::<U>(deltas, &new_left, original_right))
+            }
+            (None, Some(new_right)) => {
+                Some(self.contract_pair::<U>(deltas, original_left, &new_right))
+            }
             (Some(new_left), Some(new_right)) => {
                 Some(self.contract_pair::<U>(deltas, &new_left, &new_right))
             }
@@ -165,7 +189,9 @@ where
             (Some(lc), Some(rc)) => {
                 let maydef = self.find_definition(deltas, lc, rc);
                 (
-                    maydef.and_then(|def| self.get_label(deltas, def)).unwrap_or_else(display_joint),
+                    maydef
+                        .and_then(|def| self.get_label(deltas, def))
+                        .unwrap_or_else(display_joint),
                     maydef,
                 )
             }
@@ -189,12 +215,13 @@ where
 {
     fn get_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<String> {
         match self.get_concept_of_label(deltas, concept) {
-            None => self.read_concept(deltas, concept).get_reduction().and_then(|r|
-                self.get_label(deltas, r)
-            ),
-            Some(d) => self.get_normal_form(deltas, d).and_then(|n|
-                self.read_concept(deltas, n).get_string()
-            ),
+            None => self
+                .read_concept(deltas, concept)
+                .get_reduction()
+                .and_then(|r| self.get_label(deltas, r)),
+            Some(d) => self
+                .get_normal_form(deltas, d)
+                .and_then(|n| self.read_concept(deltas, n).get_string()),
         }
     }
 }
@@ -276,9 +303,9 @@ where
     Self: ConceptReader<T> + Delta,
 {
     fn get_normal_form(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
-        self.read_concept(deltas, concept).get_reduction().map(|n|
-            self.get_normal_form(deltas, n).unwrap_or(n)
-        )
+        self.read_concept(deltas, concept)
+            .get_reduction()
+            .map(|n| self.get_normal_form(deltas, n).unwrap_or(n))
     }
 }
 
@@ -295,9 +322,18 @@ where
     Self: ConceptReader<T>,
 {
     fn get_concept_of_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
-        self.read_concept(deltas, concept).get_righthand_of().iter().filter(|candidate|
-            self.read_concept(deltas, **candidate).get_definition().expect("Candidate should have a definition!").0 == LABEL
-        ).nth(0).cloned()
+        self.read_concept(deltas, concept)
+            .get_righthand_of()
+            .iter()
+            .filter(|candidate| {
+                self.read_concept(deltas, **candidate)
+                    .get_definition()
+                    .expect("Candidate should have a definition!")
+                    .0
+                    == LABEL
+            })
+            .nth(0)
+            .cloned()
     }
 }
 
@@ -315,8 +351,14 @@ where
 {
     fn is_disconnected(&self, deltas: &[Self::Delta], concept: usize) -> bool {
         self.read_concept(deltas, concept).get_reduction().is_none()
-            && self.read_concept(deltas, concept).get_definition().is_none()
-            && self.read_concept(deltas, concept).get_lefthand_of().is_empty()
+            && self
+                .read_concept(deltas, concept)
+                .get_definition()
+                .is_none()
+            && self
+                .read_concept(deltas, concept)
+                .get_lefthand_of()
+                .is_empty()
             && self.righthand_of_without_label_is_empty(deltas, concept)
             && self
                 .read_concept(deltas, concept)
@@ -324,11 +366,16 @@ where
                 .is_empty()
     }
     fn righthand_of_without_label_is_empty(&self, deltas: &[Self::Delta], con: usize) -> bool {
-        self.read_concept(deltas, con).get_righthand_of().iter().filter_map(|concept|
-            self.read_concept(deltas, *concept).get_definition().filter(|(left, _)|
-                *left != LABEL
-            )
-        ).nth(0).is_none()
+        self.read_concept(deltas, con)
+            .get_righthand_of()
+            .iter()
+            .filter_map(|concept| {
+                self.read_concept(deltas, *concept)
+                    .get_definition()
+                    .filter(|(left, _)| *left != LABEL)
+            })
+            .nth(0)
+            .is_none()
     }
 }
 
@@ -344,14 +391,20 @@ where
     T: GetDefinitionOf,
     Self: ConceptReader<T>,
 {
-    fn find_definition(&self, deltas: &[Self::Delta], lefthand: usize, righthand: usize) -> Option<usize> {
+    fn find_definition(
+        &self,
+        deltas: &[Self::Delta],
+        lefthand: usize,
+        righthand: usize,
+    ) -> Option<usize> {
         let has_lefthand = self.read_concept(deltas, lefthand).get_lefthand_of();
         let has_righthand = self.read_concept(deltas, righthand).get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
-        candidates.next().map(|index| candidates.next().map_or(
-            *index,
-            |_| panic!("Multiple definitions with the same lefthand and righthand pair exist.")
-        ))
+        candidates.next().map(|index| {
+            candidates.next().map_or(*index, |_| {
+                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
+            })
+        })
     }
 }
 

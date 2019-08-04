@@ -38,7 +38,11 @@ where
         + MaybeString
         + Debug,
 {
-    fn cleanly_delete_definition(&self, deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
+    fn cleanly_delete_definition(
+        &self,
+        deltas: Vec<Self::Delta>,
+        concept: usize,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         match self.read_concept(&deltas, concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
@@ -49,12 +53,16 @@ where
             }
         }
     }
-    fn try_delete_concept(&self, previous_deltas: Vec<Self::Delta>, concept: usize) -> ZiaResult<Vec<Self::Delta>> {
+    fn try_delete_concept(
+        &self,
+        previous_deltas: Vec<Self::Delta>,
+        concept: usize,
+    ) -> ZiaResult<Vec<Self::Delta>> {
         Ok(if self.is_disconnected(&previous_deltas, concept) {
             let initial_deltas = self.unlabel(previous_deltas, concept)?;
             self.remove_concept(initial_deltas, concept)
         } else {
-            vec!()
+            vec![]
         })
     }
 }
@@ -99,7 +107,7 @@ pub trait BlindConceptRemover {
     fn blindly_remove_concept(&mut self, usize);
 }
 
-pub trait BlindConceptRemoverDeltas 
+pub trait BlindConceptRemoverDeltas
 where
     Self: Delta,
 {
@@ -110,7 +118,7 @@ pub trait StringRemover {
     fn remove_string(&mut self, &str);
 }
 
-pub trait StringRemoverDeltas 
+pub trait StringRemoverDeltas
 where
     Self: Delta,
 {

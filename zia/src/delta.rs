@@ -27,19 +27,30 @@ pub trait Delta {
         }
     }
     // Repeat mutation, f, n times on self and return vector of n results
-    fn repeat<F>(deltas: &mut Vec<Self::Delta>, mut f: F, n: usize) -> Vec<usize> 
+    fn repeat<F>(deltas: &mut Vec<Self::Delta>, mut f: F, n: usize) -> Vec<usize>
     where
         F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize,
     {
         let mut counter = 0;
-        from_fn(|| if counter < n {counter += 1; Some(f(deltas))} else {None}).collect()
+        from_fn(|| {
+            if counter < n {
+                counter += 1;
+                Some(f(deltas))
+            } else {
+                None
+            }
+        })
+        .collect()
     }
-    fn multiply<F>(deltas: &mut Vec<Self::Delta>, mut f: F, ns: Vec<usize>, ms: Vec<&str>) -> ZiaResult<()>
+    fn multiply<F>(
+        deltas: &mut Vec<Self::Delta>,
+        mut f: F,
+        ns: Vec<usize>,
+        ms: Vec<&str>,
+    ) -> ZiaResult<()>
     where
         F: for<'a> FnMut(&'a mut Vec<Self::Delta>, usize, &str) -> ZiaResult<()>,
     {
-        ns.iter().zip(ms).try_for_each(|(n, m)| {
-            f(deltas, *n, m)
-        })
+        ns.iter().zip(ms).try_for_each(|(n, m)| f(deltas, *n, m))
     }
 }
