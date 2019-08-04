@@ -81,7 +81,8 @@
 //! assert_eq!(context.execute("let ((c d) (-> ((c d) e))"), ZiaError::ExpandingReduction.to_string());
 //! 
 //! // Determine the truth of a reduction
-//! assert_eq!(context.execute("a (-> d)"), "true")
+//! assert_eq!(context.execute("a (-> d)"), "true");
+//! assert_eq!(context.execute("d (-> a)"), "false");
 //! ```
 
 #[macro_use]
@@ -303,7 +304,11 @@ where
             ).unwrap_or_else(|| right.to_string()) + "'"))),
             _ => right.get_expansion().and_then(
                 |(rightleft, rightright)| rightleft.get_concept().and_then(|rlc| match rlc {
-                    REDUCTION => self.determine_reduction_truth(&deltas, left, &rightright),
+                    REDUCTION => self.determine_reduction_truth(&deltas, left, &rightright).map(|x| if x {
+                        self.get_label(&deltas, TRUE).expect("TRUE is unlabelled")
+                    } else {
+                        self.get_label(&deltas, FALSE).expect("FALSE is unlabelled")
+                    }),
                     _ => None, 
                 }).map(|s| Ok((deltas.clone(), s)))
             ),
@@ -374,16 +379,12 @@ where
             None => Err(ZiaError::UnusedSymbol),
         }
     }
-    fn determine_reduction_truth(&self, deltas: &[Self::Delta], left: &Rc<Self::S>, right: &Rc<Self::S>) -> Option<String> {
+    fn determine_reduction_truth(&self, deltas: &[Self::Delta], left: &Rc<Self::S>, right: &Rc<Self::S>) -> Option<bool> {
         self.reduce(deltas, left).and_then(|reduced_left| if &reduced_left == right {
-            Some(self.get_label(deltas, TRUE).expect("TRUE concept is unlabelled"))
+            Some(true)
         } else {
-            self.determine_reduction_truth(deltas, &reduced_left, right).or_else(|| self.reduce(deltas, right).and_then(|reduced_right| if &reduced_right == left {
-                Some(self.get_label(deltas, FALSE).expect("FALSE concept is unlabelled"))
-            } else {
-                self.determine_reduction_truth(deltas, left, &reduced_right)
-            }))
-        })
+            self.determine_reduction_truth(deltas, &reduced_left, right)
+        }).or_else(|| self.determine_reduction_truth(deltas, right, left).map(|x| !x))
     }
 }
 
