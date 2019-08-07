@@ -37,32 +37,34 @@ where
         + GetReduction
         + MaybeString
         + Debug,
+    Self::Delta: Clone,
 {
     fn cleanly_delete_definition(
         &self,
-        deltas: Vec<Self::Delta>,
+        deltas: &mut Vec<Self::Delta>,
         concept: usize,
-    ) -> ZiaResult<Vec<Self::Delta>> {
-        match self.read_concept(&deltas, concept).get_definition() {
+    ) -> ZiaResult<()> {
+        match self.read_concept(deltas, concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
-                let deltas0 = self.delete_definition(deltas, concept, left, right);
-                let deltas1 = self.try_delete_concept(deltas0, concept)?;
-                let deltas2 = self.try_delete_concept(deltas1, left)?;
-                self.try_delete_concept(deltas2, right)
+                let extra_deltas = self.delete_definition(deltas, concept, left, right);
+                deltas.extend(extra_deltas.iter().cloned());
+                self.try_delete_concept(deltas, concept)?;
+                self.try_delete_concept(deltas, left)?;
+                self.try_delete_concept(deltas, right)
             }
         }
     }
     fn try_delete_concept(
         &self,
-        previous_deltas: Vec<Self::Delta>,
+        previous_deltas: &mut Vec<Self::Delta>,
         concept: usize,
-    ) -> ZiaResult<Vec<Self::Delta>> {
-        Ok(if self.is_disconnected(&previous_deltas, concept) {
-            let initial_deltas = self.unlabel(previous_deltas, concept)?;
-            self.remove_concept(initial_deltas, concept)
+    ) -> ZiaResult<()> {
+        Ok(if self.is_disconnected(previous_deltas, concept) {
+            self.unlabel(previous_deltas, concept)?;
+            self.remove_concept(previous_deltas, concept)
         } else {
-            previous_deltas
+            ()
         })
     }
 }
@@ -80,6 +82,7 @@ where
         + GetReduction
         + MaybeString
         + Debug,
+    S::Delta: Clone,
 {
 }
 
@@ -88,9 +91,9 @@ where
     Self: BlindConceptRemoverDeltas + ConceptReader<T> + StringRemoverDeltas,
     T: MaybeString,
 {
-    fn remove_concept(&self, mut deltas: Vec<Self::Delta>, concept: usize) -> Vec<Self::Delta> {
-        if let Some(ref s) = self.read_concept(&deltas, concept).get_string() {
-            deltas = self.remove_string_deltas(deltas, s);
+    fn remove_concept(&self, deltas: &mut Vec<Self::Delta>, concept: usize) {
+        if let Some(ref s) = self.read_concept(deltas, concept).get_string() {
+            self.remove_string_deltas(deltas, s);
         }
         self.blindly_remove_concept_deltas(deltas, concept)
     }
@@ -111,7 +114,7 @@ pub trait BlindConceptRemoverDeltas
 where
     Self: Delta,
 {
-    fn blindly_remove_concept_deltas(&self, Vec<Self::Delta>, usize) -> Vec<Self::Delta>;
+    fn blindly_remove_concept_deltas(&self, &mut Vec<Self::Delta>, usize);
 }
 
 pub trait StringRemover {
@@ -122,5 +125,5 @@ pub trait StringRemoverDeltas
 where
     Self: Delta,
 {
-    fn remove_string_deltas(&self, deltas: Vec<Self::Delta>, &str) -> Vec<Self::Delta>;
+    fn remove_string_deltas(&self, &mut Vec<Self::Delta>, &str);
 }

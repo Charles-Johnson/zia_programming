@@ -250,9 +250,9 @@ where
 {
     fn blindly_remove_concept_deltas(
         &self,
-        mut deltas: Vec<ContextDelta<T>>,
+        deltas: &mut Vec<ContextDelta<T>>,
         id: usize,
-    ) -> Vec<ContextDelta<T>> {
+    ) {
         if deltas.iter().fold(false, |removed, delta| match delta {
             ContextDelta::Concept(concept, ConceptDelta::Insert(_)) if *concept == id => false,
             ContextDelta::Concept(concept, ConceptDelta::Remove) if *concept == id => true,
@@ -261,7 +261,6 @@ where
             panic!("Concept will be already removed!");
         } else {
             deltas.push(ContextDelta::Concept(id, ConceptDelta::Remove));
-            deltas
         }
     }
 }
@@ -288,9 +287,9 @@ where
 {
     fn remove_string_deltas(
         &self,
-        mut deltas: Vec<ContextDelta<T>>,
+        deltas: &mut Vec<ContextDelta<T>>,
         string: &str,
-    ) -> Vec<ContextDelta<T>> {
+    ) {
         if deltas
             .iter()
             .fold(true, |string_may_exist, delta| match delta {
@@ -303,7 +302,6 @@ where
                 string.to_string(),
                 StringDelta::Remove,
             ));
-            deltas
         } else {
             panic!("string already removed");
         }
@@ -426,15 +424,15 @@ where
 {
     fn remove_concept_reduction(
         &self,
-        mut deltas: Vec<ContextDelta<T>>,
+        deltas: &[ContextDelta<T>],
         concept: usize,
         reduction: usize,
-    ) -> Vec<ContextDelta<T>> {
-        let mut edited_concept: Option<T> = Some(self.read_concept(&deltas, concept));
-        let mut edited_reduction: Option<T> = Some(self.read_concept(&deltas, reduction));
+    ) -> [ContextDelta<T>; 2] {
+        let mut edited_concept: Option<T> = Some(self.read_concept(deltas, concept));
+        let mut edited_reduction: Option<T> = Some(self.read_concept(deltas, reduction));
         let mut concept_deltas = Vec::<T::Delta>::new();
         let mut reduction_deltas = Vec::<T::Delta>::new();
-        for delta in &deltas {
+        for delta in deltas {
             match delta {
                 ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == concept => {
                     concept_deltas.push(d.clone())
@@ -459,23 +457,24 @@ where
                 _ => (),
             };
         }
-        deltas.push(ContextDelta::Concept(
-            concept,
-            ConceptDelta::Update(
-                edited_concept
-                    .expect("Concept previously removed!")
-                    .make_reduce_to_none_delta(&concept_deltas),
+        [
+            ContextDelta::Concept(
+                concept,
+                ConceptDelta::Update(
+                    edited_concept
+                        .expect("Concept previously removed!")
+                        .make_reduce_to_none_delta(&concept_deltas),
+                ),
             ),
-        ));
-        deltas.push(ContextDelta::Concept(
-            reduction,
-            ConceptDelta::Update(
-                edited_reduction
-                    .expect("Reduction previously removed!")
-                    .no_longer_reduces_from_delta(&reduction_deltas, concept),
-            ),
-        ));
-        deltas
+            ContextDelta::Concept(
+                reduction,
+                ConceptDelta::Update(
+                    edited_reduction
+                        .expect("Reduction previously removed!")
+                        .no_longer_reduces_from_delta(&reduction_deltas, concept),
+                ),
+            )
+        ]
     }
 }
 
@@ -486,18 +485,18 @@ where
 {
     fn delete_definition(
         &self,
-        mut deltas: Vec<Self::Delta>,
+        deltas: &[Self::Delta],
         concept: usize,
         left: usize,
         right: usize,
-    ) -> Vec<Self::Delta> {
-        let mut edited_concept: Option<T> = Some(self.read_concept(&deltas, concept));
-        let mut edited_left: Option<T> = Some(self.read_concept(&deltas, left));
-        let mut edited_right: Option<T> = Some(self.read_concept(&deltas, right));
+    ) -> [Self::Delta; 3] {
+        let mut edited_concept: Option<T> = Some(self.read_concept(deltas, concept));
+        let mut edited_left: Option<T> = Some(self.read_concept(deltas, left));
+        let mut edited_right: Option<T> = Some(self.read_concept(deltas, right));
         let mut concept_deltas = Vec::<T::Delta>::new();
         let mut left_deltas = Vec::<T::Delta>::new();
         let mut right_deltas = Vec::<T::Delta>::new();
-        for delta in &deltas {
+        for delta in deltas {
             match delta {
                 ContextDelta::Concept(c, ConceptDelta::Update(d)) if *c == concept => {
                     concept_deltas.push(d.clone())
@@ -532,30 +531,31 @@ where
                 _ => (),
             };
         }
-        deltas.push(ContextDelta::Concept(
-            concept,
-            ConceptDelta::Update(
-                edited_concept
-                    .expect("Concept previously removed!")
-                    .remove_definition_delta(concept_deltas),
+        [
+            ContextDelta::Concept(
+                concept,
+                ConceptDelta::Update(
+                    edited_concept
+                        .expect("Concept previously removed!")
+                        .remove_definition_delta(&concept_deltas),
+                ),
             ),
-        ));
-        deltas.push(ContextDelta::Concept(
-            left,
-            ConceptDelta::Update(
-                edited_left
-                    .expect("Left previously removed!")
-                    .remove_as_lefthand_of_delta(left_deltas, concept),
+            ContextDelta::Concept(
+                left,
+                ConceptDelta::Update(
+                    edited_left
+                        .expect("Left previously removed!")
+                        .remove_as_lefthand_of_delta(&left_deltas, concept),
+                ),
             ),
-        ));
-        deltas.push(ContextDelta::Concept(
-            right,
-            ConceptDelta::Update(
-                edited_right
-                    .expect("Right previously removed!")
-                    .remove_as_righthand_of_delta(right_deltas, concept),
-            ),
-        ));
-        deltas
+            ContextDelta::Concept(
+                right,
+                ConceptDelta::Update(
+                    edited_right
+                        .expect("Right previously removed!")
+                        .remove_as_righthand_of_delta(&right_deltas, concept),
+                ),
+            )
+        ]
     }
 }

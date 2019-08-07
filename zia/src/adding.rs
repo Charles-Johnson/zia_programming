@@ -50,19 +50,18 @@ where
 {
     fn execute_reduction(
         &self,
-        deltas: Vec<Self::Delta>,
+        deltas: &mut Vec<Self::Delta>,
         syntax: &Self::S,
         normal_form: &Self::S,
-    ) -> ZiaResult<Vec<Self::Delta>> {
+    ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
             self.try_removing_reduction::<Self::S>(deltas, syntax)
         } else {
-            let (deltas1, syntax_concept) = self.concept_from_ast(deltas, syntax)?;
-            let (mut deltas2, normal_form_concept) = self.concept_from_ast(deltas1, normal_form)?;
-            self.update_reduction(&mut deltas2, syntax_concept, normal_form_concept)?;
-            Ok(deltas2)
+            let syntax_concept = self.concept_from_ast(deltas, syntax)?;
+            let normal_form_concept = self.concept_from_ast(deltas, normal_form)?;
+            self.update_reduction(deltas, syntax_concept, normal_form_concept)
         }
     }
 }
@@ -125,25 +124,25 @@ where
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
     fn concept_from_ast(
         &self,
-        deltas: Vec<Self::Delta>,
+        deltas: &mut Vec<Self::Delta>,
         ast: &Self::S,
-    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
+    ) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
-            Ok((deltas, c))
+            Ok(c)
         } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
-            Ok((deltas, c))
+            Ok(c)
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
                 None => self.new_labelled_default(deltas, string),
                 Some((ref left, ref right)) => {
-                    let (deltas1, leftc) = self.concept_from_ast(deltas, left)?;
-                    let (mut deltas2, rightc) = self.concept_from_ast(deltas1, right)?;
-                    let concept = self.find_or_insert_definition(&mut deltas2, leftc, rightc)?;
+                    let leftc = self.concept_from_ast(deltas, left)?;
+                    let rightc = self.concept_from_ast(deltas, right)?;
+                    let concept = self.find_or_insert_definition(deltas, leftc, rightc)?;
                     if !string.contains(' ') {
-                        self.label(&mut deltas2, concept, string)?;
+                        self.label(deltas, concept, string)?;
                     }
-                    Ok((deltas2, concept))
+                    Ok(concept)
                 }
             }
         }
@@ -225,12 +224,12 @@ where
     }
     fn new_labelled_default(
         &self,
-        mut deltas: Vec<Self::Delta>,
+        deltas: &mut Vec<Self::Delta>,
         string: &str,
-    ) -> ZiaResult<(Vec<Self::Delta>, usize)> {
-        let new_default = self.new_default::<Self::A>(&mut deltas);
-        self.label(&mut deltas, new_default, string)?;
-        Ok((deltas, new_default))
+    ) -> ZiaResult<usize> {
+        let new_default = self.new_default::<Self::A>(deltas);
+        self.label(deltas, new_default, string)?;
+        Ok(new_default)
     }
     fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
         let mut deltas = vec![];

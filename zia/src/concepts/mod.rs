@@ -278,7 +278,7 @@ impl RemoveReductionDelta for Concept {
 }
 
 impl RemoveDefinitionDelta for Concept {
-    fn remove_as_lefthand_of_delta(&self, deltas: Vec<Self::Delta>, concept: usize) -> Self::Delta {
+    fn remove_as_lefthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
         assert!(deltas
             .iter()
             .fold(true, |lefthand_of_concept, delta| match delta {
@@ -290,7 +290,7 @@ impl RemoveDefinitionDelta for Concept {
     }
     fn remove_as_righthand_of_delta(
         &self,
-        deltas: Vec<Self::Delta>,
+        deltas: &[Self::Delta],
         concept: usize,
     ) -> Self::Delta {
         assert!(deltas
@@ -302,7 +302,7 @@ impl RemoveDefinitionDelta for Concept {
             }));
         ConceptDelta::Common(CommonDelta::RemoveRight(concept))
     }
-    fn remove_definition_delta(&self, deltas: Vec<Self::Delta>) -> Self::Delta {
+    fn remove_definition_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
         assert!(deltas.iter().fold(true, |definition, delta| match delta {
             ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => false,
             ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => true,
