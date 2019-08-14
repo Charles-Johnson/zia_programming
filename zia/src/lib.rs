@@ -87,7 +87,12 @@
 //! // A concept never reduces to itself
 //! assert_eq!(context.execute("a (-> a)"), "false");
 //!
+//! // Cannot reduce a reduction expression between unrelated concepts
 //! assert_eq!(context.execute("d (-> f)"), "d (-> f)");
+//! 
+//! // Can ask whether a reduction is true or false
+//! assert_eq!(context.execute("(a (-> d)) (-> true)"), "true");
+//! assert_eq!(context.execute("(a (-> d)) (-> false)"), "false");
 //! ```
 
 #[macro_use]
@@ -439,36 +444,6 @@ where
             },
             None => Err(ZiaError::UnusedSymbol),
         }
-    }
-    fn determine_reduction_truth(
-        &self,
-        deltas: &[Self::Delta],
-        left: &Rc<Self::S>,
-        right: &Rc<Self::S>,
-    ) -> Option<bool> {
-        if left == right {
-            Some(false)
-        } else {
-            self.determine_evidence_of_reduction(deltas, left, right)
-                .or_else(|| {
-                    self.determine_evidence_of_reduction(deltas, right, left)
-                        .map(|x| !x)
-                })
-        }
-    }
-    fn determine_evidence_of_reduction(
-        &self,
-        deltas: &[Self::Delta],
-        left: &Rc<Self::S>,
-        right: &Rc<Self::S>,
-    ) -> Option<bool> {
-        self.reduce(deltas, left).and_then(|reduced_left| {
-            if &reduced_left == right {
-                Some(true)
-            } else {
-                self.determine_evidence_of_reduction(deltas, &reduced_left, right)
-            }
-        })
     }
 }
 

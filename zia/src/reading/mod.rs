@@ -81,6 +81,52 @@ where
             None => ast.clone(),
         }
     }
+    fn determine_reduction_truth<
+        U: PartialEq
+            + From<(String, Option<usize>)>
+            + MightExpand<U>
+            + Clone
+            + Pair<U>
+            + MaybeConcept
+            + DisplayJoint,
+    >(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<U>,
+        right: &Rc<U>,
+    ) -> Option<bool> {
+        if left == right {
+            Some(false)
+        } else {
+            self.determine_evidence_of_reduction(deltas, left, right)
+                .or_else(|| {
+                    self.determine_evidence_of_reduction(deltas, right, left)
+                        .map(|x| !x)
+                })
+        }
+    }
+    fn determine_evidence_of_reduction<
+        U: PartialEq
+            + From<(String, Option<usize>)>
+            + MightExpand<U>
+            + Clone
+            + Pair<U>
+            + MaybeConcept
+            + DisplayJoint,
+    >(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<U>,
+        right: &Rc<U>,
+    ) -> Option<bool> {
+        self.reduce(deltas, left).and_then(|reduced_left| {
+            if &reduced_left == right {
+                Some(true)
+            } else {
+                self.determine_evidence_of_reduction(deltas, &reduced_left, right)
+            }
+        })
+    }
     /// Reduces the syntax by using the reduction rules of associated concepts.
     fn reduce<
         U: From<(String, Option<usize>)>
