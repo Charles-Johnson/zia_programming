@@ -20,7 +20,7 @@ mod syntax;
 
 pub use self::concepts::*;
 pub use self::syntax::*;
-use constants::LABEL;
+use constants::{LABEL, TRUE, FALSE, REDUCTION};
 use delta::Delta;
 use std::{collections::HashSet, fmt, rc::Rc};
 
@@ -70,7 +70,8 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint,
+            + DisplayJoint
+            + PartialEq,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -134,7 +135,8 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint,
+            + DisplayJoint
+            + PartialEq,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -143,13 +145,28 @@ where
         match ast.get_concept() {
             Some(c) => self.reduce_concept::<U>(deltas, c),
             None => ast.get_expansion().and_then(|(ref left, ref right)| {
-                self.match_left_right::<U>(
+                right.get_expansion().and_then(|(rightleft, rightright)| {
+                    rightleft
+                        .get_concept()
+                        .and_then(|rlc| match rlc {
+                            REDUCTION => self
+                                .determine_reduction_truth(deltas, left, &rightright)
+                                .map(|x| {
+                                    if x {
+                                        Rc::new(U::from((self.get_label(deltas, TRUE).expect("TRUE is unlabelled"), Some(TRUE))))
+                                    } else {
+                                        Rc::new(U::from((self.get_label(deltas, FALSE).expect("FALSE is unlabelled"), Some(FALSE))))
+                                    }
+                                }),
+                            _ => None,
+                        })
+                }).or_else(||self.match_left_right::<U>(
                     deltas,
                     self.reduce(deltas, left),
                     self.reduce(deltas, right),
                     left,
                     right,
-                )
+                ))
             }),
         }
     }

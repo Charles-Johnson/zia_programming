@@ -92,7 +92,7 @@
 //! 
 //! // Can ask whether a reduction is true or false
 //! assert_eq!(context.execute("(a (-> d)) (-> true)"), "true");
-//! assert_eq!(context.execute("(a (-> d)) (-> false)"), "false");
+//! assert_eq!(context.execute("(d (-> a)) (-> false)"), "true");
 //! ```
 
 #[macro_use]
@@ -139,7 +139,7 @@ pub use adding::ContextMaker;
 use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
 use concepts::{AbstractPart, CommonPart, Concept};
-use constants::{DEFINE, FALSE, LABEL, LET, REDUCTION, TRUE};
+use constants::{DEFINE, LABEL, LET, REDUCTION};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
 use errors::{map_err_variant, ZiaResult};
@@ -340,23 +340,7 @@ where
                             .unwrap_or_else(|| right.to_string())
                         + "'",
                 )),
-                _ => right.get_expansion().and_then(|(rightleft, rightright)| {
-                    rightleft
-                        .get_concept()
-                        .and_then(|rlc| match rlc {
-                            REDUCTION => self
-                                .determine_reduction_truth(deltas, left, &rightright)
-                                .map(|x| {
-                                    if x {
-                                        self.get_label(deltas, TRUE).expect("TRUE is unlabelled")
-                                    } else {
-                                        self.get_label(deltas, FALSE).expect("FALSE is unlabelled")
-                                    }
-                                }),
-                            _ => None,
-                        })
-                        .map(|s| Ok(s))
-                }),
+                _ => None,
             })
             .unwrap_or_else(|| match right.get_concept() {
                 Some(c) if c == REDUCTION => self.try_reducing_then_call(deltas, &left),
