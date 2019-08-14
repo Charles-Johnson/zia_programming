@@ -40,6 +40,7 @@ impl Delta for AbstractPart {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum AbstractDelta {
     SetDefinition(usize, usize),
     RemoveDefinition,
@@ -72,6 +73,9 @@ impl AbstractPart {
     }
     pub fn make_reduce_to(&mut self, concept: usize) {
         self.reduces_to = Some(concept);
+    }
+    pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
+        AbstractDelta::SetReduction(concept)
     }
 }
 

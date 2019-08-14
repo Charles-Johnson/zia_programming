@@ -26,68 +26,64 @@ use std::{fmt, rc::Rc};
 use translating::SyntaxFinder;
 use writing::{
     DeleteReduction, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction, InsertDefinition,
-    MakeReduceFrom, MaybeConcept, NoLongerReducesFrom, RemoveReduction, SetAsDefinitionOf,
-    SetDefinition, SetReduction, UpdateReduction,
+    MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
 };
 
 pub trait ExecuteReduction<T>
 where
-    Self: ConceptMaker<T> + DeleteReduction<T> + Logger,
+    Self: ConceptMaker<T> + DeleteReduction<T>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
         + MakeReduceFrom
         + GetDefinitionOf
         + From<String>
-        + RemoveReduction
-        + NoLongerReducesFrom
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Clone,
     Self::S: Container + PartialEq + DisplayJoint,
+    Self::Delta: Clone + fmt::Debug,
 {
-    fn execute_reduction(&mut self, syntax: &Self::S, normal_form: &Self::S) -> ZiaResult<String> {
-        info!(
-            self.logger(),
-            "execute_reduction({}, {})",
-            syntax.display_joint(),
-            normal_form.display_joint()
-        );
+    fn execute_reduction(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        syntax: &Self::S,
+        normal_form: &Self::S,
+    ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            try!(self.try_removing_reduction::<Self::S>(syntax));
-            Ok("".to_string())
+            self.try_removing_reduction::<Self::S>(deltas, syntax)
         } else {
-            let syntax_concept = try!(self.concept_from_ast(syntax));
-            let normal_form_concept = try!(self.concept_from_ast(normal_form));
-            try!(self.update_reduction(syntax_concept, normal_form_concept));
-            Ok("".to_string())
+            let syntax_concept = self.concept_from_ast(deltas, syntax)?;
+            let normal_form_concept = self.concept_from_ast(deltas, normal_form)?;
+            self.update_reduction(deltas, syntax_concept, normal_form_concept)
         }
     }
 }
 
 impl<S, T> ExecuteReduction<T> for S
 where
-    S: ConceptMaker<T> + DeleteReduction<T> + Logger,
+    S: ConceptMaker<T> + DeleteReduction<T>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
-        + From<Self::C>
-        + From<Self::A>
+        + From<S::C>
+        + From<S::A>
         + From<String>
-        + RemoveReduction
-        + NoLongerReducesFrom
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
         + GetDefinition
         + MaybeString
-        + FindWhatReducesToIt,
-    Self::S: Container + PartialEq<Self::S> + DisplayJoint,
+        + FindWhatReducesToIt
+        + Clone,
+    S::S: Container + PartialEq<S::S> + DisplayJoint,
+    S::Delta: Clone + fmt::Debug,
 {
 }
 
@@ -119,54 +115,33 @@ where
         + SetAsDefinitionOf
         + MaybeString
         + GetReduction
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Clone,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::S: DisplayJoint,
+    Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&mut self, ast: &Self::S) -> ZiaResult<usize> {
+    fn concept_from_ast(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        ast: &Self::S,
+    ) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
-            info!(
-                self.logger(),
-                "concept_from_ast({}) -> Ok({})",
-                ast.display_joint(),
-                c
-            );
             Ok(c)
-        } else if let Some(c) = self.concept_from_label(&ast.display_joint()) {
-            info!(
-                self.logger(),
-                "concept_from_ast({}) -> Ok({})",
-                ast.display_joint(),
-                c
-            );
+        } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
             Ok(c)
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => {
-                    let new_concept = try!(self.new_labelled_default(string));
-                    info!(
-                        self.logger(),
-                        "concept_from_ast({}) -> Ok({})",
-                        ast.display_joint(),
-                        new_concept
-                    );
-                    Ok(new_concept)
-                }
+                None => self.new_labelled_default(deltas, string),
                 Some((ref left, ref right)) => {
-                    let mut leftc = try!(self.concept_from_ast(left));
-                    let mut rightc = try!(self.concept_from_ast(right));
-                    let concept = try!(self.find_or_insert_definition(leftc, rightc));
+                    let leftc = self.concept_from_ast(deltas, left)?;
+                    let rightc = self.concept_from_ast(deltas, right)?;
+                    let concept = self.find_or_insert_definition(deltas, leftc, rightc)?;
                     if !string.contains(' ') {
-                        try!(self.label(concept, string));
+                        self.label(deltas, concept, string)?;
                     }
-                    info!(
-                        self.logger(),
-                        "concept_from_ast({}) -> Ok({})",
-                        ast.display_joint(),
-                        concept
-                    );
                     Ok(concept)
                 }
             }
@@ -189,12 +164,15 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
     fn new() -> Self {
         let mut cont = Self::default();
-        cont.setup().unwrap();
-        info!(cont.logger(), "Setup a new context");
+        let deltas = cont.setup().unwrap();
+        cont.apply_all(&deltas);
+        info!(cont.logger(), "Setup a new context: {:?}", deltas);
         cont
     }
 }
@@ -213,7 +191,9 @@ where
         + SetDefinition
         + SetAsDefinitionOf
         + MaybeString
-        + FindWhatReducesToIt,
+        + FindWhatReducesToIt
+        + Clone,
+    Self::Delta: Clone + fmt::Debug,
 {
 }
 
@@ -230,38 +210,38 @@ where
         + GetReduction
         + MaybeString
         + From<Self::C>
-        + From<Self::A>,
+        + From<Self::A>
+        + Clone,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
+    Self::Delta: Clone + fmt::Debug + Sized,
 {
     type C: Default;
-    fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
-        let definition = try!(self.find_or_insert_definition(LABEL, concept));
-        let (string_id, deltas) = self.new_string(&[], string);
-        self.apply_all(&deltas);
-        self.update_reduction(definition, string_id)
+    fn label(&self, deltas: &mut Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<()> {
+        let definition = self.find_or_insert_definition(deltas, LABEL, concept)?;
+        let string_id = self.new_string(deltas, string);
+        self.update_reduction(deltas, definition, string_id)?;
+        Ok(())
     }
-    fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let (new_default, delta) = self.new_default::<Self::A>(&[]);
-        self.apply(&delta);
-        try!(self.label(new_default, string));
+    fn new_labelled_default(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        string: &str,
+    ) -> ZiaResult<usize> {
+        let new_default = self.new_default::<Self::A>(deltas);
+        self.label(deltas, new_default, string)?;
         Ok(new_default)
     }
-    fn setup(&mut self) -> ZiaResult<()> {
-        let mut deltas = Vec::<Self::Delta>::new();
-        deltas.reserve(4);
-        let (label_concept, delta1) = self.new_default::<Self::C>(&deltas);
-        deltas.push(delta1);
-        let (define_concept, delta2) = self.new_default::<Self::C>(&deltas);
-        deltas.push(delta2);
-        let (reduction_concept, delta3) = self.new_default::<Self::C>(&deltas);
-        deltas.push(delta3);
-        let (let_concept, delta4) = self.new_default::<Self::C>(&deltas);
-        deltas.push(delta4);
-        self.apply_all(&deltas);
-        try!(self.label(label_concept, "label_of"));
-        try!(self.label(define_concept, ":="));
-        try!(self.label(reduction_concept, "->"));
-        self.label(let_concept, "let")
+    fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
+        let mut deltas = vec![];
+        let concrete_constructor =
+            |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
+        let concepts = Self::repeat(&mut deltas, concrete_constructor, 6);
+        let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| {
+            self.label(local_deltas, concept, string)
+        };
+        let labels = vec!["label_of", ":=", "->", "let", "true", "false"];
+        Self::multiply(&mut deltas, label, concepts, labels)?;
+        Ok(deltas)
     }
 }
 
@@ -272,17 +252,23 @@ where
         + GetReduction
         + SetDefinition
         + SetAsDefinitionOf
-        + GetDefinitionOf,
+        + GetDefinitionOf
+        + Clone,
     Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
+    Self::Delta: Clone + fmt::Debug,
 {
     type A: Default;
-    fn find_or_insert_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<usize> {
-        let pair = self.find_definition(lefthand, righthand);
+    fn find_or_insert_definition(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        lefthand: usize,
+        righthand: usize,
+    ) -> ZiaResult<usize> {
+        let pair = self.find_definition(deltas, lefthand, righthand);
         match pair {
             None => {
-                let (definition, delta) = self.new_default::<Self::A>(&[]);
-                self.apply(&delta);
-                try!(self.insert_definition(definition, lefthand, righthand));
+                let definition = self.new_default::<Self::A>(deltas);
+                self.insert_definition(deltas, definition, lefthand, righthand)?;
                 Ok(definition)
             }
             Some(def) => Ok(def),
@@ -295,12 +281,13 @@ where
     T: From<String>,
     Self: ConceptAdderDelta<T> + StringAdderDelta,
 {
-    fn new_string(&self, deltas: &[Self::Delta], string: &str) -> (usize, Vec<Self::Delta>) {
+    fn new_string(&self, deltas: &mut Vec<Self::Delta>, string: &str) -> usize {
         let string_concept = string.to_string().into();
-        let (index, concept_delta) = self.add_concept_delta(deltas, string_concept);
+        let (delta, index) = self.add_concept_delta(deltas, string_concept);
+        deltas.push(delta);
         let string_delta = Self::add_string_delta(index, string);
-        let new_deltas = vec![concept_delta, string_delta];
-        (index, new_deltas)
+        deltas.push(string_delta);
+        index
     }
 }
 
@@ -315,9 +302,11 @@ pub trait DefaultMaker<T>
 where
     Self: ConceptAdderDelta<T>,
 {
-    fn new_default<V: Default + Into<T>>(&self, deltas: &[Self::Delta]) -> (usize, Self::Delta) {
+    fn new_default<V: Default + Into<T>>(&self, deltas: &mut Vec<Self::Delta>) -> usize {
         let concept: T = V::default().into();
-        self.add_concept_delta(deltas, concept)
+        let (delta, index) = self.add_concept_delta(deltas, concept);
+        deltas.push(delta);
+        index
     }
 }
 
@@ -338,7 +327,7 @@ pub trait ConceptAdderDelta<T>
 where
     Self: Delta,
 {
-    fn add_concept_delta(&self, &[Self::Delta], T) -> (usize, Self::Delta);
+    fn add_concept_delta(&self, &[Self::Delta], T) -> (Self::Delta, usize);
 }
 
 pub trait ConceptAdder<T> {

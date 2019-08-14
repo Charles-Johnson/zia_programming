@@ -15,6 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
     Combine, DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
@@ -31,33 +32,36 @@ where
         U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint,
     >(
         &self,
+        deltas: &[Self::Delta],
         s: &str,
     ) -> ZiaResult<Rc<U>> {
         let tokens: Vec<String> = parse_line(s);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token::<U>(&tokens[0]),
-            2 => self.ast_from_pair::<U>(&tokens[0], &tokens[1]),
+            1 => self.ast_from_token::<U>(deltas, &tokens[0]),
+            2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
             _ => Err(ZiaError::AmbiguousExpression),
         }
     }
     fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>>(
         &self,
+        deltas: &[Self::Delta],
         left: &str,
         right: &str,
     ) -> ZiaResult<Rc<U>> {
-        let lefthand = try!(self.ast_from_token(left));
-        let righthand = try!(self.ast_from_token(right));
-        Ok(self.combine(&lefthand, &righthand))
+        let lefthand = self.ast_from_token(deltas, left)?;
+        let righthand = self.ast_from_token(deltas, right)?;
+        Ok(self.combine(deltas, &lefthand, &righthand))
     }
     fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>>(
         &self,
+        deltas: &[Self::Delta],
         t: &str,
     ) -> ZiaResult<Rc<U>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression::<U>(t)
+            self.ast_from_expression::<U>(deltas, t)
         } else {
-            Ok(Rc::new(self.ast_from_symbol::<U>(t)))
+            Ok(Rc::new(self.ast_from_symbol::<U>(deltas, t)))
         }
     }
 }
@@ -118,14 +122,16 @@ where
     Self: StringConcept + Label<T>,
     T: FindWhatReducesToIt + GetDefinition,
 {
-    fn concept_from_label(&self, s: &str) -> Option<usize> {
-        match self.get_string_concept(s) {
-            None => None,
-            Some(c) => self.get_labellee(c),
-        }
+    fn concept_from_label(&self, deltas: &[Self::Delta], s: &str) -> Option<usize> {
+        self.get_string_concept(deltas, s)
+            .and_then(|c| self.get_labellee(deltas, c))
     }
-    fn ast_from_symbol<U: From<(String, Option<usize>)>>(&self, s: &str) -> U {
-        let concept_if_exists = self.concept_from_label(s);
+    fn ast_from_symbol<U: From<(String, Option<usize>)>>(
+        &self,
+        deltas: &[Self::Delta],
+        s: &str,
+    ) -> U {
+        let concept_if_exists = self.concept_from_label(deltas, s);
         U::from((s.to_string(), concept_if_exists))
     }
 }
@@ -137,6 +143,9 @@ where
 {
 }
 
-pub trait StringConcept {
-    fn get_string_concept(&self, &str) -> Option<usize>;
+pub trait StringConcept
+where
+    Self: Delta,
+{
+    fn get_string_concept(&self, &[Self::Delta], &str) -> Option<usize>;
 }

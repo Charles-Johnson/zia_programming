@@ -18,8 +18,23 @@ use std::{error::Error, fmt};
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
+pub fn map_err_variant<T, E, F>(
+    result: Result<T, E>,
+    error_variant: &E,
+    result_on_error: F,
+) -> Result<T, E>
+where
+    F: FnOnce() -> Result<T, E>,
+    E: PartialEq + Clone,
+{
+    match result {
+        Err(ref err) if err == error_variant => result_on_error(),
+        _ => result,
+    }
+}
+
 /// All the expected ways a Zia command could be invalid.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ZiaError {
     /// When specifying a reduction rule that already exists.
     RedundantReduction,

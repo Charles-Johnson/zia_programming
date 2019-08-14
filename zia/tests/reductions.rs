@@ -113,7 +113,7 @@ proptest! {
     #[test]
     fn change_reduction_rule(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
         // to prevent rendundant reductions
-        prop_assume!(a != b && b != c);
+        prop_assume!(a != b && b != c && c != d);
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, b, d);

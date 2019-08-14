@@ -18,8 +18,8 @@ use delta::Delta;
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::collections::HashSet;
 use writing::{
-    MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, SetAsDefinitionOf,
-    SetAsDefinitionOfDelta,
+    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
+    SetAsDefinitionOf, SetAsDefinitionOfDelta,
 };
 
 #[derive(Default, Clone, Debug)]
@@ -46,6 +46,7 @@ impl Delta for CommonPart {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum CommonDelta {
     AddLeft(usize),
     AddRight(usize),
@@ -91,6 +92,12 @@ impl SetAsDefinitionOfDelta for CommonPart {
 impl MakeReduceFrom for CommonPart {
     fn make_reduce_from(&mut self, index: usize) {
         self.reduces_from.insert(index);
+    }
+}
+
+impl MakeReduceFromDelta for CommonPart {
+    fn make_reduce_from_delta(&self, index: usize) -> CommonDelta {
+        CommonDelta::AddReducesFrom(index)
     }
 }
 

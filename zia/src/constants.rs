@@ -18,3 +18,5 @@ pub const LABEL: usize = 0;
 pub const DEFINE: usize = 1;
 pub const REDUCTION: usize = 2;
 pub const LET: usize = 3;
+pub const TRUE: usize = 4;
+pub const FALSE: usize = 5;
