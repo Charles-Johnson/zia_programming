@@ -61,6 +61,7 @@ lazy_static! {
         cs.insert("false".to_string());
         cs.insert("assoc".to_string());
         cs.insert("right".to_string());
+        cs.insert("left".to_string());
         cs
     };
 }

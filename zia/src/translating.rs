@@ -15,35 +15,63 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+use constants::{ASSOC, RIGHT, LEFT};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
     Combine, DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
-    MaybeConcept, Pair,
+    MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand
 };
-use std::rc::Rc;
+use std::{rc::Rc, fmt::Debug};
 
 pub trait SyntaxConverter<T>
 where
-    Self: SyntaxFinder<T> + Combine<T>,
-    T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt,
+    Self: SyntaxFinder<T> + Combine<T> + SyntaxReader<T>,
+    T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
     fn ast_from_expression<
-        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint,
+        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint  + Clone + PartialEq + MightExpand<U>,
     >(
         &self,
         deltas: &[Self::Delta],
         s: &str,
     ) -> ZiaResult<Rc<U>> {
         let tokens: Vec<String> = parse_line(s);
+        self.ast_from_tokens(deltas, &tokens)
+    }
+    fn ast_from_tokens<
+        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint + Clone + PartialEq + MightExpand<U>,
+    >(
+        &self,
+        deltas: &[Self::Delta],
+        tokens: &[String],
+    ) -> ZiaResult<Rc<U>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token::<U>(deltas, &tokens[0]),
             2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
+            3 => {
+                let second = self.ast_from_token::<U>(deltas, &tokens[1])?;
+                let assoc_of_second = self.combine(deltas, &self.to_ast(deltas, ASSOC), &second);
+                let value = self.reduce(deltas, &assoc_of_second);
+                match value.and_then(|s| s.get_concept()) {
+                    Some(RIGHT) => {
+                        let second_with_the_rest = self.ast_from_tokens(deltas, &tokens[1..])?;
+                        let first = self.ast_from_token(deltas, &tokens[0])?;
+                        Ok(self.combine(deltas, &first, &second_with_the_rest))
+                    },
+                    Some(LEFT) => {
+                        let the_rest = self.ast_from_tokens(deltas, &tokens[2..])?;
+                        let first_with_second = self.ast_from_pair(deltas, &tokens[0], &tokens[1])?;
+                        Ok(self.combine(deltas, &first_with_second, &the_rest))
+                    },
+                    _ => Err(ZiaError::AmbiguousExpression),
+                }
+            },
             _ => Err(ZiaError::AmbiguousExpression),
         }
     }
-    fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>>(
+    fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>  + Clone + PartialEq + MightExpand<U>>(
         &self,
         deltas: &[Self::Delta],
         left: &str,
@@ -53,7 +81,7 @@ where
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>>(
+    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>  + Clone + PartialEq + MightExpand<U>>(
         &self,
         deltas: &[Self::Delta],
         t: &str,
@@ -68,8 +96,8 @@ where
 
 impl<S, T> SyntaxConverter<T> for S
 where
-    S: SyntaxFinder<T> + Combine<T>,
-    T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt,
+    S: SyntaxFinder<T> + Combine<T> + SyntaxReader<T>,
+    T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
 }
 

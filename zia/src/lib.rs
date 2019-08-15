@@ -37,9 +37,9 @@
 //! in parentheses will be alleviated by functionality to set the relative precedence and associativity
 //! of concepts.
 //!
-//! So far there are 8 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, but the labels can be changed to different symbols
-//! for different languages or disciplines.
+//! So far there are 9 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
+//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, but the labels can 
+//! be changed to different symbols for different languages or disciplines.
 //!
 //! # Examples
 //!
