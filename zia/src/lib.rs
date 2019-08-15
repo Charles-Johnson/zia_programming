@@ -100,6 +100,10 @@
 //! 
 //! // Determine associativity of symbol
 //! assert_eq!(context.execute("assoc a"), "right");
+//! 
+//! // Change associativity of symbol
+//! assert_eq!(context.execute("let ((assoc b) -> left)"), "");
+//! assert_eq!(context.execute("assoc b (-> left)"), "true");
 //! ```
 
 #[macro_use]
