@@ -93,6 +93,10 @@
 //! // Can ask whether a reduction is true or false
 //! assert_eq!(context.execute("(a (-> d)) (-> true)"), "true");
 //! assert_eq!(context.execute("(d (-> a)) (-> false)"), "true");
+//! 
+//! // Let an arbitary concept be true
+//! assert_eq!(context.execute("let g"), "");
+//! assert_eq!(context.execute("g"), "true");
 //! ```
 
 #[macro_use]
@@ -139,7 +143,7 @@ pub use adding::ContextMaker;
 use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
 use concepts::{AbstractPart, CommonPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION};
+use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
 use context::Context as GenericContext;
 pub use errors::ZiaError;
 use errors::{map_err_variant, ZiaResult};
@@ -328,10 +332,12 @@ where
     ) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
-                LET => right.get_expansion().map(|(left, right)| {
-                    self.execute_let(deltas, &left, &right)?;
-                    Ok("".to_string())
-                }),
+                LET => right.get_expansion().and_then(|(left, right)|
+                    self.execute_let(deltas, &left, &right)
+                ).or_else(|| Some({
+                    let syntax = Self::S::from((self.get_label(deltas, TRUE)?, Some(TRUE)));
+                    self.execute_reduction(deltas, right, &syntax)
+                })).map(|r| r.map(|()| "".to_string())),
                 LABEL => Some(Ok(
                     "'".to_string()
                         + &right
@@ -394,13 +400,10 @@ where
         deltas: &mut Vec<Self::Delta>,
         left: &Self::S,
         right: &Self::S,
-    ) -> ZiaResult<()> {
-        match right.get_expansion() {
-            Some((ref rightleft, ref rightright)) => {
-                self.match_righthand_pair(deltas, left, rightleft, rightright)
-            }
-            None => Err(ZiaError::CannotExpandFurther),
-        }
+    ) -> Option<ZiaResult<()>> {
+        right.get_expansion().map(|(ref rightleft, ref rightright)|
+            self.match_righthand_pair(deltas, left, rightleft, rightright)
+        )
     }
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
     /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
