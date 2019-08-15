@@ -20,7 +20,7 @@ mod syntax;
 
 pub use self::concepts::*;
 pub use self::syntax::*;
-use constants::{LABEL, TRUE, FALSE, REDUCTION};
+use constants::{LABEL, TRUE, FALSE, REDUCTION, ASSOC, RIGHT};
 use delta::Delta;
 use std::{collections::HashSet, fmt, rc::Rc};
 
@@ -145,28 +145,33 @@ where
         match ast.get_concept() {
             Some(c) => self.reduce_concept::<U>(deltas, c),
             None => ast.get_expansion().and_then(|(ref left, ref right)| {
-                right.get_expansion().and_then(|(rightleft, rightright)| {
-                    rightleft
-                        .get_concept()
-                        .and_then(|rlc| match rlc {
-                            REDUCTION => self
-                                .determine_reduction_truth(deltas, left, &rightright)
-                                .map(|x| {
-                                    if x {
-                                        Rc::new(U::from((self.get_label(deltas, TRUE).expect("TRUE is unlabelled"), Some(TRUE))))
-                                    } else {
-                                        Rc::new(U::from((self.get_label(deltas, FALSE).expect("FALSE is unlabelled"), Some(FALSE))))
-                                    }
-                                }),
-                            _ => None,
-                        })
-                }).or_else(||self.match_left_right::<U>(
-                    deltas,
-                    self.reduce(deltas, left),
-                    self.reduce(deltas, right),
-                    left,
-                    right,
-                ))
+                left.get_concept().and_then(|lc| match lc {
+                    ASSOC => Some(Rc::new(U::from((self.get_label(deltas, RIGHT).expect("RIGHT is unlabelled"), Some(RIGHT))))),
+                    _ => None,
+                }).or_else(||
+                    right.get_expansion().and_then(|(rightleft, rightright)| {
+                        rightleft
+                            .get_concept()
+                            .and_then(|rlc| match rlc {
+                                REDUCTION => self
+                                    .determine_reduction_truth(deltas, left, &rightright)
+                                    .map(|x| {
+                                        if x {
+                                            Rc::new(U::from((self.get_label(deltas, TRUE).expect("TRUE is unlabelled"), Some(TRUE))))
+                                        } else {
+                                            Rc::new(U::from((self.get_label(deltas, FALSE).expect("FALSE is unlabelled"), Some(FALSE))))
+                                        }
+                                    }),
+                                _ => None,
+                            })
+                    }).or_else(||self.match_left_right::<U>(
+                        deltas,
+                        self.reduce(deltas, left),
+                        self.reduce(deltas, right),
+                        left,
+                        right,
+                    ))
+                )
             }),
         }
     }

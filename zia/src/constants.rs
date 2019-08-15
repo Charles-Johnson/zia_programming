@@ -20,3 +20,5 @@ pub const REDUCTION: usize = 2;
 pub const LET: usize = 3;
 pub const TRUE: usize = 4;
 pub const FALSE: usize = 5;
+pub const ASSOC: usize = 6;
+pub const RIGHT: usize = 7;
