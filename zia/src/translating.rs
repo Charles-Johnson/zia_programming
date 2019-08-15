@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use constants::{ASSOC, RIGHT, LEFT};
+use constants::{ASSOC, RIGHT, LEFT, PRECEDENCE, TRUE, FALSE};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
@@ -50,25 +50,71 @@ where
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token::<U>(deltas, &tokens[0]),
             2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
-            3 => {
-                let second = self.ast_from_token::<U>(deltas, &tokens[1])?;
-                let assoc_of_second = self.combine(deltas, &self.to_ast(deltas, ASSOC), &second);
-                let value = self.reduce(deltas, &assoc_of_second);
-                match value.and_then(|s| s.get_concept()) {
-                    Some(RIGHT) => {
-                        let second_with_the_rest = self.ast_from_tokens(deltas, &tokens[1..])?;
-                        let first = self.ast_from_token(deltas, &tokens[0])?;
-                        Ok(self.combine(deltas, &first, &second_with_the_rest))
-                    },
-                    Some(LEFT) => {
-                        let the_rest = self.ast_from_tokens(deltas, &tokens[2..])?;
-                        let first_with_second = self.ast_from_pair(deltas, &tokens[0], &tokens[1])?;
-                        Ok(self.combine(deltas, &first_with_second, &the_rest))
-                    },
+            _ => {
+                let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
+                let (hp_syntax, hp_indices, _number_of_tokens) = tokens.iter().try_fold(
+                    (Vec::<Rc<U>>::new(), Vec::<usize>::new(), None),
+                    |(highest_precedence_syntax, hp_indices, prev_index), token| {
+                        let this_index = prev_index.map(|x| x + 1).or(Some(0));
+                        let syntax_of_token = self.ast_from_token(deltas, token)?;
+                        let comparing_precedence_of_token = self.combine(deltas, &precedence_syntax, &syntax_of_token);
+                        for syntax in highest_precedence_syntax.clone() {
+                            let comparing_between_tokens = self.combine(
+                                deltas, &syntax, &comparing_precedence_of_token
+                            );
+                            match self.reduce::<U>(deltas, &comparing_between_tokens).and_then(|s| s.get_concept()) {
+                                Some(TRUE) => return Ok((vec![syntax_of_token], vec![this_index.unwrap()], this_index)),
+                                Some(FALSE) => return Ok((highest_precedence_syntax, hp_indices, this_index)),
+                                _ => ()
+                            };
+                        }
+                        let mut hps = highest_precedence_syntax.clone();
+                        hps.push(syntax_of_token);
+                        let mut hi = hp_indices.clone();
+                        hi.push(this_index.unwrap());
+                        return Ok((hps,hi,this_index))
+                    }
+                )?;
+                let assoc = hp_syntax.iter().try_fold(None, |assoc, syntax| {
+                    let assoc_of_hp = self.combine(deltas, &self.to_ast(deltas, ASSOC), &syntax);
+                    let value = self.reduce::<U>(deltas, &assoc_of_hp);
+                    match (value.and_then(|s| s.get_concept()), assoc) {
+                        (Some(x), Some(y)) => if x == y {
+                            Ok(Some(x))
+                        } else {
+                            Err(ZiaError::AmbiguousExpression)
+                        },
+                        (Some(x), None) => Ok(Some(x)),
+                        (None, _) => Err(ZiaError::AmbiguousExpression),
+                    }
+                });
+                match assoc? {
+                    Some(RIGHT) => hp_indices.iter().rev().try_fold((None, None), |(tail, prev_hp_index), hp_index| {
+                        let slice = match prev_hp_index {
+                            Some(i) => &tokens[*hp_index..i],
+                            None => &tokens[*hp_index..],
+                        };
+                        let hp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                        Ok((Some(match tail {
+                            None => hp_with_the_rest,
+                            Some(t) => self.combine(deltas, &hp_with_the_rest, &t),
+                        }), Some(*hp_index)))
+                    })?.0.ok_or(ZiaError::AmbiguousExpression),
+                    Some(LEFT) => hp_indices.iter().try_fold((None, None), |(head, prev_hp_index), hp_index| {
+                        let slice = match prev_hp_index {
+                            Some(i) => &tokens[i..*hp_index],
+                            None => &tokens[..*hp_index],
+                        };
+                        let hp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                        Ok((Some(match head {
+                            None => hp_with_the_rest,
+                            Some(h) => self.combine(deltas, &h, &hp_with_the_rest),
+                        }), Some(*hp_index)))
+                    })?.0.ok_or(ZiaError::AmbiguousExpression),
                     _ => Err(ZiaError::AmbiguousExpression),
                 }
-            },
-            _ => Err(ZiaError::AmbiguousExpression),
+
+            }
         }
     }
     fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>  + Clone + PartialEq + MightExpand<U>>(
