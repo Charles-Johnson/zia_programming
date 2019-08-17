@@ -52,32 +52,35 @@ where
             2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
             _ => {
                 let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
-                let (hp_syntax, hp_indices, _number_of_tokens) = tokens.iter().try_fold(
+                let (lp_syntax, lp_indices, _number_of_tokens) = tokens.iter().try_fold(
                     (Vec::<Rc<U>>::new(), Vec::<usize>::new(), None),
-                    |(highest_precedence_syntax, hp_indices, prev_index), token| {
+                    |(lowest_precedence_syntax, lp_indices, prev_index), token| {
                         let this_index = prev_index.map(|x| x + 1).or(Some(0));
                         let syntax_of_token = self.ast_from_token(deltas, token)?;
                         let comparing_precedence_of_token = self.combine(deltas, &precedence_syntax, &syntax_of_token);
-                        for syntax in highest_precedence_syntax.clone() {
+                        for syntax in lowest_precedence_syntax.clone() {
                             let comparing_between_tokens = self.combine(
                                 deltas, &syntax, &comparing_precedence_of_token
                             );
                             match self.reduce::<U>(deltas, &comparing_between_tokens).and_then(|s| s.get_concept()) {
+                                // syntax of token has even lower precedence than some previous lowest precendence syntax 
                                 Some(TRUE) => return Ok((vec![syntax_of_token], vec![this_index.unwrap()], this_index)),
-                                Some(FALSE) => return Ok((highest_precedence_syntax, hp_indices, this_index)),
+                                // syntax of token has higher precedence than some previous lowest precendence syntax 
+                                Some(FALSE) => return Ok((lowest_precedence_syntax, lp_indices, this_index)),
                                 _ => ()
                             };
                         }
-                        let mut hps = highest_precedence_syntax.clone();
+                        // syntax of token has neither higher or lower precedence than the lowest precedence syntax
+                        let mut hps = lowest_precedence_syntax.clone();
                         hps.push(syntax_of_token);
-                        let mut hi = hp_indices.clone();
+                        let mut hi = lp_indices.clone();
                         hi.push(this_index.unwrap());
                         return Ok((hps,hi,this_index))
                     }
                 )?;
-                let assoc = hp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    let assoc_of_hp = self.combine(deltas, &self.to_ast(deltas, ASSOC), &syntax);
-                    let value = self.reduce::<U>(deltas, &assoc_of_hp);
+                let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
+                    let assoc_of_lp = self.combine(deltas, &self.to_ast(deltas, ASSOC), &syntax);
+                    let value = self.reduce::<U>(deltas, &assoc_of_lp);
                     match (value.and_then(|s| s.get_concept()), assoc) {
                         (Some(x), Some(y)) => if x == y {
                             Ok(Some(x))
@@ -89,27 +92,27 @@ where
                     }
                 });
                 match assoc? {
-                    Some(RIGHT) => hp_indices.iter().rev().try_fold((None, None), |(tail, prev_hp_index), hp_index| {
-                        let slice = match prev_hp_index {
-                            Some(i) => &tokens[*hp_index..i],
-                            None => &tokens[*hp_index..],
+                    Some(RIGHT) => lp_indices.iter().rev().try_fold((None, None), |(tail, prev_lp_index), lp_index| {
+                        let slice = match prev_lp_index {
+                            Some(i) => &tokens[*lp_index..i],
+                            None => &tokens[*lp_index..],
                         };
-                        let hp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                        let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
                         Ok((Some(match tail {
-                            None => hp_with_the_rest,
-                            Some(t) => self.combine(deltas, &hp_with_the_rest, &t),
-                        }), Some(*hp_index)))
+                            None => lp_with_the_rest,
+                            Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
+                        }), Some(*lp_index)))
                     })?.0.ok_or(ZiaError::AmbiguousExpression),
-                    Some(LEFT) => hp_indices.iter().try_fold((None, None), |(head, prev_hp_index), hp_index| {
-                        let slice = match prev_hp_index {
-                            Some(i) => &tokens[i..*hp_index],
-                            None => &tokens[..*hp_index],
+                    Some(LEFT) => lp_indices.iter().try_fold((None, None), |(head, prev_lp_index), lp_index| {
+                        let slice = match prev_lp_index {
+                            Some(i) => &tokens[i..*lp_index],
+                            None => &tokens[..*lp_index],
                         };
-                        let hp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                        let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
                         Ok((Some(match head {
-                            None => hp_with_the_rest,
-                            Some(h) => self.combine(deltas, &h, &hp_with_the_rest),
-                        }), Some(*hp_index)))
+                            None => lp_with_the_rest,
+                            Some(h) => self.combine(deltas, &h, &lp_with_the_rest),
+                        }), Some(*lp_index)))
                     })?.0.ok_or(ZiaError::AmbiguousExpression),
                     _ => Err(ZiaError::AmbiguousExpression),
                 }

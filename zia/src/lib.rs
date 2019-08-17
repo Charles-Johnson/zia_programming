@@ -94,16 +94,16 @@
 //! assert_eq!(context.execute("(a -> d) -> true"), "true");
 //! assert_eq!(context.execute("(d -> a) -> false"), "true");
 //! 
-//! // Let an arbitary concept be true
+//! // Let an arbitary symbol be true
 //! assert_eq!(context.execute("let g"), "");
 //! assert_eq!(context.execute("g"), "true");
 //! 
+//! // Let an arbitary expression be true
+//! assert_eq!(context.execute("let h i j"), "");
+//! assert_eq!(context.execute("h i j"), "true");
+//! 
 //! // Determine associativity of symbol
 //! assert_eq!(context.execute("assoc a"), "right");
-//! 
-//! // Change associativity of symbol
-//! assert_eq!(context.execute("let ((assoc b) -> left)"), "");
-//! assert_eq!(context.execute("assoc b (-> left)"), "true");
 //! ```
 
 #[macro_use]
@@ -340,7 +340,11 @@ where
         left.get_concept()
             .and_then(|lc| match lc {
                 LET => right.get_expansion().and_then(|(left, right)|
-                    self.execute_let(deltas, &left, &right)
+                    self.execute_let(deltas, &left, &right).and_then(|x| match x {
+                        Err(ZiaError::CannotReduceFurther) => None,
+                        Err(ZiaError::UnusedSymbol) => None,
+                        _ => Some(x),
+                    })
                 ).or_else(|| Some({
                     let syntax = Self::S::from((self.get_label(deltas, TRUE)?, Some(TRUE)));
                     self.execute_reduction(deltas, right, &syntax)
