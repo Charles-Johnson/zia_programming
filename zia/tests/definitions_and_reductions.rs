@@ -39,7 +39,7 @@ proptest! {
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, d, e, f);
         let_definition!(cont, g, c, f);
-        let print = format!("({} {}) ({} {})", a, b, d, e);
+        let print = format!("({} {}) {} {}", a, b, d, e);
         assert_eq!(
             cont.execute(&print),
             g
@@ -51,9 +51,9 @@ proptest! {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
-        let reduction = format!("let (({} {}) (-> {}))", c, d, a);
+        let reduction = format!("let ({} {}) -> {}", c, d, a);
         assert_eq!(cont.execute(&reduction), "");
-        let definition = format!("let ({} (:= ({} ({} {}))))", a, b, c, d);
+        let definition = format!("let {} := {} {} {}", a, b, c, d);
         assert_eq!(
             cont.execute(&definition),
             ZiaError::InfiniteDefinition.to_string()
@@ -72,9 +72,9 @@ proptest! {
         assume_symbols!(a, b, c, d, e);
         prop_assume!(a != b && a != c && a != d);
         let mut cont = Context::new();
-        let definition = format!("let ({} (:= ({} ({} {}))))", a, b, c, d);
+        let definition = format!("let {} := {} {} {}", a, b, c, d);
         assert_eq!(cont.execute(&definition), "");
-        let reduction = format!("let (({} {}) (-> {}))", c, d, e);
+        let reduction = format!("let ({} {}) -> {}", c, d, e);
         assert_eq!(
             cont.execute(&reduction),
             ""

@@ -38,7 +38,7 @@ proptest! {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, c, b);
-        let print = format!("{} ({} {})", a, a, b);
+        let print = format!("{} {} {}", a, a, b);
         prop_assert_eq!(cont.execute(&print), b);
     }
     // A concept should not be able to reduce to a concept whose normal form is the former concept.
@@ -48,9 +48,9 @@ proptest! {
         prop_assume!(a != b);
         assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
-        let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
+        let reduction0 = format!("let ({} {}) -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let (({} {}) (-> ({} {})))", c, d, a, b);
+        let reduction1 = format!("let ({} {}) -> {} {}", c, d, a, b);
         prop_assert_eq!(
             cont.execute(&reduction1),
             ZiaError::CyclicReduction.to_string()
@@ -68,7 +68,7 @@ proptest! {
     #[test]
     fn infinite_expansion(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         assume_symbols!(a, b, c);
-        let reduction = format!("let (({} {}) (-> ({} ({} {}))))", a, b, c, a, b);
+        let reduction = format!("let ({} {}) -> {} {} {}", a, b, c, a, b);
         let mut cont = Context::new();
         assert_eq!(
             cont.execute(&reduction),
@@ -82,11 +82,11 @@ proptest! {
         prop_assume!(a != b && b != c && c != a);
         assume_symbols!(a, b, c, d, e);
         let mut cont = Context::new();
-        let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
+        let reduction0 = format!("let ({} {}) -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let (({} {}) (-> {}))", c, d, e);
+        let reduction1 = format!("let ({} {}) -> {}", c, d, e);
         assert_eq!(cont.execute(&reduction1), "");
-        let reduction2 = format!("let (({} {}) (-> ({} {})))", c, d, c, d);
+        let reduction2 = format!("let ({} {}) -> {} {}", c, d, c, d);
         assert_eq!(cont.execute(&reduction2), "");
         let print = format!("{} {}", a, b);
         assert_eq!(cont.execute(&print), format!("{} {}", c, d));
@@ -98,13 +98,13 @@ proptest! {
         prop_assume!(a != b && b != c && c != d && c != a && d != a && d != b);
         assume_symbols!(a, b, c, d, e, f, g);
         let mut cont = Context::new();
-        let reduction0 = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
+        let reduction0 = format!("let ({} {}) -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let (({} {}) (-> ({} {})))", c, d, e, f);
+        let reduction1 = format!("let ({} {}) -> {} {}", c, d, e, f);
         assert_eq!(cont.execute(&reduction1), "");
-        let reduction2 = format!("let (({} {}) (-> {}))", e, f, g);
+        let reduction2 = format!("let ({} {}) -> {}", e, f, g);
         assert_eq!(cont.execute(&reduction2), "");
-        let reduction3 = format!("let (({} {}) (-> ({} {})))", e, f, e, f);
+        let reduction3 = format!("let ({} {}) -> {} {}", e, f, e, f);
         assert_eq!(cont.execute(&reduction3), "");
         let print = format!("{} {}", a, b);
         assert_eq!(cont.execute(&print), format!("{} {}", e, f));
@@ -127,7 +127,7 @@ proptest! {
         prop_assume!(a != b && b != c && c != a);
         assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
-        let reduction = format!("let (({} {}) (-> ({} {})))", a, b, c, d);
+        let reduction = format!("let ({} {}) -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction), "");
         reduce_pair!(cont, c, d, e);
         reduce_pair!(cont, a, b, e);
@@ -139,12 +139,12 @@ proptest! {
         assume_symbol!(d);
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
-        let reduction = format!("let (({} {}) (-> {}))", a, b, c);
+        let reduction = format!("let ({} {}) -> {}", a, b, c);
         assert_eq!(
             cont.execute(&reduction),
             ZiaError::RedundantReduction.to_string()
         );
-        let remove_reduction = format!("let (({} {}) (-> ({} {})))", c, d, c, d);
+        let remove_reduction = format!("let ({} {}) -> {} {}", c, d, c, d);
         assert_eq!(
             cont.execute(&remove_reduction),
             ZiaError::RedundantReduction.to_string()

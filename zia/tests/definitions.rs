@@ -39,7 +39,7 @@ proptest! {
     fn pair_on_the_left(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         assume_symbols!(a, b, c);
         let mut cont = Context::new();
-        let let_command = format!("let (({} {}) (:= {}))", a, b, c);
+        let let_command = format!("let ({} {}) := {}", a, b, c);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::BadDefinition.to_string()
@@ -54,7 +54,7 @@ proptest! {
         // if `a == b` then the definition is redundant, not the refactor
         prop_assume!(a != b);
         let mut cont = Context::new();
-        let let_command = format!("let ({} (:= {}))", a, b);
+        let let_command = format!("let {} := {}", a, b);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::RedundantRefactor.to_string()
@@ -65,7 +65,7 @@ proptest! {
     fn bad_refactor(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
-        let let_command = format!("let ({} (:= {}))", b, a);
+        let let_command = format!("let {} := {}", b, a);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::DefinitionCollision.to_string()
@@ -84,7 +84,7 @@ proptest! {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let_definition!(cont, f, d, e);
-        let let_command = format!("let ({} (:= ({} {})))", d, b, c);
+        let let_command = format!("let {} := {} {}", d, b, c);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::DefinitionCollision.to_string()
@@ -95,7 +95,7 @@ proptest! {
     fn definition_loop(a in "\\PC*", b in "\\PC*") {
         assume_symbols!(a, b);
         let mut cont = Context::new();
-        let let_command = format!("let ({} (:= ({} {})))", a, a, b);
+        let let_command = format!("let {} := {} {}", a, a, b);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::InfiniteDefinition.to_string()
@@ -107,7 +107,7 @@ proptest! {
         assume_symbols!(a, b);
         prop_assume!(a != b);
         let mut cont = Context::new();
-        let let_command = format!("let ({} (:= (({} {}) {})))", a, a, b, b);
+        let let_command = format!("let {} := ({} {}) {}", a, a, b, b);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::InfiniteDefinition.to_string()
@@ -118,7 +118,7 @@ proptest! {
     fn chained_definitions_loop(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         let_definition!(cont, c, a, b);
-        let let_command = format!("let ({} (:= ({} {})))", a, c, b);
+        let let_command = format!("let {} := {} {}", a, c, b);
         assert_eq!(
             cont.execute(&let_command),
             ZiaError::InfiniteDefinition.to_string()
@@ -129,7 +129,7 @@ proptest! {
     fn redundantly_remove_definition(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
-        let remove_definition_command = format!("let ({} (:= {}))", b, b);
+        let remove_definition_command = format!("let {} := {}", b, b);
         assert_eq!(
             cont.execute(&remove_definition_command),
             ZiaError::RedundantDefinitionRemoval.to_string()
@@ -140,7 +140,7 @@ proptest! {
     fn redundancy(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
-        let let_command = format!("let ({} (:= ({} {})))", a, b, c);
+        let let_command = format!("let {} := {} {}", a, b, c);
         assert_eq!(
             cont.execute(&let_command),
             ZiaError::RedundantDefinition.to_string()
@@ -151,7 +151,7 @@ proptest! {
     fn setting_definition_of_concrete(a in "\\PC*", b in "\\PC*", c in "label_of|:=|->|let") {
         assume_symbols!(a,b);
         let mut cont = Context::new();
-        let let_command = format!("let ({} (:= ({} {})))", c, a, b);
+        let let_command = format!("let {} := {} {}", c, a, b);
         assert_eq!(
             cont.execute(&let_command),
             ZiaError::SettingDefinitionOfConcrete.to_string()
