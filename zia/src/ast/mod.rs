@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-use reading::{DisplayJoint, MaybeConcept, MightExpand, Pair};
+use reading::{MaybeConcept, MightExpand, Pair};
 use std::{fmt, rc::Rc};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
@@ -53,16 +53,6 @@ impl MightExpand<SyntaxTree> for SyntaxTree {
     /// An expression does have an expansion while a symbol does not.
     fn get_expansion(&self) -> Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)> {
         self.expansion.clone()
-    }
-}
-
-impl DisplayJoint for SyntaxTree {
-    /// An expression's syntax is encapsulated in parentheses when joined with other syntax whereas a symbol's syntax is not.
-    fn display_joint(&self) -> String {
-        match self.get_expansion() {
-            Some(_) => "(".to_string() + &self.to_string() + ")",
-            None => self.to_string(),
-        }
     }
 }
 

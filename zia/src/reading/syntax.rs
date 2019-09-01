@@ -16,10 +16,6 @@
 */
 use std::rc::Rc;
 
-pub trait DisplayJoint {
-    fn display_joint(&self) -> String;
-}
-
 pub trait MaybeConcept {
     fn get_concept(&self) -> Option<usize>;
 }

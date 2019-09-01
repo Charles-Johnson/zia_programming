@@ -20,13 +20,13 @@ mod syntax;
 
 pub use self::concepts::*;
 pub use self::syntax::*;
-use constants::{LABEL, TRUE, FALSE, REDUCTION, ASSOC, RIGHT};
+use constants::{LABEL, TRUE, FALSE, REDUCTION, ASSOC, LEFT, RIGHT, PRECEDENCE};
 use delta::Delta;
 use std::{collections::HashSet, fmt, rc::Rc};
 
 pub trait SyntaxReader<T>
 where
-    Self: GetLabel<T> + Combine<T>,
+    Self: GetLabel<T> + FindDefinition<T>,
     T: GetDefinitionOf + GetDefinition + GetReduction + MaybeString + fmt::Debug,
 {
     /// Expands syntax by definition of its associated concept.
@@ -36,8 +36,8 @@ where
             + fmt::Display
             + Clone
             + Pair<U>
-            + DisplayJoint
-            + From<(String, Option<usize>)>,
+            + From<(String, Option<usize>)>
+            + PartialEq,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -70,8 +70,8 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint
-            + PartialEq,
+            + PartialEq
+            + fmt::Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -89,7 +89,7 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint,
+            + fmt::Display
     >(
         &self,
         deltas: &[Self::Delta],
@@ -113,7 +113,7 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint,
+            + fmt::Display
     >(
         &self,
         deltas: &[Self::Delta],
@@ -135,8 +135,8 @@ where
             + Clone
             + Pair<U>
             + MaybeConcept
-            + DisplayJoint
-            + PartialEq,
+            + PartialEq
+            + fmt::Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -177,7 +177,7 @@ where
     }
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept<
-        U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint,
+        U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + MightExpand<U> + fmt::Display + PartialEq
     >(
         &self,
         deltas: &[Self::Delta],
@@ -203,7 +203,7 @@ where
             })
     }
     /// Returns the syntax for a concept.
-    fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + DisplayJoint>(
+    fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair<U> + MaybeConcept + MightExpand<U> + fmt::Display + PartialEq>(
         &self,
         deltas: &[Self::Delta],
         concept: usize,
@@ -223,8 +223,56 @@ where
             }
         }
     }
+    fn combine<U: MaybeConcept + Pair<U> + MightExpand<U> + fmt::Display + Sized + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(
+        &self,
+        deltas: &[Self::Delta],
+        ast: &Rc<U>,
+        other: &Rc<U>,
+    ) -> Rc<U> {
+        let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
+            self.find_definition(deltas, l, r)
+        } else {
+            None
+        };
+        Rc::new(U::from_pair(
+            (self.display_joint(deltas, ast, other), definition),
+            ast,
+            other,
+        ))
+    }
+    fn display_joint<U: MaybeConcept + Pair<U> + MightExpand<U> + fmt::Display + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
+        let left_string = left.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &r) {
+            Associativity::Left => l.to_string() + " " + &r.to_string(),
+            Associativity::Right => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
+        }).unwrap_or_else(|| left.to_string());
+        let right_string = right.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &l) {
+            Associativity::Left => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
+            Associativity::Right => l.to_string() + " " + &r.to_string(),
+        }).unwrap_or_else(|| right.to_string());
+        left_string + " " + &right_string
+    }
+    fn get_associativity<U: MaybeConcept + Pair<U> + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Associativity {
+        let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
+        self.reduce(deltas, &assoc_of_ast)
+            .and_then(|ast| match ast.get_concept() {
+                Some(LEFT) => Some(Associativity::Left),
+                Some(RIGHT) => Some(Associativity::Right),
+                _ => None,
+            })
+            .unwrap()
+    }
+    fn has_higher_precedence<U: MaybeConcept + Pair<U> + PartialEq + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> {
+        let is_higher_prec_than_right = self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
+        let left_is_higher_prec_than_right = self.combine(deltas, left, &is_higher_prec_than_right);
+        self.reduce(deltas, &left_is_higher_prec_than_right)
+            .and_then(|ast| match ast.get_concept() {
+                Some(TRUE) => Some(true),
+                Some(FALSE) => Some(false),
+                _ => None,
+            })
+    }
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
-    fn match_left_right<U: Pair<U> + MaybeConcept + DisplayJoint>(
+    fn match_left_right<U: Pair<U> + MaybeConcept + MightExpand<U> + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         left: Option<Rc<U>>,
@@ -246,32 +294,37 @@ where
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    fn contract_pair<U: MaybeConcept + Pair<U> + DisplayJoint>(
+    fn contract_pair<U: MaybeConcept + Pair<U> + MightExpand<U> + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         lefthand: &Rc<U>,
         righthand: &Rc<U>,
     ) -> Rc<U> {
-        let display_joint = || lefthand.display_joint() + " " + &righthand.display_joint();
         let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
             (Some(lc), Some(rc)) => {
                 let maydef = self.find_definition(deltas, lc, rc);
                 (
                     maydef
                         .and_then(|def| self.get_label(deltas, def))
-                        .unwrap_or_else(display_joint),
+                        .unwrap_or_else(|| self.display_joint(deltas, lefthand, righthand)),
                     maydef,
                 )
             }
-            _ => (display_joint(), None),
+            _ => (self.display_joint(deltas, lefthand, righthand), None),
         };
         Rc::new(U::from_pair(syntax, lefthand, righthand))
     }
 }
 
+#[derive(Debug)]
+pub enum Associativity {
+    Left,
+    Right,
+}
+
 impl<S, T> SyntaxReader<T> for S
 where
-    S: GetLabel<T> + Combine<T>,
+    S: GetLabel<T>,
     T: GetDefinitionOf + GetDefinition + MaybeString + GetReduction + fmt::Debug,
 {
 }
@@ -300,38 +353,7 @@ where
     S: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
 }
-pub trait Combine<T>
-where
-    Self: FindDefinition<T>,
-    T: GetDefinitionOf,
-{
-    fn combine<U: DisplayJoint + MaybeConcept + Pair<U> + Sized>(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-        other: &Rc<U>,
-    ) -> Rc<U> {
-        let left_string = ast.display_joint();
-        let right_string = other.display_joint();
-        let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
-            self.find_definition(deltas, l, r)
-        } else {
-            None
-        };
-        Rc::new(U::from_pair(
-            (left_string + " " + &right_string, definition),
-            ast,
-            other,
-        ))
-    }
-}
 
-impl<S, T> Combine<T> for S
-where
-    T: GetDefinitionOf,
-    S: FindDefinition<T>,
-{
-}
 pub trait Label<T>
 where
     T: GetDefinition + FindWhatReducesToIt,

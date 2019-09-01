@@ -88,7 +88,7 @@
 //! assert_eq!(context.execute("a -> a"), "false");
 //!
 //! // Cannot reduce a reduction expression between unrelated concepts
-//! assert_eq!(context.execute("d -> f"), "d (-> f)");
+//! assert_eq!(context.execute("d -> f"), "d -> f");
 //! 
 //! // Can ask whether a reduction is true or false
 //! assert_eq!(context.execute("(a -> d) -> true"), "true");
@@ -156,7 +156,7 @@ pub use errors::ZiaError;
 use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
-    DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
+    FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
     MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
 };
 use removing::DefinitionDeleter;
@@ -198,7 +198,6 @@ where
         + Debug
         + Clone
         + From<(String, Option<usize>)>
-        + DisplayJoint
         + PartialEq<Self::S>,
     Self::Delta: Clone + Debug,
 {
@@ -240,7 +239,6 @@ where
         + Pair<S::S>
         + Clone
         + From<(String, Option<usize>)>
-        + DisplayJoint
         + Debug
         + PartialEq<Self::S>,
     S::Delta: Clone + Debug,
@@ -288,7 +286,6 @@ where
         + Pair<Self::S>
         + Clone
         + From<(String, Option<usize>)>
-        + DisplayJoint
         + PartialEq<Self::S>
         + Debug,
     Self::Delta: Clone + Debug,
@@ -471,7 +468,6 @@ where
         + Clone
         + Debug
         + From<(String, Option<usize>)>
-        + DisplayJoint
         + PartialEq<Self::S>,
     Self::Delta: Clone + Debug,
 {

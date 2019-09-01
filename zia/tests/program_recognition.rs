@@ -51,7 +51,7 @@ proptest! {
         assume_abstract!(c);
         assume_symbols!(a, b, c);
         let mut cont = Context::new();
-        let command = format!("{} ({} {})", a, b, c);
+        let command = format!("{} {} {}", a, b, c);
         assert_eq!(cont.execute(&command), command);
     }
     // A previously used symbol cannot reduce unless it is a reducible concepts.
@@ -80,7 +80,7 @@ proptest! {
         prop_assume!((a != b) && (b != c) && (c != a));
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
-        let command = format!("{} ({} {})", a, b, c);
+        let command = format!("{} {} {}", a, b, c);
         assert_eq!(cont.execute(&command), command);
     }
 }

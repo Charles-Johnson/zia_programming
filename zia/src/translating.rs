@@ -19,18 +19,18 @@ use constants::{ASSOC, RIGHT, LEFT, PRECEDENCE, TRUE, FALSE};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
-    Combine, DisplayJoint, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
+    FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
     MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand
 };
-use std::{rc::Rc, fmt::Debug};
+use std::{rc::Rc, fmt::{Debug, Display}};
 
 pub trait SyntaxConverter<T>
 where
-    Self: SyntaxFinder<T> + Combine<T> + SyntaxReader<T>,
+    Self: SyntaxFinder<T> + SyntaxReader<T>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
     fn ast_from_expression<
-        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint  + Clone + PartialEq + MightExpand<U>,
+        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept  + Clone + PartialEq + MightExpand<U> + Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -40,7 +40,7 @@ where
         self.ast_from_tokens(deltas, &tokens)
     }
     fn ast_from_tokens<
-        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept + DisplayJoint + Clone + PartialEq + MightExpand<U>,
+        U: From<(String, Option<usize>)> + Pair<U> + MaybeConcept  + Clone + PartialEq + MightExpand<U> + Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -120,7 +120,7 @@ where
             }
         }
     }
-    fn ast_from_pair<U: From<(String, Option<usize>)> + DisplayJoint + MaybeConcept + Pair<U>  + Clone + PartialEq + MightExpand<U>>(
+    fn ast_from_pair<U: From<(String, Option<usize>)>  + MaybeConcept + Pair<U>  + Clone + PartialEq + MightExpand<U> + Display>(
         &self,
         deltas: &[Self::Delta],
         left: &str,
@@ -130,7 +130,7 @@ where
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept + DisplayJoint + Pair<U>  + Clone + PartialEq + MightExpand<U>>(
+    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept  + Pair<U>  + Clone + PartialEq + MightExpand<U> + Display>(
         &self,
         deltas: &[Self::Delta],
         t: &str,
@@ -145,7 +145,7 @@ where
 
 impl<S, T> SyntaxConverter<T> for S
 where
-    S: SyntaxFinder<T> + Combine<T> + SyntaxReader<T>,
+    S: SyntaxFinder<T> + SyntaxReader<T>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
 }

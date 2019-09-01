@@ -19,7 +19,6 @@ use constants::LABEL;
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use logging::Logger;
-use reading::DisplayJoint;
 use reading::FindWhatReducesToIt;
 use reading::{FindDefinition, MaybeString, MightExpand};
 use std::{fmt, rc::Rc};
@@ -45,7 +44,7 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    Self::S: Container + PartialEq + DisplayJoint,
+    Self::S: Container + PartialEq,
     Self::Delta: Clone + fmt::Debug,
 {
     fn execute_reduction(
@@ -82,7 +81,7 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    S::S: Container + PartialEq<S::S> + DisplayJoint,
+    S::S: Container + PartialEq<S::S>,
     S::Delta: Clone + fmt::Debug,
 {
 }
@@ -118,7 +117,6 @@ where
         + FindWhatReducesToIt
         + Clone,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
-    Self::S: DisplayJoint,
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
@@ -129,7 +127,7 @@ where
     ) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
-        } else if let Some(c) = self.concept_from_label(&deltas, &ast.display_joint()) {
+        } else if let Some(c) = self.concept_from_label(&deltas, &ast.to_string()) {
             Ok(c)
         } else {
             let string = &ast.to_string();
