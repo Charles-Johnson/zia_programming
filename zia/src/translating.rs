@@ -15,12 +15,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use constants::{ASSOC, RIGHT, LEFT, PRECEDENCE, TRUE, FALSE};
+use constants::{PRECEDENCE, TRUE, FALSE};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
     FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
-    MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand
+    MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand, Associativity
 };
 use std::{rc::Rc, fmt::{Debug, Display}};
 
@@ -79,9 +79,7 @@ where
                     }
                 )?;
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    let assoc_of_lp = self.combine(deltas, &self.to_ast(deltas, ASSOC), &syntax);
-                    let value = self.reduce::<U>(deltas, &assoc_of_lp);
-                    match (value.and_then(|s| s.get_concept()), assoc) {
+                    match (self.get_associativity(deltas, &syntax), assoc) {
                         (Some(x), Some(y)) => if x == y {
                             Ok(Some(x))
                         } else {
@@ -92,7 +90,7 @@ where
                     }
                 });
                 match assoc? {
-                    Some(RIGHT) => lp_indices.iter().rev().try_fold((None, None), |(tail, prev_lp_index), lp_index| {
+                    Some(Associativity::Right) => lp_indices.iter().rev().try_fold((None, None), |(tail, prev_lp_index), lp_index| {
                         let slice = match prev_lp_index {
                             Some(i) => &tokens[*lp_index..i],
                             None => &tokens[*lp_index..],
@@ -103,7 +101,7 @@ where
                             Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
                         }), Some(*lp_index)))
                     })?.0.ok_or(ZiaError::AmbiguousExpression),
-                    Some(LEFT) => lp_indices.iter().try_fold((None, None), |(head, prev_lp_index), lp_index| {
+                    Some(Associativity::Left) => lp_indices.iter().try_fold((None, None), |(head, prev_lp_index), lp_index| {
                         let slice = match prev_lp_index {
                             Some(i) => &tokens[i..*lp_index],
                             None => &tokens[..*lp_index],

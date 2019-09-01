@@ -241,17 +241,17 @@ where
         ))
     }
     fn display_joint<U: MaybeConcept + Pair<U> + MightExpand<U> + fmt::Display + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
-        let left_string = left.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &r) {
+        let left_string = left.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
             Associativity::Left => l.to_string() + " " + &r.to_string(),
             Associativity::Right => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
         }).unwrap_or_else(|| left.to_string());
-        let right_string = right.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &l) {
+        let right_string = right.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &l).unwrap() {
             Associativity::Left => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
             Associativity::Right => l.to_string() + " " + &r.to_string(),
         }).unwrap_or_else(|| right.to_string());
         left_string + " " + &right_string
     }
-    fn get_associativity<U: MaybeConcept + Pair<U> + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Associativity {
+    fn get_associativity<U: MaybeConcept + Pair<U> + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
         self.reduce(deltas, &assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
@@ -259,7 +259,6 @@ where
                 Some(RIGHT) => Some(Associativity::Right),
                 _ => None,
             })
-            .unwrap()
     }
     fn has_higher_precedence<U: MaybeConcept + Pair<U> + PartialEq + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> {
         let is_higher_prec_than_right = self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
@@ -316,7 +315,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Associativity {
     Left,
     Right,
