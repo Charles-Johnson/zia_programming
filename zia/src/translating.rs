@@ -36,7 +36,7 @@ where
         deltas: &[Self::Delta],
         s: &str,
     ) -> ZiaResult<Rc<U>> {
-        let tokens: Vec<String> = parse_line(s);
+        let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
     fn ast_from_tokens<
@@ -148,41 +148,53 @@ where
 {
 }
 
-pub fn parse_line(buffer: &str) -> Vec<String> {
+pub fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
     let mut tokens: Vec<String> = [].to_vec();
     let mut token = String::new();
     let mut parenthesis_level = 0;
     for letter in buffer.chars() {
-        parse_letter(letter, &mut parenthesis_level, &mut token, &mut tokens);
+        parenthesis_level = parse_letter(letter, parenthesis_level, &mut token, &mut tokens)?;
+    }
+    if parenthesis_level != 0 {
+        return Err(ZiaError::MissingSymbol(")".to_string()));
     }
     if token != "" {
         tokens.push(token.clone());
     }
-    tokens
+    Ok(tokens)
 }
 
 fn parse_letter(
     letter: char,
-    parenthesis_level: &mut i8,
+    mut parenthesis_level: u8,
     token: &mut String,
     tokens: &mut Vec<String>,
-) {
+) -> ZiaResult<u8> {
     match letter {
         '(' => {
-            push_token(letter, *parenthesis_level, token, tokens);
-            *parenthesis_level += 1;
+            push_token(letter, parenthesis_level, token, tokens);
+            Ok(parenthesis_level + 1)
         }
-        ')' => {
-            *parenthesis_level -= 1;
-            push_token(letter, *parenthesis_level, token, tokens);
+        ')' => if parenthesis_level > 0 {
+            parenthesis_level -= 1;
+            push_token(letter, parenthesis_level, token, tokens);
+            Ok(parenthesis_level)
+        } else {
+            Err(ZiaError::MissingSymbol("(".to_string()))
         }
-        ' ' => push_token(letter, *parenthesis_level, token, tokens),
-        '\n' | '\r' => (),
-        _ => token.push(letter),
-    };
+        ' ' => {
+            push_token(letter, parenthesis_level, token, tokens);
+            Ok(parenthesis_level)
+        }
+        '\n' | '\r' => Ok(parenthesis_level),
+        _ => {
+            token.push(letter);
+            Ok(parenthesis_level)
+        },
+    }
 }
 
-fn push_token(letter: char, parenthesis_level: i8, token: &mut String, tokens: &mut Vec<String>) {
+fn push_token(letter: char, parenthesis_level: u8, token: &mut String, tokens: &mut Vec<String>) {
     if (token != "") & (parenthesis_level == 0) {
         tokens.push(token.clone());
         *token = String::new();

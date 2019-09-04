@@ -54,6 +54,8 @@ pub enum ZiaError {
     CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.  
     ExpandingReduction,
+    /// When a required symbol is missing from a command
+    MissingSymbol(String),
     /// When a concept is contained within the normal form of its definition.
     InfiniteDefinition,
     /// When a command contains a pair of parentheses with no syntax inside.
@@ -84,24 +86,29 @@ impl Error for ZiaError {
 
 impl fmt::Display for ZiaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match *self {
-	        ZiaError::RedundantReduction => "That reduction rule already exists.",
-			ZiaError::RedundantDefinition => "That definition already exists.",
-			ZiaError::RedundantRefactor => "Relabelling something that doesn't yet exist has no effect.",
-			ZiaError::RedundantDefinitionRemoval => "Removing a definition that doesn't exist is redundant.",
-	        ZiaError::BadDefinition => "Cannot define expressions.",
-            ZiaError::CannotExpandFurther => "Cannot expand syntax further",
-            ZiaError::CannotReduceFurther => "Cannot reduce syntax further",
-	        ZiaError::CyclicReduction => "Cannot allow a chain of reduction rules to loop.",
-	        ZiaError::ExpandingReduction => "Cannot reduce a concept to an expression containing itself.",
-	        ZiaError::InfiniteDefinition => "Cannot define a concept as an expression whose normal form contains itself.",
-			ZiaError::EmptyParentheses => "Parentheses need to contain a symbol or expression.",
-			ZiaError::AmbiguousExpression => "Ambiguity due to lack of precedence or associativity defined for the symbols in that expression.",
-			ZiaError::DefinitionCollision => "Cannot define a used symbol as another used symbol or expression.",
-			ZiaError::SettingDefinitionOfConcrete => "Cannot set a definition of a concrete concept",
-			ZiaError::ConcreteReduction => "Cannot reduce a concrete concept", 
-			ZiaError::MultipleReductionPaths => "Concept is already composed of concepts with their own reduction rules.",
-            ZiaError::UnusedSymbol => "Symbol was expected to be used to label a concept but isn't."
-	    })
+        if let ZiaError::MissingSymbol(ref s) = *self {
+            write!(f, "Missing {}", s)
+        } else {
+            write!(f, "{}", match *self {
+                ZiaError::RedundantReduction => "That reduction rule already exists.",
+                ZiaError::RedundantDefinition => "That definition already exists.",
+                ZiaError::RedundantRefactor => "Relabelling something that doesn't yet exist has no effect.",
+                ZiaError::RedundantDefinitionRemoval => "Removing a definition that doesn't exist is redundant.",
+                ZiaError::BadDefinition => "Cannot define expressions.",
+                ZiaError::CannotExpandFurther => "Cannot expand syntax further",
+                ZiaError::CannotReduceFurther => "Cannot reduce syntax further",
+                ZiaError::CyclicReduction => "Cannot allow a chain of reduction rules to loop.",
+                ZiaError::ExpandingReduction => "Cannot reduce a concept to an expression containing itself.",
+                ZiaError::InfiniteDefinition => "Cannot define a concept as an expression whose normal form contains itself.",
+                ZiaError::EmptyParentheses => "Parentheses need to contain a symbol or expression.",
+                ZiaError::AmbiguousExpression => "Ambiguity due to lack of precedence or associativity defined for the symbols in that expression.",
+                ZiaError::DefinitionCollision => "Cannot define a used symbol as another used symbol or expression.",
+                ZiaError::SettingDefinitionOfConcrete => "Cannot set a definition of a concrete concept",
+                ZiaError::ConcreteReduction => "Cannot reduce a concrete concept", 
+                ZiaError::MultipleReductionPaths => "Concept is already composed of concepts with their own reduction rules.",
+                ZiaError::UnusedSymbol => "Symbol was expected to be used to label a concept but isn't.",
+                _ => "",
+            })
+        }
     }
 }

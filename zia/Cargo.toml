@@ -29,3 +29,7 @@ criterion = "0.3.0"
 [[bench]]
 name = "setup"
 harness = false
+
+[[bench]]
+name = "let_reduction"
+harness = false
