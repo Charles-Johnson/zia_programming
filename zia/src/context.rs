@@ -248,11 +248,7 @@ where
     T: Delta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn blindly_remove_concept_deltas(
-        &self,
-        deltas: &mut Vec<ContextDelta<T>>,
-        id: usize,
-    ) {
+    fn blindly_remove_concept_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, id: usize) {
         if deltas.iter().fold(false, |removed, delta| match delta {
             ContextDelta::Concept(concept, ConceptDelta::Insert(_)) if *concept == id => false,
             ContextDelta::Concept(concept, ConceptDelta::Remove) if *concept == id => true,
@@ -285,11 +281,7 @@ where
     T: Delta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn remove_string_deltas(
-        &self,
-        deltas: &mut Vec<ContextDelta<T>>,
-        string: &str,
-    ) {
+    fn remove_string_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, string: &str) {
         if deltas
             .iter()
             .fold(true, |string_may_exist, delta| match delta {
@@ -473,7 +465,7 @@ where
                         .expect("Reduction previously removed!")
                         .no_longer_reduces_from_delta(&reduction_deltas, concept),
                 ),
-            )
+            ),
         ]
     }
 }
@@ -555,7 +547,7 @@ where
                         .expect("Right previously removed!")
                         .remove_as_righthand_of_delta(&right_deltas, concept),
                 ),
-            )
+            ),
         ]
     }
 }

@@ -162,7 +162,7 @@ impl SetDefinition for Concept {
             SpecificPart::Abstract(ref mut c) => {
                 c.set_definition(lefthand, righthand);
                 Ok(())
-            },
+            }
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
@@ -209,7 +209,7 @@ impl SetReduction for Concept {
             SpecificPart::Abstract(ref mut c) => {
                 c.make_reduce_to(concept);
                 Ok(())
-            },
+            }
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
@@ -288,11 +288,7 @@ impl RemoveDefinitionDelta for Concept {
             }));
         ConceptDelta::Common(CommonDelta::RemoveLeft(concept))
     }
-    fn remove_as_righthand_of_delta(
-        &self,
-        deltas: &[Self::Delta],
-        concept: usize,
-    ) -> Self::Delta {
+    fn remove_as_righthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
         assert!(deltas
             .iter()
             .fold(true, |righthand_of_concept, delta| match delta {

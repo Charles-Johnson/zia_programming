@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.*/
 
-use snafu::{Snafu};
+use snafu::Snafu;
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
@@ -65,15 +65,17 @@ pub enum ZiaError {
     ExpandingReduction,
     /// When a required symbol is missing from a command
     #[snafu(display("Missing {}", symbol))]
-    MissingSymbol{symbol: &'static str},
+    MissingSymbol { symbol: &'static str },
     /// When a concept is contained within the normal form of its definition.
-    #[snafu(display("Cannot define a concept as an expression whose normal form contains itself."))]
+    #[snafu(display(
+        "Cannot define a concept as an expression whose normal form contains itself."
+    ))]
     InfiniteDefinition,
     /// When a command contains a pair of parentheses with no syntax inside.
     #[snafu(display("Parentheses need to contain a symbol or expression."))]
     EmptyParentheses,
     /// When the interpreter cannot determine the tree structure of an expression.
-    #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]    
+    #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]
     AmbiguousExpression,
     /// When trying to refactor a used symbol as another used symbol or expression.
     #[snafu(display("Cannot define a used symbol as another used symbol or expression."))]

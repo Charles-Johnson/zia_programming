@@ -60,12 +60,11 @@ where
         previous_deltas: &mut Vec<Self::Delta>,
         concept: usize,
     ) -> ZiaResult<()> {
-        Ok(if self.is_disconnected(previous_deltas, concept) {
+        if self.is_disconnected(previous_deltas, concept) {
             self.unlabel(previous_deltas, concept)?;
             self.remove_concept(previous_deltas, concept)
-        } else {
-            ()
-        })
+        }
+        Ok(())
     }
 }
 

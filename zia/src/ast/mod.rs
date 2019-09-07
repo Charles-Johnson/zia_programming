@@ -14,8 +14,8 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-use errors::{ZiaError,ZiaResult};
-use reading::{MaybeConcept, MightExpand, Pair, BindConcept};
+use errors::{ZiaError, ZiaResult};
+use reading::{BindConcept, MaybeConcept, MightExpand, Pair};
 use std::{fmt, rc::Rc, str::FromStr};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
@@ -80,7 +80,7 @@ impl Pair for SyntaxTree {
 }
 
 impl FromStr for SyntaxTree {
-    type Err = ZiaError; 
+    type Err = ZiaError;
     fn from_str(syntax: &str) -> ZiaResult<SyntaxTree> {
         Ok(SyntaxTree {
             syntax: syntax.to_string(),

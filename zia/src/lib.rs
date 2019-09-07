@@ -89,19 +89,19 @@
 //!
 //! // Cannot reduce a reduction expression between unrelated concepts
 //! assert_eq!(context.execute("d -> f"), "d -> f");
-//! 
+//!
 //! // Can ask whether a reduction is true or false
 //! assert_eq!(context.execute("(a -> d) -> true"), "true");
 //! assert_eq!(context.execute("(d -> a) -> false"), "true");
-//! 
+//!
 //! // Let an arbitary symbol be true
 //! assert_eq!(context.execute("let g"), "");
 //! assert_eq!(context.execute("g"), "true");
-//! 
+//!
 //! // Let an arbitary expression be true
 //! assert_eq!(context.execute("let h i j"), "");
 //! assert_eq!(context.execute("h i j"), "true");
-//! 
+//!
 //! // Determine associativity of symbol
 //! assert_eq!(context.execute("assoc a"), "right");
 //! ```
@@ -157,8 +157,8 @@ pub use errors::ZiaError;
 use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
-    FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
-    MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader, BindConcept
+    BindConcept, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
+    MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
 };
 use removing::DefinitionDeleter;
 use std::{fmt::Debug, rc::Rc, str::FromStr};
@@ -193,13 +193,7 @@ where
         + FindWhatReducesToIt
         + Debug
         + Clone,
-    Self::S: Container
-        + Pair
-        + Debug
-        + Clone
-        + FromStr
-        + BindConcept
-        + PartialEq<Self::S>,
+    Self::S: Container + Pair + Debug + Clone + FromStr + BindConcept + PartialEq<Self::S>,
     <Self::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
@@ -237,13 +231,7 @@ where
         + Debug
         + Clone,
     S: Call<T> + SyntaxConverter<T> + Logger,
-    S::S: Container
-        + Pair
-        + Clone
-        + FromStr
-        + BindConcept
-        + Debug
-        + PartialEq<Self::S>,
+    S::S: Container + Pair + Clone + FromStr + BindConcept + Debug + PartialEq<Self::S>,
     <S::S as FromStr>::Err: Debug,
     S::Delta: Clone + Debug,
 {
@@ -286,22 +274,12 @@ where
         + MaybeString
         + Debug
         + Clone,
-    Self::S: Container
-        + Pair
-        + Clone
-        + FromStr
-        + BindConcept
-        + PartialEq<Self::S>
-        + Debug,
+    Self::S: Container + Pair + Clone + FromStr + BindConcept + PartialEq<Self::S> + Debug,
     <Self::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        ast: &Rc<Self::S>,
-    ) -> ZiaResult<String> {
+    fn call(&self, deltas: &mut Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<String> {
         match ast
             .get_concept()
             .and_then(|c| self.read_concept(&deltas, c).get_string())
@@ -342,24 +320,34 @@ where
     ) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
-                LET => right.get_expansion().and_then(|(left, right)|
-                    self.execute_let(deltas, &left, &right).and_then(|x| match x {
-                        Err(ZiaError::CannotReduceFurther) => None,
-                        Err(ZiaError::UnusedSymbol) => None,
-                        _ => Some(x),
+                LET => right
+                    .get_expansion()
+                    .and_then(|(left, right)| {
+                        self.execute_let(deltas, &left, &right)
+                            .and_then(|x| match x {
+                                Err(ZiaError::CannotReduceFurther) => None,
+                                Err(ZiaError::UnusedSymbol) => None,
+                                _ => Some(x),
+                            })
                     })
-                ).or_else(|| Some({
-                    let syntax = self.get_label(deltas, TRUE).unwrap().parse::<Self::S>().unwrap().bind_concept(TRUE);
-                    self.execute_reduction(deltas, right, &syntax)
-                })).map(|r| r.map(|()| "".to_string())),
-                LABEL => Some(Ok(
-                    "'".to_string()
-                        + &right
-                            .get_concept()
-                            .and_then(|c| self.get_label(deltas, c))
-                            .unwrap_or_else(|| right.to_string())
-                        + "'",
-                )),
+                    .or_else(|| {
+                        Some({
+                            let syntax = self
+                                .get_label(deltas, TRUE)
+                                .unwrap()
+                                .parse::<Self::S>()
+                                .unwrap()
+                                .bind_concept(TRUE);
+                            self.execute_reduction(deltas, right, &syntax)
+                        })
+                    })
+                    .map(|r| r.map(|()| "".to_string())),
+                LABEL => Some(Ok("'".to_string()
+                    + &right
+                        .get_concept()
+                        .and_then(|c| self.get_label(deltas, c))
+                        .unwrap_or_else(|| right.to_string())
+                    + "'")),
                 _ => None,
             })
             .unwrap_or_else(|| match right.get_concept() {
@@ -415,9 +403,11 @@ where
         left: &Self::S,
         right: &Self::S,
     ) -> Option<ZiaResult<()>> {
-        right.get_expansion().map(|(ref rightleft, ref rightright)|
-            self.match_righthand_pair(deltas, left, rightleft, rightright)
-        )
+        right
+            .get_expansion()
+            .map(|(ref rightleft, ref rightright)| {
+                self.match_righthand_pair(deltas, left, rightleft, rightright)
+            })
     }
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
     /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
@@ -469,13 +459,7 @@ where
         + MaybeString
         + Debug
         + Clone,
-    S::S: Container
-        + Pair
-        + Clone
-        + Debug
-        + FromStr
-        + BindConcept
-        + PartialEq<Self::S>,
+    S::S: Container + Pair + Clone + Debug + FromStr + BindConcept + PartialEq<Self::S>,
     <S::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
@@ -520,12 +504,7 @@ where
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        new: &Self::S,
-        old: &Self::S,
-    ) -> ZiaResult<()> {
+    fn define(&self, deltas: &mut Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {

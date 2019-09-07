@@ -120,11 +120,7 @@ where
     Self::Delta: Clone + fmt::Debug,
 {
     type S: MightExpand + MaybeConcept + fmt::Display;
-    fn concept_from_ast(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        ast: &Self::S,
-    ) -> ZiaResult<usize> {
+    fn concept_from_ast(&self, deltas: &mut Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
         } else if let Some(c) = self.concept_from_label(&deltas, &ast.to_string()) {
@@ -233,7 +229,9 @@ where
         let mut deltas = vec![];
         let concrete_constructor =
             |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas);
-        let labels = vec!["label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-"];
+        let labels = vec![
+            "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
+        ];
         let concepts = Self::repeat(&mut deltas, concrete_constructor, labels.len());
         let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| {
             self.label(local_deltas, concept, string)

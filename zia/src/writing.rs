@@ -68,11 +68,7 @@ where
             Err(ZiaError::RedundantReduction)
         }
     }
-    fn delete_reduction(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        concept: usize,
-    ) -> ZiaResult<()> {
+    fn delete_reduction(&self, deltas: &mut Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
         self.read_concept(deltas, concept)
             .get_reduction()
             .map(|n| {
