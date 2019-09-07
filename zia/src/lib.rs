@@ -158,11 +158,10 @@ use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
     FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
-    MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
+    MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader, BindConcept
 };
 use removing::DefinitionDeleter;
-use std::fmt::Debug;
-use std::rc::Rc;
+use std::{fmt::Debug, rc::Rc, str::FromStr};
 use translating::SyntaxConverter;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
@@ -198,8 +197,10 @@ where
         + Pair
         + Debug
         + Clone
-        + From<(String, Option<usize>)>
+        + FromStr
+        + BindConcept
         + PartialEq<Self::S>,
+    <Self::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     fn execute(&mut self, command: &str) -> String {
@@ -239,9 +240,11 @@ where
     S::S: Container
         + Pair
         + Clone
-        + From<(String, Option<usize>)>
+        + FromStr
+        + BindConcept
         + Debug
         + PartialEq<Self::S>,
+    <S::S as FromStr>::Err: Debug,
     S::Delta: Clone + Debug,
 {
 }
@@ -286,9 +289,11 @@ where
     Self::S: Container
         + Pair
         + Clone
-        + From<(String, Option<usize>)>
+        + FromStr
+        + BindConcept
         + PartialEq<Self::S>
         + Debug,
+    <Self::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
@@ -344,7 +349,7 @@ where
                         _ => Some(x),
                     })
                 ).or_else(|| Some({
-                    let syntax = Self::S::from((self.get_label(deltas, TRUE)?, Some(TRUE)));
+                    let syntax = self.get_label(deltas, TRUE).unwrap().parse::<Self::S>().unwrap().bind_concept(TRUE);
                     self.execute_reduction(deltas, right, &syntax)
                 })).map(|r| r.map(|()| "".to_string())),
                 LABEL => Some(Ok(
@@ -468,8 +473,10 @@ where
         + Pair
         + Clone
         + Debug
-        + From<(String, Option<usize>)>
+        + FromStr
+        + BindConcept
         + PartialEq<Self::S>,
+    <S::S as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
 }

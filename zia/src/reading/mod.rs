@@ -22,7 +22,7 @@ pub use self::concepts::*;
 pub use self::syntax::*;
 use constants::{LABEL, TRUE, FALSE, REDUCTION, ASSOC, LEFT, RIGHT, PRECEDENCE};
 use delta::Delta;
-use std::{collections::HashSet, fmt, rc::Rc};
+use std::{collections::HashSet, fmt, rc::Rc, str::FromStr};
 
 pub trait SyntaxReader<T>
 where
@@ -36,13 +36,17 @@ where
             + fmt::Display
             + Clone
             + Pair
-            + From<(String, Option<usize>)>
+            + FromStr
+            + BindConcept
             + PartialEq,
     >(
         &self,
         deltas: &[Self::Delta],
         ast: &Rc<U>,
-    ) -> Rc<U> {
+    ) -> Rc<U> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
                 self.combine(
@@ -65,7 +69,8 @@ where
     }
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     fn recursively_reduce<
-        U: From<(String, Option<usize>)>
+        U: FromStr
+            + BindConcept
             + MightExpand
             + Clone
             + Pair
@@ -76,7 +81,10 @@ where
         &self,
         deltas: &[Self::Delta],
         ast: &Rc<U>,
-    ) -> Rc<U> {
+    ) -> Rc<U> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         match self.reduce(deltas, ast) {
             Some(ref a) => self.recursively_reduce(deltas, a),
             None => ast.clone(),
@@ -84,7 +92,8 @@ where
     }
     fn determine_reduction_truth<
         U: PartialEq
-            + From<(String, Option<usize>)>
+            + FromStr
+            + BindConcept
             + MightExpand
             + Clone
             + Pair
@@ -95,7 +104,10 @@ where
         deltas: &[Self::Delta],
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> Option<bool> {
+    ) -> Option<bool> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         if left == right {
             Some(false)
         } else {
@@ -108,7 +120,8 @@ where
     }
     fn determine_evidence_of_reduction<
         U: PartialEq
-            + From<(String, Option<usize>)>
+            + FromStr
+            + BindConcept
             + MightExpand
             + Clone
             + Pair
@@ -119,7 +132,10 @@ where
         deltas: &[Self::Delta],
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> Option<bool> {
+    ) -> Option<bool>
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         self.reduce(deltas, left).and_then(|reduced_left| {
             if &reduced_left == right {
                 Some(true)
@@ -130,7 +146,8 @@ where
     }
     /// Reduces the syntax by using the reduction rules of associated concepts.
     fn reduce<
-        U: From<(String, Option<usize>)>
+        U: FromStr
+            + BindConcept
             + MightExpand
             + Clone
             + Pair
@@ -141,12 +158,15 @@ where
         &self,
         deltas: &[Self::Delta],
         ast: &Rc<U>,
-    ) -> Option<Rc<U>> {
+    ) -> Option<Rc<U>> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         match ast.get_concept() {
             Some(c) => self.reduce_concept::<U>(deltas, c),
             None => ast.get_expansion().and_then(|(ref left, ref right)| {
                 left.get_concept().and_then(|lc| match lc {
-                    ASSOC => Some(Rc::new(U::from((self.get_label(deltas, RIGHT).expect("RIGHT is unlabelled"), Some(RIGHT))))),
+                    ASSOC => Some(Rc::new(self.get_label(deltas, RIGHT).expect("RIGHT is unlabelled").parse::<U>().unwrap().bind_concept(RIGHT))),
                     _ => None,
                 }).or_else(||
                     right.get_expansion().and_then(|(rightleft, rightright)| {
@@ -157,9 +177,9 @@ where
                                     .determine_reduction_truth(deltas, left, &rightright)
                                     .map(|x| {
                                         if x {
-                                            Rc::new(U::from((self.get_label(deltas, TRUE).expect("TRUE is unlabelled"), Some(TRUE))))
+                                            Rc::new(self.get_label(deltas, TRUE).expect("TRUE is unlabelled").parse::<U>().unwrap().bind_concept(TRUE))
                                         } else {
-                                            Rc::new(U::from((self.get_label(deltas, FALSE).expect("FALSE is unlabelled"), Some(FALSE))))
+                                            Rc::new(self.get_label(deltas, FALSE).expect("FALSE is unlabelled").parse::<U>().unwrap().bind_concept(FALSE))
                                         }
                                     }),
                                 _ => None,
@@ -177,12 +197,15 @@ where
     }
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept<
-        U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq
+        U: FromStr + BindConcept + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq
     >(
         &self,
         deltas: &[Self::Delta],
         concept: usize,
-    ) -> Option<Rc<U>> {
+    ) -> Option<Rc<U>>
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         self.read_concept(deltas, concept)
             .get_reduction()
             .map(|n| self.to_ast::<U>(deltas, n))
@@ -203,13 +226,16 @@ where
             })
     }
     /// Returns the syntax for a concept.
-    fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq>(
+    fn to_ast<U: FromStr + BindConcept + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq>(
         &self,
         deltas: &[Self::Delta],
         concept: usize,
-    ) -> Rc<U> {
+    ) -> Rc<U> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         match self.get_label(deltas, concept) {
-            Some(s) => Rc::new(U::from((s, Some(concept)))),
+            Some(s) => Rc::new(s.parse::<U>().unwrap().bind_concept(concept)),
             None => {
                 let (left, right) = self
                     .read_concept(deltas, concept)
@@ -223,12 +249,15 @@ where
             }
         }
     }
-    fn combine<U: MaybeConcept + Pair + MightExpand + fmt::Display + Sized + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(
+    fn combine<U: MaybeConcept + Pair + MightExpand + fmt::Display + Sized + Clone + PartialEq + FromStr + BindConcept>(
         &self,
         deltas: &[Self::Delta],
         ast: &Rc<U>,
         other: &Rc<U>,
-    ) -> Rc<U> {
+    ) -> Rc<U> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
             self.find_definition(deltas, l, r)
         } else {
@@ -240,7 +269,10 @@ where
             other,
         ))
     }
-    fn display_joint<U: MaybeConcept + Pair + MightExpand + fmt::Display + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
+    fn display_joint<U: MaybeConcept + Pair + MightExpand + fmt::Display + Clone + PartialEq + FromStr + BindConcept>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         let left_string = left.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
             Associativity::Left => l.to_string() + " " + &r.to_string(),
             Associativity::Right => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
@@ -251,7 +283,10 @@ where
         }).unwrap_or_else(|| right.to_string());
         left_string + " " + &right_string
     }
-    fn get_associativity<U: MaybeConcept + Pair + MightExpand + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
+    fn get_associativity<U: MaybeConcept + Pair + MightExpand + Clone + fmt::Display + FromStr + BindConcept + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
         self.reduce(deltas, &assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
@@ -260,7 +295,10 @@ where
                 _ => None,
             })
     }
-    fn has_higher_precedence<U: MaybeConcept + Pair + PartialEq + MightExpand + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> {
+    fn has_higher_precedence<U: MaybeConcept + Pair + PartialEq + MightExpand + Clone + fmt::Display + FromStr + BindConcept>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         let is_higher_prec_than_right = self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
         let left_is_higher_prec_than_right = self.combine(deltas, left, &is_higher_prec_than_right);
         self.reduce(deltas, &left_is_higher_prec_than_right)
@@ -271,14 +309,17 @@ where
             })
     }
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
-    fn match_left_right<U: Pair + MaybeConcept + MightExpand + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
+    fn match_left_right<U: Pair + MaybeConcept + MightExpand + PartialEq + Clone + FromStr + BindConcept + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         left: Option<Rc<U>>,
         right: Option<Rc<U>>,
         original_left: &Rc<U>,
         original_right: &Rc<U>,
-    ) -> Option<Rc<U>> {
+    ) -> Option<Rc<U>> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         match (left, right) {
             (None, None) => None,
             (Some(new_left), None) => {
@@ -293,12 +334,15 @@ where
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    fn contract_pair<U: MaybeConcept + Pair + MightExpand + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
+    fn contract_pair<U: MaybeConcept + Pair + MightExpand + PartialEq + Clone + FromStr + BindConcept + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         lefthand: &Rc<U>,
         righthand: &Rc<U>,
-    ) -> Rc<U> {
+    ) -> Rc<U> 
+    where
+        <U as FromStr>::Err: fmt::Debug,
+    {
         let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
             (Some(lc), Some(rc)) => {
                 let maydef = self.find_definition(deltas, lc, rc);
@@ -556,4 +600,8 @@ where
     Self: Delta,
 {
     fn read_concept(&self, &[Self::Delta], usize) -> T;
+}
+
+pub trait BindConcept {
+    fn bind_concept(self, usize) -> Self;
 }

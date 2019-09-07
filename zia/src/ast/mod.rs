@@ -14,8 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-use reading::{MaybeConcept, MightExpand, Pair};
-use std::{fmt, rc::Rc};
+use errors::{ZiaError,ZiaResult};
+use reading::{MaybeConcept, MightExpand, Pair, BindConcept};
+use std::{fmt, rc::Rc, str::FromStr};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone, Debug)]
@@ -78,13 +79,20 @@ impl Pair for SyntaxTree {
     }
 }
 
-impl From<(String, Option<usize>)> for SyntaxTree {
-    /// Constructs a `Symbol` variant from the syntax string and a possible associated concept.  
-    fn from(syntax: (String, Option<usize>)) -> SyntaxTree {
-        SyntaxTree {
-            syntax: syntax.0,
-            concept: syntax.1,
+impl FromStr for SyntaxTree {
+    type Err = ZiaError; 
+    fn from_str(syntax: &str) -> ZiaResult<SyntaxTree> {
+        Ok(SyntaxTree {
+            syntax: syntax.to_string(),
+            concept: None,
             expansion: None,
-        }
+        })
+    }
+}
+
+impl BindConcept for SyntaxTree {
+    fn bind_concept(mut self, concept: usize) -> SyntaxTree {
+        self.concept = Some(concept);
+        self
     }
 }

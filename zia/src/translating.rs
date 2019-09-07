@@ -20,9 +20,9 @@ use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
     FindWhatReducesToIt, GetDefinition, GetDefinitionOf, Label,
-    MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand, Associativity
+    MaybeConcept, Pair, SyntaxReader, MaybeString, GetReduction, MightExpand, Associativity, BindConcept
 };
-use std::{rc::Rc, fmt::{Debug, Display}};
+use std::{rc::Rc, fmt::{Debug, Display}, str::FromStr};
 
 pub trait SyntaxConverter<T>
 where
@@ -30,22 +30,28 @@ where
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
     fn ast_from_expression<
-        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
+        U: FromStr + BindConcept + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
     >(
         &self,
         deltas: &[Self::Delta],
         s: &str,
-    ) -> ZiaResult<Rc<U>> {
+    ) -> ZiaResult<Rc<U>> 
+    where
+        <U as FromStr>::Err: Debug,
+    {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
     fn ast_from_tokens<
-        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
+        U: FromStr + BindConcept + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
     >(
         &self,
         deltas: &[Self::Delta],
         tokens: &[String],
-    ) -> ZiaResult<Rc<U>> {
+    ) -> ZiaResult<Rc<U>> 
+    where
+        <U as FromStr>::Err: Debug,
+    {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token::<U>(deltas, &tokens[0]),
@@ -118,21 +124,27 @@ where
             }
         }
     }
-    fn ast_from_pair<U: From<(String, Option<usize>)>  + MaybeConcept + Pair  + Clone + PartialEq + MightExpand + Display>(
+    fn ast_from_pair<U: FromStr + BindConcept + MaybeConcept + Pair  + Clone + PartialEq + MightExpand + Display>(
         &self,
         deltas: &[Self::Delta],
         left: &str,
         right: &str,
-    ) -> ZiaResult<Rc<U>> {
+    ) -> ZiaResult<Rc<U>>
+    where
+        <U as FromStr>::Err: Debug,
+    {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept  + Pair  + Clone + PartialEq + MightExpand + Display>(
+    fn ast_from_token<U: FromStr + BindConcept + MaybeConcept  + Pair  + Clone + PartialEq + MightExpand + Display>(
         &self,
         deltas: &[Self::Delta],
         t: &str,
-    ) -> ZiaResult<Rc<U>> {
+    ) -> ZiaResult<Rc<U>>
+    where
+        <U as FromStr>::Err: Debug,
+    {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression::<U>(deltas, t)
         } else {
@@ -213,13 +225,17 @@ where
         self.get_string_concept(deltas, s)
             .and_then(|c| self.get_labellee(deltas, c))
     }
-    fn ast_from_symbol<U: From<(String, Option<usize>)>>(
+    fn ast_from_symbol<U: FromStr + BindConcept>(
         &self,
         deltas: &[Self::Delta],
         s: &str,
-    ) -> U {
-        let concept_if_exists = self.concept_from_label(deltas, s);
-        U::from((s.to_string(), concept_if_exists))
+    ) -> U
+    where
+        <U as FromStr>::Err: Debug,
+    {
+        self.concept_from_label(deltas, s)
+            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
+            .unwrap_or_else(|| s.parse().unwrap())
     }
 }
 
