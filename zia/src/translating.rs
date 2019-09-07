@@ -30,7 +30,7 @@ where
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
 {
     fn ast_from_expression<
-        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand<U> + Display,
+        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -40,7 +40,7 @@ where
         self.ast_from_tokens(deltas, &tokens)
     }
     fn ast_from_tokens<
-        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand<U> + Display,
+        U: From<(String, Option<usize>)> + Pair + MaybeConcept  + Clone + PartialEq + MightExpand + Display,
     >(
         &self,
         deltas: &[Self::Delta],
@@ -118,7 +118,7 @@ where
             }
         }
     }
-    fn ast_from_pair<U: From<(String, Option<usize>)>  + MaybeConcept + Pair  + Clone + PartialEq + MightExpand<U> + Display>(
+    fn ast_from_pair<U: From<(String, Option<usize>)>  + MaybeConcept + Pair  + Clone + PartialEq + MightExpand + Display>(
         &self,
         deltas: &[Self::Delta],
         left: &str,
@@ -128,7 +128,7 @@ where
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept  + Pair  + Clone + PartialEq + MightExpand<U> + Display>(
+    fn ast_from_token<U: From<(String, Option<usize>)> + MaybeConcept  + Pair  + Clone + PartialEq + MightExpand + Display>(
         &self,
         deltas: &[Self::Delta],
         t: &str,

@@ -24,6 +24,6 @@ pub trait Pair {
     fn from_pair((String, Option<usize>), &Rc<Self>, &Rc<Self>) -> Self;
 }
 
-pub trait MightExpand<U> {
-    fn get_expansion(&self) -> Option<(Rc<U>, Rc<U>)>;
+pub trait MightExpand {
+    fn get_expansion(&self) -> Option<(Rc<Self>, Rc<Self>)>;
 }

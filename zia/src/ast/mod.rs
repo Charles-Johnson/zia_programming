@@ -49,7 +49,7 @@ impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
     }
 }
 
-impl MightExpand<SyntaxTree> for SyntaxTree {
+impl MightExpand for SyntaxTree {
     /// An expression does have an expansion while a symbol does not.
     fn get_expansion(&self) -> Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)> {
         self.expansion.clone()

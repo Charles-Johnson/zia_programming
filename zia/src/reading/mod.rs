@@ -32,7 +32,7 @@ where
     /// Expands syntax by definition of its associated concept.
     fn expand<
         U: MaybeConcept
-            + MightExpand<U>
+            + MightExpand
             + fmt::Display
             + Clone
             + Pair
@@ -66,7 +66,7 @@ where
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     fn recursively_reduce<
         U: From<(String, Option<usize>)>
-            + MightExpand<U>
+            + MightExpand
             + Clone
             + Pair
             + MaybeConcept
@@ -85,7 +85,7 @@ where
     fn determine_reduction_truth<
         U: PartialEq
             + From<(String, Option<usize>)>
-            + MightExpand<U>
+            + MightExpand
             + Clone
             + Pair
             + MaybeConcept
@@ -109,7 +109,7 @@ where
     fn determine_evidence_of_reduction<
         U: PartialEq
             + From<(String, Option<usize>)>
-            + MightExpand<U>
+            + MightExpand
             + Clone
             + Pair
             + MaybeConcept
@@ -131,7 +131,7 @@ where
     /// Reduces the syntax by using the reduction rules of associated concepts.
     fn reduce<
         U: From<(String, Option<usize>)>
-            + MightExpand<U>
+            + MightExpand
             + Clone
             + Pair
             + MaybeConcept
@@ -177,7 +177,7 @@ where
     }
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept<
-        U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand<U> + fmt::Display + PartialEq
+        U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq
     >(
         &self,
         deltas: &[Self::Delta],
@@ -203,7 +203,7 @@ where
             })
     }
     /// Returns the syntax for a concept.
-    fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand<U> + fmt::Display + PartialEq>(
+    fn to_ast<U: From<(String, Option<usize>)> + Clone + Pair + MaybeConcept + MightExpand + fmt::Display + PartialEq>(
         &self,
         deltas: &[Self::Delta],
         concept: usize,
@@ -223,7 +223,7 @@ where
             }
         }
     }
-    fn combine<U: MaybeConcept + Pair + MightExpand<U> + fmt::Display + Sized + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(
+    fn combine<U: MaybeConcept + Pair + MightExpand + fmt::Display + Sized + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(
         &self,
         deltas: &[Self::Delta],
         ast: &Rc<U>,
@@ -240,7 +240,7 @@ where
             other,
         ))
     }
-    fn display_joint<U: MaybeConcept + Pair + MightExpand<U> + fmt::Display + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
+    fn display_joint<U: MaybeConcept + Pair + MightExpand + fmt::Display + Clone + PartialEq + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
         let left_string = left.get_expansion().map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
             Associativity::Left => l.to_string() + " " + &r.to_string(),
             Associativity::Right => "(".to_string() + &l.to_string() + " " + &r.to_string() + ")",
@@ -251,7 +251,7 @@ where
         }).unwrap_or_else(|| right.to_string());
         left_string + " " + &right_string
     }
-    fn get_associativity<U: MaybeConcept + Pair + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
+    fn get_associativity<U: MaybeConcept + Pair + MightExpand + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)> + PartialEq>(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
         self.reduce(deltas, &assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
@@ -260,7 +260,7 @@ where
                 _ => None,
             })
     }
-    fn has_higher_precedence<U: MaybeConcept + Pair + PartialEq + MightExpand<U> + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> {
+    fn has_higher_precedence<U: MaybeConcept + Pair + PartialEq + MightExpand + Clone + fmt::Display + From<(std::string::String, std::option::Option<usize>)>>(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<bool> {
         let is_higher_prec_than_right = self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
         let left_is_higher_prec_than_right = self.combine(deltas, left, &is_higher_prec_than_right);
         self.reduce(deltas, &left_is_higher_prec_than_right)
@@ -271,7 +271,7 @@ where
             })
     }
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
-    fn match_left_right<U: Pair + MaybeConcept + MightExpand<U> + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
+    fn match_left_right<U: Pair + MaybeConcept + MightExpand + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         left: Option<Rc<U>>,
@@ -293,7 +293,7 @@ where
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    fn contract_pair<U: MaybeConcept + Pair + MightExpand<U> + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
+    fn contract_pair<U: MaybeConcept + Pair + MightExpand + PartialEq + Clone + From<(std::string::String, std::option::Option<usize>)> + fmt::Display>(
         &self,
         deltas: &[Self::Delta],
         lefthand: &Rc<U>,

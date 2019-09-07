@@ -88,7 +88,7 @@ where
 
 pub trait Container
 where
-    Self: MightExpand<Self> + PartialEq<Rc<Self>> + Sized,
+    Self: MightExpand + PartialEq<Rc<Self>> + Sized,
 {
     fn contains(&self, other: &Self) -> bool {
         if let Some((ref left, ref right)) = self.get_expansion() {
@@ -99,7 +99,7 @@ where
     }
 }
 
-impl<T> Container for T where T: MightExpand<T> + PartialEq<Rc<T>> + Sized {}
+impl<T> Container for T where T: MightExpand + PartialEq<Rc<T>> + Sized {}
 
 pub trait ConceptMaker<T>
 where
@@ -119,7 +119,7 @@ where
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::Delta: Clone + fmt::Debug,
 {
-    type S: MightExpand<Self::S> + MaybeConcept + fmt::Display;
+    type S: MightExpand + MaybeConcept + fmt::Display;
     fn concept_from_ast(
         &self,
         deltas: &mut Vec<Self::Delta>,
