@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.*/
 
-use std::{error::Error, fmt};
+use snafu::{Snafu};
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
@@ -34,81 +34,60 @@ where
 }
 
 /// All the expected ways a Zia command could be invalid.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Snafu)]
 pub enum ZiaError {
     /// When specifying a reduction rule that already exists.
+    #[snafu(display("That reduction rule already exists."))]
     RedundantReduction,
     /// When specifying a definition that already exists.
+    #[snafu(display("That definition already exists."))]
     RedundantDefinition,
     /// When refactoring a symbol that hasn't been used.
+    #[snafu(display("Relabelling something that doesn't yet exist has no effect."))]
     RedundantRefactor,
     /// When removing a definition from a concept with no definition.
+    #[snafu(display("Removing a definition that doesn't exist is redundant."))]
     RedundantDefinitionRemoval,
     /// When defining an expanded expression.
+    #[snafu(display("Cannot define expressions."))]
     BadDefinition,
     /// When the command would complete a cycle of chained reduction rules.
+    #[snafu(display("Cannot allow a chain of reduction rules to loop."))]
     CyclicReduction,
     /// When syntax tree cannot be expanded further
+    #[snafu(display("Cannot expand syntax further"))]
     CannotExpandFurther,
     /// When syntax tree cannot be reduced further
+    #[snafu(display("Cannot reduce syntax further"))]
     CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.  
+    #[snafu(display("Cannot reduce a concept to an expression containing itself."))]
     ExpandingReduction,
     /// When a required symbol is missing from a command
-    MissingSymbol(String),
+    #[snafu(display("Missing {}", symbol))]
+    MissingSymbol{symbol: &'static str},
     /// When a concept is contained within the normal form of its definition.
+    #[snafu(display("Cannot define a concept as an expression whose normal form contains itself."))]
     InfiniteDefinition,
     /// When a command contains a pair of parentheses with no syntax inside.
+    #[snafu(display("Parentheses need to contain a symbol or expression."))]
     EmptyParentheses,
     /// When the interpreter cannot determine the tree structure of an expression.
+    #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]    
     AmbiguousExpression,
     /// When trying to refactor a used symbol as another used symbol or expression.
+    #[snafu(display("Cannot define a used symbol as another used symbol or expression."))]
     DefinitionCollision,
     /// When trying to define the composition of a concrete concept.
+    #[snafu(display("Cannot set a definition of a concrete concept"))]
     SettingDefinitionOfConcrete,
     /// When trying to specify a reduction rule for a concrete concept.
+    #[snafu(display("Cannot reduce a concrete concept"))]
     ConcreteReduction,
     /// When trying to specify a reduction rule for a concept whose components reduce to something else.
+    #[snafu(display("Concept is already composed of concepts with their own reduction rules."))]
     MultipleReductionPaths,
     /// When symbol is expected to be used by a concept but isn't.
+    #[snafu(display("Symbol was expected to be used to label a concept but isn't."))]
     UnusedSymbol,
-}
-
-impl Error for ZiaError {
-    fn description(&self) -> &str {
-        "All the expected ways a Zia command could be invalid"
-    }
-
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
-
-impl fmt::Display for ZiaError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let ZiaError::MissingSymbol(ref s) = *self {
-            write!(f, "Missing {}", s)
-        } else {
-            write!(f, "{}", match *self {
-                ZiaError::RedundantReduction => "That reduction rule already exists.",
-                ZiaError::RedundantDefinition => "That definition already exists.",
-                ZiaError::RedundantRefactor => "Relabelling something that doesn't yet exist has no effect.",
-                ZiaError::RedundantDefinitionRemoval => "Removing a definition that doesn't exist is redundant.",
-                ZiaError::BadDefinition => "Cannot define expressions.",
-                ZiaError::CannotExpandFurther => "Cannot expand syntax further",
-                ZiaError::CannotReduceFurther => "Cannot reduce syntax further",
-                ZiaError::CyclicReduction => "Cannot allow a chain of reduction rules to loop.",
-                ZiaError::ExpandingReduction => "Cannot reduce a concept to an expression containing itself.",
-                ZiaError::InfiniteDefinition => "Cannot define a concept as an expression whose normal form contains itself.",
-                ZiaError::EmptyParentheses => "Parentheses need to contain a symbol or expression.",
-                ZiaError::AmbiguousExpression => "Ambiguity due to lack of precedence or associativity defined for the symbols in that expression.",
-                ZiaError::DefinitionCollision => "Cannot define a used symbol as another used symbol or expression.",
-                ZiaError::SettingDefinitionOfConcrete => "Cannot set a definition of a concrete concept",
-                ZiaError::ConcreteReduction => "Cannot reduce a concrete concept", 
-                ZiaError::MultipleReductionPaths => "Concept is already composed of concepts with their own reduction rules.",
-                ZiaError::UnusedSymbol => "Symbol was expected to be used to label a concept but isn't.",
-                _ => "",
-            })
-        }
-    }
 }

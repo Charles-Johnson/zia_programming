@@ -156,7 +156,7 @@ pub fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
         parenthesis_level = parse_letter(letter, parenthesis_level, &mut token, &mut tokens)?;
     }
     if parenthesis_level != 0 {
-        return Err(ZiaError::MissingSymbol(")".to_string()));
+        return Err(ZiaError::MissingSymbol{symbol:")"});
     }
     if token != "" {
         tokens.push(token.clone());
@@ -180,7 +180,7 @@ fn parse_letter(
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level)
         } else {
-            Err(ZiaError::MissingSymbol("(".to_string()))
+            Err(ZiaError::MissingSymbol{symbol:"("})
         }
         ' ' => {
             push_token(letter, parenthesis_level, token, tokens);

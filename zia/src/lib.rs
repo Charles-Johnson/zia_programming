@@ -109,6 +109,7 @@
 #[macro_use]
 extern crate slog;
 extern crate slog_term;
+extern crate snafu;
 
 /// Traits for adding concepts to the context.
 mod adding;
