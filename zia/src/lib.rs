@@ -195,7 +195,7 @@ where
         + Debug
         + Clone,
     Self::S: Container
-        + Pair<Self::S>
+        + Pair
         + Debug
         + Clone
         + From<(String, Option<usize>)>
@@ -237,7 +237,7 @@ where
         + Clone,
     S: Call<T> + SyntaxConverter<T> + Logger,
     S::S: Container
-        + Pair<S::S>
+        + Pair
         + Clone
         + From<(String, Option<usize>)>
         + Debug
@@ -284,7 +284,7 @@ where
         + Debug
         + Clone,
     Self::S: Container
-        + Pair<Self::S>
+        + Pair
         + Clone
         + From<(String, Option<usize>)>
         + PartialEq<Self::S>
@@ -465,7 +465,7 @@ where
         + Debug
         + Clone,
     S::S: Container
-        + Pair<S::S>
+        + Pair
         + Clone
         + Debug
         + From<(String, Option<usize>)>
@@ -496,7 +496,7 @@ where
         + Debug
         + Clone,
     Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
-    Self::S: Pair<Self::S> + Container,
+    Self::S: Pair + Container,
     Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
@@ -625,7 +625,7 @@ where
         + Debug
         + Clone,
     S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
-    S::S: Pair<S::S> + Container,
+    S::S: Pair + Container,
     S::Delta: Clone + Debug,
 {
 }

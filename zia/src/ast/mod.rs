@@ -63,7 +63,7 @@ impl fmt::Display for SyntaxTree {
     }
 }
 
-impl Pair<SyntaxTree> for SyntaxTree {
+impl Pair for SyntaxTree {
     /// Combines a pair of syntax trees into a `SyntaxTree` whilst specifying the overall syntax and maybe a concept.
     fn from_pair(
         syntax: (String, Option<usize>),

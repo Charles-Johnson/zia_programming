@@ -20,8 +20,8 @@ pub trait MaybeConcept {
     fn get_concept(&self) -> Option<usize>;
 }
 
-pub trait Pair<U> {
-    fn from_pair((String, Option<usize>), &Rc<U>, &Rc<U>) -> Self;
+pub trait Pair {
+    fn from_pair((String, Option<usize>), &Rc<Self>, &Rc<Self>) -> Self;
 }
 
 pub trait MightExpand<U> {
