@@ -19,8 +19,8 @@ use constants::{FALSE, PRECEDENCE, TRUE};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
-    Associativity, BindConcept, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction,
-    Label, MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
+    Associativity, BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf,
+    GetReduction, Label, MaybeConcept, MaybeString, MightExpand, SyntaxReader,
 };
 use std::{
     fmt::{Debug, Display},
@@ -32,24 +32,14 @@ pub trait SyntaxConverter<T, U>
 where
     Self: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
-    U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
+    U: FromStr + BindConcept + BindPair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
     <U as FromStr>::Err: Debug,
 {
-    fn ast_from_expression(
-        &self,
-        deltas: &[Self::Delta],
-        s: &str,
-    ) -> ZiaResult<Rc<U>>
-    {
+    fn ast_from_expression(&self, deltas: &[Self::Delta], s: &str) -> ZiaResult<Rc<U>> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
-    fn ast_from_tokens(
-        &self,
-        deltas: &[Self::Delta],
-        tokens: &[String],
-    ) -> ZiaResult<Rc<U>>
-    {
+    fn ast_from_tokens(&self, deltas: &[Self::Delta], tokens: &[String]) -> ZiaResult<Rc<U>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(deltas, &tokens[0]),
@@ -149,23 +139,12 @@ where
             }
         }
     }
-    fn ast_from_pair(
-        &self,
-        deltas: &[Self::Delta],
-        left: &str,
-        right: &str,
-    ) -> ZiaResult<Rc<U>>
-    {
+    fn ast_from_pair(&self, deltas: &[Self::Delta], left: &str, right: &str) -> ZiaResult<Rc<U>> {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token(
-        &self,
-        deltas: &[Self::Delta],
-        t: &str,
-    ) -> ZiaResult<Rc<U>>
-    {
+    fn ast_from_token(&self, deltas: &[Self::Delta], t: &str) -> ZiaResult<Rc<U>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(deltas, t)
         } else {
@@ -178,7 +157,7 @@ impl<S, T, U> SyntaxConverter<T, U> for S
 where
     S: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
-    U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
+    U: FromStr + BindConcept + BindPair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
     <U as FromStr>::Err: Debug,
 {
 }
@@ -186,10 +165,9 @@ where
 pub fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
     let mut tokens: Vec<String> = [].to_vec();
     let mut token = String::new();
-    let mut parenthesis_level = 0;
-    for letter in buffer.chars() {
-        parenthesis_level = parse_letter(letter, parenthesis_level, &mut token, &mut tokens)?;
-    }
+    let parenthesis_level = buffer.chars().try_fold(0, |p_level, letter| {
+        parse_letter(letter, p_level, &mut token, &mut tokens)
+    })?;
     if parenthesis_level != 0 {
         return Err(ZiaError::MissingSymbol { symbol: ")" });
     }

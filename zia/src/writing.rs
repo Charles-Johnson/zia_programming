@@ -29,7 +29,7 @@ where
     T: GetReduction + GetDefinition + GetDefinitionOf + Debug,
     Self: DeleteReduction<T, U> + GetConceptOfLabel<T> + Delta,
     Self::Delta: Clone,
-    U: MaybeConcept + Display
+    U: MaybeConcept + Display,
 {
     fn unlabel(&self, deltas: &mut Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
         let concept_of_label = self
@@ -49,7 +49,7 @@ where
         + Debug,
     S: DeleteReduction<T, U> + GetConceptOfLabel<T>,
     S::Delta: Clone,
-    U: Display + MaybeConcept
+    U: Display + MaybeConcept,
 {
 }
 
@@ -60,11 +60,7 @@ where
     Self::Delta: Clone,
     U: MaybeConcept + Display,
 {
-    fn try_removing_reduction(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        syntax: &U,
-    ) -> ZiaResult<()> {
+    fn try_removing_reduction(&self, deltas: &mut Vec<Self::Delta>, syntax: &U) -> ZiaResult<()> {
         if let Some(c) = syntax.get_concept() {
             self.delete_reduction(deltas, c)
         } else {

@@ -157,11 +157,15 @@ pub use errors::ZiaError;
 use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
-    BindConcept, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
-    MaybeConcept, MaybeString, Pair, SyntaxReader,
+    BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
+    GetReduction, MaybeConcept, MaybeString, SyntaxReader,
 };
 use removing::DefinitionDeleter;
-use std::{fmt::{Debug, Display}, rc::Rc, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    rc::Rc,
+    str::FromStr,
+};
 use translating::SyntaxConverter;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
@@ -211,7 +215,15 @@ where
         + FindWhatReducesToIt
         + Debug
         + Clone,
-    U: Container + Pair + Debug + Clone + FromStr + BindConcept + PartialEq<U> + Display + MaybeConcept,
+    U: Container
+        + BindPair
+        + Debug
+        + Clone
+        + FromStr
+        + BindConcept
+        + PartialEq<U>
+        + Display
+        + MaybeConcept,
     <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
@@ -250,7 +262,15 @@ where
         + MaybeString
         + Debug
         + Clone,
-    U: Container + Pair + Clone + FromStr + BindConcept + PartialEq<U> + Debug + MaybeConcept + Display,
+    U: Container
+        + BindPair
+        + Clone
+        + FromStr
+        + BindConcept
+        + PartialEq<U>
+        + Debug
+        + MaybeConcept
+        + Display,
     <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
@@ -436,16 +456,12 @@ where
         + Debug
         + Clone,
     Self: GetLabel<T> + ConceptMaker<T, U> + DefinitionDeleter<T, U>,
-    U: Pair + Container + MaybeConcept + Display,
+    U: BindPair + Container + MaybeConcept + Display + FromStr + BindConcept,
+    <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(
-        &self,
-        deltas: &mut Vec<Self::Delta>,
-        new: &U,
-        old: &U,
-    ) -> ZiaResult<()> {
+    fn execute_definition(&self, deltas: &mut Vec<Self::Delta>, new: &U, old: &U) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
@@ -468,7 +484,7 @@ where
                     }
                 }
                 (None, None, Some((ref left, ref right))) => {
-                    self.define_new_syntax(deltas, new.to_string(), left, right)
+                    self.define_new_syntax(deltas, &new.to_string(), left, right)
                 }
                 (Some(a), Some(b), None) => {
                     if a == b {
@@ -523,17 +539,24 @@ where
     fn define_new_syntax(
         &self,
         previous_deltas: &mut Vec<Self::Delta>,
-        syntax: String,
+        syntax: &str,
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> ZiaResult<()> {
-        let definition_concept =
-            if let (Some(l), Some(r)) = (left.get_concept(), right.get_concept()) {
-                self.find_definition(previous_deltas, l, r)
-            } else {
-                None
-            };
-        let new_syntax_tree = U::from_pair((syntax, definition_concept), left, right);
+        let new_syntax_tree = left
+            .get_concept()
+            .and_then(|l| {
+                right.get_concept().and_then(|r| {
+                    self.find_definition(previous_deltas, l, r).map(|concept| {
+                        syntax
+                            .parse::<U>()
+                            .unwrap()
+                            .bind_pair(left, right)
+                            .bind_concept(concept)
+                    })
+                })
+            })
+            .unwrap_or_else(|| syntax.parse::<U>().unwrap().bind_pair(left, right));
         self.concept_from_ast(previous_deltas, &new_syntax_tree)?;
         Ok(())
     }

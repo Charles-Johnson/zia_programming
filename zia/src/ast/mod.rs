@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 use errors::{ZiaError, ZiaResult};
-use reading::{BindConcept, MaybeConcept, MightExpand, Pair};
+use reading::{BindConcept, BindPair, MaybeConcept, MightExpand};
 use std::{fmt, rc::Rc, str::FromStr};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
@@ -64,18 +64,10 @@ impl fmt::Display for SyntaxTree {
     }
 }
 
-impl Pair for SyntaxTree {
-    /// Combines a pair of syntax trees into a `SyntaxTree` whilst specifying the overall syntax and maybe a concept.
-    fn from_pair(
-        syntax: (String, Option<usize>),
-        lefthand: &Rc<SyntaxTree>,
-        righthand: &Rc<SyntaxTree>,
-    ) -> SyntaxTree {
-        SyntaxTree {
-            syntax: syntax.0,
-            concept: syntax.1,
-            expansion: Some((lefthand.clone(), righthand.clone())),
-        }
+impl BindPair for SyntaxTree {
+    fn bind_pair(mut self, lefthand: &Rc<SyntaxTree>, righthand: &Rc<SyntaxTree>) -> SyntaxTree {
+        self.expansion = Some((lefthand.clone(), righthand.clone()));
+        self
     }
 }
 

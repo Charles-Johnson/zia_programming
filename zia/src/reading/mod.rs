@@ -31,7 +31,7 @@ where
     U: FromStr
         + BindConcept
         + Clone
-        + Pair
+        + BindPair
         + MaybeConcept
         + MightExpand
         + fmt::Display
@@ -39,12 +39,7 @@ where
     <U as FromStr>::Err: fmt::Debug,
 {
     /// Expands syntax by definition of its associated concept.
-    fn expand(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-    ) -> Rc<U>
-    {
+    fn expand(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Rc<U> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
                 self.combine(
@@ -66,12 +61,7 @@ where
         }
     }
     /// Reduces the syntax as much as possible (returns the normal form syntax).
-    fn recursively_reduce(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-    ) -> Rc<U>
-    {
+    fn recursively_reduce(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Rc<U> {
         match self.reduce(deltas, ast) {
             Some(ref a) => self.recursively_reduce(deltas, a),
             None => ast.clone(),
@@ -82,8 +72,7 @@ where
         deltas: &[Self::Delta],
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> Option<bool>
-    {
+    ) -> Option<bool> {
         if left == right {
             Some(false)
         } else {
@@ -99,8 +88,7 @@ where
         deltas: &[Self::Delta],
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> Option<bool>
-    {
+    ) -> Option<bool> {
         self.reduce(deltas, left).and_then(|reduced_left| {
             if &reduced_left == right {
                 Some(true)
@@ -110,12 +98,7 @@ where
         })
     }
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    fn reduce(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-    ) -> Option<Rc<U>>
-    {
+    fn reduce(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Rc<U>> {
         match ast.get_concept() {
             Some(c) => self.reduce_concept(deltas, c),
             None => ast.get_expansion().and_then(|(ref left, ref right)| {
@@ -173,12 +156,7 @@ where
         }
     }
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(
-        &self,
-        deltas: &[Self::Delta],
-        concept: usize,
-    ) -> Option<Rc<U>>
-    {
+    fn reduce_concept(&self, deltas: &[Self::Delta], concept: usize) -> Option<Rc<U>> {
         self.read_concept(deltas, concept)
             .get_reduction()
             .map(|n| self.to_ast(deltas, n))
@@ -199,12 +177,7 @@ where
             })
     }
     /// Returns the syntax for a concept.
-    fn to_ast(
-        &self,
-        deltas: &[Self::Delta],
-        concept: usize,
-    ) -> Rc<U>
-    {
+    fn to_ast(&self, deltas: &[Self::Delta], concept: usize) -> Rc<U> {
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(s.parse::<U>().unwrap().bind_concept(concept)),
             None => {
@@ -220,31 +193,29 @@ where
             }
         }
     }
-    fn combine(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-        other: &Rc<U>,
-    ) -> Rc<U>
-    {
-        let definition = if let (Some(l), Some(r)) = (ast.get_concept(), other.get_concept()) {
-            self.find_definition(deltas, l, r)
-        } else {
-            None
-        };
-        Rc::new(U::from_pair(
-            (self.display_joint(deltas, ast, other), definition),
-            ast,
-            other,
-        ))
+    fn combine(&self, deltas: &[Self::Delta], ast: &Rc<U>, other: &Rc<U>) -> Rc<U> {
+        let syntax = ast
+            .get_concept()
+            .and_then(|l| {
+                other.get_concept().and_then(|r| {
+                    self.find_definition(deltas, l, r).map(|concept| {
+                        self.display_joint(deltas, ast, other)
+                            .parse::<U>()
+                            .unwrap()
+                            .bind_pair(ast, other)
+                            .bind_concept(concept)
+                    })
+                })
+            })
+            .unwrap_or_else(|| {
+                self.display_joint(deltas, ast, other)
+                    .parse::<U>()
+                    .unwrap()
+                    .bind_pair(ast, other)
+            });
+        Rc::new(syntax)
     }
-    fn display_joint(
-        &self,
-        deltas: &[Self::Delta],
-        left: &Rc<U>,
-        right: &Rc<U>,
-    ) -> String
-    {
+    fn display_joint(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
         let left_string = left
             .get_expansion()
             .map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
@@ -265,12 +236,7 @@ where
             .unwrap_or_else(|| right.to_string());
         left_string + " " + &right_string
     }
-    fn get_associativity(
-        &self,
-        deltas: &[Self::Delta],
-        ast: &Rc<U>,
-    ) -> Option<Associativity>
-    {
+    fn get_associativity(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
         self.reduce(deltas, &assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
@@ -284,8 +250,7 @@ where
         deltas: &[Self::Delta],
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> Option<bool>
-    {
+    ) -> Option<bool> {
         let is_higher_prec_than_right =
             self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
         let left_is_higher_prec_than_right = self.combine(deltas, left, &is_higher_prec_than_right);
@@ -304,42 +269,41 @@ where
         right: Option<Rc<U>>,
         original_left: &Rc<U>,
         original_right: &Rc<U>,
-    ) -> Option<Rc<U>>
-    {
+    ) -> Option<Rc<U>> {
         match (left, right) {
             (None, None) => None,
-            (Some(new_left), None) => {
-                Some(self.contract_pair(deltas, &new_left, original_right))
-            }
-            (None, Some(new_right)) => {
-                Some(self.contract_pair(deltas, original_left, &new_right))
-            }
+            (Some(new_left), None) => Some(self.contract_pair(deltas, &new_left, original_right)),
+            (None, Some(new_right)) => Some(self.contract_pair(deltas, original_left, &new_right)),
             (Some(new_left), Some(new_right)) => {
                 Some(self.contract_pair(deltas, &new_left, &new_right))
             }
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    fn contract_pair(
-        &self,
-        deltas: &[Self::Delta],
-        lefthand: &Rc<U>,
-        righthand: &Rc<U>,
-    ) -> Rc<U>
-    {
-        let syntax = match (lefthand.get_concept(), righthand.get_concept()) {
-            (Some(lc), Some(rc)) => {
-                let maydef = self.find_definition(deltas, lc, rc);
-                (
-                    maydef
-                        .and_then(|def| self.get_label(deltas, def))
-                        .unwrap_or_else(|| self.display_joint(deltas, lefthand, righthand)),
-                    maydef,
-                )
-            }
-            _ => (self.display_joint(deltas, lefthand, righthand), None),
-        };
-        Rc::new(U::from_pair(syntax, lefthand, righthand))
+    fn contract_pair(&self, deltas: &[Self::Delta], lefthand: &Rc<U>, righthand: &Rc<U>) -> Rc<U> {
+        Rc::new(
+            lefthand
+                .get_concept()
+                .and_then(|lc| {
+                    righthand.get_concept().and_then(|rc| {
+                        self.find_definition(deltas, lc, rc).and_then(|def| {
+                            self.get_label(deltas, def).map(|label| {
+                                label
+                                    .parse::<U>()
+                                    .unwrap()
+                                    .bind_pair(lefthand, righthand)
+                                    .bind_concept(def)
+                            })
+                        })
+                    })
+                })
+                .unwrap_or_else(|| {
+                    self.display_joint(deltas, lefthand, righthand)
+                        .parse::<U>()
+                        .unwrap()
+                        .bind_pair(lefthand, righthand)
+                }),
+        )
     }
 }
 
@@ -356,7 +320,7 @@ where
     U: FromStr
         + BindConcept
         + Clone
-        + Pair
+        + BindPair
         + MaybeConcept
         + MightExpand
         + fmt::Display

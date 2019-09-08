@@ -17,7 +17,7 @@
 
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
-use reading::{FindWhatReducesToIt, MaybeDisconnected, MaybeString, MaybeConcept};
+use reading::{FindWhatReducesToIt, MaybeConcept, MaybeDisconnected, MaybeString};
 use std::fmt::{Debug, Display};
 use writing::{
     ConceptReader, DeleteDefinition, GetDefinition, GetDefinitionOf, GetReduction,
@@ -38,7 +38,7 @@ where
         + MaybeString
         + Debug,
     Self::Delta: Clone,
-    U: MaybeConcept + Display
+    U: MaybeConcept + Display,
 {
     fn cleanly_delete_definition(
         &self,
@@ -83,7 +83,7 @@ where
         + MaybeString
         + Debug,
     S::Delta: Clone,
-    U: Display + MaybeConcept
+    U: Display + MaybeConcept,
 {
 }
 
