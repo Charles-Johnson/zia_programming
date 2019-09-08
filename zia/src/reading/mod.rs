@@ -198,22 +198,18 @@ where
             .get_concept()
             .and_then(|l| {
                 other.get_concept().and_then(|r| {
-                    self.find_definition(deltas, l, r).map(|concept| {
-                        self.display_joint(deltas, ast, other)
-                            .parse::<U>()
-                            .unwrap()
-                            .bind_pair(ast, other)
-                            .bind_concept(concept)
-                    })
+                    self.find_definition(deltas, l, r)
+                        .map(|concept| self.join(deltas, ast, other).bind_concept(concept))
                 })
             })
-            .unwrap_or_else(|| {
-                self.display_joint(deltas, ast, other)
-                    .parse::<U>()
-                    .unwrap()
-                    .bind_pair(ast, other)
-            });
+            .unwrap_or_else(|| self.join(deltas, ast, other));
         Rc::new(syntax)
+    }
+    fn join(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> U {
+        self.display_joint(deltas, left, right)
+            .parse::<U>()
+            .unwrap()
+            .bind_pair(left, right)
     }
     fn display_joint(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
         let left_string = left
@@ -287,13 +283,8 @@ where
                 .and_then(|lc| {
                     righthand.get_concept().and_then(|rc| {
                         self.find_definition(deltas, lc, rc).and_then(|def| {
-                            self.get_label(deltas, def).map(|label| {
-                                label
-                                    .parse::<U>()
-                                    .unwrap()
-                                    .bind_pair(lefthand, righthand)
-                                    .bind_concept(def)
-                            })
+                            self.get_label(deltas, def)
+                                .map(|label| label.parse::<U>().unwrap().bind_concept(def))
                         })
                     })
                 })
@@ -301,8 +292,8 @@ where
                     self.display_joint(deltas, lefthand, righthand)
                         .parse::<U>()
                         .unwrap()
-                        .bind_pair(lefthand, righthand)
-                }),
+                })
+                .bind_pair(lefthand, righthand),
         )
     }
 }

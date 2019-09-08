@@ -547,16 +547,12 @@ where
             .get_concept()
             .and_then(|l| {
                 right.get_concept().and_then(|r| {
-                    self.find_definition(previous_deltas, l, r).map(|concept| {
-                        syntax
-                            .parse::<U>()
-                            .unwrap()
-                            .bind_pair(left, right)
-                            .bind_concept(concept)
-                    })
+                    self.find_definition(previous_deltas, l, r)
+                        .map(|concept| syntax.parse::<U>().unwrap().bind_concept(concept))
                 })
             })
-            .unwrap_or_else(|| syntax.parse::<U>().unwrap().bind_pair(left, right));
+            .unwrap_or_else(|| syntax.parse::<U>().unwrap())
+            .bind_pair(left, right);
         self.concept_from_ast(previous_deltas, &new_syntax_tree)?;
         Ok(())
     }
