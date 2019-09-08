@@ -28,38 +28,32 @@ use std::{
     str::FromStr,
 };
 
-pub trait SyntaxConverter<T>
+pub trait SyntaxConverter<T, U>
 where
-    Self: SyntaxFinder<T> + SyntaxReader<T>,
+    Self: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
+    U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
+    <U as FromStr>::Err: Debug,
 {
-    fn ast_from_expression<
-        U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
-    >(
+    fn ast_from_expression(
         &self,
         deltas: &[Self::Delta],
         s: &str,
     ) -> ZiaResult<Rc<U>>
-    where
-        <U as FromStr>::Err: Debug,
     {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
-    fn ast_from_tokens<
-        U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
-    >(
+    fn ast_from_tokens(
         &self,
         deltas: &[Self::Delta],
         tokens: &[String],
     ) -> ZiaResult<Rc<U>>
-    where
-        <U as FromStr>::Err: Debug,
     {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token::<U>(deltas, &tokens[0]),
-            2 => self.ast_from_pair::<U>(deltas, &tokens[0], &tokens[1]),
+            1 => self.ast_from_token(deltas, &tokens[0]),
+            2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
             _ => {
                 let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
                 let (lp_syntax, lp_indices, _number_of_tokens) = tokens.iter().try_fold(
@@ -73,7 +67,7 @@ where
                             let comparing_between_tokens =
                                 self.combine(deltas, &syntax, &comparing_precedence_of_token);
                             match self
-                                .reduce::<U>(deltas, &comparing_between_tokens)
+                                .reduce(deltas, &comparing_between_tokens)
                                 .and_then(|s| s.get_concept())
                             {
                                 // syntax of token has even lower precedence than some previous lowest precendence syntax
@@ -155,43 +149,37 @@ where
             }
         }
     }
-    fn ast_from_pair<
-        U: FromStr + BindConcept + MaybeConcept + Pair + Clone + PartialEq + MightExpand + Display,
-    >(
+    fn ast_from_pair(
         &self,
         deltas: &[Self::Delta],
         left: &str,
         right: &str,
     ) -> ZiaResult<Rc<U>>
-    where
-        <U as FromStr>::Err: Debug,
     {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token<
-        U: FromStr + BindConcept + MaybeConcept + Pair + Clone + PartialEq + MightExpand + Display,
-    >(
+    fn ast_from_token(
         &self,
         deltas: &[Self::Delta],
         t: &str,
     ) -> ZiaResult<Rc<U>>
-    where
-        <U as FromStr>::Err: Debug,
     {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression::<U>(deltas, t)
+            self.ast_from_expression(deltas, t)
         } else {
             Ok(Rc::new(self.ast_from_symbol::<U>(deltas, t)))
         }
     }
 }
 
-impl<S, T> SyntaxConverter<T> for S
+impl<S, T, U> SyntaxConverter<T, U> for S
 where
-    S: SyntaxFinder<T> + SyntaxReader<T>,
+    S: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
+    U: FromStr + BindConcept + Pair + MaybeConcept + Clone + PartialEq + MightExpand + Display,
+    <U as FromStr>::Err: Debug,
 {
 }
 

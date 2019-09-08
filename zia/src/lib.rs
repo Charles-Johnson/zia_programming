@@ -192,7 +192,7 @@ impl Labeller<Concept> for Context {
 /// Executing a command based on a string to add, write, read, or remove contained concepts.  
 pub trait Execute<T, U>
 where
-    Self: Call<T, U> + SyntaxConverter<T> + Logger,
+    Self: Call<T, U> + SyntaxConverter<T, U> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -231,7 +231,7 @@ where
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  
 pub trait Call<T, U>
 where
-    Self: Definer<T, U> + ExecuteReduction<T, U> + SyntaxReader<T> + Logger,
+    Self: Definer<T, U> + ExecuteReduction<T, U> + SyntaxReader<T, U> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -402,7 +402,7 @@ where
                 _ => {
                     let rightleft_reduction = self.read_concept(deltas, c).get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast::<U>(deltas, r);
+                        let ast = self.to_ast(deltas, r);
                         self.match_righthand_pair(deltas, left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)
