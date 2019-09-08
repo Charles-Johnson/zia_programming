@@ -24,11 +24,12 @@ pub use reading::{
 };
 use reading::{Container, GetConceptOfLabel};
 use std::fmt::{Debug, Display};
-pub trait Unlabeller<T>
+pub trait Unlabeller<T, U>
 where
     T: GetReduction + GetDefinition + GetDefinitionOf + Debug,
-    Self: DeleteReduction<T> + GetConceptOfLabel<T> + Delta,
+    Self: DeleteReduction<T, U> + GetConceptOfLabel<T> + Delta,
     Self::Delta: Clone,
+    U: MaybeConcept + Display
 {
     fn unlabel(&self, deltas: &mut Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
         let concept_of_label = self
@@ -38,7 +39,7 @@ where
     }
 }
 
-impl<S, T> Unlabeller<T> for S
+impl<S, T, U> Unlabeller<T, U> for S
 where
     T: GetReduction
         + RemoveReduction
@@ -46,18 +47,20 @@ where
         + GetDefinitionOf
         + GetDefinition
         + Debug,
-    S: DeleteReduction<T> + GetConceptOfLabel<T>,
+    S: DeleteReduction<T, U> + GetConceptOfLabel<T>,
     S::Delta: Clone,
+    U: Display + MaybeConcept
 {
 }
 
-pub trait DeleteReduction<T>
+pub trait DeleteReduction<T, U>
 where
     T: GetReduction,
     Self: ConceptWriter<T> + ConceptReader<T> + Delta + RemoveConceptReduction,
     Self::Delta: Clone,
+    U: MaybeConcept + Display,
 {
-    fn try_removing_reduction<U: MaybeConcept + Display>(
+    fn try_removing_reduction(
         &self,
         deltas: &mut Vec<Self::Delta>,
         syntax: &U,
@@ -79,11 +82,12 @@ where
     }
 }
 
-impl<S, T> DeleteReduction<T> for S
+impl<S, T, U> DeleteReduction<T, U> for S
 where
     S: ConceptWriter<T> + ConceptReader<T> + RemoveConceptReduction,
     T: GetReduction,
     S::Delta: Clone,
+    U: MaybeConcept + Display,
 {
 }
 

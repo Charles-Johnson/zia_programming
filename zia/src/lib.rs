@@ -435,7 +435,7 @@ where
         + MaybeString
         + Debug
         + Clone,
-    Self: GetLabel<T> + ConceptMaker<T, U> + DefinitionDeleter<T>,
+    Self: GetLabel<T> + ConceptMaker<T, U> + DefinitionDeleter<T, U>,
     U: Pair + Container + MaybeConcept + Display,
     Self::Delta: Clone + Debug,
 {

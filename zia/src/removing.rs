@@ -17,16 +17,16 @@
 
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
-use reading::{FindWhatReducesToIt, MaybeDisconnected, MaybeString};
-use std::fmt::Debug;
+use reading::{FindWhatReducesToIt, MaybeDisconnected, MaybeString, MaybeConcept};
+use std::fmt::{Debug, Display};
 use writing::{
     ConceptReader, DeleteDefinition, GetDefinition, GetDefinitionOf, GetReduction,
     NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction, Unlabeller,
 };
 
-pub trait DefinitionDeleter<T>
+pub trait DefinitionDeleter<T, U>
 where
-    Self: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T>,
+    Self: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T, U>,
     T: RemoveDefinition
         + RemoveAsDefinitionOf
         + RemoveReduction
@@ -38,6 +38,7 @@ where
         + MaybeString
         + Debug,
     Self::Delta: Clone,
+    U: MaybeConcept + Display
 {
     fn cleanly_delete_definition(
         &self,
@@ -68,9 +69,9 @@ where
     }
 }
 
-impl<S, T> DefinitionDeleter<T> for S
+impl<S, T, U> DefinitionDeleter<T, U> for S
 where
-    S: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T>,
+    S: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T, U>,
     T: RemoveDefinition
         + RemoveAsDefinitionOf
         + RemoveReduction
@@ -82,6 +83,7 @@ where
         + MaybeString
         + Debug,
     S::Delta: Clone,
+    U: Display + MaybeConcept
 {
 }
 

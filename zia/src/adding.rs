@@ -30,7 +30,7 @@ use writing::{
 
 pub trait ExecuteReduction<T, U>
 where
-    Self: ConceptMaker<T, U> + DeleteReduction<T>,
+    Self: ConceptMaker<T, U> + DeleteReduction<T, U>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
@@ -56,7 +56,7 @@ where
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            self.try_removing_reduction::<U>(deltas, syntax)
+            self.try_removing_reduction(deltas, syntax)
         } else {
             let syntax_concept = self.concept_from_ast(deltas, syntax)?;
             let normal_form_concept = self.concept_from_ast(deltas, normal_form)?;
@@ -67,7 +67,7 @@ where
 
 impl<S, T, U> ExecuteReduction<T, U> for S
 where
-    S: ConceptMaker<T, U> + DeleteReduction<T>,
+    S: ConceptMaker<T, U> + DeleteReduction<T, U>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
