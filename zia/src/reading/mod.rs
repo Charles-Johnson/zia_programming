@@ -104,13 +104,9 @@ where
             None => ast.get_expansion().and_then(|(ref left, ref right)| {
                 left.get_concept()
                     .and_then(|lc| match lc {
-                        ASSOC => Some(Rc::new(
-                            self.get_label(deltas, RIGHT)
-                                .expect("RIGHT is unlabelled")
-                                .parse::<U>()
-                                .unwrap()
-                                .bind_concept(RIGHT),
-                        )),
+                        ASSOC => Some(
+                            self.to_ast(deltas, RIGHT)
+                        ),
                         _ => None,
                     })
                     .or_else(|| {
