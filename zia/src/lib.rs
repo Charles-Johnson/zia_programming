@@ -328,13 +328,8 @@ where
                     })
                     .or_else(|| {
                         Some({
-                            let syntax = self
-                                .get_label(deltas, TRUE)
-                                .unwrap()
-                                .parse::<U>()
-                                .unwrap()
-                                .bind_concept(TRUE);
-                            self.execute_reduction(deltas, right, &syntax)
+                            let true_syntax = self.to_ast(deltas, TRUE);
+                            self.execute_reduction(deltas, right, &true_syntax)
                         })
                     })
                     .map(|r| r.map(|()| "".to_string())),

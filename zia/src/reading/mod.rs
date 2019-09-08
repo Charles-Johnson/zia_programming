@@ -122,21 +122,9 @@ where
                                         .determine_reduction_truth(deltas, left, &rightright)
                                         .map(|x| {
                                             if x {
-                                                Rc::new(
-                                                    self.get_label(deltas, TRUE)
-                                                        .expect("TRUE is unlabelled")
-                                                        .parse::<U>()
-                                                        .unwrap()
-                                                        .bind_concept(TRUE),
-                                                )
+                                                self.to_ast(deltas, TRUE)
                                             } else {
-                                                Rc::new(
-                                                    self.get_label(deltas, FALSE)
-                                                        .expect("FALSE is unlabelled")
-                                                        .parse::<U>()
-                                                        .unwrap()
-                                                        .bind_concept(FALSE),
-                                                )
+                                                self.to_ast(deltas, FALSE)
                                             }
                                         }),
                                     _ => None,
