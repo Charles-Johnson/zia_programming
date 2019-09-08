@@ -28,9 +28,9 @@ use writing::{
     MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
 };
 
-pub trait ExecuteReduction<T>
+pub trait ExecuteReduction<T, U>
 where
-    Self: ConceptMaker<T> + DeleteReduction<T>,
+    Self: ConceptMaker<T, U> + DeleteReduction<T>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
@@ -44,19 +44,19 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    Self::S: Container + PartialEq,
+    U: Container + PartialEq + MaybeConcept + fmt::Display,
     Self::Delta: Clone + fmt::Debug,
 {
     fn execute_reduction(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        syntax: &Self::S,
-        normal_form: &Self::S,
+        syntax: &U,
+        normal_form: &U,
     ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
-            self.try_removing_reduction::<Self::S>(deltas, syntax)
+            self.try_removing_reduction::<U>(deltas, syntax)
         } else {
             let syntax_concept = self.concept_from_ast(deltas, syntax)?;
             let normal_form_concept = self.concept_from_ast(deltas, normal_form)?;
@@ -65,9 +65,9 @@ where
     }
 }
 
-impl<S, T> ExecuteReduction<T> for S
+impl<S, T, U> ExecuteReduction<T, U> for S
 where
-    S: ConceptMaker<T> + DeleteReduction<T>,
+    S: ConceptMaker<T, U> + DeleteReduction<T>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
@@ -81,7 +81,7 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    S::S: Container + PartialEq<S::S>,
+    U: Container + PartialEq + MaybeConcept + fmt::Display,
     S::Delta: Clone + fmt::Debug,
 {
 }
@@ -101,7 +101,7 @@ where
 
 impl<T> Container for T where T: MightExpand + PartialEq<Rc<T>> + Sized {}
 
-pub trait ConceptMaker<T>
+pub trait ConceptMaker<T, U>
 where
     T: From<String>
         + From<Self::C>
@@ -118,9 +118,9 @@ where
         + Clone,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
     Self::Delta: Clone + fmt::Debug,
+    U: MightExpand + MaybeConcept + fmt::Display,
 {
-    type S: MightExpand + MaybeConcept + fmt::Display;
-    fn concept_from_ast(&self, deltas: &mut Vec<Self::Delta>, ast: &Self::S) -> ZiaResult<usize> {
+    fn concept_from_ast(&self, deltas: &mut Vec<Self::Delta>, ast: &U) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
         } else if let Some(c) = self.concept_from_label(&deltas, &ast.to_string()) {

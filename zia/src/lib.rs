@@ -158,10 +158,10 @@ use errors::{map_err_variant, ZiaResult};
 use logging::Logger;
 use reading::{
     BindConcept, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel, GetReduction,
-    MaybeConcept, MaybeString, MightExpand, Pair, SyntaxReader,
+    MaybeConcept, MaybeString, Pair, SyntaxReader,
 };
 use removing::DefinitionDeleter;
-use std::{fmt::Debug, rc::Rc, str::FromStr};
+use std::{fmt::{Debug, Display}, rc::Rc, str::FromStr};
 use translating::SyntaxConverter;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
@@ -171,10 +171,28 @@ use writing::{
 /// A container for adding, writing, reading and removing `Concept`s.
 pub type Context = GenericContext<Concept>;
 
+impl Execute<Concept, SyntaxTree> for Context {}
+
+impl Call<Concept, SyntaxTree> for Context {}
+
+impl Definer<Concept, SyntaxTree> for Context {}
+
+impl ConceptMaker<Concept, SyntaxTree> for Context {}
+
+impl FindOrInsertDefinition<Concept> for Context {
+    /// When a specific composition of concepts does not exist as its own concept, a new abstract concept is defined as that composition.
+    type A = AbstractPart;
+}
+
+impl Labeller<Concept> for Context {
+    /// The `setup` method labels concrete concepts.
+    type C = CommonPart;
+}
+
 /// Executing a command based on a string to add, write, read, or remove contained concepts.  
-pub trait Execute<T>
+pub trait Execute<T, U>
 where
-    Self: Call<T> + SyntaxConverter<T> + Logger,
+    Self: Call<T, U> + SyntaxConverter<T> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -193,8 +211,8 @@ where
         + FindWhatReducesToIt
         + Debug
         + Clone,
-    Self::S: Container + Pair + Debug + Clone + FromStr + BindConcept + PartialEq<Self::S>,
-    <Self::S as FromStr>::Err: Debug,
+    U: Container + Pair + Debug + Clone + FromStr + BindConcept + PartialEq<U> + Display + MaybeConcept,
+    <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     fn execute(&mut self, command: &str) -> String {
@@ -210,52 +228,10 @@ where
     }
 }
 
-impl<S, T> Execute<T> for S
-where
-    T: From<String>
-        + From<Self::C>
-        + From<Self::A>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + GetDefinition
-        + MaybeString
-        + GetDefinitionOf
-        + GetReduction
-        + FindWhatReducesToIt
-        + Debug
-        + Clone,
-    S: Call<T> + SyntaxConverter<T> + Logger,
-    S::S: Container + Pair + Clone + FromStr + BindConcept + Debug + PartialEq<Self::S>,
-    <S::S as FromStr>::Err: Debug,
-    S::Delta: Clone + Debug,
-{
-}
-
-impl FindOrInsertDefinition<Concept> for Context {
-    /// When a specific composition of concepts does not exist as its own concept, a new abstract concept is defined as that composition.
-    type A = AbstractPart;
-}
-
-impl Labeller<Concept> for Context {
-    /// The `setup` method labels concrete concepts.
-    type C = CommonPart;
-}
-
-impl ConceptMaker<Concept> for Context {
-    /// New concepts are made from syntax trees.
-    type S = SyntaxTree;
-}
-
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  
-pub trait Call<T>
+pub trait Call<T, U>
 where
-    Self: Definer<T> + ExecuteReduction<T> + SyntaxReader<T> + Logger,
+    Self: Definer<T, U> + ExecuteReduction<T, U> + SyntaxReader<T> + Logger,
     T: From<String>
         + From<Self::C>
         + From<Self::A>
@@ -274,12 +250,12 @@ where
         + MaybeString
         + Debug
         + Clone,
-    Self::S: Container + Pair + Clone + FromStr + BindConcept + PartialEq<Self::S> + Debug,
-    <Self::S as FromStr>::Err: Debug,
+    U: Container + Pair + Clone + FromStr + BindConcept + PartialEq<U> + Debug + MaybeConcept + Display,
+    <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug,
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&self, deltas: &mut Vec<Self::Delta>, ast: &Rc<Self::S>) -> ZiaResult<String> {
+    fn call(&self, deltas: &mut Vec<Self::Delta>, ast: &Rc<U>) -> ZiaResult<String> {
         match ast
             .get_concept()
             .and_then(|c| self.read_concept(&deltas, c).get_string())
@@ -315,8 +291,8 @@ where
     fn call_pair(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        left: &Rc<Self::S>,
-        right: &Rc<Self::S>,
+        left: &Rc<U>,
+        right: &Rc<U>,
     ) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
@@ -335,7 +311,7 @@ where
                             let syntax = self
                                 .get_label(deltas, TRUE)
                                 .unwrap()
-                                .parse::<Self::S>()
+                                .parse::<U>()
                                 .unwrap()
                                 .bind_concept(TRUE);
                             self.execute_reduction(deltas, right, &syntax)
@@ -358,8 +334,8 @@ where
     fn reduce_and_call_pair(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        left: &Rc<Self::S>,
-        right: &Rc<Self::S>,
+        left: &Rc<U>,
+        right: &Rc<U>,
     ) -> ZiaResult<String> {
         let reduced_left = self.reduce(deltas, left);
         let reduced_right = self.reduce(deltas, right);
@@ -374,7 +350,7 @@ where
     fn try_expanding_then_call(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        ast: &Rc<Self::S>,
+        ast: &Rc<U>,
     ) -> ZiaResult<String> {
         let expansion = &self.expand(deltas, ast);
         if expansion != ast {
@@ -387,7 +363,7 @@ where
     fn try_reducing_then_call(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        ast: &Rc<Self::S>,
+        ast: &Rc<U>,
     ) -> ZiaResult<String> {
         let normal_form = &self.recursively_reduce(deltas, ast);
         if normal_form != ast {
@@ -400,8 +376,8 @@ where
     fn execute_let(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        left: &Self::S,
-        right: &Self::S,
+        left: &U,
+        right: &U,
     ) -> Option<ZiaResult<()>> {
         right
             .get_expansion()
@@ -415,9 +391,9 @@ where
     fn match_righthand_pair(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        left: &Self::S,
-        rightleft: &Self::S,
-        rightright: &Self::S,
+        left: &U,
+        rightleft: &U,
+        rightright: &U,
     ) -> ZiaResult<()> {
         match rightleft.get_concept() {
             Some(c) => match c {
@@ -426,7 +402,7 @@ where
                 _ => {
                     let rightleft_reduction = self.read_concept(deltas, c).get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast::<Self::S>(deltas, r);
+                        let ast = self.to_ast::<U>(deltas, r);
                         self.match_righthand_pair(deltas, left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)
@@ -438,35 +414,8 @@ where
     }
 }
 
-impl<S, T> Call<T> for S
-where
-    S: Definer<T> + ExecuteReduction<T> + SyntaxReader<T> + Logger,
-    T: From<String>
-        + From<Self::C>
-        + From<Self::A>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + FindWhatReducesToIt
-        + GetReduction
-        + GetDefinition
-        + GetDefinitionOf
-        + MaybeString
-        + Debug
-        + Clone,
-    S::S: Container + Pair + Clone + Debug + FromStr + BindConcept + PartialEq<Self::S>,
-    <S::S as FromStr>::Err: Debug,
-    Self::Delta: Clone + Debug,
-{
-}
-
 /// Defining new syntax in terms of old syntax.
-pub trait Definer<T>
+pub trait Definer<T, U>
 where
     T: From<String>
         + From<Self::C>
@@ -486,16 +435,16 @@ where
         + MaybeString
         + Debug
         + Clone,
-    Self: GetLabel<T> + ConceptMaker<T> + DefinitionDeleter<T>,
-    Self::S: Pair + Container,
+    Self: GetLabel<T> + ConceptMaker<T, U> + DefinitionDeleter<T>,
+    U: Pair + Container + MaybeConcept + Display,
     Self::Delta: Clone + Debug,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(
         &self,
         deltas: &mut Vec<Self::Delta>,
-        new: &Self::S,
-        old: &Self::S,
+        new: &U,
+        old: &U,
     ) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
@@ -504,7 +453,7 @@ where
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, deltas: &mut Vec<Self::Delta>, new: &Self::S, old: &Self::S) -> ZiaResult<()> {
+    fn define(&self, deltas: &mut Vec<Self::Delta>, new: &U, old: &U) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
@@ -546,8 +495,8 @@ where
         &self,
         deltas: &mut Vec<Self::Delta>,
         concept: usize,
-        left: &Self::S,
-        right: &Self::S,
+        left: &U,
+        right: &U,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.read_concept(deltas, concept).get_definition()
@@ -575,8 +524,8 @@ where
         &self,
         previous_deltas: &mut Vec<Self::Delta>,
         syntax: String,
-        left: &Rc<Self::S>,
-        right: &Rc<Self::S>,
+        left: &Rc<U>,
+        right: &Rc<U>,
     ) -> ZiaResult<()> {
         let definition_concept =
             if let (Some(l), Some(r)) = (left.get_concept(), right.get_concept()) {
@@ -584,34 +533,8 @@ where
             } else {
                 None
             };
-        let new_syntax_tree = Self::S::from_pair((syntax, definition_concept), left, right);
+        let new_syntax_tree = U::from_pair((syntax, definition_concept), left, right);
         self.concept_from_ast(previous_deltas, &new_syntax_tree)?;
         Ok(())
     }
-}
-
-impl<S, T> Definer<T> for S
-where
-    T: From<String>
-        + From<Self::C>
-        + From<Self::A>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + FindWhatReducesToIt
-        + GetReduction
-        + GetDefinition
-        + GetDefinitionOf
-        + MaybeString
-        + Debug
-        + Clone,
-    S: ConceptMaker<T> + GetLabel<T> + DefinitionDeleter<T>,
-    S::S: Pair + Container,
-    S::Delta: Clone + Debug,
-{
 }
