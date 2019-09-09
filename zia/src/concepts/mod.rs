@@ -56,7 +56,7 @@ pub enum ConceptDelta {
 
 impl Delta for Concept {
     type Delta = ConceptDelta;
-    fn apply(&mut self, delta: &ConceptDelta) {
+    fn apply(&mut self, delta: ConceptDelta) {
         match delta {
             ConceptDelta::Abstract(ad) => match self.specific_part {
                 SpecificPart::Abstract(ref mut ap) => ap.apply(ad),

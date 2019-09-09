@@ -104,6 +104,10 @@
 //!
 //! // Determine associativity of symbol
 //! assert_eq!(context.execute("assoc a"), "right");
+//! 
+//! // Define patterns
+//! assert_eq!(context.execute("let (_x_ and false) -> false"), "");
+//! assert_eq!(context.execute("foo and false"), "false");
 //! ```
 
 #[macro_use]
@@ -235,7 +239,7 @@ where
             .and_then(|a| self.call(&mut deltas, &a))
             .unwrap_or_else(|e| e.to_string());
         info!(self.logger(), "execute({}) -> {:?}", command, deltas);
-        self.apply_all(&deltas);
+        self.apply_all(deltas);
         string
     }
 }
