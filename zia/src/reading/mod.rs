@@ -99,45 +99,57 @@ where
     }
     /// Reduces the syntax by using the reduction rules of associated concepts.
     fn reduce(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Rc<U>> {
-        match ast.get_concept() {
-            Some(c) => self.reduce_concept(deltas, c),
-            None => ast.get_expansion().and_then(|(ref left, ref right)| {
-                left.get_concept()
-                    .and_then(|lc| match lc {
-                        ASSOC => Some(
-                            self.to_ast(deltas, RIGHT)
-                        ),
-                        _ => None,
+        ast.get_concept()
+            .and_then(|c| self.reduce_concept(deltas, c))
+            .or_else(|| {
+                ast.get_expansion()
+                    .and_then(|(ref left, ref right)| self.reduce_pair(deltas, left, right))
+            })
+    }
+    // Reduces a syntax tree based on the properties of the left and right branches
+    fn reduce_pair(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Option<Rc<U>> {
+        left.get_concept()
+            .and_then(|lc| match lc {
+                ASSOC => Some(self.to_ast(deltas, RIGHT)),
+                _ => None,
+            })
+            .or_else(|| {
+                right
+                    .get_expansion()
+                    .and_then(|(ref rightleft, ref rightright)| {
+                        self.reduce_by_expanded_right_branch(deltas, left, rightleft, rightright)
                     })
                     .or_else(|| {
-                        right
-                            .get_expansion()
-                            .and_then(|(rightleft, rightright)| {
-                                rightleft.get_concept().and_then(|rlc| match rlc {
-                                    REDUCTION => self
-                                        .determine_reduction_truth(deltas, left, &rightright)
-                                        .map(|x| {
-                                            if x {
-                                                self.to_ast(deltas, TRUE)
-                                            } else {
-                                                self.to_ast(deltas, FALSE)
-                                            }
-                                        }),
-                                    _ => None,
-                                })
-                            })
-                            .or_else(|| {
-                                self.match_left_right(
-                                    deltas,
-                                    self.reduce(deltas, left),
-                                    self.reduce(deltas, right),
-                                    left,
-                                    right,
-                                )
-                            })
+                        self.match_left_right(
+                            deltas,
+                            self.reduce(deltas, left),
+                            self.reduce(deltas, right),
+                            left,
+                            right,
+                        )
                     })
-            }),
-        }
+            })
+    }
+    // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
+    fn reduce_by_expanded_right_branch(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<U>,
+        rightleft: &Rc<U>,
+        rightright: &Rc<U>,
+    ) -> Option<Rc<U>> {
+        rightleft.get_concept().and_then(|rlc| match rlc {
+            REDUCTION => self
+                .determine_reduction_truth(deltas, left, &rightright)
+                .map(|x| {
+                    if x {
+                        self.to_ast(deltas, TRUE)
+                    } else {
+                        self.to_ast(deltas, FALSE)
+                    }
+                }),
+            _ => None,
+        })
     }
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, deltas: &[Self::Delta], concept: usize) -> Option<Rc<U>> {
