@@ -169,6 +169,7 @@ use std::{
     fmt::{Debug, Display},
     rc::Rc,
     str::FromStr,
+    collections::HashMap,
 };
 use translating::SyntaxConverter;
 use writing::{
@@ -356,8 +357,8 @@ where
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> ZiaResult<String> {
-        let reduced_left = self.reduce(deltas, left);
-        let reduced_right = self.reduce(deltas, right);
+        let reduced_left = self.reduce(deltas, left, &HashMap::new());
+        let reduced_right = self.reduce(deltas, right, &HashMap::new());
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(deltas, &rl, right),

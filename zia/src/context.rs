@@ -19,7 +19,7 @@ use adding::{ConceptAdder, ConceptAdderDelta, StringAdder, StringAdderDelta};
 use delta::Delta;
 use errors::ZiaResult;
 use logging::Logger;
-use reading::ConceptReader;
+use reading::{ConceptReader, Variable};
 use removing::{
     BlindConceptRemover, BlindConceptRemoverDeltas, StringRemover, StringRemoverDeltas,
 };
@@ -50,7 +50,7 @@ pub struct Context<T> {
     variables: HashSet<usize>,
 }
 
-impl<T> Context<T> 
+impl<T> Variable for Context<T> 
 where
     T: Delta + Clone,
     T::Delta: Clone + Debug,

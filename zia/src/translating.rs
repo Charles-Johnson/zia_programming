@@ -26,6 +26,7 @@ use std::{
     fmt::{Debug, Display},
     rc::Rc,
     str::FromStr,
+    collections::HashMap,
 };
 
 pub trait SyntaxConverter<T, U>
@@ -57,7 +58,7 @@ where
                             let comparing_between_tokens =
                                 self.combine(deltas, &syntax, &comparing_precedence_of_token);
                             match self
-                                .reduce(deltas, &comparing_between_tokens)
+                                .reduce(deltas, &comparing_between_tokens, &HashMap::new())
                                 .and_then(|s| s.get_concept())
                             {
                                 // syntax of token has even lower precedence than some previous lowest precendence syntax
