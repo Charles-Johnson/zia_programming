@@ -50,18 +50,18 @@ pub struct Context<T> {
     variables: HashSet<usize>,
 }
 
-impl<T> Variable for Context<T> 
+impl<T> Variable for Context<T>
 where
-    T: Delta + Clone,
+    T: Delta + Clone + Debug,
     T::Delta: Clone + Debug,
 {
-    fn has_variable(&self, deltas: &[ContextDelta<T>], concept: usize) -> Option<bool> {
-        deltas.iter().fold(None, |truth, delta| match delta {
-            ContextDelta::Concept(id, cd, v) if id == &concept => match cd {
-                ConceptDelta::Insert(_) => Some(*v),
-                ConceptDelta::Remove => None,
+    fn has_variable(&self, deltas: &[ContextDelta<T>], concept: usize) -> bool {
+        deltas.iter().fold(self.variables.contains(&concept), |truth, delta| match delta {
+            ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
+                ConceptDelta::Insert(_) => *v,
+                ConceptDelta::Remove => false,
                 _ => truth,
-            }
+            },
             _ => truth,
         })
     }
@@ -129,7 +129,7 @@ where
                     }
                 }
                 ConceptDelta::Update(d) => self.write_concept(id).apply(d),
-            }
+            },
         };
     }
 }
@@ -192,7 +192,7 @@ where
         deltas.push(ContextDelta::Concept(
             concept,
             ConceptDelta::Update(concept_delta1),
-            false // Doesn't affect anything whether true or false
+            false, // Doesn't affect anything whether true or false
         ));
         let concept_delta2 = self
             .read_concept(deltas, lefthand)
@@ -200,7 +200,7 @@ where
         deltas.push(ContextDelta::Concept(
             lefthand,
             ConceptDelta::Update(concept_delta2),
-            false // Doesn't affect anything whether true or false
+            false, // Doesn't affect anything whether true or false
         ));
         let concept_delta3 = self
             .read_concept(deltas, righthand)
@@ -208,7 +208,7 @@ where
         deltas.push(ContextDelta::Concept(
             righthand,
             ConceptDelta::Update(concept_delta3),
-            false // Doesn't affect anything whether true or false
+            false, // Doesn't affect anything whether true or false
         ));
         Ok(())
     }
@@ -275,7 +275,7 @@ where
 
 impl<T> BlindConceptRemoverDeltas for Context<T>
 where
-    T: Delta + Clone,
+    T: Delta + Clone + Debug,
     T::Delta: Clone + Debug,
 {
     fn blindly_remove_concept_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, id: usize) {
@@ -286,7 +286,11 @@ where
         }) {
             panic!("Concept will be already removed!");
         } else {
-            deltas.push(ContextDelta::Concept(id, ConceptDelta::Remove, self.has_variable(deltas, id).unwrap()));
+            deltas.push(ContextDelta::Concept(
+                id,
+                ConceptDelta::Remove,
+                self.has_variable(deltas, id),
+            ));
         }
     }
 }
@@ -348,7 +352,7 @@ where
         &self,
         deltas: &[ContextDelta<T>],
         concept: T,
-        variable: bool
+        variable: bool,
     ) -> (ContextDelta<T>, usize) {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
@@ -481,7 +485,7 @@ where
                         .expect("Concept previously removed!")
                         .make_reduce_to_none_delta(&concept_deltas),
                 ),
-                false // Doesn't affect anything whether true or false
+                false, // Doesn't affect anything whether true or false
             ),
             ContextDelta::Concept(
                 reduction,
@@ -490,7 +494,7 @@ where
                         .expect("Reduction previously removed!")
                         .no_longer_reduces_from_delta(&reduction_deltas, concept),
                 ),
-                false // Doesn't affect anything whether true or false
+                false, // Doesn't affect anything whether true or false
             ),
         ]
     }
@@ -557,7 +561,7 @@ where
                         .expect("Concept previously removed!")
                         .remove_definition_delta(&concept_deltas),
                 ),
-                false // Doesn't affect anything whether true or false
+                false, // Doesn't affect anything whether true or false
             ),
             ContextDelta::Concept(
                 left,
@@ -566,7 +570,7 @@ where
                         .expect("Left previously removed!")
                         .remove_as_lefthand_of_delta(&left_deltas, concept),
                 ),
-                false // Doesn't affect anything whether true or false
+                false, // Doesn't affect anything whether true or false
             ),
             ContextDelta::Concept(
                 right,
@@ -575,7 +579,7 @@ where
                         .expect("Right previously removed!")
                         .remove_as_righthand_of_delta(&right_deltas, concept),
                 ),
-                false // Doesn't affect anything whether true or false
+                false, // Doesn't affect anything whether true or false
             ),
         ]
     }

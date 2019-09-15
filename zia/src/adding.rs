@@ -222,12 +222,7 @@ where
         if string.starts_with('_') && string.ends_with('_') {
             Ok(())
         } else {
-            let definition = self.find_or_insert_definition(
-                deltas,
-                LABEL,
-                concept,
-                false,
-            )?;
+            let definition = self.find_or_insert_definition(deltas, LABEL, concept, false)?;
             let string_id = self.new_string(deltas, string);
             self.update_reduction(deltas, definition, string_id)
         }

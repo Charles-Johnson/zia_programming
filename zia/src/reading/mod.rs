@@ -22,7 +22,12 @@ pub use self::concepts::*;
 pub use self::syntax::*;
 use constants::{ASSOC, FALSE, LABEL, LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use delta::Delta;
-use std::{collections::{HashSet, HashMap}, fmt, rc::Rc, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    rc::Rc,
+    str::FromStr,
+};
 
 pub trait SyntaxReader<T, U>
 where
@@ -35,7 +40,8 @@ where
         + MaybeConcept
         + MightExpand
         + fmt::Display
-        + PartialEq,
+        + PartialEq
+        + fmt::Debug,
     <U as FromStr>::Err: fmt::Debug,
 {
     /// Expands syntax by definition of its associated concept.
@@ -89,29 +95,44 @@ where
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> Option<bool> {
-        self.reduce(deltas, left, &HashMap::new()).and_then(|reduced_left| {
-            if &reduced_left == right {
-                Some(true)
-            } else {
-                self.determine_evidence_of_reduction(deltas, &reduced_left, right)
-            }
-        })
+        self.reduce(deltas, left, &HashMap::new())
+            .and_then(|reduced_left| {
+                if &reduced_left == right {
+                    Some(true)
+                } else {
+                    self.determine_evidence_of_reduction(deltas, &reduced_left, right)
+                }
+            })
     }
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    fn reduce(&self, deltas: &[Self::Delta], ast: &Rc<U>, variable_mask: &HashMap<usize, Rc<U>>) -> Option<Rc<U>> {
+    fn reduce(
+        &self,
+        deltas: &[Self::Delta],
+        ast: &Rc<U>,
+        variable_mask: &HashMap<usize, Rc<U>>,
+    ) -> Option<Rc<U>> {
         ast.get_concept()
             .and_then(|c| self.reduce_concept(deltas, c, variable_mask))
             .or_else(|| {
-                ast.get_expansion()
-                    .and_then(|(ref left, ref right)| self.reduce_pair(deltas, left, right, variable_mask))
+                ast.get_expansion().and_then(|(ref left, ref right)| {
+                    self.reduce_pair(deltas, left, right, variable_mask)
+                })
             })
     }
     // Reduces a syntax tree based on the properties of the left and right branches
-    fn reduce_pair(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>, variable_mask: &HashMap<usize, Rc<U>>) -> Option<Rc<U>> {
+    fn reduce_pair(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<U>,
+        right: &Rc<U>,
+        variable_mask: &HashMap<usize, Rc<U>>,
+    ) -> Option<Rc<U>> {
         left.get_concept()
             .and_then(|lc| match lc {
                 ASSOC => Some(self.to_ast(deltas, RIGHT)),
-                _ => variable_mask.get(&lc).and_then(|ast| self.reduce(deltas, ast, variable_mask)),
+                _ => variable_mask
+                    .get(&lc)
+                    .and_then(|ast| self.reduce(deltas, ast, variable_mask)),
             })
             .or_else(|| {
                 right
@@ -126,29 +147,37 @@ where
                             self.reduce(deltas, right, variable_mask),
                             left,
                             right,
-                        ).or_else(|| self.filter_generalisations(deltas, left, right)
-                            .iter()
-                            .filter_map(|(generalisation, v_mask)| {
-                                self.reduce_concept(deltas, *generalisation, v_mask)
-                            })
-                            .nth(0)
                         )
+                        .or_else(|| {
+                            self.filter_generalisations_for_pair(deltas, left, right)
+                                .iter()
+                                .filter_map(|(generalisation, v_mask)| {
+                                    self.reduce_concept(deltas, *generalisation, v_mask)
+                                })
+                                .nth(0)
+                        })
                     })
             })
     }
-    fn filter_generalisations(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> Vec<(usize, HashMap<usize, Rc<U>>)> {
-        let mut generalisations = left.get_concept()
-            .map(|lc| self.read_concept(deltas, lc)
-                .get_lefthand_of()
-                .iter()
-                .filter_map(|lo| self.has_variable(deltas, *lo)
-                    .and_then(|v| if v {
-                        self.read_concept(deltas, *lo)
-                            .get_definition()
-                            .and_then(|(_, r)| self.has_variable(deltas, r)
-                                .and_then(|v| if v {
-                                    match self.read_concept(deltas, r)
-                                        .get_definition() {
+    fn filter_generalisations_for_pair(
+        &self,
+        deltas: &[Self::Delta],
+        left: &Rc<U>,
+        right: &Rc<U>,
+    ) -> Vec<(usize, HashMap<usize, Rc<U>>)> {
+        let mut generalisations = left
+            .get_concept()
+            .map(|lc| {
+                self.read_concept(deltas, lc)
+                    .get_lefthand_of()
+                    .iter()
+                    .filter_map(|lo| {
+                        if self.has_variable(deltas, *lo) {
+                            self.read_concept(deltas, *lo)
+                                .get_definition()
+                                .and_then(|(_, r)| {
+                                    if self.has_variable(deltas, r) {
+                                        match self.read_concept(deltas, r).get_definition() {
                                             Some(_) => None,
                                             None => {
                                                 let mut hash_map = HashMap::new();
@@ -156,28 +185,30 @@ where
                                                 Some((*lo, hash_map))
                                             }
                                         }
-                                } else {
-                                    None
-                                }
-
-                            ))
-                    } else {
-                        None
+                                    } else {
+                                        None
+                                    }
+                                })
+                        } else {
+                            None
+                        }
                     })
-                ).collect()
-            ).unwrap_or_else(|| Vec::default());
-        generalisations.extend(right.get_concept()
-                .map(|rc| self.read_concept(deltas, rc)
-                    .get_righthand_of()
-                    .iter()
-                    .filter_map(|ro| self.has_variable(deltas, *ro)
-                        .and_then(|v| if v {
-                            self.read_concept(deltas, *ro)
-                                .get_definition()
-                                .and_then(|(l, _)| self.has_variable(deltas, l)
-                                    .and_then(|v| if v {
-                                        match self.read_concept(deltas, l)
-                                            .get_definition() {
+                    .collect()
+            })
+            .unwrap_or_else(|| Vec::default());
+        generalisations.extend(
+            right
+                .get_concept()
+                .map(|rc| {
+                    self.read_concept(deltas, rc)
+                        .get_righthand_of()
+                        .iter()
+                        .filter_map(|ro| {
+                            if self.has_variable(deltas, *ro) {
+                                self.read_concept(deltas, *ro).get_definition().and_then(
+                                    |(l, _)| {
+                                        if self.has_variable(deltas, l) {
+                                            match self.read_concept(deltas, l).get_definition() {
                                                 Some(_) => None,
                                                 None => {
                                                     let mut hash_map = HashMap::new();
@@ -185,17 +216,19 @@ where
                                                     Some((*ro, hash_map))
                                                 }
                                             }
-                                    } else {
-                                        None
-                                    }
-
-                                ))
-                        } else {
-                            None
+                                        } else {
+                                            None
+                                        }
+                                    },
+                                )
+                            } else {
+                                None
+                            }
                         })
-                    ).collect()
-                ).unwrap_or_else(|| Vec::default())
-            );
+                        .collect()
+                })
+                .unwrap_or_else(|| Vec::default()),
+        );
         generalisations
     }
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -220,27 +253,36 @@ where
         })
     }
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(&self, deltas: &[Self::Delta], concept: usize, variable_mask: &HashMap<usize, Rc<U>>) -> Option<Rc<U>> {
-        variable_mask.get(&concept).and_then(|ast| self.reduce(deltas, ast, variable_mask)).or_else(||
-            self.read_concept(deltas, concept)
-                .get_reduction()
-                .map(|n| self.to_ast(deltas, n))
-                .or_else(|| {
-                    self.read_concept(deltas, concept)
-                        .get_definition()
-                        .and_then(|(left, right)| {
-                            let left_result = self.reduce_concept(deltas, left, variable_mask);
-                            let right_result = self.reduce_concept(deltas, right, variable_mask);
-                            self.match_left_right(
-                                deltas,
-                                left_result,
-                                right_result,
-                                &self.to_ast(deltas, left),
-                                &self.to_ast(deltas, right),
-                            )
-                        })
-                })
-        )
+    fn reduce_concept(
+        &self,
+        deltas: &[Self::Delta],
+        concept: usize,
+        variable_mask: &HashMap<usize, Rc<U>>,
+    ) -> Option<Rc<U>> {
+        variable_mask
+            .get(&concept)
+            .and_then(|ast| self.reduce(deltas, ast, variable_mask))
+            .or_else(|| {
+                self.read_concept(deltas, concept)
+                    .get_reduction()
+                    .map(|n| self.to_ast(deltas, n))
+                    .or_else(|| {
+                        self.read_concept(deltas, concept)
+                            .get_definition()
+                            .and_then(|(left, right)| {
+                                let left_result = self.reduce_concept(deltas, left, variable_mask);
+                                let right_result =
+                                    self.reduce_concept(deltas, right, variable_mask);
+                                self.match_left_right(
+                                    deltas,
+                                    left_result,
+                                    right_result,
+                                    &self.to_ast(deltas, left),
+                                    &self.to_ast(deltas, right),
+                                )
+                            })
+                    })
+            })
     }
     /// Returns the syntax for a concept.
     fn to_ast(&self, deltas: &[Self::Delta], concept: usize) -> Rc<U> {
@@ -381,7 +423,8 @@ where
         + MaybeConcept
         + MightExpand
         + fmt::Display
-        + PartialEq,
+        + PartialEq
+        + fmt::Debug,
     <U as FromStr>::Err: fmt::Debug,
 {
 }
@@ -622,7 +665,7 @@ pub trait BindConcept {
 
 pub trait Variable
 where
-    Self: Delta
+    Self: Delta,
 {
-    fn has_variable(&self, deltas: &[Self::Delta], usize) -> Option<bool>;
+    fn has_variable(&self, deltas: &[Self::Delta], usize) -> bool;
 }
