@@ -294,7 +294,7 @@ where
         let string_concept = string.to_string().into();
         let (delta, index) = self.add_concept_delta(deltas, string_concept, false);
         deltas.push(delta);
-        let string_delta = Self::add_string_delta(index, string);
+        let string_delta = self.add_string_delta(index, string);
         deltas.push(string_delta);
         index
     }
@@ -329,7 +329,7 @@ pub trait StringAdderDelta
 where
     Self: Delta,
 {
-    fn add_string_delta(usize, &str) -> Self::Delta;
+    fn add_string_delta(&self, usize, &str) -> Self::Delta;
 }
 
 pub trait StringAdder {
