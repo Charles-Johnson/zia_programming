@@ -48,7 +48,7 @@ impl Delta for CommonPart {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CommonDelta {
     pub lefthand_of: CollectionChange<HashSet<usize>>,
     pub righthand_of: CollectionChange<HashSet<usize>>,

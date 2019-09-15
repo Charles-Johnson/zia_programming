@@ -40,7 +40,7 @@ impl Delta for AbstractPart {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AbstractDelta {
     pub definition: Change<Option<(usize, usize)>>,
     pub reduction: Change<Option<usize>>,

@@ -61,6 +61,12 @@ pub enum Change<T> {
     Different { before: T, after: T },
 }
 
+impl<T> Default for Change<T> {
+    fn default() -> Self {
+        Change::Same
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct CollectionChange<T> {
     pub remove: T,
