@@ -16,7 +16,7 @@
 */
 
 use adding::{ConceptAdder, ConceptAdderDelta, StringAdder, StringAdderDelta};
-use delta::{Change, Delta};
+use delta::Delta;
 use errors::ZiaResult;
 use logging::Logger;
 use reading::{ConceptReader, Variable};
@@ -56,17 +56,14 @@ where
     T::Delta: Clone + Debug,
 {
     fn has_variable(&self, deltas: &[ContextDelta<T>], concept: usize) -> bool {
-        deltas.iter().fold(
-            self.variables.contains(&concept),
-            |truth, delta| match delta {
-                ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
-                    ConceptDelta::Insert(_) => *v,
-                    ConceptDelta::Remove => false,
-                    _ => truth,
-                },
+        deltas.iter().fold(self.variables.contains(&concept), |truth, delta| match delta {
+            ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
+                ConceptDelta::Insert(_) => *v,
+                ConceptDelta::Remove => false,
                 _ => truth,
             },
-        )
+            _ => truth,
+        })
     }
 }
 
@@ -82,8 +79,14 @@ where
     T: Delta,
     T::Delta: Clone + Debug,
 {
-    String(String, Change<Option<usize>>),
+    String(String, StringDelta),
     Concept(usize, ConceptDelta<T>, bool),
+}
+
+#[derive(Clone, Debug)]
+pub enum StringDelta {
+    Insert(usize),
+    Remove,
 }
 
 #[derive(Clone, Debug)]
@@ -105,18 +108,13 @@ where
     type Delta = ContextDelta<T>;
     fn apply(&mut self, delta: ContextDelta<T>) {
         match delta {
-            ContextDelta::String(
-                s,
-                Change::Different {
-                    after: Some(id), ..
-                },
-            ) => {
-                self.string_map.insert(s, id);
-            }
-            ContextDelta::String(s, Change::Different { after: None, .. }) => {
-                self.string_map.remove(&s);
-            }
-            ContextDelta::String(_, Change::Same) => (),
+            ContextDelta::String(ref s, ref sd) => match sd {
+                StringDelta::Insert(id) => {
+                    info!(self.logger, "add_string({}, {})", id, &s);
+                    self.add_string(*id, &s);
+                }
+                StringDelta::Remove => self.remove_string(&s),
+            },
             ContextDelta::Concept(id, cd, v) => match cd {
                 ConceptDelta::Insert(c) => {
                     self.add_concept(c);
@@ -161,14 +159,8 @@ where
     T: Delta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn add_string_delta(&self, string_id: usize, string: &str) -> ContextDelta<T> {
-        ContextDelta::String(
-            string.to_string(),
-            Change::Different {
-                before: self.string_map.get(string).cloned(),
-                after: Some(string_id),
-            },
-        )
+    fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
+        ContextDelta::String(string.to_string(), StringDelta::Insert(string_id))
     }
 }
 
@@ -324,21 +316,17 @@ where
     T::Delta: Clone + Debug,
 {
     fn remove_string_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, string: &str) {
-        if deltas.iter().fold(
-            self.string_map.get(string).is_some(),
-            |string_may_exist, delta| match delta {
-                ContextDelta::String(s, Change::Different { after, .. }) if s == string => {
-                    after.is_some()
-                }
+        if deltas
+            .iter()
+            .fold(true, |string_may_exist, delta| match delta {
+                ContextDelta::String(s, StringDelta::Insert(_)) if s == string => true,
+                ContextDelta::String(s, StringDelta::Remove) if s == string => false,
                 _ => string_may_exist,
-            },
-        ) {
+            })
+        {
             deltas.push(ContextDelta::String(
                 string.to_string(),
-                Change::Different {
-                    before: self.string_map.get(string).cloned(),
-                    after: None,
-                },
+                StringDelta::Remove,
             ));
         } else {
             panic!("string already removed");
@@ -439,9 +427,10 @@ where
         deltas
             .iter()
             .fold(None, |candidate, delta| match delta {
-                ContextDelta::String(string, Change::Different { after, .. }) if s == string => {
-                    *after
-                }
+                ContextDelta::String(string, string_delta) if string == s => match string_delta {
+                    StringDelta::Insert(concept) => Some(*concept),
+                    StringDelta::Remove => None,
+                },
                 _ => candidate,
             })
             .or_else(|| self.string_map.get(s).cloned())
