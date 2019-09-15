@@ -97,7 +97,8 @@ where
             let delta = self.remove_string_deltas(deltas, s);
             deltas.push(delta);
         }
-        self.blindly_remove_concept_deltas(deltas, concept)
+        let delta = self.blindly_remove_concept_deltas(deltas, concept);
+        deltas.push(delta);
     }
 }
 
@@ -116,7 +117,7 @@ pub trait BlindConceptRemoverDeltas
 where
     Self: Delta,
 {
-    fn blindly_remove_concept_deltas(&self, &mut Vec<Self::Delta>, usize);
+    fn blindly_remove_concept_deltas(&self, &[Self::Delta], usize) -> Self::Delta;
 }
 
 pub trait StringRemover {

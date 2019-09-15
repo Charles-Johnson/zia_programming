@@ -85,6 +85,7 @@ proptest! {
         let_definition!(cont, a, b, c);
         let_definition!(cont, f, d, e);
         prop_assume!(!((a == d || a == e) && (f == b || f == c))); // Otherwise definition is circular!
+        prop_assume!(a != f); // b c will no longer be used if a and f are the same symbol
         let let_command = format!("let {} := {} {}", d, b, c);
         prop_assert_eq!(
             cont.execute(&let_command),

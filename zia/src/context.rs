@@ -50,6 +50,15 @@ pub struct Context<T> {
     variables: HashSet<usize>,
 }
 
+impl<T> Context<T> {
+    fn get_concept(&self, id: usize) -> Option<&T> {
+        match self.concepts.get(id) {
+            Some(Some(c)) => Some(c),
+            _ => None,
+        }
+    }
+}
+
 impl<T> Variable for Context<T>
 where
     T: Delta + Clone + Debug,
@@ -61,7 +70,7 @@ where
             |truth, delta| match delta {
                 ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
                     ConceptDelta::Insert(_) => *v,
-                    ConceptDelta::Remove => false,
+                    ConceptDelta::Remove(_) => false,
                     _ => truth,
                 },
                 _ => truth,
@@ -99,7 +108,7 @@ where
     T::Delta: Clone + Debug,
 {
     Insert(T),
-    Remove,
+    Remove(T),
     Update(T::Delta),
 }
 
@@ -125,7 +134,7 @@ where
                         self.variables.insert(id);
                     }
                 }
-                ConceptDelta::Remove => {
+                ConceptDelta::Remove(_) => {
                     self.blindly_remove_concept(id);
                     if v {
                         self.variables.remove(&id);
@@ -249,18 +258,14 @@ where
     T::Delta: Clone + Debug,
 {
     fn read_concept(&self, deltas: &[ContextDelta<T>], id: usize) -> T {
-        let concept_if_still_exists = match &self.concepts.get(id) {
-            Some(Some(ref c)) => Some(c.clone()),
-            _ => None,
-        };
         deltas
             .iter()
             .fold(
-                concept_if_still_exists,
+                self.get_concept(id).cloned(),
                 |concept_if_still_exists, delta| match delta {
                     ContextDelta::Concept(index, cd, _) if *index == id => match cd {
                         ConceptDelta::Insert(c) => Some(c.clone()),
-                        ConceptDelta::Remove => None,
+                        ConceptDelta::Remove(_) => None,
                         ConceptDelta::Update(d) => {
                             let mut concept = concept_if_still_exists.expect(
                                 "Deltas imply that a concept that doesn't exist will be updated!",
@@ -281,20 +286,28 @@ where
     T: Delta + Clone + Debug,
     T::Delta: Clone + Debug,
 {
-    fn blindly_remove_concept_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, id: usize) {
-        if deltas.iter().fold(false, |removed, delta| match delta {
-            ContextDelta::Concept(concept, ConceptDelta::Insert(_), _) if *concept == id => false,
-            ContextDelta::Concept(concept, ConceptDelta::Remove, _) if *concept == id => true,
-            _ => removed,
-        }) {
-            panic!("Concept will be already removed!");
-        } else {
-            deltas.push(ContextDelta::Concept(
-                id,
-                ConceptDelta::Remove,
-                self.has_variable(deltas, id),
-            ));
-        }
+    fn blindly_remove_concept_deltas(
+        &self,
+        deltas: &[ContextDelta<T>],
+        id: usize,
+    ) -> ContextDelta<T> {
+        let concept = deltas
+            .iter()
+            .fold(self.get_concept(id), |c, delta| match delta {
+                ContextDelta::Concept(concept, ConceptDelta::Insert(c), _) if *concept == id => {
+                    Some(c)
+                }
+                ContextDelta::Concept(concept, ConceptDelta::Remove(_), _) if *concept == id => {
+                    None
+                }
+                _ => c,
+            })
+            .expect("Concept will be already removed!");
+        ContextDelta::Concept(
+            id,
+            ConceptDelta::Remove(concept.clone()),
+            self.has_variable(deltas, id),
+        )
     }
 }
 
@@ -370,7 +383,7 @@ where
                         panic!("Deltas imply that a new concept has been given too large an id.")
                     }
                 }
-                ContextDelta::Concept(id, ConceptDelta::Remove, _) => {
+                ContextDelta::Concept(id, ConceptDelta::Remove(_), _) => {
                     added_gaps.push(*id);
                     removed_gaps.remove(&id);
                 }
@@ -468,11 +481,11 @@ where
                 ContextDelta::Concept(c, ConceptDelta::Insert(t), _) if *c == reduction => {
                     edited_reduction = Some(t.clone())
                 }
-                ContextDelta::Concept(c, ConceptDelta::Remove, _) if *c == concept => {
+                ContextDelta::Concept(c, ConceptDelta::Remove(_), _) if *c == concept => {
                     edited_concept = None;
                     concept_deltas = vec![];
                 }
-                ContextDelta::Concept(c, ConceptDelta::Remove, _) if *c == reduction => {
+                ContextDelta::Concept(c, ConceptDelta::Remove(_), _) if *c == reduction => {
                     edited_reduction = None;
                     reduction_deltas = vec![];
                 }
@@ -540,15 +553,15 @@ where
                 ContextDelta::Concept(c, ConceptDelta::Insert(t), _) if *c == right => {
                     edited_right = Some(t.clone())
                 }
-                ContextDelta::Concept(c, ConceptDelta::Remove, _) if *c == concept => {
+                ContextDelta::Concept(c, ConceptDelta::Remove(_), _) if *c == concept => {
                     edited_concept = None;
                     concept_deltas = vec![];
                 }
-                ContextDelta::Concept(c, ConceptDelta::Remove, _) if *c == left => {
+                ContextDelta::Concept(c, ConceptDelta::Remove(_), _) if *c == left => {
                     edited_left = None;
                     left_deltas = vec![];
                 }
-                ContextDelta::Concept(c, ConceptDelta::Remove, _) if *c == right => {
+                ContextDelta::Concept(c, ConceptDelta::Remove(_), _) if *c == right => {
                     edited_right = None;
                     right_deltas = vec![];
                 }
