@@ -56,14 +56,17 @@ where
     T::Delta: Clone + Debug,
 {
     fn has_variable(&self, deltas: &[ContextDelta<T>], concept: usize) -> bool {
-        deltas.iter().fold(self.variables.contains(&concept), |truth, delta| match delta {
-            ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
-                ConceptDelta::Insert(_) => *v,
-                ConceptDelta::Remove => false,
+        deltas.iter().fold(
+            self.variables.contains(&concept),
+            |truth, delta| match delta {
+                ContextDelta::Concept(id, cd, v) if *id == concept => match cd {
+                    ConceptDelta::Insert(_) => *v,
+                    ConceptDelta::Remove => false,
+                    _ => truth,
+                },
                 _ => truth,
             },
-            _ => truth,
-        })
+        )
     }
 }
 
@@ -86,7 +89,7 @@ where
 #[derive(Clone, Debug)]
 pub enum StringDelta {
     Insert(usize),
-    Remove,
+    Remove(usize),
 }
 
 #[derive(Clone, Debug)]
@@ -113,7 +116,7 @@ where
                     info!(self.logger, "add_string({}, {})", id, &s);
                     self.add_string(*id, &s);
                 }
-                StringDelta::Remove => self.remove_string(&s),
+                StringDelta::Remove(_) => self.remove_string(&s),
             },
             ContextDelta::Concept(id, cd, v) => match cd {
                 ConceptDelta::Insert(c) => {
@@ -315,22 +318,21 @@ where
     T: Delta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn remove_string_deltas(&self, deltas: &mut Vec<ContextDelta<T>>, string: &str) {
-        if deltas
+    fn remove_string_deltas(&self, deltas: &[ContextDelta<T>], string: &str) -> ContextDelta<T> {
+        let index = deltas
             .iter()
-            .fold(true, |string_may_exist, delta| match delta {
-                ContextDelta::String(s, StringDelta::Insert(_)) if s == string => true,
-                ContextDelta::String(s, StringDelta::Remove) if s == string => false,
-                _ => string_may_exist,
-            })
-        {
-            deltas.push(ContextDelta::String(
-                string.to_string(),
-                StringDelta::Remove,
-            ));
-        } else {
-            panic!("string already removed");
-        }
+            .fold(
+                self.string_map.get(string),
+                |string_index, delta| match delta {
+                    ContextDelta::String(s, StringDelta::Insert(index)) if s == string => {
+                        Some(index)
+                    }
+                    ContextDelta::String(s, StringDelta::Remove(_)) if s == string => None,
+                    _ => string_index,
+                },
+            )
+            .expect("string already removed or doesn't exist");
+        ContextDelta::String(string.to_string(), StringDelta::Remove(*index))
     }
 }
 
@@ -429,7 +431,7 @@ where
             .fold(None, |candidate, delta| match delta {
                 ContextDelta::String(string, string_delta) if string == s => match string_delta {
                     StringDelta::Insert(concept) => Some(*concept),
-                    StringDelta::Remove => None,
+                    StringDelta::Remove(_) => None,
                 },
                 _ => candidate,
             })
