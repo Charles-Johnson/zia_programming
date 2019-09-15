@@ -31,21 +31,25 @@ pub struct AbstractPart {
 impl Delta for AbstractPart {
     type Delta = AbstractDelta;
     fn apply(&mut self, delta: AbstractDelta) {
-        match delta {
-            AbstractDelta::SetDefinition(left, right) => self.set_definition(left, right),
-            AbstractDelta::RemoveDefinition => self.remove_definition(),
-            AbstractDelta::SetReduction(concept) => self.make_reduce_to(concept),
-            AbstractDelta::RemoveReduction => self.make_reduce_to_none(),
-        };
+        if let Change::Different { after, .. } = delta.definition {
+            self.definition = after;
+        }
+        if let Change::Different { after, .. } = delta.reduction {
+            self.reduces_to = after;
+        }
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum AbstractDelta {
-    SetDefinition(usize, usize),
-    RemoveDefinition,
-    SetReduction(usize),
-    RemoveReduction,
+pub enum Change<T> {
+    Same,
+    Different { before: T, after: T },
+}
+
+#[derive(Clone, Debug)]
+pub struct AbstractDelta {
+    pub definition: Change<Option<(usize, usize)>>,
+    pub reduction: Change<Option<usize>>,
 }
 
 impl Default for AbstractPart {
@@ -69,13 +73,25 @@ impl AbstractPart {
         self.definition = Some((lefthand, righthand));
     }
     pub fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> AbstractDelta {
-        AbstractDelta::SetDefinition(lefthand, righthand)
+        AbstractDelta {
+            definition: Change::Different {
+                before: self.definition,
+                after: Some((lefthand, righthand)),
+            },
+            reduction: Change::Same,
+        }
     }
     pub fn make_reduce_to(&mut self, concept: usize) {
         self.reduces_to = Some(concept);
     }
     pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
-        AbstractDelta::SetReduction(concept)
+        AbstractDelta {
+            definition: Change::Same,
+            reduction: Change::Different {
+                before: self.reduces_to,
+                after: Some(concept),
+            },
+        }
     }
 }
 

@@ -17,7 +17,7 @@
 mod abstract_part;
 mod common_part;
 
-pub use self::abstract_part::{AbstractDelta, AbstractPart};
+pub use self::abstract_part::{AbstractDelta, AbstractPart, Change};
 pub use self::common_part::{CommonDelta, CommonPart};
 use delta::Delta;
 use errors::{ZiaError, ZiaResult};
@@ -269,11 +269,10 @@ impl RemoveReductionDelta for Concept {
     }
     fn make_reduce_to_none_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
         assert!(deltas.iter().fold(true, |reduces, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta::RemoveReduction) => false,
-            ConceptDelta::Abstract(AbstractDelta::SetReduction(_)) => true,
+            ConceptDelta::Abstract(AbstractDelta{reduction: Change::Different{after, ..}, ..}) => after.is_some(),
             _ => reduces,
         }));
-        ConceptDelta::Abstract(AbstractDelta::RemoveReduction)
+        ConceptDelta::Abstract(AbstractDelta{reduction: Change::Different{before: self.get_reduction(), after: None}, definition: Change::Same})
     }
 }
 
@@ -300,10 +299,9 @@ impl RemoveDefinitionDelta for Concept {
     }
     fn remove_definition_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
         assert!(deltas.iter().fold(true, |definition, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => false,
-            ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => true,
+            ConceptDelta::Abstract(AbstractDelta{definition: Change::Different{after, ..}, ..}) => after.is_some(),
             _ => definition,
         }));
-        ConceptDelta::Abstract(AbstractDelta::RemoveDefinition)
+        ConceptDelta::Abstract(AbstractDelta{definition: Change::Different{before: self.get_definition(), after: None}, reduction: Change::Same})
     }
 }
