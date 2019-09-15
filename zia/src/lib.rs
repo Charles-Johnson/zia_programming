@@ -111,6 +111,8 @@
 //! ```
 
 #[macro_use]
+extern crate maplit;
+#[macro_use]
 extern crate slog;
 extern crate slog_term;
 extern crate snafu;
