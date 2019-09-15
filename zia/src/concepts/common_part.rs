@@ -14,9 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-use delta::Delta;
+use delta::{CollectionChange, Delta};
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::FromIterator};
 use writing::{
     MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
     SetAsDefinitionOf, SetAsDefinitionOfDelta,
@@ -35,25 +35,24 @@ pub struct CommonPart {
 impl Delta for CommonPart {
     type Delta = CommonDelta;
     fn apply(&mut self, delta: CommonDelta) {
-        match delta {
-            CommonDelta::AddLeft(left) => self.add_as_lefthand_of(left),
-            CommonDelta::AddRight(right) => self.add_as_righthand_of(right),
-            CommonDelta::RemoveLeft(left) => self.remove_as_lefthand_of(left),
-            CommonDelta::RemoveRight(right) => self.remove_as_righthand_of(right),
-            CommonDelta::AddReducesFrom(concept) => self.make_reduce_from(concept),
-            CommonDelta::RemoveReducesFrom(concept) => self.no_longer_reduces_from(concept),
-        };
+        let CommonDelta{lefthand_of, righthand_of, reduces_from} = delta;
+        self.lefthand_of
+            .retain(|c| !lefthand_of.remove.contains(c));
+        self.lefthand_of.extend(lefthand_of.add);
+        self.righthand_of
+            .retain(|c| !righthand_of.remove.contains(c));
+        self.righthand_of.extend(righthand_of.add);
+        self.reduces_from
+            .retain(|c| !reduces_from.remove.contains(c));
+        self.reduces_from.extend(reduces_from.add);
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum CommonDelta {
-    AddLeft(usize),
-    AddRight(usize),
-    RemoveLeft(usize),
-    RemoveRight(usize),
-    AddReducesFrom(usize),
-    RemoveReducesFrom(usize),
+pub struct CommonDelta {
+    pub lefthand_of: CollectionChange<HashSet<usize>>,
+    pub righthand_of: CollectionChange<HashSet<usize>>,
+    pub reduces_from: CollectionChange<HashSet<usize>>,
 }
 
 impl GetDefinitionOf for CommonPart {
@@ -82,10 +81,24 @@ impl SetAsDefinitionOf for CommonPart {
 
 impl SetAsDefinitionOfDelta for CommonPart {
     fn add_as_lefthand_of_delta(&self, index: usize) -> CommonDelta {
-        CommonDelta::AddLeft(index)
+        CommonDelta {
+            lefthand_of: CollectionChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            righthand_of: CollectionChange::default(),
+            reduces_from: CollectionChange::default(),
+        }
     }
     fn add_as_righthand_of_delta(&self, index: usize) -> CommonDelta {
-        CommonDelta::AddRight(index)
+        CommonDelta {
+            righthand_of: CollectionChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            lefthand_of: CollectionChange::default(),
+            reduces_from: CollectionChange::default(),
+        }
     }
 }
 
@@ -97,7 +110,14 @@ impl MakeReduceFrom for CommonPart {
 
 impl MakeReduceFromDelta for CommonPart {
     fn make_reduce_from_delta(&self, index: usize) -> CommonDelta {
-        CommonDelta::AddReducesFrom(index)
+        CommonDelta {
+            reduces_from: CollectionChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            lefthand_of: CollectionChange::default(),
+            righthand_of: CollectionChange::default(),
+        }
     }
 }
 

@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::Delta;
+use delta::{Change, Delta};
 use reading::{GetDefinition, GetReduction};
 use writing::{RemoveDefinition, RemoveReduction};
 
@@ -38,12 +38,6 @@ impl Delta for AbstractPart {
             self.reduces_to = after;
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum Change<T> {
-    Same,
-    Different { before: T, after: T },
 }
 
 #[derive(Clone, Debug)]

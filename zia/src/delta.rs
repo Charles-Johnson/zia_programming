@@ -54,3 +54,15 @@ pub trait Delta {
         ns.iter().zip(ms).try_for_each(|(n, m)| f(deltas, *n, m))
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum Change<T> {
+    Same,
+    Different { before: T, after: T },
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CollectionChange<T> {
+    pub remove: T,
+    pub add: T,
+}

@@ -17,12 +17,12 @@
 mod abstract_part;
 mod common_part;
 
-pub use self::abstract_part::{AbstractDelta, AbstractPart, Change};
+pub use self::abstract_part::{AbstractDelta, AbstractPart};
 pub use self::common_part::{CommonDelta, CommonPart};
-use delta::Delta;
+use delta::{Change, CollectionChange, Delta};
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::FromIterator};
 use writing::{
     MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
     RemoveDefinition, RemoveDefinitionDelta, RemoveReduction, RemoveReductionDelta,
@@ -258,50 +258,125 @@ impl MaybeString for Concept {
 
 impl RemoveReductionDelta for Concept {
     fn no_longer_reduces_from_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |reduces_from_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveReducesFrom(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddReducesFrom(c)) if *c == concept => true,
+        assert!(deltas.iter().fold(
+            self.find_what_reduces_to_it().contains(&concept),
+            |reduces_from_concept, delta| match delta {
+                ConceptDelta::Common(CommonDelta {
+                    reduces_from: CollectionChange { add, remove },
+                    ..
+                }) => {
+                    if remove.contains(&concept) {
+                        false
+                    } else if add.contains(&concept) {
+                        true
+                    } else {
+                        reduces_from_concept
+                    }
+                }
                 _ => reduces_from_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveReducesFrom(concept))
+            }
+        ));
+        ConceptDelta::Common(CommonDelta {
+            reduces_from: CollectionChange {
+                remove: HashSet::from_iter(std::iter::once(concept)),
+                add: HashSet::default(),
+            },
+            lefthand_of: CollectionChange::default(),
+            righthand_of: CollectionChange::default(),
+        })
     }
     fn make_reduce_to_none_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
-        assert!(deltas.iter().fold(true, |reduces, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta{reduction: Change::Different{after, ..}, ..}) => after.is_some(),
-            _ => reduces,
-        }));
-        ConceptDelta::Abstract(AbstractDelta{reduction: Change::Different{before: self.get_reduction(), after: None}, definition: Change::Same})
+        assert!(deltas.iter().fold(
+            self.get_reduction().is_some(),
+            |reduces, delta| match delta {
+                ConceptDelta::Abstract(AbstractDelta {
+                    reduction: Change::Different { after, .. },
+                    ..
+                }) => after.is_some(),
+                _ => reduces,
+            }
+        ));
+        ConceptDelta::Abstract(AbstractDelta {
+            reduction: Change::Different {
+                before: self.get_reduction(),
+                after: None,
+            },
+            definition: Change::Same,
+        })
     }
 }
 
 impl RemoveDefinitionDelta for Concept {
     fn remove_as_lefthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |lefthand_of_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveLeft(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddLeft(c)) if *c == concept => true,
+        assert!(deltas.iter().fold(
+            self.get_lefthand_of().contains(&concept),
+            |lefthand_of_concept, delta| match delta {
+                ConceptDelta::Common(CommonDelta {
+                    lefthand_of: CollectionChange { add, remove },
+                    ..
+                }) => {
+                    if remove.contains(&concept) {
+                        false
+                    } else if add.contains(&concept) {
+                        true
+                    } else {
+                        lefthand_of_concept
+                    }
+                }
                 _ => lefthand_of_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveLeft(concept))
+            }
+        ));
+        ConceptDelta::Common(CommonDelta {
+            lefthand_of: CollectionChange {
+                remove: HashSet::from_iter(std::iter::once(concept)),
+                add: HashSet::default(),
+            },
+            reduces_from: CollectionChange::default(),
+            righthand_of: CollectionChange::default(),
+        })
     }
     fn remove_as_righthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |righthand_of_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveRight(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddRight(c)) if *c == concept => true,
+        assert!(deltas.iter().fold(
+            self.get_righthand_of().contains(&concept),
+            |righthand_of_concept, delta| match delta {
+                ConceptDelta::Common(CommonDelta {
+                    righthand_of: CollectionChange { add, remove },
+                    ..
+                }) => {
+                    if remove.contains(&concept) {
+                        false
+                    } else if add.contains(&concept) {
+                        true
+                    } else {
+                        righthand_of_concept
+                    }
+                }
                 _ => righthand_of_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveRight(concept))
+            }
+        ));
+        ConceptDelta::Common(CommonDelta {
+            righthand_of: CollectionChange {
+                remove: HashSet::from_iter(std::iter::once(concept)),
+                add: HashSet::default(),
+            },
+            reduces_from: CollectionChange::default(),
+            lefthand_of: CollectionChange::default(),
+        })
     }
     fn remove_definition_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
         assert!(deltas.iter().fold(true, |definition, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta{definition: Change::Different{after, ..}, ..}) => after.is_some(),
+            ConceptDelta::Abstract(AbstractDelta {
+                definition: Change::Different { after, .. },
+                ..
+            }) => after.is_some(),
             _ => definition,
         }));
-        ConceptDelta::Abstract(AbstractDelta{definition: Change::Different{before: self.get_definition(), after: None}, reduction: Change::Same})
+        ConceptDelta::Abstract(AbstractDelta {
+            definition: Change::Different {
+                before: self.get_definition(),
+                after: None,
+            },
+            reduction: Change::Same,
+        })
     }
 }
