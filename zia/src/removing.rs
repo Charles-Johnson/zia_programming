@@ -94,7 +94,8 @@ where
 {
     fn remove_concept(&self, deltas: &mut Vec<Self::Delta>, concept: usize) {
         if let Some(ref s) = self.read_concept(deltas, concept).get_string() {
-            self.remove_string_deltas(deltas, s);
+            let delta = self.remove_string_deltas(deltas, s);
+            deltas.push(delta);
         }
         self.blindly_remove_concept_deltas(deltas, concept)
     }
@@ -126,5 +127,5 @@ pub trait StringRemoverDeltas
 where
     Self: Delta,
 {
-    fn remove_string_deltas(&self, &mut Vec<Self::Delta>, &str);
+    fn remove_string_deltas(&self, &[Self::Delta], &str) -> Self::Delta;
 }
