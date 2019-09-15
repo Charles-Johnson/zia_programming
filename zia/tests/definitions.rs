@@ -84,6 +84,7 @@ proptest! {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let_definition!(cont, f, d, e);
+        prop_assume!(!((a == d || a == e) && (f == b || f == c))); // Otherwise definition is circular!
         let let_command = format!("let {} := {} {}", d, b, c);
         prop_assert_eq!(
             cont.execute(&let_command),

@@ -134,7 +134,13 @@ where
                     let rightc = self.concept_from_ast(deltas, right)?;
                     let ls = left.to_string();
                     let rs = right.to_string();
-                    let concept = self.find_or_insert_definition(deltas, leftc, rightc, ls.starts_with('_') && ls.ends_with('_') || rs.starts_with('_') && rs.ends_with('_'))?;
+                    let concept = self.find_or_insert_definition(
+                        deltas,
+                        leftc,
+                        rightc,
+                        ls.starts_with('_') && ls.ends_with('_')
+                            || rs.starts_with('_') && rs.ends_with('_'),
+                    )?;
                     if !string.contains(' ') {
                         self.label(deltas, concept, string)?;
                     }
@@ -213,17 +219,26 @@ where
 {
     type C: Default;
     fn label(&self, deltas: &mut Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<()> {
-        let definition = self.find_or_insert_definition(deltas, LABEL, concept, string.starts_with('_') && string.ends_with('_'))?;
-        let string_id = self.new_string(deltas, string);
-        self.update_reduction(deltas, definition, string_id)?;
-        Ok(())
+        if string.starts_with('_') && string.ends_with('_') {
+            Ok(())
+        } else {
+            let definition = self.find_or_insert_definition(
+                deltas,
+                LABEL,
+                concept,
+                false,
+            )?;
+            let string_id = self.new_string(deltas, string);
+            self.update_reduction(deltas, definition, string_id)
+        }
     }
     fn new_labelled_default(
         &self,
         deltas: &mut Vec<Self::Delta>,
         string: &str,
     ) -> ZiaResult<usize> {
-        let new_default = self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
+        let new_default =
+            self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
         self.label(deltas, new_default, string)?;
         Ok(new_default)
     }
@@ -261,7 +276,7 @@ where
         deltas: &mut Vec<Self::Delta>,
         lefthand: usize,
         righthand: usize,
-        variable: bool
+        variable: bool,
     ) -> ZiaResult<usize> {
         let pair = self.find_definition(deltas, lefthand, righthand);
         match pair {
@@ -301,7 +316,11 @@ pub trait DefaultMaker<T>
 where
     Self: ConceptAdderDelta<T>,
 {
-    fn new_default<V: Default + Into<T>>(&self, deltas: &mut Vec<Self::Delta>, variable: bool) -> usize {
+    fn new_default<V: Default + Into<T>>(
+        &self,
+        deltas: &mut Vec<Self::Delta>,
+        variable: bool,
+    ) -> usize {
         let concept: T = V::default().into();
         let (delta, index) = self.add_concept_delta(deltas, concept, variable);
         deltas.push(delta);

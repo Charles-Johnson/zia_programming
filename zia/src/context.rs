@@ -108,14 +108,13 @@ where
     type Delta = ContextDelta<T>;
     fn apply(&mut self, delta: ContextDelta<T>) {
         match delta {
-            ContextDelta::String(ref s, ref sd) if !(s.starts_with('_') && s.ends_with('_')) => match sd {
+            ContextDelta::String(ref s, ref sd) => match sd {
                 StringDelta::Insert(id) => {
                     info!(self.logger, "add_string({}, {})", id, &s);
                     self.add_string(*id, &s);
                 }
                 StringDelta::Remove => self.remove_string(&s),
             },
-            ContextDelta::String(_, _) => (),
             ContextDelta::Concept(id, cd, v) => match cd {
                 ConceptDelta::Insert(c) => {
                     self.add_concept(c);

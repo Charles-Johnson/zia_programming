@@ -1,5 +1,7 @@
 {
-    "files.exclude": {
+    "files.watcherExclude": {
         "**/target": true
-    }
+    },
+    "editor.formatOnSave": true,
+    "search.usePCRE2": true
 }
