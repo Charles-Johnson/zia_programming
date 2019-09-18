@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{Change, Delta};
+use delta::{Change, Delta, ApplyDelta};
 use reading::{GetDefinition, GetReduction};
 use writing::{RemoveDefinition, RemoveReduction};
 
@@ -28,7 +28,7 @@ pub struct AbstractPart {
     reduces_to: Option<usize>,
 }
 
-impl Delta for AbstractPart {
+impl ApplyDelta for AbstractPart {
     type Delta = AbstractDelta;
     fn apply(&mut self, delta: AbstractDelta) {
         if let Change::Different { after, .. } = delta.definition {
@@ -37,6 +37,13 @@ impl Delta for AbstractPart {
         if let Change::Different { after, .. } = delta.reduction {
             self.reduces_to = after;
         }
+    }
+}
+
+impl Delta for AbstractDelta {
+    fn combine(&mut self, other: &AbstractDelta) {
+        self.definition.combine(&other.definition);
+        self.reduction.combine(&other.reduction);
     }
 }
 

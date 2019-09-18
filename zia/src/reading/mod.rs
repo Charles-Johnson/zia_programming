@@ -21,7 +21,7 @@ mod syntax;
 pub use self::concepts::*;
 pub use self::syntax::*;
 use constants::{ASSOC, FALSE, LABEL, LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE};
-use delta::Delta;
+use delta::ApplyDelta;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -45,7 +45,7 @@ where
     <U as FromStr>::Err: fmt::Debug,
 {
     /// Expands syntax by definition of its associated concept.
-    fn expand(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Rc<U> {
+    fn expand(&self, deltas: &Self::Delta, ast: &Rc<U>) -> Rc<U> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
                 self.combine(
@@ -67,7 +67,7 @@ where
         }
     }
     /// Reduces the syntax as much as possible (returns the normal form syntax).
-    fn recursively_reduce(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Rc<U> {
+    fn recursively_reduce(&self, deltas: &Self::Delta, ast: &Rc<U>) -> Rc<U> {
         match self.reduce(deltas, ast, &HashMap::new()) {
             Some(ref a) => self.recursively_reduce(deltas, a),
             None => ast.clone(),
@@ -75,7 +75,7 @@ where
     }
     fn determine_reduction_truth(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> Option<bool> {
@@ -91,7 +91,7 @@ where
     }
     fn determine_evidence_of_reduction(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> Option<bool> {
@@ -107,7 +107,7 @@ where
     /// Reduces the syntax by using the reduction rules of associated concepts.
     fn reduce(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         ast: &Rc<U>,
         variable_mask: &HashMap<usize, Rc<U>>,
     ) -> Option<Rc<U>> {
@@ -122,7 +122,7 @@ where
     // Reduces a syntax tree based on the properties of the left and right branches
     fn reduce_pair(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
         variable_mask: &HashMap<usize, Rc<U>>,
@@ -161,7 +161,7 @@ where
     }
     fn filter_generalisations_for_pair(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> Vec<(usize, HashMap<usize, Rc<U>>)> {
@@ -234,7 +234,7 @@ where
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
     fn reduce_by_expanded_right_branch(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         rightleft: &Rc<U>,
         rightright: &Rc<U>,
@@ -255,7 +255,7 @@ where
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         concept: usize,
         variable_mask: &HashMap<usize, Rc<U>>,
     ) -> Option<Rc<U>> {
@@ -285,7 +285,7 @@ where
             })
     }
     /// Returns the syntax for a concept.
-    fn to_ast(&self, deltas: &[Self::Delta], concept: usize) -> Rc<U> {
+    fn to_ast(&self, deltas: &Self::Delta, concept: usize) -> Rc<U> {
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(s.parse::<U>().unwrap().bind_concept(concept)),
             None => {
@@ -301,7 +301,7 @@ where
             }
         }
     }
-    fn combine(&self, deltas: &[Self::Delta], ast: &Rc<U>, other: &Rc<U>) -> Rc<U> {
+    fn combine(&self, deltas: &Self::Delta, ast: &Rc<U>, other: &Rc<U>) -> Rc<U> {
         let syntax = ast
             .get_concept()
             .and_then(|l| {
@@ -313,13 +313,13 @@ where
             .unwrap_or_else(|| self.join(deltas, ast, other));
         Rc::new(syntax)
     }
-    fn join(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> U {
+    fn join(&self, deltas: &Self::Delta, left: &Rc<U>, right: &Rc<U>) -> U {
         self.display_joint(deltas, left, right)
             .parse::<U>()
             .unwrap()
             .bind_pair(left, right)
     }
-    fn display_joint(&self, deltas: &[Self::Delta], left: &Rc<U>, right: &Rc<U>) -> String {
+    fn display_joint(&self, deltas: &Self::Delta, left: &Rc<U>, right: &Rc<U>) -> String {
         let left_string = left
             .get_expansion()
             .map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
@@ -340,7 +340,7 @@ where
             .unwrap_or_else(|| right.to_string());
         left_string + " " + &right_string
     }
-    fn get_associativity(&self, deltas: &[Self::Delta], ast: &Rc<U>) -> Option<Associativity> {
+    fn get_associativity(&self, deltas: &Self::Delta, ast: &Rc<U>) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
         self.reduce(deltas, &assoc_of_ast, &HashMap::new())
             .and_then(|ast| match ast.get_concept() {
@@ -351,7 +351,7 @@ where
     }
     fn has_higher_precedence(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
     ) -> Option<bool> {
@@ -368,7 +368,7 @@ where
     /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
     fn match_left_right(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         left: Option<Rc<U>>,
         right: Option<Rc<U>>,
         original_left: &Rc<U>,
@@ -384,7 +384,7 @@ where
         }
     }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    fn contract_pair(&self, deltas: &[Self::Delta], lefthand: &Rc<U>, righthand: &Rc<U>) -> Rc<U> {
+    fn contract_pair(&self, deltas: &Self::Delta, lefthand: &Rc<U>, righthand: &Rc<U>) -> Rc<U> {
         Rc::new(
             lefthand
                 .get_concept()
@@ -434,7 +434,7 @@ where
     T: MaybeString + GetDefinitionOf + GetDefinition + GetReduction + fmt::Debug,
     Self: GetNormalForm<T> + GetConceptOfLabel<T>,
 {
-    fn get_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<String> {
+    fn get_label(&self, deltas: &Self::Delta, concept: usize) -> Option<String> {
         match self.get_concept_of_label(deltas, concept) {
             None => self
                 .read_concept(deltas, concept)
@@ -459,7 +459,7 @@ where
     T: GetDefinition + FindWhatReducesToIt,
     Self: FindWhatItsANormalFormOf<T>,
 {
-    fn get_labellee(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
+    fn get_labellee(&self, deltas: &Self::Delta, concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
         for label in self.find_what_its_a_normal_form_of(deltas, concept) {
             match self.read_concept(deltas, label).get_definition() {
@@ -490,9 +490,9 @@ where
 pub trait GetNormalForm<T>
 where
     T: GetReduction,
-    Self: ConceptReader<T> + Delta,
+    Self: ConceptReader<T> + ApplyDelta,
 {
-    fn get_normal_form(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
+    fn get_normal_form(&self, deltas: &Self::Delta, concept: usize) -> Option<usize> {
         self.read_concept(deltas, concept)
             .get_reduction()
             .map(|n| self.get_normal_form(deltas, n).unwrap_or(n))
@@ -511,7 +511,7 @@ where
     T: GetDefinition + GetDefinitionOf + fmt::Debug,
     Self: ConceptReader<T>,
 {
-    fn get_concept_of_label(&self, deltas: &[Self::Delta], concept: usize) -> Option<usize> {
+    fn get_concept_of_label(&self, deltas: &Self::Delta, concept: usize) -> Option<usize> {
         self.read_concept(deltas, concept)
             .get_righthand_of()
             .iter()
@@ -539,7 +539,7 @@ where
     T: GetReduction + FindWhatReducesToIt + GetDefinition + GetDefinitionOf,
     Self: ConceptReader<T>,
 {
-    fn is_disconnected(&self, deltas: &[Self::Delta], concept: usize) -> bool {
+    fn is_disconnected(&self, deltas: &Self::Delta, concept: usize) -> bool {
         self.read_concept(deltas, concept).get_reduction().is_none()
             && self
                 .read_concept(deltas, concept)
@@ -555,7 +555,7 @@ where
                 .find_what_reduces_to_it()
                 .is_empty()
     }
-    fn righthand_of_without_label_is_empty(&self, deltas: &[Self::Delta], con: usize) -> bool {
+    fn righthand_of_without_label_is_empty(&self, deltas: &Self::Delta, con: usize) -> bool {
         self.read_concept(deltas, con)
             .get_righthand_of()
             .iter()
@@ -583,7 +583,7 @@ where
 {
     fn find_definition(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         lefthand: usize,
         righthand: usize,
     ) -> Option<usize> {
@@ -608,9 +608,9 @@ where
 pub trait FindWhatItsANormalFormOf<T>
 where
     T: FindWhatReducesToIt,
-    Self: ConceptReader<T> + Delta,
+    Self: ConceptReader<T> + ApplyDelta,
 {
-    fn find_what_its_a_normal_form_of(&self, deltas: &[Self::Delta], con: usize) -> HashSet<usize> {
+    fn find_what_its_a_normal_form_of(&self, deltas: &Self::Delta, con: usize) -> HashSet<usize> {
         let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it();
         for concept in normal_form_of.clone().iter() {
             for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
@@ -633,7 +633,7 @@ where
     Self: ConceptReader<T>,
     T: GetDefinition,
 {
-    fn contains(&self, deltas: &[Self::Delta], outer: usize, inner: usize) -> bool {
+    fn contains(&self, deltas: &Self::Delta, outer: usize, inner: usize) -> bool {
         if let Some((left, right)) = self.read_concept(deltas, outer).get_definition() {
             left == inner
                 || right == inner
@@ -654,9 +654,9 @@ where
 
 pub trait ConceptReader<T>
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn read_concept(&self, &[Self::Delta], usize) -> T;
+    fn read_concept(&self, &Self::Delta, usize) -> T;
 }
 
 pub trait BindConcept {
@@ -665,7 +665,7 @@ pub trait BindConcept {
 
 pub trait Variable
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn has_variable(&self, deltas: &[Self::Delta], usize) -> bool;
+    fn has_variable(&self, deltas: &Self::Delta, usize) -> bool;
 }

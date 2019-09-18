@@ -16,26 +16,24 @@
 */
 
 use errors::ZiaResult;
-use std::iter::from_fn;
+use std::{iter::from_fn, collections::HashSet};
 
-pub trait Delta {
+pub trait ApplyDelta {
     type Delta;
     fn apply(&mut self, Self::Delta);
-    fn apply_all(&mut self, deltas: Vec<Self::Delta>) {
-        for delta in deltas {
-            self.apply(delta);
-        }
-    }
+}
+pub trait Delta {
+    fn combine(&mut self, &Self);
     // Repeat mutation, f, n times on self and return vector of n results
-    fn repeat<F>(deltas: &mut Vec<Self::Delta>, mut f: F, n: usize) -> Vec<usize>
+    fn repeat<F>(&mut self, mut f: F, n: usize) -> Vec<usize>
     where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize,
+        F: for<'a> FnMut(&'a mut Self) -> usize,
     {
         let mut counter = 0;
         from_fn(|| {
             if counter < n {
                 counter += 1;
-                Some(f(deltas))
+                Some(f(self))
             } else {
                 None
             }
@@ -43,15 +41,15 @@ pub trait Delta {
         .collect()
     }
     fn multiply<F>(
-        deltas: &mut Vec<Self::Delta>,
+        &mut self,
         mut f: F,
         ns: Vec<usize>,
         ms: Vec<&str>,
     ) -> ZiaResult<()>
     where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>, usize, &str) -> ZiaResult<()>,
+        F: for<'a> FnMut(&'a mut Self, usize, &str) -> ZiaResult<()>,
     {
-        ns.iter().zip(ms).try_for_each(|(n, m)| f(deltas, *n, m))
+        ns.iter().zip(ms).try_for_each(|(n, m)| f(self, *n, m))
     }
 }
 
@@ -67,8 +65,38 @@ impl<T> Default for Change<T> {
     }
 }
 
+impl<T> Delta for Change<T>
+where
+    T: PartialEq,
+{
+    fn combine(&mut self, other: &Change<T>) {
+        match (self, other) {
+            (Change::Same, Change::Same) => (),
+            (Change::Same, _) => *self = *other,
+            (_, Change::Same) => (),
+            (Change::Different{before: x, after: y1}, Change::Different{before: y2, after: z}) if y1 == y2 => *self = Change::Different{before: *x, after: *z},
+            _ => panic!("Deltas do not align"),
+        };
+    }
+}
+
 #[derive(Clone, Debug, Default)]
-pub struct CollectionChange<T> {
-    pub remove: T,
-    pub add: T,
+pub struct CollectionChange {
+    pub remove: HashSet<usize>,
+    pub add: HashSet<usize>,
+}
+
+impl Delta for CollectionChange {
+    fn combine(&mut self, other: &CollectionChange) {
+        other.remove.iter().for_each(|item| if self.add.contains(item) {
+            self.add.remove(item);
+        } else {
+            self.remove.insert(*item);
+        });
+        other.add.iter().for_each(|item| if self.remove.contains(item) {
+            self.remove.remove(item);
+        } else {
+            self.add.insert(*item);
+        });
+    }
 }

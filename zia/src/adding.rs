@@ -16,7 +16,7 @@
 */
 
 use constants::LABEL;
-use delta::Delta;
+use delta::{ApplyDelta, Delta};
 use errors::{ZiaError, ZiaResult};
 use logging::Logger;
 use reading::FindWhatReducesToIt;
@@ -45,11 +45,11 @@ where
         + FindWhatReducesToIt
         + Clone,
     U: Container + PartialEq + MaybeConcept + fmt::Display,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Default + Delta,
 {
     fn execute_reduction(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        deltas: &mut Self::Delta,
         syntax: &U,
         normal_form: &U,
     ) -> ZiaResult<()> {
@@ -82,7 +82,7 @@ where
         + FindWhatReducesToIt
         + Clone,
     U: Container + PartialEq + MaybeConcept + fmt::Display,
-    S::Delta: Clone + fmt::Debug,
+    S::Delta: Clone + fmt::Debug + Default + Delta,
 {
 }
 
@@ -117,10 +117,10 @@ where
         + FindWhatReducesToIt
         + Clone,
     Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Default + Delta,
     U: MightExpand + MaybeConcept + fmt::Display,
 {
-    fn concept_from_ast(&self, deltas: &mut Vec<Self::Delta>, ast: &U) -> ZiaResult<usize> {
+    fn concept_from_ast(&self, deltas: &mut Self::Delta, ast: &U) -> ZiaResult<usize> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
         } else if let Some(c) = self.concept_from_label(deltas, &ast.to_string()) {
@@ -168,13 +168,13 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Default + Delta,
 {
     fn new() -> Self {
         let mut cont = Self::default();
-        let deltas = cont.setup().unwrap();
-        info!(cont.logger(), "Setup a new context: {:?}", &deltas);
-        cont.apply_all(deltas);
+        let delta = cont.setup().unwrap();
+        info!(cont.logger(), "Setup a new context: {:?}", &delta);
+        cont.apply(delta);
         cont
     }
 }
@@ -195,7 +195,7 @@ where
         + MaybeString
         + FindWhatReducesToIt
         + Clone,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Default + Delta,
 {
 }
 
@@ -215,10 +215,10 @@ where
         + From<Self::A>
         + Clone,
     Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
-    Self::Delta: Clone + fmt::Debug + Sized,
+    Self::Delta: Clone + fmt::Debug + Sized + Default + Delta,
 {
     type C: Default;
-    fn label(&self, deltas: &mut Vec<Self::Delta>, concept: usize, string: &str) -> ZiaResult<()> {
+    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()> {
         if string.starts_with('_') && string.ends_with('_') {
             Ok(())
         } else {
@@ -229,7 +229,7 @@ where
     }
     fn new_labelled_default(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        deltas: &mut Self::Delta,
         string: &str,
     ) -> ZiaResult<usize> {
         let new_default =
@@ -237,19 +237,19 @@ where
         self.label(deltas, new_default, string)?;
         Ok(new_default)
     }
-    fn setup(&mut self) -> ZiaResult<Vec<Self::Delta>> {
-        let mut deltas = vec![];
+    fn setup(&mut self) -> ZiaResult<Self::Delta> {
+        let mut delta = Self::Delta::default();
         let concrete_constructor =
-            |local_deltas: &mut Vec<Self::Delta>| self.new_default::<Self::C>(local_deltas, false);
+            |local_delta: &mut Self::Delta| self.new_default::<Self::C>(local_delta, false);
         let labels = vec![
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
         ];
-        let concepts = Self::repeat(&mut deltas, concrete_constructor, labels.len());
-        let label = |local_deltas: &mut Vec<Self::Delta>, concept: usize, string: &str| {
+        let concepts = delta.repeat(concrete_constructor, labels.len());
+        let label = |local_deltas: &mut Self::Delta, concept: usize, string: &str| {
             self.label(local_deltas, concept, string)
         };
-        Self::multiply(&mut deltas, label, concepts, labels)?;
-        Ok(deltas)
+        delta.multiply(label, concepts, labels)?;
+        Ok(delta)
     }
 }
 
@@ -263,12 +263,12 @@ where
         + GetDefinitionOf
         + Clone,
     Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
-    Self::Delta: Clone + fmt::Debug,
+    Self::Delta: Clone + fmt::Debug + Delta,
 {
     type A: Default;
     fn find_or_insert_definition(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        deltas: &mut Self::Delta,
         lefthand: usize,
         righthand: usize,
         variable: bool,
@@ -289,13 +289,14 @@ pub trait StringMaker<T>
 where
     T: From<String>,
     Self: ConceptAdderDelta<T> + StringAdderDelta,
+    Self::Delta: Delta,
 {
-    fn new_string(&self, deltas: &mut Vec<Self::Delta>, string: &str) -> usize {
+    fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize {
         let string_concept = string.to_string().into();
-        let (delta, index) = self.add_concept_delta(deltas, string_concept, false);
-        deltas.push(delta);
+        let (delta, index) = self.add_concept_delta(original_delta, string_concept, false);
+        original_delta.combine(&delta);
         let string_delta = Self::add_string_delta(index, string);
-        deltas.push(string_delta);
+        original_delta.combine(&string_delta);
         index
     }
 }
@@ -304,30 +305,32 @@ impl<S, T> StringMaker<T> for S
 where
     T: From<String>,
     S: ConceptAdderDelta<T> + StringAdderDelta,
+    S::Delta: Delta,
 {
 }
 
 pub trait DefaultMaker<T>
 where
     Self: ConceptAdderDelta<T>,
+    Self::Delta: Delta,
 {
     fn new_default<V: Default + Into<T>>(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        original_delta: &mut Self::Delta,
         variable: bool,
     ) -> usize {
         let concept: T = V::default().into();
-        let (delta, index) = self.add_concept_delta(deltas, concept, variable);
-        deltas.push(delta);
+        let (delta, index) = self.add_concept_delta(original_delta, concept, variable);
+        original_delta.combine(&delta);
         index
     }
 }
 
-impl<S, T> DefaultMaker<T> for S where S: ConceptAdderDelta<T> {}
+impl<S, T> DefaultMaker<T> for S where S: ConceptAdderDelta<T>, S::Delta: Delta {}
 
 pub trait StringAdderDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn add_string_delta(usize, &str) -> Self::Delta;
 }
@@ -338,9 +341,9 @@ pub trait StringAdder {
 
 pub trait ConceptAdderDelta<T>
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn add_concept_delta(&self, &[Self::Delta], T, bool) -> (Self::Delta, usize);
+    fn add_concept_delta(&self, &Self::Delta, T, bool) -> (Self::Delta, usize);
 }
 
 pub trait ConceptAdder<T> {

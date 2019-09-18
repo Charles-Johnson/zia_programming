@@ -16,7 +16,7 @@
 */
 
 use constants::{FALSE, PRECEDENCE, TRUE};
-use delta::Delta;
+use delta::ApplyDelta;
 use errors::{ZiaError, ZiaResult};
 use reading::{
     Associativity, BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf,
@@ -36,11 +36,11 @@ where
     U: FromStr + BindConcept + BindPair + MaybeConcept + Clone + PartialEq + MightExpand + Display + Debug,
     <U as FromStr>::Err: Debug,
 {
-    fn ast_from_expression(&self, deltas: &[Self::Delta], s: &str) -> ZiaResult<Rc<U>> {
+    fn ast_from_expression(&self, deltas: &Self::Delta, s: &str) -> ZiaResult<Rc<U>> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
-    fn ast_from_tokens(&self, deltas: &[Self::Delta], tokens: &[String]) -> ZiaResult<Rc<U>> {
+    fn ast_from_tokens(&self, deltas: &Self::Delta, tokens: &[String]) -> ZiaResult<Rc<U>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(deltas, &tokens[0]),
@@ -140,12 +140,12 @@ where
             }
         }
     }
-    fn ast_from_pair(&self, deltas: &[Self::Delta], left: &str, right: &str) -> ZiaResult<Rc<U>> {
+    fn ast_from_pair(&self, deltas: &Self::Delta, left: &str, right: &str) -> ZiaResult<Rc<U>> {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
     }
-    fn ast_from_token(&self, deltas: &[Self::Delta], t: &str) -> ZiaResult<Rc<U>> {
+    fn ast_from_token(&self, deltas: &Self::Delta, t: &str) -> ZiaResult<Rc<U>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(deltas, t)
         } else {
@@ -225,11 +225,11 @@ where
     Self: StringConcept + Label<T>,
     T: FindWhatReducesToIt + GetDefinition,
 {
-    fn concept_from_label(&self, deltas: &[Self::Delta], s: &str) -> Option<usize> {
+    fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize> {
         self.get_string_concept(deltas, s)
             .and_then(|c| self.get_labellee(deltas, c))
     }
-    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &[Self::Delta], s: &str) -> U
+    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &Self::Delta, s: &str) -> U
     where
         <U as FromStr>::Err: Debug,
     {
@@ -248,7 +248,7 @@ where
 
 pub trait StringConcept
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn get_string_concept(&self, &[Self::Delta], &str) -> Option<usize>;
+    fn get_string_concept(&self, &Self::Delta, &str) -> Option<usize>;
 }

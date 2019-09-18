@@ -16,17 +16,18 @@
 */
 
 use adding::{ConceptAdder, ConceptAdderDelta, StringAdder, StringAdderDelta};
-use delta::Delta;
+use delta::{ApplyDelta, Delta};
 use errors::ZiaResult;
 use logging::Logger;
 use reading::{ConceptReader, Variable};
 use removing::{
-    BlindConceptRemover, BlindConceptRemoverDeltas, StringRemover, StringRemoverDeltas,
+    BlindConceptRemover, BlindConceptRemoverDelta, StringRemover, StringRemoverDelta,
 };
 use slog;
 use slog::Drain;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map::Entry},
+    default::Default,
     fmt::Debug,
 };
 use translating::StringConcept;
@@ -59,25 +60,40 @@ impl<T> Context<T> {
     }
 }
 
+fn update_concept_delta<T>(entry: Entry<usize, (ConceptDelta<T>, bool)>, concept_delta: T::Delta) 
+where 
+    T: ApplyDelta,
+    T::Delta: Clone + Debug + Delta,
+{
+    entry.and_modify(|(cd, v)| match cd {
+        ConceptDelta::Update(d) => {
+            d.combine(&concept_delta);
+            *cd = ConceptDelta::Update(*d);
+        }
+        ConceptDelta::Insert(c) => {
+            c.apply(concept_delta);
+            *cd = ConceptDelta::Insert(*c);
+        }
+        ConceptDelta::Remove(_) => panic!("Concept {} will already be removed", entry.key()),
+    }).or_insert((ConceptDelta::Update(concept_delta), false));
+}
+
 impl<T> Variable for Context<T>
 where
-    T: Delta + Clone + Debug,
+    T: ApplyDelta + Clone + Debug,
     T::Delta: Clone + Debug,
 {
-    fn has_variable(&self, deltas: &[ContextDelta<T>], concept: usize) -> bool {
-        deltas
-            .iter()
-            .fold(self.variables.contains(&concept), |truth, delta| {
-                delta
-                    .concept
-                    .get(&concept)
-                    .map(|(cd, v)| match cd {
-                        ConceptDelta::Insert(_) => *v,
-                        ConceptDelta::Remove(_) => false,
-                        ConceptDelta::Update(_) => truth,
-                    })
-                    .unwrap_or(truth)
+    fn has_variable(&self, delta: &ContextDelta<T>, concept: usize) -> bool {
+        let in_previous_variables = self.variables.contains(&concept);
+        delta
+            .concept
+            .get(&concept)
+            .map(|(cd, v)| match cd {
+                ConceptDelta::Insert(_) => *v,
+                ConceptDelta::Remove(_) => false,
+                ConceptDelta::Update(_) => in_previous_variables,
             })
+            .unwrap_or(in_previous_variables)
     }
 }
 
@@ -87,10 +103,10 @@ impl<T> Logger for Context<T> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ContextDelta<T>
 where
-    T: Delta,
+    T: ApplyDelta,
     T::Delta: Clone + Debug,
 {
     string: HashMap<String, StringDelta>,
@@ -106,7 +122,7 @@ pub enum StringDelta {
 #[derive(Clone, Debug)]
 pub enum ConceptDelta<T>
 where
-    T: Delta,
+    T: ApplyDelta,
     T::Delta: Clone + Debug,
 {
     Insert(T),
@@ -114,9 +130,9 @@ where
     Update(T::Delta),
 }
 
-impl<T> Delta for Context<T>
+impl<T> ApplyDelta for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Clone + Debug,
 {
     type Delta = ContextDelta<T>;
@@ -170,7 +186,7 @@ impl<T> StringAdder for Context<T> {
 
 impl<T> StringAdderDelta for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Clone + Debug,
 {
     fn add_string_delta(string_id: usize, string: &str) -> ContextDelta<T> {
@@ -192,146 +208,105 @@ impl<T> ConceptWriter<T> for Context<T> {
 
 impl<T> SetConceptDefinitionDeltas for Context<T>
 where
-    Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
+    Self: ConceptReader<T> + ApplyDelta<Delta = ContextDelta<T>>,
     T: SetDefinitionDelta + SetAsDefinitionOfDelta + Clone,
-    T::Delta: Clone + Debug,
+    T::Delta: Clone + Debug + Delta,
 {
     fn set_concept_definition_deltas(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        delta: &mut Self::Delta,
         concept: usize,
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<()> {
-        let concept_delta1 = try!(self
-            .read_concept(deltas, concept)
-            .set_definition_delta(lefthand, righthand));
-        deltas.push(ContextDelta {
-            concept: hashmap! {concept => (
-                ConceptDelta::Update(concept_delta1),
-                false, // Doesn't affect anything whether true or false
-            )},
-            string: hashmap! {},
-        });
-        let concept_delta2 = self
-            .read_concept(deltas, lefthand)
+        let concept_delta = self
+            .read_concept(delta, concept)
+            .set_definition_delta(lefthand, righthand)?;
+        update_concept_delta(delta.concept.entry(concept), concept_delta);
+        let lefthand_delta = self
+            .read_concept(delta, lefthand)
             .add_as_lefthand_of_delta(concept);
-        deltas.push(ContextDelta {
-            concept: hashmap! {lefthand => (
-                ConceptDelta::Update(concept_delta2),
-                false, // Doesn't affect anything whether true or false
-            )},
-            string: hashmap! {},
-        });
-        let concept_delta3 = self
-            .read_concept(deltas, righthand)
+        update_concept_delta(delta.concept.entry(lefthand), lefthand_delta);
+        let righthand_delta = self
+            .read_concept(delta, righthand)
             .add_as_righthand_of_delta(concept);
-        deltas.push(ContextDelta {
-            concept: hashmap! {righthand => (
-                ConceptDelta::Update(concept_delta3),
-                false, // Doesn't affect anything whether true or false
-            )},
-            string: hashmap! {},
-        });
+        update_concept_delta(delta.concept.entry(righthand), righthand_delta);
         Ok(())
     }
 }
 
 impl<T> SetConceptReductionDelta for Context<T>
 where
-    T: Delta + SetReductionDelta + MakeReduceFromDelta + Clone,
-    Self: ConceptReader<T> + Delta<Delta = ContextDelta<T>>,
-    T::Delta: Clone + Debug,
+    T: ApplyDelta + SetReductionDelta + MakeReduceFromDelta + Clone,
+    Self: ConceptReader<T> + ApplyDelta<Delta = ContextDelta<T>>,
+    T::Delta: Clone + Debug + Delta,
 {
     fn concept_reduction_deltas(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        delta: &mut Self::Delta,
         concept: usize,
         reduction: usize,
     ) -> ZiaResult<()> {
-        let concept_delta1 = self
-            .read_concept(deltas, concept)
+        let concept_delta = self
+            .read_concept(delta, concept)
             .make_reduce_to_delta(reduction)?;
-        let concept_delta2 = self
-            .read_concept(deltas, reduction)
+        let reduction_delta = self
+            .read_concept(delta, reduction)
             .make_reduce_from_delta(concept);
-        deltas.extend(vec![
-            ContextDelta {
-                concept: hashmap! {concept => (ConceptDelta::Update(concept_delta1), false)},
-                string: hashmap! {},
-            }, // Doesn't affect anything whether true or false
-            ContextDelta {
-                concept: hashmap! {reduction => (ConceptDelta::Update(concept_delta2), false)},
-                string: hashmap! {},
-            }, // Doesn't affect anything whether true or false
-        ]);
+        update_concept_delta(delta.concept.entry(concept), concept_delta);
+        update_concept_delta(delta.concept.entry(reduction), reduction_delta);
         Ok(())
     }
 }
 
 impl<T> ConceptReader<T> for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn read_concept(&self, deltas: &[ContextDelta<T>], id: usize) -> T {
-        deltas
-            .iter()
-            .fold(
-                self.get_concept(id).cloned(),
-                |concept_if_still_exists, delta| {
-                    delta
-                        .concept
-                        .get(&id)
-                        .map(|(cd, _)| match cd {
-                            ConceptDelta::Insert(c) => Some(c.clone()),
-                            ConceptDelta::Remove(_) => None,
-                            ConceptDelta::Update(d) => {
-                                let mut concept = concept_if_still_exists.clone().expect(
-                                "Deltas imply that a concept that doesn't exist will be updated!",
-                            );
-                                concept.apply(d.clone());
-                                Some(concept)
-                            }
-                        })
-                        .unwrap_or(concept_if_still_exists)
-                },
-            )
-            .unwrap_or_else(|| panic!("No concept with id = {}", id))
+    fn read_concept(&self, delta: &ContextDelta<T>, id: usize) -> T {
+        delta
+            .concept
+            .get(&id)
+            .and_then(|(cd, _)| match cd {
+                ConceptDelta::Insert(c) => Some(c.clone()),
+                ConceptDelta::Remove(_) => None,
+                ConceptDelta::Update(d) => {
+                    let mut concept = self.get_concept(id).expect(
+                    "Deltas imply that a concept that doesn't exist will be updated!",
+                );
+                    concept.apply(d.clone());
+                    Some(concept.clone())
+                }
+            })
+            .unwrap_or_else(|| self.get_concept(id).expect(
+                &format!("No concept with id = {}", id)
+            ).clone())
     }
 }
 
-impl<T> BlindConceptRemoverDeltas for Context<T>
+impl<T> BlindConceptRemoverDelta for Context<T>
 where
-    T: Delta + Clone + Debug,
+    T: ApplyDelta + Clone + Debug,
     T::Delta: Clone + Debug,
 {
-    fn blindly_remove_concept_deltas(
+    fn blindly_remove_concept_delta(
         &self,
-        deltas: &[ContextDelta<T>],
+        delta: &mut ContextDelta<T>,
         id: usize,
-    ) -> ContextDelta<T> {
-        let concept = deltas
-            .iter()
-            .fold(self.get_concept(id), |c, delta| {
-                delta
-                    .concept
-                    .get(&id)
-                    .map(|(cd, _)| match cd {
-                        ConceptDelta::Insert(c) => Some(c),
-                        ConceptDelta::Remove(_) => None,
-                        ConceptDelta::Update(_) => c,
-                    })
-                    .unwrap_or(c)
-            })
-            .expect("Concept will be already removed!");
-        ContextDelta {
-            concept: hashmap! {id => (
-                ConceptDelta::Remove(concept.clone()),
-                self.has_variable(deltas, id),
-            )},
-            string: hashmap! {},
-        }
+    ) {
+        let concept = delta
+            .concept
+            .get(&id)
+            .and_then(|(cd, _)| match cd {
+                ConceptDelta::Insert(c) => Some(c),
+                ConceptDelta::Remove(_) => None,
+                ConceptDelta::Update(_) => self.get_concept(id),
+            }).unwrap_or_else(|| self.get_concept(id).expect("Concept will be already removed!"));
+        delta.concept.insert(id, (
+            ConceptDelta::Remove(concept.clone()),
+            self.has_variable(delta, id),
+        ));
     }
 }
 
@@ -350,29 +325,21 @@ impl<T> StringRemover for Context<T> {
     }
 }
 
-impl<T> StringRemoverDeltas for Context<T>
+impl<T> StringRemoverDelta for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Clone + Debug,
 {
-    fn remove_string_deltas(&self, deltas: &[ContextDelta<T>], string: &str) -> ContextDelta<T> {
-        let index = deltas
-            .iter()
-            .fold(self.string_map.get(string), |string_index, delta| {
-                delta
-                    .string
-                    .get(string)
-                    .map(|sd| match sd {
-                        StringDelta::Insert(index) => Some(index),
-                        StringDelta::Remove(_) => None,
-                    })
-                    .unwrap_or(string_index)
+    fn remove_string_delta(&self, delta: &mut ContextDelta<T>, string: &str) {
+        let index = delta
+            .string
+            .get(string)
+            .and_then(|sd| match sd {
+                StringDelta::Insert(index) => Some(*index),
+                StringDelta::Remove(_) => None,
             })
             .expect("string already removed or doesn't exist");
-        ContextDelta {
-            string: hashmap! {string.to_string() => StringDelta::Remove(*index)},
-            concept: hashmap! {},
-        }
+        delta.string.insert(string.to_string(), StringDelta::Remove(index));
     }
 }
 
@@ -387,38 +354,36 @@ impl<T> ConceptAdder<T> for Context<T> {
 
 impl<T> ConceptAdderDelta<T> for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Clone + Debug,
 {
     fn add_concept_delta(
         &self,
-        deltas: &[ContextDelta<T>],
+        delta: &ContextDelta<T>,
         concept: T,
         variable: bool,
     ) -> (ContextDelta<T>, usize) {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for delta in deltas {
-            for (id, (cd, _)) in delta.concept.clone() {
-                match cd {
-                    ConceptDelta::Insert(_) => {
-                        if id < new_concept_length {
-                            removed_gaps.insert(id);
-                        } else if id == new_concept_length {
-                            new_concept_length += 1
-                        } else {
-                            panic!(
-                                "Deltas imply that a new concept has been given too large an id."
-                            )
-                        }
+        for (id, (cd, _)) in delta.concept.clone() {
+            match cd {
+                ConceptDelta::Insert(_) => {
+                    if id < new_concept_length {
+                        removed_gaps.insert(id);
+                    } else if id == new_concept_length {
+                        new_concept_length += 1
+                    } else {
+                        panic!(
+                            "Deltas imply that a new concept has been given too large an id."
+                        )
                     }
-                    ConceptDelta::Remove(_) => {
-                        added_gaps.push(id);
-                        removed_gaps.remove(&id);
-                    }
-                    ConceptDelta::Update(_) => (),
                 }
+                ConceptDelta::Remove(_) => {
+                    added_gaps.push(id);
+                    removed_gaps.remove(&id);
+                }
+                ConceptDelta::Update(_) => (),
             }
         }
         let index: usize;
@@ -469,66 +434,59 @@ where
 
 impl<T> StringConcept for Context<T>
 where
-    T: Delta + Clone,
+    T: ApplyDelta + Clone,
     T::Delta: Debug + Clone,
 {
-    fn get_string_concept(&self, deltas: &[ContextDelta<T>], s: &str) -> Option<usize> {
-        deltas
-            .iter()
-            .fold(None, |candidate, delta| {
-                delta
-                    .string
-                    .get(s)
-                    .map(|string_delta| match string_delta {
-                        StringDelta::Insert(concept) => Some(*concept),
-                        StringDelta::Remove(_) => None,
-                    })
-                    .unwrap_or(candidate)
+    fn get_string_concept(&self, delta: &ContextDelta<T>, s: &str) -> Option<usize> {
+        delta
+            .string
+            .get(s)
+            .map(|string_delta| match string_delta {
+                StringDelta::Insert(concept) => Some(concept),
+                StringDelta::Remove(_) => None,
             })
-            .or_else(|| self.string_map.get(s).cloned())
+            .unwrap_or_else(|| self.string_map.get(s)).cloned()
     }
 }
 
 impl<T> RemoveConceptReduction for Context<T>
 where
-    T: Delta + Clone + RemoveReductionDelta,
-    T::Delta: Clone + Debug,
+    T: ApplyDelta + Clone + RemoveReductionDelta,
+    T::Delta: Clone + Debug + Default + Delta,
 {
     fn remove_concept_reduction(
         &self,
-        deltas: &[ContextDelta<T>],
+        delta: &ContextDelta<T>,
         concept: usize,
         reduction: usize,
     ) -> [ContextDelta<T>; 2] {
-        let mut edited_concept: Option<T> = Some(self.read_concept(deltas, concept));
-        let mut edited_reduction: Option<T> = Some(self.read_concept(deltas, reduction));
-        let mut concept_deltas = Vec::<T::Delta>::new();
-        let mut reduction_deltas = Vec::<T::Delta>::new();
-        for delta in deltas {
-            delta.concept.get(&concept).map(|(cd, _)| match cd {
-                ConceptDelta::Update(d) => concept_deltas.push(d.clone()),
-                ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
-                ConceptDelta::Remove(_) => {
-                    edited_concept = None;
-                    concept_deltas = vec![];
-                }
-            });
-            delta.concept.get(&reduction).map(|(cd, _)| match cd {
-                ConceptDelta::Update(d) => reduction_deltas.push(d.clone()),
-                ConceptDelta::Insert(t) => edited_reduction = Some(t.clone()),
-                ConceptDelta::Remove(_) => {
-                    edited_reduction = None;
-                    reduction_deltas = vec![];
-                }
-            });
-        }
+        let mut edited_concept: Option<T> = Some(self.read_concept(delta, concept));
+        let mut concept_delta = T::Delta::default();
+        delta.concept.get(&concept).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => concept_delta.combine(d),
+            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_concept = None;
+                concept_delta = T::Delta::default();
+            }
+        });
+        let mut edited_reduction: Option<T> = Some(self.read_concept(delta, reduction));
+        let mut reduction_delta = T::Delta::default();
+        delta.concept.get(&reduction).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => reduction_delta.combine(d),
+            ConceptDelta::Insert(t) => edited_reduction = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_reduction = None;
+                reduction_delta = T::Delta::default();
+            }
+        });
         [
             ContextDelta {
                 concept: hashmap! {concept => (
                     ConceptDelta::Update(
                         edited_concept
                             .expect("Concept previously removed!")
-                            .make_reduce_to_none_delta(&concept_deltas),
+                            .make_reduce_to_none_delta(&concept_delta),
                     ),
                     false, // Doesn't affect anything whether true or false
                 )},
@@ -540,7 +498,7 @@ where
                         ConceptDelta::Update(
                             edited_reduction
                                 .expect("Reduction previously removed!")
-                                .no_longer_reduces_from_delta(&reduction_deltas, concept),
+                                .no_longer_reduces_from_delta(&reduction_delta, concept),
                         ),
                         false, // Doesn't affect anything whether true or false
                     )
@@ -553,55 +511,53 @@ where
 
 impl<T> DeleteDefinition<T> for Context<T>
 where
-    T: Delta + RemoveDefinitionDelta + Clone,
-    T::Delta: Clone + Debug,
+    T: ApplyDelta + RemoveDefinitionDelta + Clone,
+    T::Delta: Clone + Debug + Default + Delta,
 {
     fn delete_definition(
         &self,
-        deltas: &[Self::Delta],
+        delta: &Self::Delta,
         concept: usize,
         left: usize,
         right: usize,
     ) -> [Self::Delta; 3] {
-        let mut edited_concept: Option<T> = Some(self.read_concept(deltas, concept));
-        let mut edited_left: Option<T> = Some(self.read_concept(deltas, left));
-        let mut edited_right: Option<T> = Some(self.read_concept(deltas, right));
-        let mut concept_deltas = Vec::<T::Delta>::new();
-        let mut left_deltas = Vec::<T::Delta>::new();
-        let mut right_deltas = Vec::<T::Delta>::new();
-        for delta in deltas {
-            delta.concept.get(&concept).map(|(cd, _)| match cd {
-                ConceptDelta::Update(d) => concept_deltas.push(d.clone()),
-                ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
-                ConceptDelta::Remove(_) => {
-                    edited_concept = None;
-                    concept_deltas = vec![];
-                }
-            });
-            delta.concept.get(&left).map(|(cd, _)| match cd {
-                ConceptDelta::Update(d) => left_deltas.push(d.clone()),
-                ConceptDelta::Insert(t) => edited_left = Some(t.clone()),
-                ConceptDelta::Remove(_) => {
-                    edited_left = None;
-                    left_deltas = vec![];
-                }
-            });
-            delta.concept.get(&right).map(|(cd, _)| match cd {
-                ConceptDelta::Update(d) => right_deltas.push(d.clone()),
-                ConceptDelta::Insert(t) => edited_right = Some(t.clone()),
-                ConceptDelta::Remove(_) => {
-                    edited_right = None;
-                    right_deltas = vec![];
-                }
-            });
-        }
+        let mut edited_concept: Option<T> = Some(self.read_concept(delta, concept));
+        let mut edited_left: Option<T> = Some(self.read_concept(delta, left));
+        let mut edited_right: Option<T> = Some(self.read_concept(delta, right));
+        let mut concept_delta = T::Delta::default();
+        let mut left_delta = T::Delta::default();
+        let mut right_delta = T::Delta::default();
+        delta.concept.get(&concept).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => concept_delta.combine(d),
+            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_concept = None;
+                concept_delta = T::Delta::default();
+            }
+        });
+        delta.concept.get(&left).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => left_delta.combine(d),
+            ConceptDelta::Insert(t) => edited_left = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_left = None;
+                left_delta = T::Delta::default();
+            }
+        });
+        delta.concept.get(&right).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => right_delta.combine(d),
+            ConceptDelta::Insert(t) => edited_right = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_right = None;
+                right_delta = T::Delta::default();
+            }
+        });
         [
             ContextDelta {
                 concept: hashmap! {concept => (
                     ConceptDelta::Update(
                         edited_concept
                             .expect("Concept previously removed!")
-                            .remove_definition_delta(&concept_deltas),
+                            .remove_definition_delta(&concept_delta),
                     ),
                     false, // Doesn't affect anything whether true or false
                 )},
@@ -612,7 +568,7 @@ where
                     ConceptDelta::Update(
                         edited_left
                             .expect("Left previously removed!")
-                            .remove_as_lefthand_of_delta(&left_deltas, concept),
+                            .remove_as_lefthand_of_delta(&left_delta, concept),
                     ),
                     false, // Doesn't affect anything whether true or false
                 )},
@@ -623,7 +579,7 @@ where
                     ConceptDelta::Update(
                         edited_right
                             .expect("Right previously removed!")
-                            .remove_as_righthand_of_delta(&right_deltas, concept),
+                            .remove_as_righthand_of_delta(&right_delta, concept),
                     ),
                     false, // Doesn't affect anything whether true or false
                 )},

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-use delta::{CollectionChange, Delta};
+use delta::{CollectionChange, ApplyDelta, Delta};
 use reading::{FindWhatReducesToIt, GetDefinitionOf};
 use std::{collections::HashSet, iter::FromIterator};
 use writing::{
@@ -32,7 +32,7 @@ pub struct CommonPart {
     reduces_from: HashSet<usize>,
 }
 
-impl Delta for CommonPart {
+impl ApplyDelta for CommonPart {
     type Delta = CommonDelta;
     fn apply(&mut self, delta: CommonDelta) {
         let CommonDelta{lefthand_of, righthand_of, reduces_from} = delta;
@@ -50,9 +50,17 @@ impl Delta for CommonPart {
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonDelta {
-    pub lefthand_of: CollectionChange<HashSet<usize>>,
-    pub righthand_of: CollectionChange<HashSet<usize>>,
-    pub reduces_from: CollectionChange<HashSet<usize>>,
+    pub lefthand_of: CollectionChange,
+    pub righthand_of: CollectionChange,
+    pub reduces_from: CollectionChange,
+}
+
+impl Delta for CommonDelta {
+    fn combine(&mut self, other: &CommonDelta) {
+        self.lefthand_of.combine(&other.lefthand_of);
+        self.righthand_of.combine(&other.righthand_of);
+        self.reduces_from.combine(&other.reduces_from);
+    }
 }
 
 impl GetDefinitionOf for CommonPart {

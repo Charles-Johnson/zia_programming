@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-pub use delta::Delta;
+pub use delta::{ApplyDelta, Delta};
 pub use errors::{ZiaError, ZiaResult};
 use logging::Logger;
 pub use reading::{
@@ -27,11 +27,11 @@ use std::fmt::{Debug, Display};
 pub trait Unlabeller<T, U>
 where
     T: GetReduction + GetDefinition + GetDefinitionOf + Debug,
-    Self: DeleteReduction<T, U> + GetConceptOfLabel<T> + Delta,
-    Self::Delta: Clone,
+    Self: DeleteReduction<T, U> + GetConceptOfLabel<T> + ApplyDelta,
+    Self::Delta: Clone + Delta,
     U: MaybeConcept + Display,
 {
-    fn unlabel(&self, deltas: &mut Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
+    fn unlabel(&self, deltas: &mut Self::Delta, concept: usize) -> ZiaResult<()> {
         let concept_of_label = self
             .get_concept_of_label(deltas, concept)
             .expect("No label to remove");
@@ -48,7 +48,7 @@ where
         + GetDefinition
         + Debug,
     S: DeleteReduction<T, U> + GetConceptOfLabel<T>,
-    S::Delta: Clone,
+    S::Delta: Clone + Delta,
     U: Display + MaybeConcept,
 {
 }
@@ -56,23 +56,23 @@ where
 pub trait DeleteReduction<T, U>
 where
     T: GetReduction,
-    Self: ConceptWriter<T> + ConceptReader<T> + Delta + RemoveConceptReduction,
-    Self::Delta: Clone,
+    Self: ConceptWriter<T> + ConceptReader<T> + ApplyDelta + RemoveConceptReduction,
+    Self::Delta: Clone + Delta,
     U: MaybeConcept + Display,
 {
-    fn try_removing_reduction(&self, deltas: &mut Vec<Self::Delta>, syntax: &U) -> ZiaResult<()> {
+    fn try_removing_reduction(&self, deltas: &mut Self::Delta, syntax: &U) -> ZiaResult<()> {
         if let Some(c) = syntax.get_concept() {
             self.delete_reduction(deltas, c)
         } else {
             Err(ZiaError::RedundantReduction)
         }
     }
-    fn delete_reduction(&self, deltas: &mut Vec<Self::Delta>, concept: usize) -> ZiaResult<()> {
-        self.read_concept(deltas, concept)
+    fn delete_reduction(&self, delta: &mut Self::Delta, concept: usize) -> ZiaResult<()> {
+        self.read_concept(delta, concept)
             .get_reduction()
             .map(|n| {
-                let extra_deltas = self.remove_concept_reduction(deltas, concept, n);
-                deltas.extend(extra_deltas.iter().cloned());
+                let extra_delta = self.remove_concept_reduction(delta, concept, n);
+                delta.combine(&extra_delta);
             })
             .ok_or(ZiaError::RedundantReduction)
     }
@@ -82,16 +82,16 @@ impl<S, T, U> DeleteReduction<T, U> for S
 where
     S: ConceptWriter<T> + ConceptReader<T> + RemoveConceptReduction,
     T: GetReduction,
-    S::Delta: Clone,
+    S::Delta: Clone + Delta,
     U: MaybeConcept + Display,
 {
 }
 
 pub trait DeleteDefinition<T>
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn delete_definition(&self, &[Self::Delta], usize, usize, usize) -> [Self::Delta; 3];
+    fn delete_definition(&self, &Self::Delta, usize, usize, usize) -> Self::Delta;
 }
 
 pub trait UpdateReduction<T>
@@ -101,7 +101,7 @@ where
 {
     fn update_reduction(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        deltas: &mut Self::Delta,
         concept: usize,
         reduction: usize,
     ) -> ZiaResult<()> {
@@ -132,7 +132,7 @@ where
                     })
             })
     }
-    fn get_reduction_of_composition(&self, deltas: &[Self::Delta], concept: usize) -> usize {
+    fn get_reduction_of_composition(&self, deltas: &Self::Delta, concept: usize) -> usize {
         self.read_concept(deltas, concept)
             .get_definition()
             .and_then(|(left, right)| {
@@ -146,7 +146,7 @@ where
     }
     fn get_reduction_or_reduction_of_composition(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         concept: usize,
     ) -> usize {
         self.read_concept(deltas, concept)
@@ -170,7 +170,7 @@ where
 {
     fn insert_definition(
         &self,
-        deltas: &mut Vec<Self::Delta>,
+        deltas: &mut Self::Delta,
         definition: usize,
         lefthand: usize,
         righthand: usize,
@@ -188,7 +188,7 @@ where
     }
     fn check_reductions(
         &self,
-        deltas: &[Self::Delta],
+        deltas: &Self::Delta,
         outer_concept: usize,
         inner_concept: usize,
     ) -> ZiaResult<()> {
@@ -226,11 +226,11 @@ pub trait NoLongerReducesFrom {
 
 pub trait SetConceptDefinitionDeltas
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn set_concept_definition_deltas(
         &self,
-        &mut Vec<Self::Delta>,
+        &mut Self::Delta,
         usize,
         usize,
         usize,
@@ -239,7 +239,7 @@ where
 
 pub trait SetDefinitionDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn set_definition_delta(&self, usize, usize) -> ZiaResult<Self::Delta>;
 }
@@ -255,7 +255,7 @@ pub trait SetAsDefinitionOf {
 
 pub trait SetAsDefinitionOfDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn add_as_lefthand_of_delta(&self, usize) -> Self::Delta;
     fn add_as_righthand_of_delta(&self, usize) -> Self::Delta;
@@ -267,16 +267,16 @@ pub trait SetReduction {
 
 pub trait SetReductionDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn make_reduce_to_delta(&self, usize) -> ZiaResult<Self::Delta>;
 }
 
 pub trait SetConceptReductionDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn concept_reduction_deltas(&self, &mut Vec<Self::Delta>, usize, usize) -> ZiaResult<()>;
+    fn concept_reduction_deltas(&self, &mut Self::Delta, usize, usize) -> ZiaResult<()>;
 }
 
 pub trait MakeReduceFrom {
@@ -285,7 +285,7 @@ pub trait MakeReduceFrom {
 
 pub trait MakeReduceFromDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
     fn make_reduce_from_delta(&self, usize) -> Self::Delta;
 }
@@ -301,24 +301,24 @@ pub trait RemoveAsDefinitionOf {
 
 pub trait RemoveConceptReduction
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn remove_concept_reduction(&self, &[Self::Delta], usize, usize) -> [Self::Delta; 2];
+    fn remove_concept_reduction(&self, &Self::Delta, usize, usize) -> Self::Delta;
 }
 
 pub trait RemoveReductionDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn no_longer_reduces_from_delta(&self, &[Self::Delta], usize) -> Self::Delta;
-    fn make_reduce_to_none_delta(&self, &[Self::Delta]) -> Self::Delta;
+    fn no_longer_reduces_from_delta(&self, &Self::Delta, usize) -> Self::Delta;
+    fn make_reduce_to_none_delta(&self, &Self::Delta) -> Self::Delta;
 }
 
 pub trait RemoveDefinitionDelta
 where
-    Self: Delta,
+    Self: ApplyDelta,
 {
-    fn remove_as_lefthand_of_delta(&self, &[Self::Delta], usize) -> Self::Delta;
-    fn remove_as_righthand_of_delta(&self, &[Self::Delta], usize) -> Self::Delta;
-    fn remove_definition_delta(&self, &[Self::Delta]) -> Self::Delta;
+    fn remove_as_lefthand_of_delta(&self, &Self::Delta, usize) -> Self::Delta;
+    fn remove_as_righthand_of_delta(&self, &Self::Delta, usize) -> Self::Delta;
+    fn remove_definition_delta(&self, &Self::Delta) -> Self::Delta;
 }
