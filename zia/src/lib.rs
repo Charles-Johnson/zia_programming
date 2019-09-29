@@ -104,7 +104,7 @@
 //!
 //! // Determine associativity of symbol
 //! assert_eq!(context.execute("assoc a"), "right");
-//! 
+//!
 //! // Define patterns
 //! assert_eq!(context.execute("let (_x_ and false) -> false"), "");
 //! assert_eq!(context.execute("foo and false"), "false");
@@ -169,10 +169,10 @@ use reading::{
 };
 use removing::DefinitionDeleter;
 use std::{
+    collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
     str::FromStr,
-    collections::HashMap,
 };
 use translating::SyntaxConverter;
 use writing::{
@@ -316,12 +316,7 @@ where
         }
     }
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(
-        &self,
-        delta: &mut Self::Delta,
-        left: &Rc<U>,
-        right: &Rc<U>,
-    ) -> ZiaResult<String> {
+    fn call_pair(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
                 LET => right
@@ -370,11 +365,7 @@ where
         }
     }
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(
-        &self,
-        delta: &mut Self::Delta,
-        ast: &Rc<U>,
-    ) -> ZiaResult<String> {
+    fn try_expanding_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String> {
         let expansion = &self.expand(delta, ast);
         if expansion != ast {
             self.call(delta, expansion)
@@ -383,11 +374,7 @@ where
         }
     }
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(
-        &self,
-        delta: &mut Self::Delta,
-        ast: &Rc<U>,
-    ) -> ZiaResult<String> {
+    fn try_reducing_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String> {
         let normal_form = &self.recursively_reduce(delta, ast);
         if normal_form != ast {
             self.call(delta, normal_form)
@@ -396,12 +383,7 @@ where
         }
     }
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn execute_let(
-        &self,
-        delta: &mut Self::Delta,
-        left: &U,
-        right: &U,
-    ) -> Option<ZiaResult<()>> {
+    fn execute_let(&self, delta: &mut Self::Delta, left: &U, right: &U) -> Option<ZiaResult<()>> {
         right
             .get_expansion()
             .map(|(ref rightleft, ref rightright)| {
@@ -529,12 +511,7 @@ where
         }
     }
     /// Unlabels a concept and gives it a new label.
-    fn relabel(
-        &self,
-        delta: &mut Self::Delta,
-        concept: usize,
-        new_label: &str,
-    ) -> ZiaResult<()> {
+    fn relabel(&self, delta: &mut Self::Delta, concept: usize, new_label: &str) -> ZiaResult<()> {
         self.unlabel(delta, concept)?;
         self.label(delta, concept, new_label)
     }

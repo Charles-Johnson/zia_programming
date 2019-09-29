@@ -238,7 +238,13 @@ where
         for (id, (cd, v)) in delta.concept {
             match cd {
                 ConceptDelta::Insert(c) => {
-                    self.add_concept(c);
+                    let padding_needed = id as isize - self.concepts.len() as isize;
+                    if 0 <= padding_needed {
+                        self.concepts.extend(vec![None; padding_needed as usize]);
+                        self.concepts.push(Some(c));
+                    } else {
+                        self.concepts[id] = Some(c);
+                    }
                     if v {
                         self.variables.insert(id);
                     }

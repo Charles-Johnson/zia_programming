@@ -23,17 +23,25 @@ use reading::{
     GetReduction, Label, MaybeConcept, MaybeString, MightExpand, SyntaxReader,
 };
 use std::{
+    collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
     str::FromStr,
-    collections::HashMap,
 };
 
 pub trait SyntaxConverter<T, U>
 where
     Self: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
-    U: FromStr + BindConcept + BindPair + MaybeConcept + Clone + PartialEq + MightExpand + Display + Debug,
+    U: FromStr
+        + BindConcept
+        + BindPair
+        + MaybeConcept
+        + Clone
+        + PartialEq
+        + MightExpand
+        + Display
+        + Debug,
     <U as FromStr>::Err: Debug,
 {
     fn ast_from_expression(&self, deltas: &Self::Delta, s: &str) -> ZiaResult<Rc<U>> {
@@ -158,7 +166,15 @@ impl<S, T, U> SyntaxConverter<T, U> for S
 where
     S: SyntaxFinder<T> + SyntaxReader<T, U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
-    U: FromStr + BindConcept + BindPair + MaybeConcept + Clone + PartialEq + MightExpand + Display + Debug,
+    U: FromStr
+        + BindConcept
+        + BindPair
+        + MaybeConcept
+        + Clone
+        + PartialEq
+        + MightExpand
+        + Display
+        + Debug,
     <U as FromStr>::Err: Debug,
 {
 }
