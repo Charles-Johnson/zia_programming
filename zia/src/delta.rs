@@ -16,7 +16,7 @@
 */
 
 use errors::ZiaResult;
-use std::{iter::from_fn, collections::{HashSet, HashMap}};
+use std::{collections::HashSet, iter::from_fn};
 
 pub trait ApplyDelta {
     type Delta;
@@ -41,12 +41,7 @@ pub trait Delta {
         })
         .collect()
     }
-    fn multiply<F>(
-        &mut self,
-        mut f: F,
-        ns: Vec<usize>,
-        ms: Vec<&str>,
-    ) -> ZiaResult<()>
+    fn multiply<F>(&mut self, mut f: F, ns: Vec<usize>, ms: Vec<&str>) -> ZiaResult<()>
     where
         F: for<'a> FnMut(&'a mut Self, usize, &str) -> ZiaResult<()>,
     {
@@ -74,10 +69,24 @@ where
         match (self, other) {
             (Change::Same, x) => x,
             (x, Change::Same) => x,
-            (Change::Different{after: y1, before: x}, Change::Different{before: y2, after: z}) => if y1 == y2 {
-                Change::Different{before: x, after: y2}
-            } else {
-                panic!("Deltas do not align")
+            (
+                Change::Different {
+                    after: y1,
+                    before: x,
+                },
+                Change::Different {
+                    before: y2,
+                    after: z,
+                },
+            ) => {
+                if y1 == y2 {
+                    Change::Different {
+                        before: x,
+                        after: y2,
+                    }
+                } else {
+                    panic!("Deltas do not align")
+                }
             }
             _ => panic!("Deltas do not align"),
         }
@@ -92,15 +101,19 @@ pub struct SetChange {
 
 impl Delta for SetChange {
     fn combine(&mut self, other: SetChange) {
-        other.remove.iter().for_each(|item| if self.add.contains(item) {
-            self.add.remove(item);
-        } else {
-            self.remove.insert(*item);
+        other.remove.iter().for_each(|item| {
+            if self.add.contains(item) {
+                self.add.remove(item);
+            } else {
+                self.remove.insert(*item);
+            }
         });
-        other.add.iter().for_each(|item| if self.remove.contains(item) {
-            self.remove.remove(item);
-        } else {
-            self.add.insert(*item);
+        other.add.iter().for_each(|item| {
+            if self.remove.contains(item) {
+                self.remove.remove(item);
+            } else {
+                self.add.insert(*item);
+            }
         });
     }
 }

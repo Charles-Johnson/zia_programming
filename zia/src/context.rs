@@ -133,7 +133,7 @@ where
 
 impl<T> Delta for ContextDelta<T>
 where
-    T: ApplyDelta + PartialEq + Clone,
+    T: ApplyDelta + PartialEq + Clone + Debug,
     T::Delta: Clone + Debug + Delta,
 {
     fn combine(&mut self, other: ContextDelta<T>) {
@@ -163,7 +163,7 @@ where
                         cd1.combine(cd2.clone());
                         *v1 = v2;
                     }
-                    _ => panic!("Something went wrong!"),
+                    _ => panic!("Something went wrong when combining concept deltas!"),
                 })
                 .or_insert((other_value, v2));
             if remove_key {
@@ -207,7 +207,7 @@ where
                     ) if a1 == b2 => {
                         *a1 = *a2;
                     }
-                    _ => panic!("Something went wrong!"),
+                    _ => panic!("Something went wrong when combining string deltas!"),
                 })
                 .or_insert(other_sd);
             if remove_string {
@@ -472,20 +472,24 @@ where
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _)) in delta.concept.clone() {
+        for (id, (cd, _)) in &delta.concept {
             match cd {
                 ConceptDelta::Insert(_) => {
-                    if id < new_concept_length {
-                        removed_gaps.insert(id);
-                    } else if id == new_concept_length {
-                        new_concept_length += 1
-                    } else {
-                        panic!("Deltas imply that a new concept has been given too large an id.")
+                    if *id >= new_concept_length {
+                        new_concept_length = *id + 1
                     }
                 }
+                _ => (),
+            };
+        }
+        for (id, (cd, _)) in &delta.concept {
+            match cd {
+                ConceptDelta::Insert(_) => {
+                    removed_gaps.insert(*id);
+                }
                 ConceptDelta::Remove(_) => {
-                    added_gaps.push(id);
-                    removed_gaps.remove(&id);
+                    added_gaps.push(*id);
+                    removed_gaps.remove(id);
                 }
                 ConceptDelta::Update(_) => (),
             }

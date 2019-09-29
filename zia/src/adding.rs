@@ -227,11 +227,7 @@ where
             self.update_reduction(deltas, definition, string_id)
         }
     }
-    fn new_labelled_default(
-        &self,
-        deltas: &mut Self::Delta,
-        string: &str,
-    ) -> ZiaResult<usize> {
+    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize> {
         let new_default =
             self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
         self.label(deltas, new_default, string)?;
@@ -245,8 +241,8 @@ where
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
         ];
         let concepts = delta.repeat(concrete_constructor, labels.len());
-        let label = |local_deltas: &mut Self::Delta, concept: usize, string: &str| {
-            self.label(local_deltas, concept, string)
+        let label = |local_delta: &mut Self::Delta, concept: usize, string: &str| {
+            self.label(local_delta, concept, string)
         };
         delta.multiply(label, concepts, labels)?;
         Ok(delta)
@@ -326,7 +322,12 @@ where
     }
 }
 
-impl<S, T> DefaultMaker<T> for S where S: ConceptAdderDelta<T>, S::Delta: Delta {}
+impl<S, T> DefaultMaker<T> for S
+where
+    S: ConceptAdderDelta<T>,
+    S::Delta: Delta,
+{
+}
 
 pub trait StringAdderDelta
 where
