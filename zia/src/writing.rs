@@ -72,7 +72,7 @@ where
             .get_reduction()
             .map(|n| {
                 let extra_delta = self.remove_concept_reduction(delta, concept, n);
-                delta.combine(&extra_delta);
+                delta.combine(extra_delta);
             })
             .ok_or(ZiaError::RedundantReduction)
     }

@@ -49,7 +49,7 @@ where
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
                 let extra_delta = self.delete_definition(delta, concept, left, right);
-                delta.combine(&extra_delta);
+                delta.combine(extra_delta);
                 self.try_delete_concept(delta, concept)?;
                 self.try_delete_concept(delta, left)?;
                 self.try_delete_concept(delta, right)

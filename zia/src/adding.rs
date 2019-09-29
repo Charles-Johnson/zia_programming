@@ -294,9 +294,9 @@ where
     fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize {
         let string_concept = string.to_string().into();
         let (delta, index) = self.add_concept_delta(original_delta, string_concept, false);
-        original_delta.combine(&delta);
+        original_delta.combine(delta);
         let string_delta = Self::add_string_delta(index, string);
-        original_delta.combine(&string_delta);
+        original_delta.combine(string_delta);
         index
     }
 }
@@ -321,7 +321,7 @@ where
     ) -> usize {
         let concept: T = V::default().into();
         let (delta, index) = self.add_concept_delta(original_delta, concept, variable);
-        original_delta.combine(&delta);
+        original_delta.combine(delta);
         index
     }
 }

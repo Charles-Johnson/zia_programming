@@ -20,7 +20,7 @@ use reading::{GetDefinition, GetReduction};
 use writing::{RemoveDefinition, RemoveReduction};
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
     definition: Option<(usize, usize)>,
@@ -38,12 +38,26 @@ impl ApplyDelta for AbstractPart {
             self.reduces_to = after;
         }
     }
+    fn diff(&self, next: AbstractPart) -> AbstractDelta {
+        AbstractDelta{
+            definition: if self.definition == next.definition {
+                Change::Same
+            } else {
+                Change::Different{before: self.definition, after: next.definition}
+            },
+            reduction: if self.reduces_to == next.reduces_to {
+                Change::Same
+            } else {
+                Change::Different{before: self.reduces_to, after: next.reduces_to}
+            }
+        }
+    }
 }
 
 impl Delta for AbstractDelta {
-    fn combine(&mut self, other: &AbstractDelta) {
-        self.definition.combine(&other.definition);
-        self.reduction.combine(&other.reduction);
+    fn combine(&mut self, other: AbstractDelta) {
+        self.definition = self.definition.clone().combine(other.definition);
+        self.reduction = self.reduction.clone().combine(other.reduction);
     }
 }
 

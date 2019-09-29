@@ -16,14 +16,15 @@
 */
 
 use errors::ZiaResult;
-use std::{iter::from_fn, collections::HashSet};
+use std::{iter::from_fn, collections::{HashSet, HashMap}};
 
 pub trait ApplyDelta {
     type Delta;
     fn apply(&mut self, Self::Delta);
+    fn diff(&self, Self) -> Self::Delta;
 }
 pub trait Delta {
-    fn combine(&mut self, &Self);
+    fn combine(&mut self, Self);
     // Repeat mutation, f, n times on self and return vector of n results
     fn repeat<F>(&mut self, mut f: F, n: usize) -> Vec<usize>
     where
@@ -65,29 +66,32 @@ impl<T> Default for Change<T> {
     }
 }
 
-impl<T> Delta for Change<T>
+impl<T> Change<T>
 where
     T: PartialEq,
 {
-    fn combine(&mut self, other: &Change<T>) {
+    pub fn combine(self, other: Change<T>) -> Change<T> {
         match (self, other) {
-            (Change::Same, Change::Same) => (),
-            (Change::Same, _) => *self = *other,
-            (_, Change::Same) => (),
-            (Change::Different{before: x, after: y1}, Change::Different{before: y2, after: z}) if y1 == y2 => *self = Change::Different{before: *x, after: *z},
+            (Change::Same, x) => x,
+            (x, Change::Same) => x,
+            (Change::Different{after: y1, before: x}, Change::Different{before: y2, after: z}) => if y1 == y2 {
+                Change::Different{before: x, after: y2}
+            } else {
+                panic!("Deltas do not align")
+            }
             _ => panic!("Deltas do not align"),
-        };
+        }
     }
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct CollectionChange {
+pub struct SetChange {
     pub remove: HashSet<usize>,
     pub add: HashSet<usize>,
 }
 
-impl Delta for CollectionChange {
-    fn combine(&mut self, other: &CollectionChange) {
+impl Delta for SetChange {
+    fn combine(&mut self, other: SetChange) {
         other.remove.iter().for_each(|item| if self.add.contains(item) {
             self.add.remove(item);
         } else {

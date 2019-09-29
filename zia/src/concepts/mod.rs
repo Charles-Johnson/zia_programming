@@ -19,7 +19,7 @@ mod common_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
 pub use self::common_part::{CommonDelta, CommonPart};
-use delta::{Change, CollectionChange, ApplyDelta, Delta};
+use delta::{Change, SetChange, ApplyDelta, Delta};
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
 use std::{collections::HashSet, iter::FromIterator};
@@ -31,13 +31,13 @@ use writing::{
 };
 
 /// Data type for any type of concept.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Concept {
     common_part: CommonPart,
     specific_part: SpecificPart,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,
@@ -61,9 +61,9 @@ pub struct ConceptDelta {
 }
 
 impl Delta for ConceptDelta {
-    fn combine(&mut self, other: &ConceptDelta) {
-        self.specific_part.combine(&other.specific_part);
-        self.common_part.combine(&other.common_part);
+    fn combine(&mut self, other: ConceptDelta) {
+        self.specific_part.combine(other.specific_part);
+        self.common_part.combine(other.common_part);
     }
 }
 
@@ -75,6 +75,17 @@ impl ApplyDelta for Concept {
             _ => (),
         };
         self.common_part.apply(delta.common_part);
+    }
+    fn diff(&self, next: Concept) -> ConceptDelta {
+        ConceptDelta{
+            common_part: self.common_part.diff(next.common_part),
+            specific_part: match (&self.specific_part, next.specific_part) {
+                (SpecificPart::Abstract(ap1), SpecificPart::Abstract(ref ap2)) => ap1.diff(ap2.clone()),
+                (SpecificPart::Abstract(ap1), _) => ap1.diff(AbstractPart::default()),
+                (_, SpecificPart::Abstract(ap2)) => AbstractPart::default().diff(ap2),
+                _ => AbstractDelta::default(),
+            }
+        }
     }
 }
 
@@ -282,7 +293,7 @@ impl RemoveReductionDelta for Concept {
     fn no_longer_reduces_from_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
         assert!({
             let reduces_from_concept = self.find_what_reduces_to_it().contains(&concept);
-            let CollectionChange { add, remove } = &delta.common_part.reduces_from;
+            let SetChange { add, remove } = &delta.common_part.reduces_from;
             if remove.contains(&concept) {
                 false
             } else if add.contains(&concept) {
@@ -293,12 +304,12 @@ impl RemoveReductionDelta for Concept {
         });
         ConceptDelta {
             common_part: CommonDelta {
-                reduces_from: CollectionChange {
+                reduces_from: SetChange {
                     remove: HashSet::from_iter(std::iter::once(concept)),
                     add: HashSet::default(),
                 },
-                lefthand_of: CollectionChange::default(),
-                righthand_of: CollectionChange::default(),
+                lefthand_of: SetChange::default(),
+                righthand_of: SetChange::default(),
             },
             specific_part: AbstractDelta::default(),
         }
@@ -331,7 +342,7 @@ impl RemoveDefinitionDelta for Concept {
     fn remove_as_lefthand_of_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
         assert!({
             let lefthand_of_concept = self.get_lefthand_of().contains(&concept);
-            let CollectionChange { add, remove } = &delta.common_part.lefthand_of;
+            let SetChange { add, remove } = &delta.common_part.lefthand_of;
             if remove.contains(&concept) {
                 false
             } else if add.contains(&concept) {
@@ -342,12 +353,12 @@ impl RemoveDefinitionDelta for Concept {
         });
         ConceptDelta {
             common_part: CommonDelta {
-                lefthand_of: CollectionChange {
+                lefthand_of: SetChange {
                     remove: hashset!{concept},
                     add: hashset!{},
                 },
-                reduces_from: CollectionChange::default(),
-                righthand_of: CollectionChange::default(),
+                reduces_from: SetChange::default(),
+                righthand_of: SetChange::default(),
             },
             specific_part: AbstractDelta::default(),
         }
@@ -355,7 +366,7 @@ impl RemoveDefinitionDelta for Concept {
     fn remove_as_righthand_of_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
         assert!({
             let righthand_of_concept = self.get_righthand_of().contains(&concept);
-            let CollectionChange { add, remove } = &delta.common_part.righthand_of;
+            let SetChange { add, remove } = &delta.common_part.righthand_of;
             if remove.contains(&concept) {
                 false
             } else if add.contains(&concept) {
@@ -366,12 +377,12 @@ impl RemoveDefinitionDelta for Concept {
         });
         ConceptDelta {
             common_part: CommonDelta {
-                righthand_of: CollectionChange {
+                righthand_of: SetChange {
                     remove: hashset!{concept},
                     add: hashset!{},
                 },
-                reduces_from: CollectionChange::default(),
-                lefthand_of: CollectionChange::default(),
+                reduces_from: SetChange::default(),
+                lefthand_of: SetChange::default(),
             },
             specific_part: AbstractDelta::default(),
         }
