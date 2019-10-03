@@ -30,7 +30,7 @@ use writing::{
 
 pub trait ExecuteReduction<T, U>
 where
-    Self: ConceptMaker<T, U> + DeleteReduction<T, U>,
+    Self: ConceptMaker<T, U> + DeleteReduction<U>,
     T: SetReduction
         + From<Self::C>
         + From<Self::A>
@@ -67,7 +67,7 @@ where
 
 impl<S, T, U> ExecuteReduction<T, U> for S
 where
-    S: ConceptMaker<T, U> + DeleteReduction<T, U>,
+    S: ConceptMaker<T, U> + DeleteReduction<U>,
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
@@ -116,7 +116,7 @@ where
         + GetReduction
         + FindWhatReducesToIt
         + Clone,
-    Self: Labeller<T> + GetNormalForm<T> + Logger + SyntaxFinder<T>,
+    Self: Labeller<T> + GetNormalForm + Logger + SyntaxFinder<T>,
     Self::Delta: Clone + fmt::Debug + Default + Delta,
     U: MightExpand + MaybeConcept + fmt::Display,
 {
@@ -214,7 +214,7 @@ where
         + From<Self::C>
         + From<Self::A>
         + Clone,
-    Self: StringMaker<T> + FindOrInsertDefinition<T> + UpdateReduction<T>,
+    Self: StringMaker + FindOrInsertDefinition<T> + UpdateReduction,
     Self::Delta: Clone + fmt::Debug + Sized + Default + Delta,
 {
     type C: Default;
@@ -258,7 +258,7 @@ where
         + SetAsDefinitionOf
         + GetDefinitionOf
         + Clone,
-    Self: DefaultMaker<T> + InsertDefinition<T> + FindDefinition<T>,
+    Self: DefaultMaker<T> + InsertDefinition + FindDefinition,
     Self::Delta: Clone + fmt::Debug + Delta,
 {
     type A: Default;
@@ -281,52 +281,18 @@ where
     }
 }
 
-pub trait StringMaker<T>
-where
-    T: From<String>,
-    Self: ConceptAdderDelta<T> + StringAdderDelta,
-    Self::Delta: Delta,
+pub trait StringMaker: ApplyDelta
 {
-    fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize {
-        let string_concept = string.to_string().into();
-        let (delta, index) = self.add_concept_delta(original_delta, string_concept, false);
-        original_delta.combine(delta);
-        let string_delta = Self::add_string_delta(index, string);
-        original_delta.combine(string_delta);
-        index
-    }
+    fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize;
 }
 
-impl<S, T> StringMaker<T> for S
-where
-    T: From<String>,
-    S: ConceptAdderDelta<T> + StringAdderDelta,
-    S::Delta: Delta,
-{
-}
-
-pub trait DefaultMaker<T>
-where
-    Self: ConceptAdderDelta<T>,
-    Self::Delta: Delta,
+pub trait DefaultMaker<T>: ApplyDelta
 {
     fn new_default<V: Default + Into<T>>(
         &self,
         original_delta: &mut Self::Delta,
         variable: bool,
-    ) -> usize {
-        let concept: T = V::default().into();
-        let (delta, index) = self.add_concept_delta(original_delta, concept, variable);
-        original_delta.combine(delta);
-        index
-    }
-}
-
-impl<S, T> DefaultMaker<T> for S
-where
-    S: ConceptAdderDelta<T>,
-    S::Delta: Delta,
-{
+    ) -> usize;
 }
 
 pub trait StringAdderDelta
@@ -338,15 +304,4 @@ where
 
 pub trait StringAdder {
     fn add_string(&mut self, usize, &str);
-}
-
-pub trait ConceptAdderDelta<T>
-where
-    Self: ApplyDelta,
-{
-    fn add_concept_delta(&self, &Self::Delta, T, bool) -> (Self::Delta, usize);
-}
-
-pub trait ConceptAdder<T> {
-    fn add_concept(&mut self, T);
 }

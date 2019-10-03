@@ -154,22 +154,24 @@ mod translating;
 mod writing;
 
 pub use adding::ContextMaker;
-use adding::{ConceptMaker, Container, ExecuteReduction, FindOrInsertDefinition, Labeller};
+use adding::{ConceptMaker, Container, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
+use delta::{Delta};
 use concepts::{AbstractPart, CommonPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
-use context::Context as GenericContext;
-use delta::Delta;
+
+/// A container for adding, writing, reading and removing `Concept`s.
+pub use context::Context;
+
+use delta::ApplyDelta;
 pub use errors::ZiaError;
-use errors::{map_err_variant, ZiaResult};
+use errors::ZiaResult;
 use logging::Logger;
 use reading::{
     BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
-    GetReduction, MaybeConcept, MaybeString, SyntaxReader,
+    GetReduction, MaybeConcept, MaybeString,
 };
 use removing::DefinitionDeleter;
 use std::{
-    collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
     str::FromStr,
@@ -180,14 +182,7 @@ use writing::{
     SetAsDefinitionOf, SetDefinition, SetReduction,
 };
 
-/// A container for adding, writing, reading and removing `Concept`s.
-pub type Context = GenericContext<Concept>;
-
 impl Execute<Concept, SyntaxTree> for Context {}
-
-impl Call<Concept, SyntaxTree> for Context {}
-
-impl Definer<Concept, SyntaxTree> for Context {}
 
 impl ConceptMaker<Concept, SyntaxTree> for Context {}
 
@@ -204,10 +199,8 @@ impl Labeller<Concept> for Context {
 /// Executing a command based on a string to add, write, read, or remove contained concepts.  
 pub trait Execute<T, U>
 where
-    Self: Call<T, U> + SyntaxConverter<T, U> + Logger,
+    Self: Call<U> + SyntaxConverter<T, U> + Logger,
     T: From<String>
-        + From<Self::C>
-        + From<Self::A>
         + RemoveDefinition
         + RemoveAsDefinitionOf
         + SetReduction
@@ -249,174 +242,34 @@ where
 }
 
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  
-pub trait Call<T, U>
-where
-    Self: Definer<T, U> + ExecuteReduction<T, U> + SyntaxReader<T, U> + Logger,
-    T: From<String>
-        + From<Self::C>
-        + From<Self::A>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + FindWhatReducesToIt
-        + GetReduction
-        + GetDefinition
-        + GetDefinitionOf
-        + MaybeString
-        + Debug
-        + Clone,
-    U: Container
-        + BindPair
-        + Clone
-        + FromStr
-        + BindConcept
-        + PartialEq<U>
-        + Debug
-        + MaybeConcept
-        + Display,
-    <U as FromStr>::Err: Debug,
-    Self::Delta: Clone + Debug + Default + Delta,
+pub trait Call<U>: ApplyDelta
 {
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String> {
-        match ast
-            .get_concept()
-            .and_then(|c| self.read_concept(delta, c).get_string())
-        {
-            Some(s) => Ok(s),
-            None => match ast.get_expansion() {
-                Some((ref left, ref right)) => map_err_variant(
-                    self.call_pair(delta, left, right),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_reducing_then_call(delta, ast),
-                            &ZiaError::CannotReduceFurther,
-                            || Ok(self.contract_pair(delta, left, right).to_string()),
-                        )
-                    },
-                ),
-                None => map_err_variant(
-                    self.try_reducing_then_call(delta, ast),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_expanding_then_call(delta, ast),
-                            &ZiaError::CannotExpandFurther,
-                            || Ok(ast.to_string()),
-                        )
-                    },
-                ),
-            },
-        }
-    }
+    fn call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> ZiaResult<String> {
-        left.get_concept()
-            .and_then(|lc| match lc {
-                LET => right
-                    .get_expansion()
-                    .and_then(|(left, right)| {
-                        self.execute_let(delta, &left, &right)
-                            .and_then(|x| match x {
-                                Err(ZiaError::CannotReduceFurther) => None,
-                                Err(ZiaError::UnusedSymbol) => None,
-                                _ => Some(x),
-                            })
-                    })
-                    .or_else(|| {
-                        Some({
-                            let true_syntax = self.to_ast(delta, TRUE);
-                            self.execute_reduction(delta, right, &true_syntax)
-                        })
-                    })
-                    .map(|r| r.map(|()| "".to_string())),
-                LABEL => Some(Ok("'".to_string()
-                    + &right
-                        .get_concept()
-                        .and_then(|c| self.get_label(delta, c))
-                        .unwrap_or_else(|| right.to_string())
-                    + "'")),
-                _ => None,
-            })
-            .unwrap_or_else(|| match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(delta, &left),
-                _ => self.reduce_and_call_pair(delta, left, right),
-            })
-    }
+    fn call_pair(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> ZiaResult<String>;
     fn reduce_and_call_pair(
         &self,
         delta: &mut Self::Delta,
         left: &Rc<U>,
         right: &Rc<U>,
-    ) -> ZiaResult<String> {
-        let reduced_left = self.reduce(delta, left, &HashMap::new());
-        let reduced_right = self.reduce(delta, right, &HashMap::new());
-        match (reduced_left, reduced_right) {
-            (None, None) => Err(ZiaError::CannotReduceFurther),
-            (Some(rl), None) => self.call_pair(delta, &rl, right),
-            (None, Some(rr)) => self.call_pair(delta, left, &rr),
-            (Some(rl), Some(rr)) => self.call_pair(delta, &rl, &rr),
-        }
-    }
+    ) -> ZiaResult<String>;
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String> {
-        let expansion = &self.expand(delta, ast);
-        if expansion != ast {
-            self.call(delta, expansion)
-        } else {
-            Err(ZiaError::CannotExpandFurther)
-        }
-    }
+    fn try_expanding_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String> {
-        let normal_form = &self.recursively_reduce(delta, ast);
-        if normal_form != ast {
-            self.call(delta, normal_form)
-        } else {
-            Err(ZiaError::CannotReduceFurther)
-        }
-    }
+    fn try_reducing_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn execute_let(&self, delta: &mut Self::Delta, left: &U, right: &U) -> Option<ZiaResult<()>> {
-        right
-            .get_expansion()
-            .map(|(ref rightleft, ref rightright)| {
-                self.match_righthand_pair(delta, left, rightleft, rightright)
-            })
-    }
+    fn execute_let(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> Option<ZiaResult<()>>;
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
     /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &self,
         delta: &mut Self::Delta,
-        left: &U,
-        rightleft: &U,
-        rightright: &U,
-    ) -> ZiaResult<()> {
-        match rightleft.get_concept() {
-            Some(c) => match c {
-                REDUCTION => self.execute_reduction(delta, left, rightright),
-                DEFINE => self.execute_definition(delta, left, rightright),
-                _ => {
-                    let rightleft_reduction = self.read_concept(delta, c).get_reduction();
-                    if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast(delta, r);
-                        self.match_righthand_pair(delta, left, &ast, rightright)
-                    } else {
-                        Err(ZiaError::CannotReduceFurther)
-                    }
-                }
-            },
-            None => Err(ZiaError::UnusedSymbol),
-        }
-    }
+        left: &Rc<U>,
+        rightleft: &Rc<U>,
+        rightright: &Rc<U>,
+    ) -> ZiaResult<()>;
 }
 
 /// Defining new syntax in terms of old syntax.
@@ -440,13 +293,13 @@ where
         + MaybeString
         + Debug
         + Clone,
-    Self: GetLabel<T> + ConceptMaker<T, U> + DefinitionDeleter<T, U>,
+    Self: GetLabel + ConceptMaker<T, U> + DefinitionDeleter,
     U: BindPair + Container + MaybeConcept + Display + FromStr + BindConcept,
     <U as FromStr>::Err: Debug,
     Self::Delta: Clone + Debug + Default + Delta,
 {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(&self, delta: &mut Self::Delta, new: &U, old: &U) -> ZiaResult<()> {
+    fn execute_definition(&self, delta: &mut Self::Delta, new: &Rc<U>, old: &Rc<U>) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
         } else {
@@ -454,7 +307,7 @@ where
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, delta: &mut Self::Delta, new: &U, old: &U) -> ZiaResult<()> {
+    fn define(&self, delta: &mut Self::Delta, new: &Rc<U>, old: &Rc<U>) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
@@ -496,25 +349,11 @@ where
         &self,
         delta: &mut Self::Delta,
         concept: usize,
-        left: &U,
-        right: &U,
-    ) -> ZiaResult<()> {
-        if let Some((left_concept, right_concept)) =
-            self.read_concept(delta, concept).get_definition()
-        {
-            self.relabel(delta, left_concept, &left.to_string())?;
-            self.relabel(delta, right_concept, &right.to_string())
-        } else {
-            let left_concept = self.concept_from_ast(delta, left)?;
-            let right_concept = self.concept_from_ast(delta, right)?;
-            self.insert_definition(delta, concept, left_concept, right_concept)
-        }
-    }
+        left: &Rc<U>,
+        right: &Rc<U>,
+    ) -> ZiaResult<()>;
     /// Unlabels a concept and gives it a new label.
-    fn relabel(&self, delta: &mut Self::Delta, concept: usize, new_label: &str) -> ZiaResult<()> {
-        self.unlabel(delta, concept)?;
-        self.label(delta, concept, new_label)
-    }
+    fn relabel(&self, delta: &mut Self::Delta, concept: usize, new_label: &str) -> ZiaResult<()>;
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     fn define_new_syntax(
         &self,

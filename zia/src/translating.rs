@@ -31,7 +31,7 @@ use std::{
 
 pub trait SyntaxConverter<T, U>
 where
-    Self: SyntaxFinder<T> + SyntaxReader<T, U>,
+    Self: SyntaxFinder<T> + SyntaxReader<U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
     U: FromStr
         + BindConcept
@@ -164,7 +164,7 @@ where
 
 impl<S, T, U> SyntaxConverter<T, U> for S
 where
-    S: SyntaxFinder<T> + SyntaxReader<T, U>,
+    S: SyntaxFinder<T> + SyntaxReader<U>,
     T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
     U: FromStr
         + BindConcept
@@ -238,7 +238,7 @@ fn push_token(letter: char, parenthesis_level: u8, token: &mut String, tokens: &
 
 pub trait SyntaxFinder<T>
 where
-    Self: StringConcept + Label<T>,
+    Self: StringConcept + Label,
     T: FindWhatReducesToIt + GetDefinition,
 {
     fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize> {
@@ -257,7 +257,7 @@ where
 
 impl<S, T> SyntaxFinder<T> for S
 where
-    S: StringConcept + Label<T>,
+    S: StringConcept + Label,
     T: FindWhatReducesToIt + GetDefinition,
 {
 }

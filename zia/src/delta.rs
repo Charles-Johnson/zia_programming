@@ -82,13 +82,12 @@ where
                 if y1 == y2 {
                     Change::Different {
                         before: x,
-                        after: y2,
+                        after: z,
                     }
                 } else {
                     panic!("Deltas do not align")
                 }
             }
-            _ => panic!("Deltas do not align"),
         }
     }
 }

@@ -15,96 +15,26 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{ApplyDelta, Delta};
-use errors::{ZiaError, ZiaResult};
-use reading::{FindWhatReducesToIt, MaybeConcept, MaybeDisconnected, MaybeString};
-use std::fmt::{Debug, Display};
-use writing::{
-    ConceptReader, DeleteDefinition, GetDefinition, GetDefinitionOf, GetReduction,
-    NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction, Unlabeller,
-};
+use delta::{ApplyDelta};
+use errors::{ZiaResult};
 
-pub trait DefinitionDeleter<T, U>
-where
-    Self: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T, U>,
-    T: RemoveDefinition
-        + RemoveAsDefinitionOf
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + GetDefinitionOf
-        + GetDefinition
-        + FindWhatReducesToIt
-        + GetReduction
-        + MaybeString
-        + Debug,
-    Self::Delta: Clone + Delta,
-    U: MaybeConcept + Display,
+pub trait DefinitionDeleter: ApplyDelta
 {
     fn cleanly_delete_definition(
         &self,
         delta: &mut Self::Delta,
         concept: usize,
-    ) -> ZiaResult<()> {
-        match self.read_concept(delta, concept).get_definition() {
-            None => Err(ZiaError::RedundantDefinitionRemoval),
-            Some((left, right)) => {
-                let extra_delta = self.delete_definition(delta, concept, left, right);
-                delta.combine(extra_delta);
-                self.try_delete_concept(delta, concept)?;
-                self.try_delete_concept(delta, left)?;
-                self.try_delete_concept(delta, right)
-            }
-        }
-    }
+    ) -> ZiaResult<()>;
     fn try_delete_concept(
         &self,
         previous_deltas: &mut Self::Delta,
         concept: usize,
-    ) -> ZiaResult<()> {
-        if self.is_disconnected(previous_deltas, concept) {
-            self.unlabel(previous_deltas, concept)?;
-            self.remove_concept(previous_deltas, concept)
-        }
-        Ok(())
-    }
+    ) -> ZiaResult<()>;
 }
 
-impl<S, T, U> DefinitionDeleter<T, U> for S
-where
-    S: MaybeDisconnected<T> + ConceptRemover<T> + DeleteDefinition<T> + Unlabeller<T, U>,
-    T: RemoveDefinition
-        + RemoveAsDefinitionOf
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + GetDefinitionOf
-        + GetDefinition
-        + FindWhatReducesToIt
-        + GetReduction
-        + MaybeString
-        + Debug,
-    S::Delta: Clone + Delta,
-    U: Display + MaybeConcept,
+pub trait ConceptRemover: ApplyDelta
 {
-}
-
-pub trait ConceptRemover<T>
-where
-    Self: BlindConceptRemoverDelta + ConceptReader<T> + StringRemoverDelta,
-    T: MaybeString,
-{
-    fn remove_concept(&self, delta: &mut Self::Delta, concept: usize) {
-        if let Some(ref s) = self.read_concept(delta, concept).get_string() {
-            self.remove_string_delta(delta, s);
-        }
-        self.blindly_remove_concept_delta(delta, concept);
-    }
-}
-
-impl<S, T> ConceptRemover<T> for S
-where
-    S: BlindConceptRemoverDelta + ConceptReader<T> + StringRemoverDelta,
-    T: MaybeString,
-{
+    fn remove_concept(&self, delta: &mut Self::Delta, concept: usize);
 }
 
 pub trait BlindConceptRemover {
