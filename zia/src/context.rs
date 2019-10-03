@@ -27,7 +27,7 @@ use errors::{map_err_variant, ZiaError, ZiaResult};
 use logging::Logger;
 use reading::{
     Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatItsANormalFormOf,
-    FindWhatReducesToIt, GetConceptOfLabel, GetDefinition, GetDefinitionOf, GetLabel,
+    FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
     GetReduction, Label, MaybeConcept, MaybeDisconnected, MaybeString, MightExpand,
     SyntaxReader, Variable,
 };
@@ -256,6 +256,20 @@ impl Context {
         self.read_concept(deltas, concept)
             .get_reduction()
             .map(|n| self.get_normal_form(deltas, n).unwrap_or(n))
+    }
+    fn get_concept_of_label(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
+        self.read_concept(deltas, concept)
+            .get_righthand_of()
+            .iter()
+            .filter(|candidate| {
+                self.read_concept(deltas, **candidate)
+                    .get_definition()
+                    .expect("Candidate should have a definition!")
+                    .0
+                    == LABEL
+            })
+            .nth(0)
+            .cloned()
     }
 }
 
@@ -868,23 +882,6 @@ impl MaybeDisconnected for Context {
             })
             .nth(0)
             .is_none()
-    }
-}
-
-impl GetConceptOfLabel for Context {
-    fn get_concept_of_label(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
-        self.read_concept(deltas, concept)
-            .get_righthand_of()
-            .iter()
-            .filter(|candidate| {
-                self.read_concept(deltas, **candidate)
-                    .get_definition()
-                    .expect("Candidate should have a definition!")
-                    .0
-                    == LABEL
-            })
-            .nth(0)
-            .cloned()
     }
 }
 
