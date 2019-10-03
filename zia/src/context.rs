@@ -16,7 +16,7 @@
 */
 
 use adding::{
-    ConceptMaker, DefaultMaker, ExecuteReduction, Labeller, StringAdder, StringAdderDelta,
+    ConceptMaker, DefaultMaker, ExecuteReduction, Labeller, StringAdder,
     StringMaker,
 };
 use ast::SyntaxTree;
@@ -243,6 +243,12 @@ impl Context {
             string: hashmap! {},
         }
     }
+    fn add_string_delta(string_id: usize, string: &str) -> ContextDelta {
+        ContextDelta {
+            string: hashmap! {string.to_string() => StringDelta::Insert(string_id)},
+            concept: HashMap::default(),
+        }
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -460,15 +466,6 @@ impl Default for Context {
 impl StringAdder for Context {
     fn add_string(&mut self, string_id: usize, string: &str) {
         self.string_map.insert(string.to_string(), string_id);
-    }
-}
-
-impl StringAdderDelta for Context {
-    fn add_string_delta(string_id: usize, string: &str) -> ContextDelta {
-        ContextDelta {
-            string: hashmap! {string.to_string() => StringDelta::Insert(string_id)},
-            concept: HashMap::default(),
-        }
     }
 }
 

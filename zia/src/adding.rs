@@ -281,25 +281,16 @@ where
     }
 }
 
-pub trait StringMaker: ApplyDelta
-{
+pub trait StringMaker: ApplyDelta {
     fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize;
 }
 
-pub trait DefaultMaker<T>: ApplyDelta
-{
+pub trait DefaultMaker<T>: ApplyDelta {
     fn new_default<V: Default + Into<T>>(
         &self,
         original_delta: &mut Self::Delta,
         variable: bool,
     ) -> usize;
-}
-
-pub trait StringAdderDelta
-where
-    Self: ApplyDelta,
-{
-    fn add_string_delta(usize, &str) -> Self::Delta;
 }
 
 pub trait StringAdder {
