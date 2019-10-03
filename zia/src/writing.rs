@@ -18,7 +18,7 @@
 pub use delta::{ApplyDelta, Delta};
 pub use errors::{ZiaError, ZiaResult};
 pub use reading::{
-    FindDefinition, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction,
+    FindDefinition, GetDefinition, GetDefinitionOf, GetReduction,
     MaybeConcept,
 };
 

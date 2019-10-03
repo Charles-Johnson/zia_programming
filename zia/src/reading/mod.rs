@@ -26,8 +26,7 @@ use std::{
     rc::Rc,
 };
 
-pub trait SyntaxReader<U>: ApplyDelta
-{
+pub trait SyntaxReader<U>: ApplyDelta {
     /// Expands syntax by definition of its associated concept.
     fn expand(&self, deltas: &Self::Delta, ast: &Rc<U>) -> Rc<U>;
     /// Reduces the syntax as much as possible (returns the normal form syntax).
@@ -111,34 +110,24 @@ pub enum Associativity {
     Right,
 }
 
-pub trait GetLabel: ApplyDelta
-{
+pub trait GetLabel: ApplyDelta {
     fn get_label(&self, deltas: &Self::Delta, concept: usize) -> Option<String>;
 }
 
-pub trait Label: ApplyDelta
-{
+pub trait Label: ApplyDelta {
     fn get_labellee(&self, deltas: &Self::Delta, concept: usize) -> Option<usize>;
 }
 
-pub trait GetNormalForm: ApplyDelta
-{
-    fn get_normal_form(&self, deltas: &Self::Delta, concept: usize) -> Option<usize>;
-}
-
-pub trait GetConceptOfLabel: ApplyDelta
-{
+pub trait GetConceptOfLabel: ApplyDelta {
     fn get_concept_of_label(&self, deltas: &Self::Delta, concept: usize) -> Option<usize>;
 }
 
-pub trait MaybeDisconnected: ApplyDelta
-{
+pub trait MaybeDisconnected: ApplyDelta {
     fn is_disconnected(&self, deltas: &Self::Delta, concept: usize) -> bool;
     fn righthand_of_without_label_is_empty(&self, deltas: &Self::Delta, con: usize) -> bool;
 }
 
-pub trait FindDefinition: ApplyDelta
-{
+pub trait FindDefinition: ApplyDelta {
     fn find_definition(
         &self,
         deltas: &Self::Delta,
@@ -147,13 +136,11 @@ pub trait FindDefinition: ApplyDelta
     ) -> Option<usize>;
 }
 
-pub trait FindWhatItsANormalFormOf: ApplyDelta
-{
+pub trait FindWhatItsANormalFormOf: ApplyDelta {
     fn find_what_its_a_normal_form_of(&self, deltas: &Self::Delta, con: usize) -> HashSet<usize>;
 }
 
-pub trait Container: ApplyDelta
-{
+pub trait Container: ApplyDelta {
     fn contains(&self, deltas: &Self::Delta, outer: usize, inner: usize) -> bool;
 }
 

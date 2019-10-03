@@ -24,7 +24,7 @@ use reading::{FindDefinition, MaybeString, MightExpand};
 use std::{fmt, rc::Rc};
 use translating::SyntaxFinder;
 use writing::{
-    DeleteReduction, GetDefinition, GetDefinitionOf, GetNormalForm, GetReduction, InsertDefinition,
+    DeleteReduction, GetDefinition, GetDefinitionOf, GetReduction, InsertDefinition,
     MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
 };
 
@@ -116,7 +116,7 @@ where
         + GetReduction
         + FindWhatReducesToIt
         + Clone,
-    Self: Labeller<T> + GetNormalForm + Logger + SyntaxFinder<T>,
+    Self: Labeller<T> + Logger + SyntaxFinder<T>,
     Self::Delta: Clone + fmt::Debug + Default + Delta,
     U: MightExpand + MaybeConcept + fmt::Display,
 {
@@ -291,8 +291,4 @@ pub trait DefaultMaker<T>: ApplyDelta {
         original_delta: &mut Self::Delta,
         variable: bool,
     ) -> usize;
-}
-
-pub trait StringAdder {
-    fn add_string(&mut self, usize, &str);
 }

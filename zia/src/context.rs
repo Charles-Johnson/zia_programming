@@ -16,7 +16,7 @@
 */
 
 use adding::{
-    ConceptMaker, DefaultMaker, ExecuteReduction, Labeller, StringAdder,
+    ConceptMaker, DefaultMaker, ExecuteReduction, Labeller,
     StringMaker,
 };
 use ast::SyntaxTree;
@@ -28,7 +28,7 @@ use logging::Logger;
 use reading::{
     Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatItsANormalFormOf,
     FindWhatReducesToIt, GetConceptOfLabel, GetDefinition, GetDefinitionOf, GetLabel,
-    GetNormalForm, GetReduction, Label, MaybeConcept, MaybeDisconnected, MaybeString, MightExpand,
+    GetReduction, Label, MaybeConcept, MaybeDisconnected, MaybeString, MightExpand,
     SyntaxReader, Variable,
 };
 use removing::{
@@ -249,6 +249,14 @@ impl Context {
             concept: HashMap::default(),
         }
     }
+    fn add_string(&mut self, string_id: usize, string: &str) {
+        self.string_map.insert(string.to_string(), string_id);
+    }
+    fn get_normal_form(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
+        self.read_concept(deltas, concept)
+            .get_reduction()
+            .map(|n| self.get_normal_form(deltas, n).unwrap_or(n))
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -460,12 +468,6 @@ impl Default for Context {
             logger,
             variables: HashSet::new(),
         }
-    }
-}
-
-impl StringAdder for Context {
-    fn add_string(&mut self, string_id: usize, string: &str) {
-        self.string_map.insert(string.to_string(), string_id);
     }
 }
 
@@ -883,14 +885,6 @@ impl GetConceptOfLabel for Context {
             })
             .nth(0)
             .cloned()
-    }
-}
-
-impl GetNormalForm for Context {
-    fn get_normal_form(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
-        self.read_concept(deltas, concept)
-            .get_reduction()
-            .map(|n| self.get_normal_form(deltas, n).unwrap_or(n))
     }
 }
 
