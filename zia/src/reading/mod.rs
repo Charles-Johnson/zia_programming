@@ -118,11 +118,6 @@ pub trait Label: ApplyDelta {
     fn get_labellee(&self, deltas: &Self::Delta, concept: usize) -> Option<usize>;
 }
 
-pub trait MaybeDisconnected: ApplyDelta {
-    fn is_disconnected(&self, deltas: &Self::Delta, concept: usize) -> bool;
-    fn righthand_of_without_label_is_empty(&self, deltas: &Self::Delta, con: usize) -> bool;
-}
-
 pub trait FindDefinition: ApplyDelta {
     fn find_definition(
         &self,
