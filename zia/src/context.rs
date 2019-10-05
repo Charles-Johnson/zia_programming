@@ -41,7 +41,7 @@ use std::{
 };
 use translating::StringConcept;
 use writing::{
-    DeleteReduction, InsertDefinition, MakeReduceFromDelta, RemoveConceptReduction,
+    DeleteReduction, InsertDefinition, MakeReduceFromDelta,
     RemoveDefinitionDelta, RemoveReductionDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta,
     UpdateReduction,
@@ -408,6 +408,54 @@ impl Context {
         update_concept_delta(delta.concept.entry(reduction), reduction_delta);
         Ok(())
     }
+    fn remove_concept_reduction(
+        &self,
+        delta: &ContextDelta,
+        concept: usize,
+        reduction: usize,
+    ) -> ContextDelta {
+        let mut edited_concept: Option<Concept> = Some(self.read_concept(delta, concept));
+        let mut concept_delta = CD::default();
+        delta.concept.get(&concept).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => concept_delta.combine(d.clone()),
+            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_concept = None;
+                concept_delta = CD::default();
+            }
+        });
+        let mut edited_reduction: Option<Concept> = Some(self.read_concept(delta, reduction));
+        let mut reduction_delta = CD::default();
+        delta.concept.get(&reduction).map(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => reduction_delta.combine(d.clone()),
+            ConceptDelta::Insert(t) => edited_reduction = Some(t.clone()),
+            ConceptDelta::Remove(_) => {
+                edited_reduction = None;
+                reduction_delta = CD::default();
+            }
+        });
+        ContextDelta {
+            concept: hashmap! {
+                concept => (
+                    ConceptDelta::Update(
+                        edited_concept
+                            .expect("Concept previously removed!")
+                            .make_reduce_to_none_delta(&concept_delta),
+                    ),
+                    false, // Doesn't affect anything whether true or false
+                ),
+                reduction => (
+                    ConceptDelta::Update(
+                        edited_reduction
+                            .expect("Reduction previously removed!")
+                            .no_longer_reduces_from_delta(&reduction_delta, concept),
+                    ),
+                    false, // Doesn't affect anything whether true or false
+                ),
+            },
+            string: hashmap! {},
+        }
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -619,57 +667,6 @@ impl StringConcept for Context {
             })
             .unwrap_or_else(|| self.string_map.get(s))
             .cloned()
-    }
-}
-
-impl RemoveConceptReduction for Context {
-    fn remove_concept_reduction(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-        reduction: usize,
-    ) -> ContextDelta {
-        let mut edited_concept: Option<Concept> = Some(self.read_concept(delta, concept));
-        let mut concept_delta = CD::default();
-        delta.concept.get(&concept).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => concept_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_concept = None;
-                concept_delta = CD::default();
-            }
-        });
-        let mut edited_reduction: Option<Concept> = Some(self.read_concept(delta, reduction));
-        let mut reduction_delta = CD::default();
-        delta.concept.get(&reduction).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => reduction_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_reduction = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_reduction = None;
-                reduction_delta = CD::default();
-            }
-        });
-        ContextDelta {
-            concept: hashmap! {
-                concept => (
-                    ConceptDelta::Update(
-                        edited_concept
-                            .expect("Concept previously removed!")
-                            .make_reduce_to_none_delta(&concept_delta),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-                reduction => (
-                    ConceptDelta::Update(
-                        edited_reduction
-                            .expect("Reduction previously removed!")
-                            .no_longer_reduces_from_delta(&reduction_delta, concept),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-            },
-            string: hashmap! {},
-        }
     }
 }
 

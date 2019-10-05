@@ -118,13 +118,6 @@ pub trait RemoveAsDefinitionOf {
     fn remove_as_righthand_of(&mut self, usize);
 }
 
-pub trait RemoveConceptReduction
-where
-    Self: ApplyDelta,
-{
-    fn remove_concept_reduction(&self, &Self::Delta, usize, usize) -> Self::Delta;
-}
-
 pub trait RemoveReductionDelta
 where
     Self: ApplyDelta,
