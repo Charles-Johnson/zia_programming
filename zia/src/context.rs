@@ -32,7 +32,7 @@ use reading::{
     SyntaxReader,
 };
 use removing::{
-    BlindConceptRemover, BlindConceptRemoverDelta, ConceptRemover, DefinitionDeleter,
+    BlindConceptRemover, BlindConceptRemoverDelta, DefinitionDeleter,
     StringRemover, StringRemoverDelta,
 };
 use slog;
@@ -319,6 +319,12 @@ impl Context {
             }
         }
         normal_form_of
+    }
+    fn remove_concept(&self, delta: &mut ContextDelta, concept: usize) {
+        if let Some(ref s) = self.read_concept(delta, concept).get_string() {
+            self.remove_string_delta(delta, s);
+        }
+        self.blindly_remove_concept_delta(delta, concept);
     }
 }
 
@@ -679,15 +685,6 @@ impl RemoveConceptReduction for Context {
             },
             string: hashmap! {},
         }
-    }
-}
-
-impl ConceptRemover for Context {
-    fn remove_concept(&self, delta: &mut ContextDelta, concept: usize) {
-        if let Some(ref s) = self.read_concept(delta, concept).get_string() {
-            self.remove_string_delta(delta, s);
-        }
-        self.blindly_remove_concept_delta(delta, concept);
     }
 }
 

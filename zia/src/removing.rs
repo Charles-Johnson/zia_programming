@@ -15,26 +15,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{ApplyDelta};
-use errors::{ZiaResult};
+use delta::ApplyDelta;
+use errors::ZiaResult;
 
-pub trait DefinitionDeleter: ApplyDelta
-{
-    fn cleanly_delete_definition(
-        &self,
-        delta: &mut Self::Delta,
-        concept: usize,
-    ) -> ZiaResult<()>;
+pub trait DefinitionDeleter: ApplyDelta {
+    fn cleanly_delete_definition(&self, delta: &mut Self::Delta, concept: usize) -> ZiaResult<()>;
     fn try_delete_concept(
         &self,
         previous_deltas: &mut Self::Delta,
         concept: usize,
     ) -> ZiaResult<()>;
-}
-
-pub trait ConceptRemover: ApplyDelta
-{
-    fn remove_concept(&self, delta: &mut Self::Delta, concept: usize);
 }
 
 pub trait BlindConceptRemover {
