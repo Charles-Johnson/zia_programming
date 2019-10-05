@@ -20,7 +20,7 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context, ContextMaker, Execute, ZiaError};
+use zia::{Context, ContextMaker, ZiaError};
 
 #[test]
 fn empty_parentheses() {

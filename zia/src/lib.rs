@@ -45,7 +45,7 @@
 //!
 //! ```
 //! extern crate zia;
-//! use zia::{Context, ContextMaker, Execute, ZiaError};
+//! use zia::{Context, ContextMaker, ZiaError};
 //!
 //! // Construct a new `Context` using the `new` method of the `ContextMaker` trait
 //! let mut context = Context::new();
@@ -165,7 +165,6 @@ pub use context::Context;
 use delta::ApplyDelta;
 pub use errors::ZiaError;
 use errors::ZiaResult;
-use logging::Logger;
 use reading::{
     BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
     GetReduction, MaybeConcept, MaybeString,
@@ -176,13 +175,10 @@ use std::{
     rc::Rc,
     str::FromStr,
 };
-use translating::SyntaxConverter;
 use writing::{
     MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
     SetAsDefinitionOf, SetDefinition, SetReduction,
 };
-
-impl Execute<Concept, SyntaxTree> for Context {}
 
 impl ConceptMaker<Concept, SyntaxTree> for Context {}
 
@@ -194,51 +190,6 @@ impl FindOrInsertDefinition<Concept> for Context {
 impl Labeller<Concept> for Context {
     /// The `setup` method labels concrete concepts.
     type C = CommonPart;
-}
-
-/// Executing a command based on a string to add, write, read, or remove contained concepts.  
-pub trait Execute<T, U>
-where
-    Self: Call<U> + SyntaxConverter<T, U> + Logger,
-    T: From<String>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + GetDefinition
-        + MaybeString
-        + GetDefinitionOf
-        + GetReduction
-        + FindWhatReducesToIt
-        + Debug
-        + Clone,
-    U: Container
-        + BindPair
-        + Debug
-        + Clone
-        + FromStr
-        + BindConcept
-        + PartialEq<U>
-        + Display
-        + MaybeConcept,
-    <U as FromStr>::Err: Debug,
-    Self::Delta: Clone + Debug + Default + Delta,
-{
-    fn execute(&mut self, command: &str) -> String {
-        info!(self.logger(), "execute({})", command);
-        let mut delta = Self::Delta::default();
-        let string = self
-            .ast_from_expression(&delta, command)
-            .and_then(|a| self.call(&mut delta, &a))
-            .unwrap_or_else(|e| e.to_string());
-        info!(self.logger(), "execute({}) -> {:?}", command, delta);
-        self.apply(delta);
-        string
-    }
 }
 
 /// Calling a program expressed as a syntax tree to read or write contained concepts.  

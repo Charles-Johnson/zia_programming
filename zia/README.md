@@ -57,13 +57,6 @@ trait ContextMaker<T> {
 		// Constructs a new Context and labels the 4 built-in concepts.
     }
 }
-
-trait Execute<T> {
-    fn execute(&mut self, command: &str) -> String { 
-		// Executes the commands given by the user that may modify the `Context` and outputs a 
-		// `String` that maybe empty, an error message or the answer to a query.
-	}
-}
 ```
 
 # Testing

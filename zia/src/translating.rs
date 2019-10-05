@@ -162,23 +162,6 @@ where
     }
 }
 
-impl<S, T, U> SyntaxConverter<T, U> for S
-where
-    S: SyntaxFinder<T> + SyntaxReader<U>,
-    T: GetDefinitionOf + GetDefinition + FindWhatReducesToIt + Debug + MaybeString + GetReduction,
-    U: FromStr
-        + BindConcept
-        + BindPair
-        + MaybeConcept
-        + Clone
-        + PartialEq
-        + MightExpand
-        + Display
-        + Debug,
-    <U as FromStr>::Err: Debug,
-{
-}
-
 pub fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
     let mut tokens: Vec<String> = [].to_vec();
     let mut token = String::new();

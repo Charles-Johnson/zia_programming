@@ -1,6 +1,6 @@
 extern crate zia;
 
-use zia::{Context, ContextMaker, Execute};
+use zia::{Context, ContextMaker};
 
 fn main() {
     let contents = include_str!("../../zia/src/lib.rs")
@@ -20,12 +20,6 @@ type Context = GenericContext<Concept>;
 trait ContextMaker<T> where ... {
     // Initialises context with labelled built-in concepts
     fn new() -> Self { ... }
-}
-
-trait Execute<T> where ... {
-    // Executes operation on context corresponding to its 
-    // interpretation of the command.
-    fn execute(&mut self, command: &str) -> String { ... }
 }
 ```
 

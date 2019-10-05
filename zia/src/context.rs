@@ -35,7 +35,7 @@ use std::{
     default::Default,
     rc::Rc,
 };
-use translating::StringConcept;
+use translating::{StringConcept, SyntaxConverter};
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
@@ -57,7 +57,20 @@ pub struct Context {
     variables: HashSet<usize>,
 }
 
+impl SyntaxConverter<Concept, SyntaxTree> for Context {}
+
 impl Context {
+    pub fn execute(&mut self, command: &str) -> String {
+        info!(*self.logger(), "execute({})", command);
+        let mut delta = ContextDelta::default();
+        let string = self
+            .ast_from_expression(&delta, command)
+            .and_then(|a| self.call(&mut delta, &a))
+            .unwrap_or_else(|e| e.to_string());
+        info!(*self.logger(), "execute({}) -> {:?}", command, delta);
+        self.apply(delta);
+        string
+    }
     fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
         let in_previous_variables = self.variables.contains(&concept);
         delta
