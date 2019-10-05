@@ -17,24 +17,14 @@
 
 pub use delta::{ApplyDelta, Delta};
 pub use errors::{ZiaError, ZiaResult};
-pub use reading::{
-    FindDefinition, GetDefinition, GetDefinitionOf, GetReduction,
-    MaybeConcept,
-};
+pub use reading::{FindDefinition, GetDefinition, GetDefinitionOf, GetReduction, MaybeConcept};
 
-pub trait Unlabeller: ApplyDelta
-{
-    fn unlabel(&self, deltas: &mut Self::Delta, concept: usize) -> ZiaResult<()>;
-}
-
-pub trait DeleteReduction<U>: ApplyDelta
-{
+pub trait DeleteReduction<U>: ApplyDelta {
     fn try_removing_reduction(&self, deltas: &mut Self::Delta, syntax: &U) -> ZiaResult<()>;
     fn delete_reduction(&self, delta: &mut Self::Delta, concept: usize) -> ZiaResult<()>;
 }
 
-pub trait UpdateReduction: ApplyDelta
-{
+pub trait UpdateReduction: ApplyDelta {
     fn update_reduction(
         &self,
         deltas: &mut Self::Delta,
@@ -49,8 +39,7 @@ pub trait UpdateReduction: ApplyDelta
     ) -> usize;
 }
 
-pub trait InsertDefinition: ApplyDelta
-{
+pub trait InsertDefinition: ApplyDelta {
     fn insert_definition(
         &self,
         deltas: &mut Self::Delta,
@@ -78,13 +67,8 @@ pub trait SetConceptDefinitionDeltas
 where
     Self: ApplyDelta,
 {
-    fn set_concept_definition_deltas(
-        &self,
-        &mut Self::Delta,
-        usize,
-        usize,
-        usize,
-    ) -> ZiaResult<()>;
+    fn set_concept_definition_deltas(&self, &mut Self::Delta, usize, usize, usize)
+        -> ZiaResult<()>;
 }
 
 pub trait SetDefinitionDelta

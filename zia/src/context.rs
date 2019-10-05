@@ -44,7 +44,7 @@ use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, RemoveConceptReduction,
     RemoveDefinitionDelta, RemoveReductionDelta, SetAsDefinitionOfDelta,
     SetConceptDefinitionDeltas, SetConceptReductionDelta, SetDefinitionDelta, SetReductionDelta,
-    Unlabeller, UpdateReduction,
+    UpdateReduction,
 };
 use Call;
 use Definer;
@@ -364,6 +364,12 @@ impl Context {
         self.string_map
             .remove(string)
             .expect("No string to remove!");
+    }
+    fn unlabel(&self, deltas: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
+        let concept_of_label = self
+            .get_concept_of_label(deltas, concept)
+            .expect("No label to remove");
+        self.delete_reduction(deltas, concept_of_label)
     }
 }
 
@@ -855,15 +861,6 @@ impl FindDefinition for Context {
                 panic!("Multiple definitions with the same lefthand and righthand pair exist.")
             })
         })
-    }
-}
-
-impl Unlabeller for Context {
-    fn unlabel(&self, deltas: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
-        let concept_of_label = self
-            .get_concept_of_label(deltas, concept)
-            .expect("No label to remove");
-        self.delete_reduction(deltas, concept_of_label)
     }
 }
 
