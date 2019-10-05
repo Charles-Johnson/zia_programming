@@ -138,10 +138,3 @@ pub trait Container: ApplyDelta {
 pub trait BindConcept {
     fn bind_concept(self, usize) -> Self;
 }
-
-pub trait Variable
-where
-    Self: ApplyDelta,
-{
-    fn has_variable(&self, deltas: &Self::Delta, usize) -> bool;
-}

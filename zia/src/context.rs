@@ -29,7 +29,7 @@ use reading::{
     Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatItsANormalFormOf,
     FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
     GetReduction, Label, MaybeConcept, MaybeString, MightExpand,
-    SyntaxReader, Variable,
+    SyntaxReader,
 };
 use removing::{
     BlindConceptRemover, BlindConceptRemoverDelta, ConceptRemover, DefinitionDeleter,
@@ -67,6 +67,18 @@ pub struct Context {
 }
 
 impl Context {
+    fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
+        let in_previous_variables = self.variables.contains(&concept);
+        delta
+            .concept
+            .get(&concept)
+            .map(|(cd, v)| match cd {
+                ConceptDelta::Insert(_) => *v,
+                ConceptDelta::Remove(_) => false,
+                ConceptDelta::Update(_) => in_previous_variables,
+            })
+            .unwrap_or(in_previous_variables)
+    }
     fn get_concept(&self, id: usize) -> Option<&Concept> {
         match self.concepts.get(id) {
             Some(Some(c)) => Some(c),
@@ -315,21 +327,6 @@ fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta
             ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
         })
         .or_insert((ConceptDelta::Update(concept_delta), false));
-}
-
-impl Variable for Context {
-    fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
-        let in_previous_variables = self.variables.contains(&concept);
-        delta
-            .concept
-            .get(&concept)
-            .map(|(cd, v)| match cd {
-                ConceptDelta::Insert(_) => *v,
-                ConceptDelta::Remove(_) => false,
-                ConceptDelta::Update(_) => in_previous_variables,
-            })
-            .unwrap_or(in_previous_variables)
-    }
 }
 
 impl Container for Context {
