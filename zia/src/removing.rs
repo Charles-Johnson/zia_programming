@@ -26,14 +26,3 @@ pub trait DefinitionDeleter: ApplyDelta {
         concept: usize,
     ) -> ZiaResult<()>;
 }
-
-pub trait StringRemover {
-    fn remove_string(&mut self, &str);
-}
-
-pub trait StringRemoverDelta
-where
-    Self: ApplyDelta,
-{
-    fn remove_string_delta(&self, &mut Self::Delta, &str);
-}

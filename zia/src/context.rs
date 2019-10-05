@@ -31,10 +31,7 @@ use reading::{
     GetReduction, Label, MaybeConcept, MaybeString, MightExpand,
     SyntaxReader,
 };
-use removing::{
-    DefinitionDeleter,
-    StringRemover, StringRemoverDelta,
-};
+use removing::DefinitionDeleter;
 use slog;
 use slog::Drain;
 use std::{
@@ -349,6 +346,25 @@ impl Context {
             (ConceptDelta::Remove(concept), self.has_variable(delta, id)),
         );
     }
+    fn remove_string_delta(&self, delta: &mut ContextDelta, string: &str) {
+        let index = *(delta
+            .string
+            .get(string)
+            .and_then(|sd| match sd {
+                StringDelta::Update { after, .. } => Some(after),
+                StringDelta::Insert(index) => Some(index),
+                StringDelta::Remove(_) => None,
+            })
+            .expect("string already removed or doesn't exist"));
+        delta
+            .string
+            .insert(string.to_string(), StringDelta::Remove(index));
+    }
+    fn remove_string(&mut self, string: &str) {
+        self.string_map
+            .remove(string)
+            .expect("No string to remove!");
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -588,31 +604,6 @@ impl SetConceptReductionDelta for Context {
         update_concept_delta(delta.concept.entry(concept), concept_delta);
         update_concept_delta(delta.concept.entry(reduction), reduction_delta);
         Ok(())
-    }
-}
-
-impl StringRemover for Context {
-    fn remove_string(&mut self, string: &str) {
-        self.string_map
-            .remove(string)
-            .expect("No string to remove!");
-    }
-}
-
-impl StringRemoverDelta for Context {
-    fn remove_string_delta(&self, delta: &mut ContextDelta, string: &str) {
-        let index = *(delta
-            .string
-            .get(string)
-            .and_then(|sd| match sd {
-                StringDelta::Update { after, .. } => Some(after),
-                StringDelta::Insert(index) => Some(index),
-                StringDelta::Remove(_) => None,
-            })
-            .expect("string already removed or doesn't exist"));
-        delta
-            .string
-            .insert(string.to_string(), StringDelta::Remove(index));
     }
 }
 
