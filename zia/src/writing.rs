@@ -98,13 +98,6 @@ where
     fn make_reduce_to_delta(&self, usize) -> ZiaResult<Self::Delta>;
 }
 
-pub trait SetConceptReductionDelta
-where
-    Self: ApplyDelta,
-{
-    fn concept_reduction_deltas(&self, &mut Self::Delta, usize, usize) -> ZiaResult<()>;
-}
-
 pub trait MakeReduceFrom {
     fn make_reduce_from(&mut self, usize);
 }

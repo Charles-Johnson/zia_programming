@@ -43,7 +43,7 @@ use translating::StringConcept;
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, RemoveConceptReduction,
     RemoveDefinitionDelta, RemoveReductionDelta, SetAsDefinitionOfDelta,
-    SetConceptReductionDelta, SetDefinitionDelta, SetReductionDelta,
+    SetDefinitionDelta, SetReductionDelta,
     UpdateReduction,
 };
 use Call;
@@ -392,6 +392,22 @@ impl Context {
         update_concept_delta(delta.concept.entry(righthand), righthand_delta);
         Ok(())
     }
+    fn concept_reduction_deltas(
+        &self,
+        delta: &mut ContextDelta,
+        concept: usize,
+        reduction: usize,
+    ) -> ZiaResult<()> {
+        let concept_delta = self
+            .read_concept(delta, concept)
+            .make_reduce_to_delta(reduction)?;
+        let reduction_delta = self
+            .read_concept(delta, reduction)
+            .make_reduce_from_delta(concept);
+        update_concept_delta(delta.concept.entry(concept), concept_delta);
+        update_concept_delta(delta.concept.entry(reduction), reduction_delta);
+        Ok(())
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -588,25 +604,6 @@ impl Default for Context {
             logger,
             variables: HashSet::new(),
         }
-    }
-}
-
-impl SetConceptReductionDelta for Context {
-    fn concept_reduction_deltas(
-        &self,
-        delta: &mut ContextDelta,
-        concept: usize,
-        reduction: usize,
-    ) -> ZiaResult<()> {
-        let concept_delta = self
-            .read_concept(delta, concept)
-            .make_reduce_to_delta(reduction)?;
-        let reduction_delta = self
-            .read_concept(delta, reduction)
-            .make_reduce_from_delta(concept);
-        update_concept_delta(delta.concept.entry(concept), concept_delta);
-        update_concept_delta(delta.concept.entry(reduction), reduction_delta);
-        Ok(())
     }
 }
 
