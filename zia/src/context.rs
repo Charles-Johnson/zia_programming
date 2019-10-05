@@ -15,10 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{
-    ConceptMaker, DefaultMaker, ExecuteReduction, Labeller,
-    StringMaker,
-};
+use adding::{ConceptMaker, DefaultMaker, ExecuteReduction, Labeller, StringMaker};
 use ast::SyntaxTree;
 use concepts::{Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
@@ -26,10 +23,9 @@ use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
 use logging::Logger;
 use reading::{
-    Associativity, BindConcept, BindPair, Container, FindDefinition,
-    FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
-    GetReduction, Label, MaybeConcept, MaybeString, MightExpand,
-    SyntaxReader,
+    Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatReducesToIt,
+    GetDefinition, GetDefinitionOf, GetLabel, GetReduction, Label, MaybeConcept, MaybeString,
+    MightExpand, SyntaxReader,
 };
 use removing::DefinitionDeleter;
 use slog;
@@ -41,10 +37,8 @@ use std::{
 };
 use translating::StringConcept;
 use writing::{
-    DeleteReduction, InsertDefinition, MakeReduceFromDelta,
-    RemoveDefinitionDelta, SetAsDefinitionOfDelta,
-    SetDefinitionDelta, SetReductionDelta,
-    UpdateReduction,
+    DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
+    SetDefinitionDelta, SetReductionDelta, UpdateReduction,
 };
 use Call;
 use Definer;
@@ -280,7 +274,7 @@ impl Context {
             .nth(0)
             .cloned()
     }
-        fn is_disconnected(&self, deltas: &ContextDelta, concept: usize) -> bool {
+    fn is_disconnected(&self, deltas: &ContextDelta, concept: usize) -> bool {
         self.read_concept(deltas, concept).get_reduction().is_none()
             && self
                 .read_concept(deltas, concept)

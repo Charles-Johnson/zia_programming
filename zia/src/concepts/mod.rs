@@ -19,15 +19,14 @@ mod common_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
 pub use self::common_part::{CommonDelta, CommonPart};
-use delta::{Change, SetChange, ApplyDelta, Delta};
+use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
 use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
 use std::{collections::HashSet, iter::FromIterator};
 use writing::{
     MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
-    RemoveDefinition, RemoveDefinitionDelta, RemoveReduction,
-    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
-    SetReductionDelta,
+    RemoveDefinition, RemoveReduction, SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition,
+    SetDefinitionDelta, SetReduction, SetReductionDelta,
 };
 
 /// Data type for any type of concept.
@@ -38,7 +37,86 @@ pub struct Concept {
 }
 
 impl Concept {
-    pub fn no_longer_reduces_from_delta(&self, delta: &ConceptDelta, concept: usize) -> ConceptDelta {
+    pub fn remove_as_lefthand_of_delta(
+        &self,
+        delta: &ConceptDelta,
+        concept: usize,
+    ) -> ConceptDelta {
+        assert!({
+            let lefthand_of_concept = self.get_lefthand_of().contains(&concept);
+            let SetChange { add, remove } = &delta.common_part.lefthand_of;
+            if remove.contains(&concept) {
+                false
+            } else if add.contains(&concept) {
+                true
+            } else {
+                lefthand_of_concept
+            }
+        });
+        ConceptDelta {
+            common_part: CommonDelta {
+                lefthand_of: SetChange {
+                    remove: hashset! {concept},
+                    add: hashset! {},
+                },
+                reduces_from: SetChange::default(),
+                righthand_of: SetChange::default(),
+            },
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn remove_as_righthand_of_delta(
+        &self,
+        delta: &ConceptDelta,
+        concept: usize,
+    ) -> ConceptDelta {
+        assert!({
+            let righthand_of_concept = self.get_righthand_of().contains(&concept);
+            let SetChange { add, remove } = &delta.common_part.righthand_of;
+            if remove.contains(&concept) {
+                false
+            } else if add.contains(&concept) {
+                true
+            } else {
+                righthand_of_concept
+            }
+        });
+        ConceptDelta {
+            common_part: CommonDelta {
+                righthand_of: SetChange {
+                    remove: hashset! {concept},
+                    add: hashset! {},
+                },
+                reduces_from: SetChange::default(),
+                lefthand_of: SetChange::default(),
+            },
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn remove_definition_delta(&self, delta: &ConceptDelta) -> ConceptDelta {
+        let definition = self.get_definition();
+        assert!({
+            match delta.specific_part.definition {
+                Change::Different { after, .. } => after.is_some(),
+                _ => definition.is_some(),
+            }
+        });
+        ConceptDelta {
+            specific_part: AbstractDelta {
+                definition: Change::Different {
+                    before: definition,
+                    after: None,
+                },
+                reduction: Change::Same,
+            },
+            common_part: CommonDelta::default(),
+        }
+    }
+    pub fn no_longer_reduces_from_delta(
+        &self,
+        delta: &ConceptDelta,
+        concept: usize,
+    ) -> ConceptDelta {
         assert!({
             let reduces_from_concept = self.find_what_reduces_to_it().contains(&concept);
             let SetChange { add, remove } = &delta.common_part.reduces_from;
@@ -65,10 +143,7 @@ impl Concept {
     pub fn make_reduce_to_none_delta(&self, delta: &ConceptDelta) -> ConceptDelta {
         assert!({
             let reduces = self.get_reduction().is_some();
-            match delta
-                .specific_part
-                .reduction
-            {
+            match delta.specific_part.reduction {
                 Change::Different { after, .. } => after.is_some(),
                 Change::Same => reduces,
             }
@@ -126,14 +201,16 @@ impl ApplyDelta for Concept {
         self.common_part.apply(delta.common_part);
     }
     fn diff(&self, next: Concept) -> ConceptDelta {
-        ConceptDelta{
+        ConceptDelta {
             common_part: self.common_part.diff(next.common_part),
             specific_part: match (&self.specific_part, next.specific_part) {
-                (SpecificPart::Abstract(ap1), SpecificPart::Abstract(ref ap2)) => ap1.diff(ap2.clone()),
+                (SpecificPart::Abstract(ap1), SpecificPart::Abstract(ref ap2)) => {
+                    ap1.diff(ap2.clone())
+                }
                 (SpecificPart::Abstract(ap1), _) => ap1.diff(AbstractPart::default()),
                 (_, SpecificPart::Abstract(ap2)) => AbstractPart::default().diff(ap2),
                 _ => AbstractDelta::default(),
-            }
+            },
         }
     }
 }
@@ -334,76 +411,6 @@ impl MaybeString for Concept {
         match self.specific_part {
             SpecificPart::String(ref s) => Some(s.clone()),
             _ => None,
-        }
-    }
-}
-
-impl RemoveDefinitionDelta for Concept {
-    fn remove_as_lefthand_of_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
-        assert!({
-            let lefthand_of_concept = self.get_lefthand_of().contains(&concept);
-            let SetChange { add, remove } = &delta.common_part.lefthand_of;
-            if remove.contains(&concept) {
-                false
-            } else if add.contains(&concept) {
-                true
-            } else {
-                lefthand_of_concept
-            }
-        });
-        ConceptDelta {
-            common_part: CommonDelta {
-                lefthand_of: SetChange {
-                    remove: hashset!{concept},
-                    add: hashset!{},
-                },
-                reduces_from: SetChange::default(),
-                righthand_of: SetChange::default(),
-            },
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    fn remove_as_righthand_of_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
-        assert!({
-            let righthand_of_concept = self.get_righthand_of().contains(&concept);
-            let SetChange { add, remove } = &delta.common_part.righthand_of;
-            if remove.contains(&concept) {
-                false
-            } else if add.contains(&concept) {
-                true
-            } else {
-                righthand_of_concept
-            }
-        });
-        ConceptDelta {
-            common_part: CommonDelta {
-                righthand_of: SetChange {
-                    remove: hashset!{concept},
-                    add: hashset!{},
-                },
-                reduces_from: SetChange::default(),
-                lefthand_of: SetChange::default(),
-            },
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    fn remove_definition_delta(&self, delta: &Self::Delta) -> Self::Delta {
-        let definition = self.get_definition();
-        assert!({
-            match delta.specific_part.definition {
-                Change::Different { after, .. } => after.is_some(),
-                _ => definition.is_some(),
-            }
-        });
-        ConceptDelta {
-            specific_part: AbstractDelta {
-                definition: Change::Different {
-                    before: definition,
-                    after: None,
-                },
-                reduction: Change::Same,
-            },
-            common_part: CommonDelta::default(),
         }
     }
 }
