@@ -27,13 +27,6 @@ pub trait DefinitionDeleter: ApplyDelta {
     ) -> ZiaResult<()>;
 }
 
-pub trait BlindConceptRemoverDelta
-where
-    Self: ApplyDelta,
-{
-    fn blindly_remove_concept_delta(&self, &mut Self::Delta, usize);
-}
-
 pub trait StringRemover {
     fn remove_string(&mut self, &str);
 }

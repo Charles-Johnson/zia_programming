@@ -32,7 +32,7 @@ use reading::{
     SyntaxReader,
 };
 use removing::{
-    BlindConceptRemoverDelta, DefinitionDeleter,
+    DefinitionDeleter,
     StringRemover, StringRemoverDelta,
 };
 use slog;
@@ -330,6 +330,25 @@ impl Context {
         self.concepts[id] = None;
         self.gaps.push(id);
     }
+    fn blindly_remove_concept_delta(&self, delta: &mut ContextDelta, id: usize) {
+        let concept = delta
+            .concept
+            .get(&id)
+            .and_then(|(cd, _)| match cd {
+                ConceptDelta::Insert(c) => Some(c),
+                ConceptDelta::Remove(_) => None,
+                ConceptDelta::Update(_) => self.get_concept(id),
+            })
+            .unwrap_or_else(|| {
+                self.get_concept(id)
+                    .expect("Concept will be already removed!")
+            })
+            .clone();
+        delta.concept.insert(
+            id,
+            (ConceptDelta::Remove(concept), self.has_variable(delta, id)),
+        );
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -569,28 +588,6 @@ impl SetConceptReductionDelta for Context {
         update_concept_delta(delta.concept.entry(concept), concept_delta);
         update_concept_delta(delta.concept.entry(reduction), reduction_delta);
         Ok(())
-    }
-}
-
-impl BlindConceptRemoverDelta for Context {
-    fn blindly_remove_concept_delta(&self, delta: &mut ContextDelta, id: usize) {
-        let concept = delta
-            .concept
-            .get(&id)
-            .and_then(|(cd, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c),
-                ConceptDelta::Remove(_) => None,
-                ConceptDelta::Update(_) => self.get_concept(id),
-            })
-            .unwrap_or_else(|| {
-                self.get_concept(id)
-                    .expect("Concept will be already removed!")
-            })
-            .clone();
-        delta.concept.insert(
-            id,
-            (ConceptDelta::Remove(concept), self.has_variable(delta, id)),
-        );
     }
 }
 
