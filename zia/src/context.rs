@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{ConceptMaker, DefaultMaker, ExecuteReduction, Labeller, StringMaker};
+use adding::{ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction, Labeller, StringMaker};
 use ast::SyntaxTree;
 use concepts::{Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
@@ -40,7 +40,6 @@ use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
 };
-use Definer;
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 pub struct Context {
@@ -615,7 +614,100 @@ impl Context {
             None => Err(ZiaError::UnusedSymbol),
         }
     }
-
+    fn relabel(&self, delta: &mut ContextDelta, concept: usize, new_label: &str) -> ZiaResult<()> {
+        self.unlabel(delta, concept)?;
+        self.label(delta, concept, new_label)
+    }
+    fn redefine(
+        &self,
+        delta: &mut ContextDelta,
+        concept: usize,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> ZiaResult<()> {
+        if let Some((left_concept, right_concept)) =
+            self.read_concept(delta, concept).get_definition()
+        {
+            self.relabel(delta, left_concept, &left.to_string())?;
+            self.relabel(delta, right_concept, &right.to_string())
+        } else {
+            let left_concept = self.concept_from_ast(delta, left)?;
+            let right_concept = self.concept_from_ast(delta, right)?;
+            self.insert_definition(delta, concept, left_concept, right_concept)
+        }
+    }
+        /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
+    fn execute_definition(
+        &self,
+        delta: &mut ContextDelta,
+        new: &Rc<SyntaxTree>,
+        old: &Rc<SyntaxTree>,
+    ) -> ZiaResult<()> {
+        if old.contains(new) {
+            Err(ZiaError::InfiniteDefinition)
+        } else {
+            self.define(delta, new, old)
+        }
+    }
+    /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
+    fn define(&self, delta: &mut ContextDelta, new: &Rc<SyntaxTree>, old: &Rc<SyntaxTree>) -> ZiaResult<()> {
+        if new.get_expansion().is_some() {
+            Err(ZiaError::BadDefinition)
+        } else {
+            match (new.get_concept(), old.get_concept(), old.get_expansion()) {
+                (_, None, None) => Err(ZiaError::RedundantRefactor),
+                (None, Some(b), None) => self.relabel(delta, b, &new.to_string()),
+                (None, Some(b), Some(_)) => {
+                    if self.get_label(delta, b).is_none() {
+                        self.label(delta, b, &new.to_string())
+                    } else {
+                        self.relabel(delta, b, &new.to_string())
+                    }
+                }
+                (None, None, Some((ref left, ref right))) => {
+                    self.define_new_syntax(delta, &new.to_string(), left, right)
+                }
+                (Some(a), Some(b), None) => {
+                    if a == b {
+                        self.cleanly_delete_definition(delta, a)
+                    } else {
+                        Err(ZiaError::DefinitionCollision)
+                    }
+                }
+                (Some(a), Some(b), Some(_)) => {
+                    if a == b {
+                        Err(ZiaError::RedundantDefinition)
+                    } else {
+                        Err(ZiaError::DefinitionCollision)
+                    }
+                }
+                (Some(a), None, Some((ref left, ref right))) => {
+                    self.redefine(delta, a, left, right)
+                }
+            }
+        }
+    }
+    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
+    fn define_new_syntax(
+        &self,
+        delta: &mut ContextDelta,
+        syntax: &str,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> ZiaResult<()> {
+        let new_syntax_tree = left
+            .get_concept()
+            .and_then(|l| {
+                right.get_concept().and_then(|r| {
+                    self.find_definition(delta, l, r)
+                        .map(|concept| syntax.parse::<SyntaxTree>().unwrap().bind_concept(concept))
+                })
+            })
+            .unwrap_or_else(|| syntax.parse::<SyntaxTree>().unwrap())
+            .bind_pair(left, right);
+        self.concept_from_ast(delta, &new_syntax_tree)?;
+        Ok(())
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -1436,30 +1528,5 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
-    }
-}
-
-impl Definer<Concept, SyntaxTree> for Context {
-    fn relabel(&self, delta: &mut ContextDelta, concept: usize, new_label: &str) -> ZiaResult<()> {
-        self.unlabel(delta, concept)?;
-        self.label(delta, concept, new_label)
-    }
-    fn redefine(
-        &self,
-        delta: &mut ContextDelta,
-        concept: usize,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> ZiaResult<()> {
-        if let Some((left_concept, right_concept)) =
-            self.read_concept(delta, concept).get_definition()
-        {
-            self.relabel(delta, left_concept, &left.to_string())?;
-            self.relabel(delta, right_concept, &right.to_string())
-        } else {
-            let left_concept = self.concept_from_ast(delta, left)?;
-            let right_concept = self.concept_from_ast(delta, right)?;
-            self.insert_definition(delta, concept, left_concept, right_concept)
-        }
     }
 }

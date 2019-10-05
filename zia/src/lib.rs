@@ -154,31 +154,14 @@ mod translating;
 mod writing;
 
 pub use adding::ContextMaker;
-use adding::{ConceptMaker, Container, FindOrInsertDefinition, Labeller};
+use adding::{ConceptMaker, FindOrInsertDefinition, Labeller};
 pub use ast::SyntaxTree;
-use delta::{Delta};
 use concepts::{AbstractPart, CommonPart, Concept};
 
 /// A container for adding, writing, reading and removing `Concept`s.
 pub use context::Context;
 
-use delta::ApplyDelta;
 pub use errors::ZiaError;
-use errors::ZiaResult;
-use reading::{
-    BindConcept, BindPair, FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
-    GetReduction, MaybeConcept, MaybeString,
-};
-use removing::DefinitionDeleter;
-use std::{
-    fmt::{Debug, Display},
-    rc::Rc,
-    str::FromStr,
-};
-use writing::{
-    MakeReduceFrom, NoLongerReducesFrom, RemoveAsDefinitionOf, RemoveDefinition, RemoveReduction,
-    SetAsDefinitionOf, SetDefinition, SetReduction,
-};
 
 impl ConceptMaker<Concept, SyntaxTree> for Context {}
 
@@ -190,109 +173,4 @@ impl FindOrInsertDefinition<Concept> for Context {
 impl Labeller<Concept> for Context {
     /// The `setup` method labels concrete concepts.
     type C = CommonPart;
-}
-
-/// Defining new syntax in terms of old syntax.
-pub trait Definer<T, U>
-where
-    T: From<String>
-        + From<Self::C>
-        + From<Self::A>
-        + RemoveDefinition
-        + RemoveAsDefinitionOf
-        + SetReduction
-        + MakeReduceFrom
-        + RemoveReduction
-        + NoLongerReducesFrom
-        + SetDefinition
-        + SetAsDefinitionOf
-        + FindWhatReducesToIt
-        + GetReduction
-        + GetDefinition
-        + GetDefinitionOf
-        + MaybeString
-        + Debug
-        + Clone,
-    Self: GetLabel + ConceptMaker<T, U> + DefinitionDeleter,
-    U: BindPair + Container + MaybeConcept + Display + FromStr + BindConcept,
-    <U as FromStr>::Err: Debug,
-    Self::Delta: Clone + Debug + Default + Delta,
-{
-    /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(&self, delta: &mut Self::Delta, new: &Rc<U>, old: &Rc<U>) -> ZiaResult<()> {
-        if old.contains(new) {
-            Err(ZiaError::InfiniteDefinition)
-        } else {
-            self.define(delta, new, old)
-        }
-    }
-    /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, delta: &mut Self::Delta, new: &Rc<U>, old: &Rc<U>) -> ZiaResult<()> {
-        if new.get_expansion().is_some() {
-            Err(ZiaError::BadDefinition)
-        } else {
-            match (new.get_concept(), old.get_concept(), old.get_expansion()) {
-                (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => self.relabel(delta, b, &new.to_string()),
-                (None, Some(b), Some(_)) => {
-                    if self.get_label(delta, b).is_none() {
-                        self.label(delta, b, &new.to_string())
-                    } else {
-                        self.relabel(delta, b, &new.to_string())
-                    }
-                }
-                (None, None, Some((ref left, ref right))) => {
-                    self.define_new_syntax(delta, &new.to_string(), left, right)
-                }
-                (Some(a), Some(b), None) => {
-                    if a == b {
-                        self.cleanly_delete_definition(delta, a)
-                    } else {
-                        Err(ZiaError::DefinitionCollision)
-                    }
-                }
-                (Some(a), Some(b), Some(_)) => {
-                    if a == b {
-                        Err(ZiaError::RedundantDefinition)
-                    } else {
-                        Err(ZiaError::DefinitionCollision)
-                    }
-                }
-                (Some(a), None, Some((ref left, ref right))) => {
-                    self.redefine(delta, a, left, right)
-                }
-            }
-        }
-    }
-    /// Defining a concept as a composition whose syntax is given by `left` and `right`. If the concept already has a definition, then the concepts of this composition are relabelled with `left` and `right`. Otherwise new concepts are made from `left` and `right` to define the concept.
-    fn redefine(
-        &self,
-        delta: &mut Self::Delta,
-        concept: usize,
-        left: &Rc<U>,
-        right: &Rc<U>,
-    ) -> ZiaResult<()>;
-    /// Unlabels a concept and gives it a new label.
-    fn relabel(&self, delta: &mut Self::Delta, concept: usize, new_label: &str) -> ZiaResult<()>;
-    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
-    fn define_new_syntax(
-        &self,
-        delta: &mut Self::Delta,
-        syntax: &str,
-        left: &Rc<U>,
-        right: &Rc<U>,
-    ) -> ZiaResult<()> {
-        let new_syntax_tree = left
-            .get_concept()
-            .and_then(|l| {
-                right.get_concept().and_then(|r| {
-                    self.find_definition(delta, l, r)
-                        .map(|concept| syntax.parse::<U>().unwrap().bind_concept(concept))
-                })
-            })
-            .unwrap_or_else(|| syntax.parse::<U>().unwrap())
-            .bind_pair(left, right);
-        self.concept_from_ast(delta, &new_syntax_tree)?;
-        Ok(())
-    }
 }
