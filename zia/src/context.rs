@@ -32,7 +32,7 @@ use reading::{
     SyntaxReader,
 };
 use removing::{
-    BlindConceptRemover, BlindConceptRemoverDelta, DefinitionDeleter,
+    BlindConceptRemoverDelta, DefinitionDeleter,
     StringRemover, StringRemoverDelta,
 };
 use slog;
@@ -326,6 +326,10 @@ impl Context {
         }
         self.blindly_remove_concept_delta(delta, concept);
     }
+    fn blindly_remove_concept(&mut self, id: usize) {
+        self.concepts[id] = None;
+        self.gaps.push(id);
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -587,13 +591,6 @@ impl BlindConceptRemoverDelta for Context {
             id,
             (ConceptDelta::Remove(concept), self.has_variable(delta, id)),
         );
-    }
-}
-
-impl BlindConceptRemover for Context {
-    fn blindly_remove_concept(&mut self, id: usize) {
-        self.concepts[id] = None;
-        self.gaps.push(id);
     }
 }
 
