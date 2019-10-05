@@ -43,7 +43,7 @@ use translating::StringConcept;
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, RemoveConceptReduction,
     RemoveDefinitionDelta, RemoveReductionDelta, SetAsDefinitionOfDelta,
-    SetConceptDefinitionDeltas, SetConceptReductionDelta, SetDefinitionDelta, SetReductionDelta,
+    SetConceptReductionDelta, SetDefinitionDelta, SetReductionDelta,
     UpdateReduction,
 };
 use Call;
@@ -371,6 +371,27 @@ impl Context {
             .expect("No label to remove");
         self.delete_reduction(deltas, concept_of_label)
     }
+    fn set_concept_definition_deltas(
+        &self,
+        delta: &mut ContextDelta,
+        concept: usize,
+        lefthand: usize,
+        righthand: usize,
+    ) -> ZiaResult<()> {
+        let concept_delta = self
+            .read_concept(delta, concept)
+            .set_definition_delta(lefthand, righthand)?;
+        update_concept_delta(delta.concept.entry(concept), concept_delta);
+        let lefthand_delta = self
+            .read_concept(delta, lefthand)
+            .add_as_lefthand_of_delta(concept);
+        update_concept_delta(delta.concept.entry(lefthand), lefthand_delta);
+        let righthand_delta = self
+            .read_concept(delta, righthand)
+            .add_as_righthand_of_delta(concept);
+        update_concept_delta(delta.concept.entry(righthand), righthand_delta);
+        Ok(())
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -567,30 +588,6 @@ impl Default for Context {
             logger,
             variables: HashSet::new(),
         }
-    }
-}
-
-impl SetConceptDefinitionDeltas for Context {
-    fn set_concept_definition_deltas(
-        &self,
-        delta: &mut ContextDelta,
-        concept: usize,
-        lefthand: usize,
-        righthand: usize,
-    ) -> ZiaResult<()> {
-        let concept_delta = self
-            .read_concept(delta, concept)
-            .set_definition_delta(lefthand, righthand)?;
-        update_concept_delta(delta.concept.entry(concept), concept_delta);
-        let lefthand_delta = self
-            .read_concept(delta, lefthand)
-            .add_as_lefthand_of_delta(concept);
-        update_concept_delta(delta.concept.entry(lefthand), lefthand_delta);
-        let righthand_delta = self
-            .read_concept(delta, righthand)
-            .add_as_righthand_of_delta(concept);
-        update_concept_delta(delta.concept.entry(righthand), righthand_delta);
-        Ok(())
     }
 }
 

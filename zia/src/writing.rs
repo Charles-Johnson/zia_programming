@@ -63,14 +63,6 @@ pub trait NoLongerReducesFrom {
     fn no_longer_reduces_from(&mut self, usize);
 }
 
-pub trait SetConceptDefinitionDeltas
-where
-    Self: ApplyDelta,
-{
-    fn set_concept_definition_deltas(&self, &mut Self::Delta, usize, usize, usize)
-        -> ZiaResult<()>;
-}
-
 pub trait SetDefinitionDelta
 where
     Self: ApplyDelta,
