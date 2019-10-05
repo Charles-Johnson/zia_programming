@@ -42,7 +42,7 @@ use std::{
 use translating::StringConcept;
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta,
-    RemoveDefinitionDelta, RemoveReductionDelta, SetAsDefinitionOfDelta,
+    RemoveDefinitionDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta,
     UpdateReduction,
 };

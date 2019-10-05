@@ -118,14 +118,6 @@ pub trait RemoveAsDefinitionOf {
     fn remove_as_righthand_of(&mut self, usize);
 }
 
-pub trait RemoveReductionDelta
-where
-    Self: ApplyDelta,
-{
-    fn no_longer_reduces_from_delta(&self, &Self::Delta, usize) -> Self::Delta;
-    fn make_reduce_to_none_delta(&self, &Self::Delta) -> Self::Delta;
-}
-
 pub trait RemoveDefinitionDelta
 where
     Self: ApplyDelta,

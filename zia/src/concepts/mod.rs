@@ -25,7 +25,7 @@ use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction,
 use std::{collections::HashSet, iter::FromIterator};
 use writing::{
     MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
-    RemoveDefinition, RemoveDefinitionDelta, RemoveReduction, RemoveReductionDelta,
+    RemoveDefinition, RemoveDefinitionDelta, RemoveReduction,
     SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
     SetReductionDelta,
 };
@@ -35,6 +35,55 @@ use writing::{
 pub struct Concept {
     common_part: CommonPart,
     specific_part: SpecificPart,
+}
+
+impl Concept {
+    pub fn no_longer_reduces_from_delta(&self, delta: &ConceptDelta, concept: usize) -> ConceptDelta {
+        assert!({
+            let reduces_from_concept = self.find_what_reduces_to_it().contains(&concept);
+            let SetChange { add, remove } = &delta.common_part.reduces_from;
+            if remove.contains(&concept) {
+                false
+            } else if add.contains(&concept) {
+                true
+            } else {
+                reduces_from_concept
+            }
+        });
+        ConceptDelta {
+            common_part: CommonDelta {
+                reduces_from: SetChange {
+                    remove: HashSet::from_iter(std::iter::once(concept)),
+                    add: HashSet::default(),
+                },
+                lefthand_of: SetChange::default(),
+                righthand_of: SetChange::default(),
+            },
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn make_reduce_to_none_delta(&self, delta: &ConceptDelta) -> ConceptDelta {
+        assert!({
+            let reduces = self.get_reduction().is_some();
+            match delta
+                .specific_part
+                .reduction
+            {
+                Change::Different { after, .. } => after.is_some(),
+                Change::Same => reduces,
+            }
+        });
+        ConceptDelta {
+            specific_part: AbstractDelta {
+                reduction: Change::Different {
+                    before: self.get_reduction(),
+                    after: None,
+                },
+                definition: Change::Same,
+            },
+            common_part: CommonDelta::default(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -285,55 +334,6 @@ impl MaybeString for Concept {
         match self.specific_part {
             SpecificPart::String(ref s) => Some(s.clone()),
             _ => None,
-        }
-    }
-}
-
-impl RemoveReductionDelta for Concept {
-    fn no_longer_reduces_from_delta(&self, delta: &Self::Delta, concept: usize) -> Self::Delta {
-        assert!({
-            let reduces_from_concept = self.find_what_reduces_to_it().contains(&concept);
-            let SetChange { add, remove } = &delta.common_part.reduces_from;
-            if remove.contains(&concept) {
-                false
-            } else if add.contains(&concept) {
-                true
-            } else {
-                reduces_from_concept
-            }
-        });
-        ConceptDelta {
-            common_part: CommonDelta {
-                reduces_from: SetChange {
-                    remove: HashSet::from_iter(std::iter::once(concept)),
-                    add: HashSet::default(),
-                },
-                lefthand_of: SetChange::default(),
-                righthand_of: SetChange::default(),
-            },
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    fn make_reduce_to_none_delta(&self, delta: &Self::Delta) -> Self::Delta {
-        assert!({
-            let reduces = self.get_reduction().is_some();
-            match delta
-                .specific_part
-                .reduction
-            {
-                Change::Different { after, .. } => after.is_some(),
-                Change::Same => reduces,
-            }
-        });
-        ConceptDelta {
-            specific_part: AbstractDelta {
-                reduction: Change::Different {
-                    before: self.get_reduction(),
-                    after: None,
-                },
-                definition: Change::Same,
-            },
-            common_part: CommonDelta::default(),
         }
     }
 }
