@@ -21,10 +21,7 @@ mod syntax;
 pub use self::concepts::*;
 pub use self::syntax::*;
 use delta::ApplyDelta;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
 
 pub trait SyntaxReader<U>: ApplyDelta {
     /// Expands syntax by definition of its associated concept.
@@ -125,10 +122,6 @@ pub trait FindDefinition: ApplyDelta {
         lefthand: usize,
         righthand: usize,
     ) -> Option<usize>;
-}
-
-pub trait FindWhatItsANormalFormOf: ApplyDelta {
-    fn find_what_its_a_normal_form_of(&self, deltas: &Self::Delta, con: usize) -> HashSet<usize>;
 }
 
 pub trait Container: ApplyDelta {

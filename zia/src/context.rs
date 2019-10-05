@@ -26,7 +26,7 @@ use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
 use logging::Logger;
 use reading::{
-    Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatItsANormalFormOf,
+    Associativity, BindConcept, BindPair, Container, FindDefinition,
     FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetLabel,
     GetReduction, Label, MaybeConcept, MaybeString, MightExpand,
     SyntaxReader,
@@ -310,6 +310,15 @@ impl Context {
             })
             .nth(0)
             .is_none()
+    }
+    fn find_what_its_a_normal_form_of(&self, deltas: &ContextDelta, con: usize) -> HashSet<usize> {
+        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it();
+        for concept in normal_form_of.clone().iter() {
+            for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
+                normal_form_of.insert(*concept2);
+            }
+        }
+        normal_form_of
     }
 }
 
@@ -670,18 +679,6 @@ impl RemoveConceptReduction for Context {
             },
             string: hashmap! {},
         }
-    }
-}
-
-impl FindWhatItsANormalFormOf for Context {
-    fn find_what_its_a_normal_form_of(&self, deltas: &ContextDelta, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it();
-        for concept in normal_form_of.clone().iter() {
-            for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
-                normal_form_of.insert(*concept2);
-            }
-        }
-        normal_form_of
     }
 }
 
