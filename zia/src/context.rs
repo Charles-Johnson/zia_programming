@@ -40,7 +40,6 @@ use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
 };
-use Call;
 use Definer;
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
@@ -463,6 +462,160 @@ impl Context {
             string: hashmap! {},
         }
     }
+    /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
+    fn call(&self, delta: &mut ContextDelta, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
+        match ast
+            .get_concept()
+            .and_then(|c| self.read_concept(delta, c).get_string())
+        {
+            Some(s) => Ok(s),
+            None => match ast.get_expansion() {
+                Some((ref left, ref right)) => map_err_variant(
+                    self.call_pair(delta, left, right),
+                    &ZiaError::CannotReduceFurther,
+                    || {
+                        map_err_variant(
+                            self.try_reducing_then_call(delta, ast),
+                            &ZiaError::CannotReduceFurther,
+                            || Ok(self.contract_pair(delta, left, right).to_string()),
+                        )
+                    },
+                ),
+                None => map_err_variant(
+                    self.try_reducing_then_call(delta, ast),
+                    &ZiaError::CannotReduceFurther,
+                    || {
+                        map_err_variant(
+                            self.try_expanding_then_call(delta, ast),
+                            &ZiaError::CannotExpandFurther,
+                            || Ok(ast.to_string()),
+                        )
+                    },
+                ),
+            },
+        }
+    }
+    /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
+    fn call_pair(
+        &self,
+        delta: &mut ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> ZiaResult<String> {
+        left.get_concept()
+            .and_then(|lc| match lc {
+                LET => right
+                    .get_expansion()
+                    .and_then(|(left, right)| {
+                        self.execute_let(delta, &left, &right)
+                            .and_then(|x| match x {
+                                Err(ZiaError::CannotReduceFurther) => None,
+                                Err(ZiaError::UnusedSymbol) => None,
+                                _ => Some(x),
+                            })
+                    })
+                    .or_else(|| {
+                        Some({
+                            let true_syntax = self.to_ast(delta, TRUE);
+                            self.execute_reduction(delta, right, &true_syntax)
+                        })
+                    })
+                    .map(|r| r.map(|()| "".to_string())),
+                LABEL => Some(Ok("'".to_string()
+                    + &right
+                        .get_concept()
+                        .and_then(|c| self.get_label(delta, c))
+                        .unwrap_or_else(|| right.to_string())
+                    + "'")),
+                _ => None,
+            })
+            .unwrap_or_else(|| match right.get_concept() {
+                Some(c) if c == REDUCTION => self.try_reducing_then_call(delta, &left),
+                _ => self.reduce_and_call_pair(delta, left, right),
+            })
+    }
+    fn reduce_and_call_pair(
+        &self,
+        delta: &mut ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> ZiaResult<String> {
+        let reduced_left = self.reduce(delta, left, &HashMap::new());
+        let reduced_right = self.reduce(delta, right, &HashMap::new());
+        match (reduced_left, reduced_right) {
+            (None, None) => Err(ZiaError::CannotReduceFurther),
+            (Some(rl), None) => self.call_pair(delta, &rl, right),
+            (None, Some(rr)) => self.call_pair(delta, left, &rr),
+            (Some(rl), Some(rr)) => self.call_pair(delta, &rl, &rr),
+        }
+    }
+    /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
+    fn try_expanding_then_call(
+        &self,
+        delta: &mut ContextDelta,
+        ast: &Rc<SyntaxTree>,
+    ) -> ZiaResult<String> {
+        let expansion = &self.expand(delta, ast);
+        if expansion != ast {
+            self.call(delta, expansion)
+        } else {
+            Err(ZiaError::CannotExpandFurther)
+        }
+    }
+    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
+    fn try_reducing_then_call(
+        &self,
+        delta: &mut ContextDelta,
+        ast: &Rc<SyntaxTree>,
+    ) -> ZiaResult<String> {
+        let normal_form = &self.recursively_reduce(delta, ast);
+        if normal_form != ast {
+            self.call(delta, normal_form)
+        } else {
+            Err(ZiaError::CannotReduceFurther)
+        }
+    }
+    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
+    fn execute_let(
+        &self,
+        delta: &mut ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<ZiaResult<()>> {
+        right
+            .get_expansion()
+            .map(|(ref rightleft, ref rightright)| {
+                self.match_righthand_pair(delta, left, rightleft, rightright)
+            })
+    }
+    /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
+    /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
+    /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
+    fn match_righthand_pair(
+        &self,
+        delta: &mut ContextDelta,
+        left: &Rc<SyntaxTree>,
+        rightleft: &Rc<SyntaxTree>,
+        rightright: &Rc<SyntaxTree>,
+    ) -> ZiaResult<()> {
+        match rightleft.get_concept() {
+            Some(c) => match c {
+                REDUCTION => self.execute_reduction(delta, left, rightright),
+                DEFINE => self.execute_definition(delta, left, rightright),
+                _ => {
+                    let rightleft_reduction = self.read_concept(delta, c).get_reduction();
+                    if let Some(r) = rightleft_reduction {
+                        let ast = self.to_ast(delta, r);
+                        self.match_righthand_pair(delta, left, &ast, rightright)
+                    } else {
+                        Err(ZiaError::CannotReduceFurther)
+                    }
+                }
+            },
+            None => Err(ZiaError::UnusedSymbol),
+        }
+    }
+
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -1283,163 +1436,6 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
-    }
-}
-
-/// Calling a program expressed as a syntax tree to read or write contained concepts.  
-impl Call<SyntaxTree> for Context {
-    /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&self, delta: &mut ContextDelta, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
-        match ast
-            .get_concept()
-            .and_then(|c| self.read_concept(delta, c).get_string())
-        {
-            Some(s) => Ok(s),
-            None => match ast.get_expansion() {
-                Some((ref left, ref right)) => map_err_variant(
-                    self.call_pair(delta, left, right),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_reducing_then_call(delta, ast),
-                            &ZiaError::CannotReduceFurther,
-                            || Ok(self.contract_pair(delta, left, right).to_string()),
-                        )
-                    },
-                ),
-                None => map_err_variant(
-                    self.try_reducing_then_call(delta, ast),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_expanding_then_call(delta, ast),
-                            &ZiaError::CannotExpandFurther,
-                            || Ok(ast.to_string()),
-                        )
-                    },
-                ),
-            },
-        }
-    }
-    /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(
-        &self,
-        delta: &mut ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> ZiaResult<String> {
-        left.get_concept()
-            .and_then(|lc| match lc {
-                LET => right
-                    .get_expansion()
-                    .and_then(|(left, right)| {
-                        self.execute_let(delta, &left, &right)
-                            .and_then(|x| match x {
-                                Err(ZiaError::CannotReduceFurther) => None,
-                                Err(ZiaError::UnusedSymbol) => None,
-                                _ => Some(x),
-                            })
-                    })
-                    .or_else(|| {
-                        Some({
-                            let true_syntax = self.to_ast(delta, TRUE);
-                            self.execute_reduction(delta, right, &true_syntax)
-                        })
-                    })
-                    .map(|r| r.map(|()| "".to_string())),
-                LABEL => Some(Ok("'".to_string()
-                    + &right
-                        .get_concept()
-                        .and_then(|c| self.get_label(delta, c))
-                        .unwrap_or_else(|| right.to_string())
-                    + "'")),
-                _ => None,
-            })
-            .unwrap_or_else(|| match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(delta, &left),
-                _ => self.reduce_and_call_pair(delta, left, right),
-            })
-    }
-    fn reduce_and_call_pair(
-        &self,
-        delta: &mut ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> ZiaResult<String> {
-        let reduced_left = self.reduce(delta, left, &HashMap::new());
-        let reduced_right = self.reduce(delta, right, &HashMap::new());
-        match (reduced_left, reduced_right) {
-            (None, None) => Err(ZiaError::CannotReduceFurther),
-            (Some(rl), None) => self.call_pair(delta, &rl, right),
-            (None, Some(rr)) => self.call_pair(delta, left, &rr),
-            (Some(rl), Some(rr)) => self.call_pair(delta, &rl, &rr),
-        }
-    }
-    /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(
-        &self,
-        delta: &mut ContextDelta,
-        ast: &Rc<SyntaxTree>,
-    ) -> ZiaResult<String> {
-        let expansion = &self.expand(delta, ast);
-        if expansion != ast {
-            self.call(delta, expansion)
-        } else {
-            Err(ZiaError::CannotExpandFurther)
-        }
-    }
-    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(
-        &self,
-        delta: &mut ContextDelta,
-        ast: &Rc<SyntaxTree>,
-    ) -> ZiaResult<String> {
-        let normal_form = &self.recursively_reduce(delta, ast);
-        if normal_form != ast {
-            self.call(delta, normal_form)
-        } else {
-            Err(ZiaError::CannotReduceFurther)
-        }
-    }
-    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn execute_let(
-        &self,
-        delta: &mut ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<ZiaResult<()>> {
-        right
-            .get_expansion()
-            .map(|(ref rightleft, ref rightright)| {
-                self.match_righthand_pair(delta, left, rightleft, rightright)
-            })
-    }
-    /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
-    /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
-    /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
-    fn match_righthand_pair(
-        &self,
-        delta: &mut ContextDelta,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
-    ) -> ZiaResult<()> {
-        match rightleft.get_concept() {
-            Some(c) => match c {
-                REDUCTION => self.execute_reduction(delta, left, rightright),
-                DEFINE => self.execute_definition(delta, left, rightright),
-                _ => {
-                    let rightleft_reduction = self.read_concept(delta, c).get_reduction();
-                    if let Some(r) = rightleft_reduction {
-                        let ast = self.to_ast(delta, r);
-                        self.match_righthand_pair(delta, left, &ast, rightright)
-                    } else {
-                        Err(ZiaError::CannotReduceFurther)
-                    }
-                }
-            },
-            None => Err(ZiaError::UnusedSymbol),
-        }
     }
 }
 

@@ -192,37 +192,6 @@ impl Labeller<Concept> for Context {
     type C = CommonPart;
 }
 
-/// Calling a program expressed as a syntax tree to read or write contained concepts.  
-pub trait Call<U>: ApplyDelta
-{
-    /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
-    /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
-    fn call_pair(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> ZiaResult<String>;
-    fn reduce_and_call_pair(
-        &self,
-        delta: &mut Self::Delta,
-        left: &Rc<U>,
-        right: &Rc<U>,
-    ) -> ZiaResult<String>;
-    /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
-    /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
-    fn try_reducing_then_call(&self, delta: &mut Self::Delta, ast: &Rc<U>) -> ZiaResult<String>;
-    /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
-    fn execute_let(&self, delta: &mut Self::Delta, left: &Rc<U>, right: &Rc<U>) -> Option<ZiaResult<()>>;
-    /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
-    /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
-    /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
-    fn match_righthand_pair(
-        &self,
-        delta: &mut Self::Delta,
-        left: &Rc<U>,
-        rightleft: &Rc<U>,
-        rightright: &Rc<U>,
-    ) -> ZiaResult<()>;
-}
-
 /// Defining new syntax in terms of old syntax.
 pub trait Definer<T, U>
 where
