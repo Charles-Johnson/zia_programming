@@ -15,9 +15,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction, Labeller, StringMaker};
+use adding::{ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction, FindOrInsertDefinition, Labeller, StringMaker};
 use ast::SyntaxTree;
-use concepts::{Concept, ConceptDelta as CD};
+use concepts::{Concept, ConceptDelta as CD, AbstractPart};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
@@ -314,7 +314,7 @@ impl Context {
             .is_none()
     }
     fn find_what_its_a_normal_form_of(&self, deltas: &ContextDelta, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it();
+        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it().clone();
         for concept in normal_form_of.clone().iter() {
             for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
                 normal_form_of.insert(*concept2);
@@ -1092,12 +1092,14 @@ impl StringMaker for Context {
 impl FindDefinition for Context {
     fn find_definition(
         &self,
-        deltas: &ContextDelta,
+        delta: &ContextDelta,
         lefthand: usize,
         righthand: usize,
     ) -> Option<usize> {
-        let has_lefthand = self.read_concept(deltas, lefthand).get_lefthand_of();
-        let has_righthand = self.read_concept(deltas, righthand).get_righthand_of();
+        let lc = self.read_concept(delta, lefthand);
+        let rc = self.read_concept(delta, righthand);
+        let has_lefthand = lc.get_lefthand_of();
+        let has_righthand = rc.get_righthand_of();
         let mut candidates = has_lefthand.intersection(&has_righthand);
         candidates.next().map(|index| {
             candidates.next().map_or(*index, |_| {
@@ -1528,5 +1530,62 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
+    }
+}
+
+impl Labeller<Concept> for Context {
+    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()> {
+        if string.starts_with('_') && string.ends_with('_') {
+            Ok(())
+        } else {
+            let definition = self.find_or_insert_definition(deltas, LABEL, concept, false)?;
+            let string_id = self.new_string(deltas, string);
+            self.update_reduction(deltas, definition, string_id)
+        }
+    }
+    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize> {
+        let new_default =
+            self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
+        self.label(deltas, new_default, string)?;
+        Ok(new_default)
+    }
+    fn setup(&mut self) -> ZiaResult<Self::Delta> {
+        let mut delta = Self::Delta::default();
+        let concrete_constructor =
+            |local_delta: &mut Self::Delta| {
+                let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
+                local_delta.combine(delta);
+                index
+            };
+        let labels = vec![
+            "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
+        ];
+        let concepts = delta.repeat(concrete_constructor, labels.len());
+        let label = |local_delta: &mut Self::Delta, concept: usize, string: &str| {
+            self.label(local_delta, concept, string)
+        };
+        delta.multiply(label, concepts, labels)?;
+        Ok(delta)
+    }
+}
+
+impl FindOrInsertDefinition<Concept> for Context {
+    type A = AbstractPart;
+    fn find_or_insert_definition(
+        &self,
+        deltas: &mut Self::Delta,
+        lefthand: usize,
+        righthand: usize,
+        variable: bool,
+    ) -> ZiaResult<usize> {
+        let pair = self.find_definition(deltas, lefthand, righthand);
+        match pair {
+            None => {
+                let definition = self.new_default::<Self::A>(deltas, variable);
+                self.insert_definition(deltas, definition, lefthand, righthand)?;
+                Ok(definition)
+            }
+            Some(def) => Ok(def),
+        }
     }
 }

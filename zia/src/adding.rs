@@ -15,7 +15,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use constants::LABEL;
 use delta::{ApplyDelta, Delta};
 use errors::{ZiaError, ZiaResult};
 use logging::Logger;
@@ -32,7 +31,6 @@ pub trait ExecuteReduction<T, U>
 where
     Self: ConceptMaker<T, U> + DeleteReduction<U>,
     T: SetReduction
-        + From<Self::C>
         + From<Self::A>
         + MakeReduceFrom
         + GetDefinitionOf
@@ -71,7 +69,6 @@ where
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
-        + From<S::C>
         + From<S::A>
         + From<String>
         + GetReduction
@@ -104,7 +101,6 @@ impl<T> Container for T where T: MightExpand + PartialEq<Rc<T>> + Sized {}
 pub trait ConceptMaker<T, U>
 where
     T: From<String>
-        + From<Self::C>
         + From<Self::A>
         + SetReduction
         + MakeReduceFrom
@@ -157,7 +153,6 @@ where
     Self: Labeller<T> + Default + Logger,
     T: GetDefinitionOf
         + From<String>
-        + From<Self::C>
         + From<Self::A>
         + SetReduction
         + MakeReduceFrom
@@ -184,7 +179,6 @@ where
     S: Labeller<T> + Default + Logger,
     T: GetDefinitionOf
         + From<String>
-        + From<Self::C>
         + From<Self::A>
         + SetReduction
         + MakeReduceFrom
@@ -201,65 +195,16 @@ where
 
 pub trait Labeller<T>
 where
-    T: SetReduction
-        + MakeReduceFrom
-        + From<String>
-        + GetDefinitionOf
-        + SetDefinition
-        + SetAsDefinitionOf
-        + GetReduction
-        + GetDefinition
-        + GetReduction
-        + MaybeString
-        + From<Self::C>
-        + From<Self::A>
-        + Clone,
     Self: StringMaker + FindOrInsertDefinition<T> + UpdateReduction,
-    Self::Delta: Clone + fmt::Debug + Sized + Default + Delta,
 {
-    type C: Default;
-    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()> {
-        if string.starts_with('_') && string.ends_with('_') {
-            Ok(())
-        } else {
-            let definition = self.find_or_insert_definition(deltas, LABEL, concept, false)?;
-            let string_id = self.new_string(deltas, string);
-            self.update_reduction(deltas, definition, string_id)
-        }
-    }
-    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
-        self.label(deltas, new_default, string)?;
-        Ok(new_default)
-    }
-    fn setup(&mut self) -> ZiaResult<Self::Delta> {
-        let mut delta = Self::Delta::default();
-        let concrete_constructor =
-            |local_delta: &mut Self::Delta| self.new_default::<Self::C>(local_delta, false);
-        let labels = vec![
-            "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
-        ];
-        let concepts = delta.repeat(concrete_constructor, labels.len());
-        let label = |local_delta: &mut Self::Delta, concept: usize, string: &str| {
-            self.label(local_delta, concept, string)
-        };
-        delta.multiply(label, concepts, labels)?;
-        Ok(delta)
-    }
+    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()>;
+    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize>;
+    fn setup(&mut self) -> ZiaResult<Self::Delta>;
 }
 
 pub trait FindOrInsertDefinition<T>
 where
-    T: From<Self::A>
-        + GetDefinition
-        + GetReduction
-        + SetDefinition
-        + SetAsDefinitionOf
-        + GetDefinitionOf
-        + Clone,
     Self: DefaultMaker<T> + InsertDefinition + FindDefinition,
-    Self::Delta: Clone + fmt::Debug + Delta,
 {
     type A: Default;
     fn find_or_insert_definition(
@@ -268,17 +213,7 @@ where
         lefthand: usize,
         righthand: usize,
         variable: bool,
-    ) -> ZiaResult<usize> {
-        let pair = self.find_definition(deltas, lefthand, righthand);
-        match pair {
-            None => {
-                let definition = self.new_default::<Self::A>(deltas, variable);
-                self.insert_definition(deltas, definition, lefthand, righthand)?;
-                Ok(definition)
-            }
-            Some(def) => Ok(def),
-        }
-    }
+    ) -> ZiaResult<usize>;
 }
 
 pub trait StringMaker: ApplyDelta {

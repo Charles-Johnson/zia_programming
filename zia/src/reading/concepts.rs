@@ -25,7 +25,7 @@ pub trait GetReduction {
 }
 
 pub trait FindWhatReducesToIt {
-    fn find_what_reduces_to_it(&self) -> HashSet<usize>;
+    fn find_what_reduces_to_it(&self) -> &HashSet<usize>;
 }
 
 pub trait MaybeString {
@@ -33,6 +33,6 @@ pub trait MaybeString {
 }
 
 pub trait GetDefinitionOf {
-    fn get_lefthand_of(&self) -> HashSet<usize>;
-    fn get_righthand_of(&self) -> HashSet<usize>;
+    fn get_lefthand_of(&self) -> &HashSet<usize>;
+    fn get_righthand_of(&self) -> &HashSet<usize>;
 }

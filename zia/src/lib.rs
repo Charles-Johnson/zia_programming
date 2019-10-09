@@ -154,9 +154,9 @@ mod translating;
 mod writing;
 
 pub use adding::ContextMaker;
-use adding::{ConceptMaker, FindOrInsertDefinition, Labeller};
+use adding::ConceptMaker;
 pub use ast::SyntaxTree;
-use concepts::{AbstractPart, CommonPart, Concept};
+use concepts::Concept;
 
 /// A container for adding, writing, reading and removing `Concept`s.
 pub use context::Context;
@@ -164,13 +164,3 @@ pub use context::Context;
 pub use errors::ZiaError;
 
 impl ConceptMaker<Concept, SyntaxTree> for Context {}
-
-impl FindOrInsertDefinition<Concept> for Context {
-    /// When a specific composition of concepts does not exist as its own concept, a new abstract concept is defined as that composition.
-    type A = AbstractPart;
-}
-
-impl Labeller<Concept> for Context {
-    /// The `setup` method labels concrete concepts.
-    type C = CommonPart;
-}
