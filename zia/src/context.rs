@@ -15,9 +15,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction, FindOrInsertDefinition, Labeller, StringMaker};
+use adding::{
+    ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction,
+    FindOrInsertDefinition, Labeller, StringMaker,
+};
 use ast::SyntaxTree;
-use concepts::{Concept, ConceptDelta as CD, AbstractPart};
+use concepts::{AbstractPart, Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
@@ -314,7 +317,10 @@ impl Context {
             .is_none()
     }
     fn find_what_its_a_normal_form_of(&self, deltas: &ContextDelta, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self.read_concept(deltas, con).find_what_reduces_to_it().clone();
+        let mut normal_form_of = self
+            .read_concept(deltas, con)
+            .find_what_reduces_to_it()
+            .clone();
         for concept in normal_form_of.clone().iter() {
             for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
                 normal_form_of.insert(*concept2);
@@ -636,7 +642,7 @@ impl Context {
             self.insert_definition(delta, concept, left_concept, right_concept)
         }
     }
-        /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
+    /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(
         &self,
         delta: &mut ContextDelta,
@@ -650,7 +656,12 @@ impl Context {
         }
     }
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
-    fn define(&self, delta: &mut ContextDelta, new: &Rc<SyntaxTree>, old: &Rc<SyntaxTree>) -> ZiaResult<()> {
+    fn define(
+        &self,
+        delta: &mut ContextDelta,
+        new: &Rc<SyntaxTree>,
+        old: &Rc<SyntaxTree>,
+    ) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
         } else {
@@ -707,6 +718,13 @@ impl Context {
             .bind_pair(left, right);
         self.concept_from_ast(delta, &new_syntax_tree)?;
         Ok(())
+    }
+    pub fn new() -> Self {
+        let mut cont = Self::default();
+        let delta = cont.setup().unwrap();
+        info!(*cont.logger(), "Setup a new context: {:?}", &delta);
+        cont.apply(delta);
+        cont
     }
 }
 
@@ -1551,12 +1569,11 @@ impl Labeller<Concept> for Context {
     }
     fn setup(&mut self) -> ZiaResult<Self::Delta> {
         let mut delta = Self::Delta::default();
-        let concrete_constructor =
-            |local_delta: &mut Self::Delta| {
-                let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
-                local_delta.combine(delta);
-                index
-            };
+        let concrete_constructor = |local_delta: &mut Self::Delta| {
+            let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
+            local_delta.combine(delta);
+            index
+        };
         let labels = vec![
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
         ];

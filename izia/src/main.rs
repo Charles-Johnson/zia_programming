@@ -21,7 +21,7 @@ extern crate linefeed;
 extern crate zia;
 
 use linefeed::{Interface, ReadResult};
-use zia::{Context, ContextMaker};
+use zia::Context;
 
 fn main() {
     let reader = Interface::new("IZia").unwrap();

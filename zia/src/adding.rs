@@ -147,52 +147,6 @@ where
     }
 }
 
-/// Preparing a context by labelling concrete concepts.
-pub trait ContextMaker<T>
-where
-    Self: Labeller<T> + Default + Logger,
-    T: GetDefinitionOf
-        + From<String>
-        + From<Self::A>
-        + SetReduction
-        + MakeReduceFrom
-        + GetDefinition
-        + GetReduction
-        + SetDefinition
-        + SetAsDefinitionOf
-        + MaybeString
-        + FindWhatReducesToIt
-        + Clone,
-    Self::Delta: Clone + fmt::Debug + Default + Delta,
-{
-    fn new() -> Self {
-        let mut cont = Self::default();
-        let delta = cont.setup().unwrap();
-        info!(cont.logger(), "Setup a new context: {:?}", &delta);
-        cont.apply(delta);
-        cont
-    }
-}
-
-impl<S, T> ContextMaker<T> for S
-where
-    S: Labeller<T> + Default + Logger,
-    T: GetDefinitionOf
-        + From<String>
-        + From<Self::A>
-        + SetReduction
-        + MakeReduceFrom
-        + GetDefinition
-        + GetReduction
-        + SetDefinition
-        + SetAsDefinitionOf
-        + MaybeString
-        + FindWhatReducesToIt
-        + Clone,
-    Self::Delta: Clone + fmt::Debug + Default + Delta,
-{
-}
-
 pub trait Labeller<T>
 where
     Self: StringMaker + FindOrInsertDefinition<T> + UpdateReduction,

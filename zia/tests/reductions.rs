@@ -20,7 +20,7 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context, ContextMaker, ZiaError};
+use zia::{Context, ZiaError};
 
 proptest! {
     // If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol.

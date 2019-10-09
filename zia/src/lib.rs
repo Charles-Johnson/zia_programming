@@ -45,9 +45,9 @@
 //!
 //! ```
 //! extern crate zia;
-//! use zia::{Context, ContextMaker, ZiaError};
+//! use zia::{Context, ZiaError};
 //!
-//! // Construct a new `Context` using the `new` method of the `ContextMaker` trait
+//! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
@@ -153,7 +153,6 @@ mod translating;
 /// Traits for writing concepts within the context.
 mod writing;
 
-pub use adding::ContextMaker;
 use adding::ConceptMaker;
 pub use ast::SyntaxTree;
 use concepts::Concept;

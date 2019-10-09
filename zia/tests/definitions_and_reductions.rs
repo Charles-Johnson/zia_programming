@@ -22,7 +22,7 @@ extern crate zia;
 
 // Needed for assume_abstract macro which is needed for let_definition macro
 use test_zia::CONCRETE_SYMBOLS;
-use zia::{Context, ContextMaker, ZiaError};
+use zia::{Context, ZiaError};
 
 proptest! {
     #[test]
