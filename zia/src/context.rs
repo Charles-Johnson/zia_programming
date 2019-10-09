@@ -36,9 +36,11 @@ use slog::Drain;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     default::Default,
+    fmt::Debug,
     rc::Rc,
+    str::FromStr,
 };
-use translating::{StringConcept, SyntaxConverter};
+use translating::{StringConcept, SyntaxConverter, SyntaxFinder};
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
@@ -1552,7 +1554,7 @@ impl SyntaxReader<SyntaxTree> for Context {
 }
 
 impl Labeller<Concept> for Context {
-    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()> {
+    fn label(&self, deltas: &mut ContextDelta, concept: usize, string: &str) -> ZiaResult<()> {
         if string.starts_with('_') && string.ends_with('_') {
             Ok(())
         } else {
@@ -1561,15 +1563,15 @@ impl Labeller<Concept> for Context {
             self.update_reduction(deltas, definition, string_id)
         }
     }
-    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize> {
+    fn new_labelled_default(&self, deltas: &mut ContextDelta, string: &str) -> ZiaResult<usize> {
         let new_default =
             self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
         self.label(deltas, new_default, string)?;
         Ok(new_default)
     }
-    fn setup(&mut self) -> ZiaResult<Self::Delta> {
-        let mut delta = Self::Delta::default();
-        let concrete_constructor = |local_delta: &mut Self::Delta| {
+    fn setup(&mut self) -> ZiaResult<ContextDelta> {
+        let mut delta = ContextDelta::default();
+        let concrete_constructor = |local_delta: &mut ContextDelta| {
             let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
             local_delta.combine(delta);
             index
@@ -1578,7 +1580,7 @@ impl Labeller<Concept> for Context {
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
         ];
         let concepts = delta.repeat(concrete_constructor, labels.len());
-        let label = |local_delta: &mut Self::Delta, concept: usize, string: &str| {
+        let label = |local_delta: &mut ContextDelta, concept: usize, string: &str| {
             self.label(local_delta, concept, string)
         };
         delta.multiply(label, concepts, labels)?;
@@ -1590,7 +1592,7 @@ impl FindOrInsertDefinition<Concept> for Context {
     type A = AbstractPart;
     fn find_or_insert_definition(
         &self,
-        deltas: &mut Self::Delta,
+        deltas: &mut ContextDelta,
         lefthand: usize,
         righthand: usize,
         variable: bool,
@@ -1604,5 +1606,51 @@ impl FindOrInsertDefinition<Concept> for Context {
             }
             Some(def) => Ok(def),
         }
+    }
+}
+
+impl ConceptMaker<Concept, SyntaxTree> for Context {
+    fn concept_from_ast(&self, deltas: &mut ContextDelta, ast: &SyntaxTree) -> ZiaResult<usize> {
+        if let Some(c) = ast.get_concept() {
+            Ok(c)
+        } else if let Some(c) = self.concept_from_label(deltas, &ast.to_string()) {
+            Ok(c)
+        } else {
+            let string = &ast.to_string();
+            match ast.get_expansion() {
+                None => self.new_labelled_default(deltas, string),
+                Some((ref left, ref right)) => {
+                    let leftc = self.concept_from_ast(deltas, left)?;
+                    let rightc = self.concept_from_ast(deltas, right)?;
+                    let ls = left.to_string();
+                    let rs = right.to_string();
+                    let concept = self.find_or_insert_definition(
+                        deltas,
+                        leftc,
+                        rightc,
+                        ls.starts_with('_') && ls.ends_with('_')
+                            || rs.starts_with('_') && rs.ends_with('_'),
+                    )?;
+                    if !string.contains(' ') {
+                        self.label(deltas, concept, string)?;
+                    }
+                    Ok(concept)
+                }
+            }
+        }
+    }
+}
+
+impl SyntaxFinder<Concept> for Context {
+    fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize> {
+        self.get_string_concept(deltas, s)
+            .and_then(|c| self.get_labellee(deltas, c))
+    }
+    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &Self::Delta, s: &str) -> U
+    where <U as FromStr>::Err: Debug,
+    {
+        self.concept_from_label(deltas, s)
+            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
+            .unwrap_or_else(|| s.parse().unwrap())
     }
 }

@@ -224,25 +224,8 @@ where
     Self: StringConcept + Label,
     T: FindWhatReducesToIt + GetDefinition,
 {
-    fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize> {
-        self.get_string_concept(deltas, s)
-            .and_then(|c| self.get_labellee(deltas, c))
-    }
-    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &Self::Delta, s: &str) -> U
-    where
-        <U as FromStr>::Err: Debug,
-    {
-        self.concept_from_label(deltas, s)
-            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
-            .unwrap_or_else(|| s.parse().unwrap())
-    }
-}
-
-impl<S, T> SyntaxFinder<T> for S
-where
-    S: StringConcept + Label,
-    T: FindWhatReducesToIt + GetDefinition,
-{
+    fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize>;
+    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &Self::Delta, s: &str) -> U where <U as FromStr>::Err: Debug;
 }
 
 pub trait StringConcept

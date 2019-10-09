@@ -153,13 +153,7 @@ mod translating;
 /// Traits for writing concepts within the context.
 mod writing;
 
-use adding::ConceptMaker;
-pub use ast::SyntaxTree;
-use concepts::Concept;
-
 /// A container for adding, writing, reading and removing `Concept`s.
 pub use context::Context;
 
 pub use errors::ZiaError;
-
-impl ConceptMaker<Concept, SyntaxTree> for Context {}
