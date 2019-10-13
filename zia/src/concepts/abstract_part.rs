@@ -15,17 +15,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{Change, Delta, ApplyDelta};
-use reading::{GetDefinition, GetReduction};
+use delta::{ApplyDelta, Change, Delta};
 use writing::{RemoveDefinition, RemoveReduction};
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
-    definition: Option<(usize, usize)>,
+    pub definition: Option<(usize, usize)>,
     /// The concept may reduce to another concept.
-    reduces_to: Option<usize>,
+    pub reduces_to: Option<usize>,
 }
 
 impl ApplyDelta for AbstractPart {
@@ -39,17 +38,23 @@ impl ApplyDelta for AbstractPart {
         }
     }
     fn diff(&self, next: AbstractPart) -> AbstractDelta {
-        AbstractDelta{
+        AbstractDelta {
             definition: if self.definition == next.definition {
                 Change::Same
             } else {
-                Change::Different{before: self.definition, after: next.definition}
+                Change::Different {
+                    before: self.definition,
+                    after: next.definition,
+                }
             },
             reduction: if self.reduces_to == next.reduces_to {
                 Change::Same
             } else {
-                Change::Different{before: self.reduces_to, after: next.reduces_to}
-            }
+                Change::Different {
+                    before: self.reduces_to,
+                    after: next.reduces_to,
+                }
+            },
         }
     }
 }
@@ -74,12 +79,6 @@ impl Default for AbstractPart {
             definition: None,
             reduces_to: None,
         }
-    }
-}
-
-impl GetDefinition for AbstractPart {
-    fn get_definition(&self) -> Option<(usize, usize)> {
-        self.definition
     }
 }
 
@@ -113,12 +112,6 @@ impl AbstractPart {
 impl RemoveDefinition for AbstractPart {
     fn remove_definition(&mut self) {
         self.definition = None
-    }
-}
-
-impl GetReduction for AbstractPart {
-    fn get_reduction(&self) -> Option<usize> {
-        self.reduces_to
     }
 }
 

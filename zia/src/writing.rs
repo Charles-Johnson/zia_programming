@@ -17,7 +17,7 @@
 
 pub use delta::{ApplyDelta, Delta};
 pub use errors::{ZiaError, ZiaResult};
-pub use reading::{FindDefinition, GetDefinition, GetDefinitionOf, GetReduction, MaybeConcept};
+pub use reading::{FindDefinition, MaybeConcept};
 
 pub trait DeleteReduction<U>: ApplyDelta {
     fn try_removing_reduction(&self, deltas: &mut Self::Delta, syntax: &U) -> ZiaResult<()>;

@@ -22,8 +22,8 @@ use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, R
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
 use reading::{
-    Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatReducesToIt,
-    GetDefinition, GetDefinitionOf, GetLabel, GetReduction, Label, MaybeConcept, MaybeString,
+    Associativity, BindConcept, BindPair, Container, FindDefinition,
+    GetLabel, Label, MaybeConcept,
     MightExpand, SyntaxReader,
 };
 use slog;

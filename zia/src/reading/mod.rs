@@ -15,10 +15,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-mod concepts;
 mod syntax;
 
-pub use self::concepts::*;
 pub use self::syntax::*;
 use delta::ApplyDelta;
 use std::{collections::HashMap, rc::Rc};

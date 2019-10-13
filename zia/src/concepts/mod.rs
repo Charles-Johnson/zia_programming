@@ -19,7 +19,6 @@ mod abstract_part;
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
-use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
 use std::{collections::HashSet, iter::FromIterator};
 use writing::{
     MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
@@ -106,7 +105,8 @@ impl Concept {
                 after: None,
             },
             reduction: Change::Same,
-        }.into()
+        }
+        .into()
     }
     pub fn no_longer_reduces_from_delta(
         &self,
@@ -148,7 +148,38 @@ impl Concept {
                 after: None,
             },
             definition: Change::Same,
-        }.into()
+        }
+        .into()
+    }
+    pub fn find_what_reduces_to_it(&self) -> &HashSet<usize> {
+        &self.reduces_from
+    }
+    /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
+    pub fn get_string(&self) -> Option<String> {
+        match self.specific_part {
+            SpecificPart::String(ref s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+    pub fn get_lefthand_of(&self) -> &HashSet<usize> {
+        &self.lefthand_of
+    }
+    pub fn get_righthand_of(&self) -> &HashSet<usize> {
+        &self.righthand_of
+    }
+    /// Gets the index of the concept that `self` may reduce to.
+    pub fn get_reduction(&self) -> Option<usize> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => c.reduces_to,
+            _ => None,
+        }
+    }
+    /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
+    pub fn get_definition(&self) -> Option<(usize, usize)> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => c.definition,
+            _ => None,
+        }
     }
 }
 
@@ -182,15 +213,20 @@ impl Delta for ConceptDelta {
         self.specific_part.combine(other.specific_part);
         self.lefthand_of.combine(other.lefthand_of);
         self.righthand_of.combine(other.righthand_of);
-        self.reduces_from.combine(other.reduces_from);    }
+        self.reduces_from.combine(other.reduces_from);
+    }
 }
 
 impl ApplyDelta for Concept {
     type Delta = ConceptDelta;
     fn apply(&mut self, delta: ConceptDelta) {
-        let ConceptDelta{lefthand_of, righthand_of, reduces_from, specific_part} = delta;
-        self.lefthand_of
-            .retain(|c| !lefthand_of.remove.contains(c));
+        let ConceptDelta {
+            lefthand_of,
+            righthand_of,
+            reduces_from,
+            specific_part,
+        } = delta;
+        self.lefthand_of.retain(|c| !lefthand_of.remove.contains(c));
         self.lefthand_of.extend(lefthand_of.add);
         self.righthand_of
             .retain(|c| !righthand_of.remove.contains(c));
@@ -281,21 +317,6 @@ impl From<AbstractDelta> for ConceptDelta {
     }
 }
 
-impl GetDefinitionOf for Concept {
-    fn get_lefthand_of(&self) -> &HashSet<usize> {
-        &self.lefthand_of
-    }
-    fn get_righthand_of(&self) -> &HashSet<usize> {
-        &self.righthand_of
-    }
-}
-
-impl FindWhatReducesToIt for Concept {
-    fn find_what_reduces_to_it(&self) -> &HashSet<usize> {
-        &self.reduces_from
-    }
-}
-
 impl RemoveAsDefinitionOf for Concept {
     fn remove_as_lefthand_of(&mut self, index: usize) {
         self.lefthand_of.remove(&index);
@@ -365,16 +386,6 @@ impl SetAsDefinitionOfDelta for Concept {
     }
 }
 
-impl GetDefinition for Concept {
-    /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
-    fn get_definition(&self) -> Option<(usize, usize)> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => c.get_definition(),
-            _ => None,
-        }
-    }
-}
-
 impl SetDefinition for Concept {
     /// Sets the definition of the concept if abstract, otherwise returns an error.
     fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
@@ -410,16 +421,6 @@ impl RemoveDefinition for Concept {
     }
 }
 
-impl GetReduction for Concept {
-    /// Gets the index of the concept that `self` may reduce to.
-    fn get_reduction(&self) -> Option<usize> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => c.get_reduction(),
-            _ => None,
-        }
-    }
-}
-
 impl SetReduction for Concept {
     /// Sets the index of the concept that `self` reduces to if abstract. Otherwise returns an error.
     fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
@@ -436,9 +437,7 @@ impl SetReduction for Concept {
 impl SetReductionDelta for Concept {
     fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(
-                c.make_reduce_to_delta(concept).into()
-            ),
+            SpecificPart::Abstract(ref c) => Ok(c.make_reduce_to_delta(concept).into()),
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
@@ -458,15 +457,5 @@ impl RemoveReduction for Concept {
 impl From<String> for Concept {
     fn from(string: String) -> Concept {
         SpecificPart::String(string).into()
-    }
-}
-
-impl MaybeString for Concept {
-    /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
-    fn get_string(&self) -> Option<String> {
-        match self.specific_part {
-            SpecificPart::String(ref s) => Some(s.clone()),
-            _ => None,
-        }
     }
 }
