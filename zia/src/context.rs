@@ -1057,7 +1057,7 @@ impl Context {
                 .and_then(|n| self.read_concept(deltas, n).get_string()),
         }
     }
-        /// Expands syntax by definition of its associated concept.
+    /// Expands syntax by definition of its associated concept.
     fn expand(&self, deltas: &ContextDelta, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
@@ -1378,22 +1378,6 @@ impl Context {
             .and_then(|ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),
-                _ => None,
-            })
-    }
-    fn has_higher_precedence(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<bool> {
-        let is_higher_prec_than_right =
-            self.combine(deltas, &self.to_ast(deltas, PRECEDENCE), &right);
-        let left_is_higher_prec_than_right = self.combine(deltas, left, &is_higher_prec_than_right);
-        self.reduce(deltas, &left_is_higher_prec_than_right, &HashMap::new())
-            .and_then(|ast| match ast.get_concept() {
-                Some(TRUE) => Some(true),
-                Some(FALSE) => Some(false),
                 _ => None,
             })
     }

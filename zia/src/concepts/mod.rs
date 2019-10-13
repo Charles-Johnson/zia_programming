@@ -181,12 +181,6 @@ impl Concept {
             _ => None,
         }
     }
-    pub fn remove_as_lefthand_of(&mut self, index: usize) {
-        self.lefthand_of.remove(&index);
-    }
-    pub fn remove_as_righthand_of(&mut self, index: usize) {
-        self.righthand_of.remove(&index);
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
