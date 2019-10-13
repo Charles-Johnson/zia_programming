@@ -29,31 +29,13 @@ pub struct AbstractPart {
 impl ApplyDelta for AbstractPart {
     type Delta = AbstractDelta;
     fn apply(&mut self, delta: AbstractDelta) {
-        if let Change::Different { after, .. } = delta.definition {
-            self.definition = after;
-        }
-        if let Change::Different { after, .. } = delta.reduction {
-            self.reduces_to = after;
-        }
+        self.definition.apply(delta.definition);
+        self.reduces_to.apply(delta.reduction);
     }
     fn diff(&self, next: AbstractPart) -> AbstractDelta {
         AbstractDelta {
-            definition: if self.definition == next.definition {
-                Change::Same
-            } else {
-                Change::Different {
-                    before: self.definition,
-                    after: next.definition,
-                }
-            },
-            reduction: if self.reduces_to == next.reduces_to {
-                Change::Same
-            } else {
-                Change::Different {
-                    before: self.reduces_to,
-                    after: next.reduces_to,
-                }
-            },
+            definition: self.definition.diff(next.definition),
+            reduction: self.reduces_to.diff(next.reduces_to),
         }
     }
 }

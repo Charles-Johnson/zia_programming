@@ -23,6 +23,28 @@ pub trait ApplyDelta {
     fn apply(&mut self, Self::Delta);
     fn diff(&self, Self) -> Self::Delta;
 }
+
+impl<T> ApplyDelta for Option<T>
+where
+    T: PartialEq + Clone
+{
+    type Delta = Change<Option<T>>;
+    fn apply(&mut self, delta: Self::Delta) {
+        if let Change::Different { after, .. } = delta {
+            *self = after;
+        }
+    }
+    fn diff(&self, next: Option<T>) -> Change<Option<T>> {
+        if self == &next {
+            Change::Same
+        } else {
+            Change::Different {
+                before: self.as_ref().cloned(),
+                after: next,
+            }
+        }
+    }
+}
 pub trait Delta {
     fn combine(&mut self, Self);
     // Repeat mutation, f, n times on self and return vector of n results
