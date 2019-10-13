@@ -20,7 +20,6 @@ pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
 use std::{collections::HashSet, iter::FromIterator};
-use writing::{RemoveDefinition, RemoveReduction};
 
 /// Data type for any type of concept.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -359,30 +358,6 @@ impl From<AbstractDelta> for ConceptDelta {
             reduces_from: SetChange::default(),
             specific_part: ap,
         }
-    }
-}
-
-impl RemoveDefinition for Concept {
-    /// Removes the definition of the concept if abstract, otherwise panics.
-    fn remove_definition(&mut self) {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.remove_definition(),
-            SpecificPart::String(_) => panic!("String concepts do not have a definition to remove"),
-            SpecificPart::Concrete => {
-                panic!("Concrete concepts do not have a definition to remove")
-            }
-        }
-    }
-}
-
-impl RemoveReduction for Concept {
-    /// Removes the reduction rule of the concept if abstract, otherwise panics.
-    fn make_reduce_to_none(&mut self) {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.make_reduce_to_none(),
-            SpecificPart::String(_) => panic!("String concepts have no reduction rule to remove"),
-            SpecificPart::Concrete => panic!("Concrete concepts have no reduction rule to remove"),
-        };
     }
 }
 

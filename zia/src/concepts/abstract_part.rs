@@ -16,7 +16,6 @@
 */
 
 use delta::{ApplyDelta, Change, Delta};
-use writing::{RemoveDefinition, RemoveReduction};
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
 #[derive(Clone, Debug, PartialEq)]
@@ -100,17 +99,5 @@ impl AbstractPart {
                 after: Some(concept),
             },
         }
-    }
-}
-
-impl RemoveDefinition for AbstractPart {
-    fn remove_definition(&mut self) {
-        self.definition = None
-    }
-}
-
-impl RemoveReduction for AbstractPart {
-    fn make_reduce_to_none(&mut self) {
-        self.reduces_to = None;
     }
 }

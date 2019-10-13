@@ -135,9 +135,6 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
-/// Traits for writing concepts within the context.
-mod writing;
-
 /// A container for adding, writing, reading and removing `Concept`s.
 pub use context::Context;
 
