@@ -20,11 +20,7 @@ pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
 use std::{collections::HashSet, iter::FromIterator};
-use writing::{
-    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveDefinition, RemoveReduction,
-    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
-    SetReductionDelta,
-};
+use writing::{RemoveDefinition, RemoveReduction};
 
 /// Data type for any type of concept.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -181,6 +177,55 @@ impl Concept {
             _ => None,
         }
     }
+    pub fn make_reduce_from_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta {
+            reduces_from: SetChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            lefthand_of: SetChange::default(),
+            righthand_of: SetChange::default(),
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => Ok(c.make_reduce_to_delta(concept).into()),
+            _ => Err(ZiaError::ConcreteReduction),
+        }
+    }
+    pub fn add_as_lefthand_of_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta {
+            lefthand_of: SetChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            righthand_of: SetChange::default(),
+            reduces_from: SetChange::default(),
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn add_as_righthand_of_delta(&self, index: usize) -> ConceptDelta {
+        ConceptDelta {
+            righthand_of: SetChange {
+                add: HashSet::from_iter(std::iter::once(index)),
+                remove: HashSet::default(),
+            },
+            lefthand_of: SetChange::default(),
+            reduces_from: SetChange::default(),
+            specific_part: AbstractDelta::default(),
+        }
+    }
+    pub fn set_definition_delta(
+        &self,
+        lefthand: usize,
+        righthand: usize,
+    ) -> ZiaResult<ConceptDelta> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => Ok(c.set_definition_delta(lefthand, righthand).into()),
+            _ => Err(ZiaError::SettingDefinitionOfConcrete),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -317,88 +362,6 @@ impl From<AbstractDelta> for ConceptDelta {
     }
 }
 
-impl NoLongerReducesFrom for Concept {
-    fn no_longer_reduces_from(&mut self, index: usize) {
-        self.reduces_from.remove(&index);
-    }
-}
-
-impl MakeReduceFrom for Concept {
-    fn make_reduce_from(&mut self, index: usize) {
-        self.reduces_from.insert(index);
-    }
-}
-
-impl MakeReduceFromDelta for Concept {
-    fn make_reduce_from_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            reduces_from: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            lefthand_of: SetChange::default(),
-            righthand_of: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-}
-
-impl SetAsDefinitionOf for Concept {
-    fn add_as_lefthand_of(&mut self, index: usize) {
-        self.lefthand_of.insert(index);
-    }
-    fn add_as_righthand_of(&mut self, index: usize) {
-        self.righthand_of.insert(index);
-    }
-}
-
-impl SetAsDefinitionOfDelta for Concept {
-    fn add_as_lefthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            lefthand_of: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            righthand_of: SetChange::default(),
-            reduces_from: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    fn add_as_righthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            righthand_of: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            lefthand_of: SetChange::default(),
-            reduces_from: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-}
-
-impl SetDefinition for Concept {
-    /// Sets the definition of the concept if abstract, otherwise returns an error.
-    fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.set_definition(lefthand, righthand);
-                Ok(())
-            }
-            _ => Err(ZiaError::SettingDefinitionOfConcrete),
-        }
-    }
-}
-
-impl SetDefinitionDelta for Concept {
-    fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> ZiaResult<ConceptDelta> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(c.set_definition_delta(lefthand, righthand).into()),
-            _ => Err(ZiaError::SettingDefinitionOfConcrete),
-        }
-    }
-}
-
 impl RemoveDefinition for Concept {
     /// Removes the definition of the concept if abstract, otherwise panics.
     fn remove_definition(&mut self) {
@@ -408,28 +371,6 @@ impl RemoveDefinition for Concept {
             SpecificPart::Concrete => {
                 panic!("Concrete concepts do not have a definition to remove")
             }
-        }
-    }
-}
-
-impl SetReduction for Concept {
-    /// Sets the index of the concept that `self` reduces to if abstract. Otherwise returns an error.
-    fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.make_reduce_to(concept);
-                Ok(())
-            }
-            _ => Err(ZiaError::ConcreteReduction),
-        }
-    }
-}
-
-impl SetReductionDelta for Concept {
-    fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(c.make_reduce_to_delta(concept).into()),
-            _ => Err(ZiaError::ConcreteReduction),
         }
     }
 }
