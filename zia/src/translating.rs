@@ -16,19 +16,8 @@
 */
 
 use delta::ApplyDelta;
-use errors::ZiaResult;
 use reading::{BindConcept, FindWhatReducesToIt, GetDefinition, Label};
-use std::{fmt::Debug, rc::Rc, str::FromStr};
-
-pub trait SyntaxConverter<T, U>
-where
-    Self: ApplyDelta,
-{
-    fn ast_from_expression(&self, deltas: &Self::Delta, s: &str) -> ZiaResult<Rc<U>>;
-    fn ast_from_tokens(&self, deltas: &Self::Delta, tokens: &[String]) -> ZiaResult<Rc<U>>;
-    fn ast_from_pair(&self, deltas: &Self::Delta, left: &str, right: &str) -> ZiaResult<Rc<U>>;
-    fn ast_from_token(&self, deltas: &Self::Delta, t: &str) -> ZiaResult<Rc<U>>;
-}
+use std::{fmt::Debug, str::FromStr};
 
 pub trait SyntaxFinder<T>
 where

@@ -40,7 +40,7 @@ use std::{
     rc::Rc,
     str::FromStr,
 };
-use translating::{StringConcept, SyntaxConverter, SyntaxFinder};
+use translating::{StringConcept, SyntaxFinder};
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
@@ -725,6 +725,122 @@ impl Context {
         info!(*cont.logger(), "Setup a new context: {:?}", &delta);
         cont.apply(delta);
         cont
+    }
+        fn ast_from_expression(&self, deltas: &ContextDelta, s: &str) -> ZiaResult<Rc<SyntaxTree>> {
+        let tokens: Vec<String> = parse_line(s)?;
+        self.ast_from_tokens(deltas, &tokens)
+    }
+    fn ast_from_tokens(&self, deltas: &ContextDelta, tokens: &[String]) -> ZiaResult<Rc<SyntaxTree>> {
+        match tokens.len() {
+            0 => Err(ZiaError::EmptyParentheses),
+            1 => self.ast_from_token(deltas, &tokens[0]),
+            2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
+            _ => {
+                let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
+                let (lp_syntax, lp_indices, _number_of_tokens) = tokens.iter().try_fold(
+                    (Vec::<Rc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
+                    |(lowest_precedence_syntax, lp_indices, prev_index), token| {
+                        let this_index = prev_index.map(|x| x + 1).or(Some(0));
+                        let syntax_of_token = self.ast_from_token(deltas, token)?;
+                        let comparing_precedence_of_token =
+                            self.combine(deltas, &precedence_syntax, &syntax_of_token);
+                        for syntax in lowest_precedence_syntax.clone() {
+                            let comparing_between_tokens =
+                                self.combine(deltas, &syntax, &comparing_precedence_of_token);
+                            match self
+                                .reduce(deltas, &comparing_between_tokens, &HashMap::new())
+                                .and_then(|s| s.get_concept())
+                            {
+                                // syntax of token has even lower precedence than some previous lowest precendence syntax
+                                Some(TRUE) => {
+                                    return Ok((
+                                        vec![syntax_of_token],
+                                        vec![this_index.unwrap()],
+                                        this_index,
+                                    ))
+                                }
+                                // syntax of token has higher precedence than some previous lowest precendence syntax
+                                Some(FALSE) => {
+                                    return Ok((lowest_precedence_syntax, lp_indices, this_index))
+                                }
+                                _ => (),
+                            };
+                        }
+                        // syntax of token has neither higher or lower precedence than the lowest precedence syntax
+                        let mut hps = lowest_precedence_syntax.clone();
+                        hps.push(syntax_of_token);
+                        let mut hi = lp_indices.clone();
+                        hi.push(this_index.unwrap());
+                        Ok((hps, hi, this_index))
+                    },
+                )?;
+                let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
+                    match (self.get_associativity(deltas, &syntax), assoc) {
+                        (Some(x), Some(y)) => {
+                            if x == y {
+                                Ok(Some(x))
+                            } else {
+                                Err(ZiaError::AmbiguousExpression)
+                            }
+                        }
+                        (Some(x), None) => Ok(Some(x)),
+                        (None, _) => Err(ZiaError::AmbiguousExpression),
+                    }
+                });
+                match assoc? {
+                    Some(Associativity::Right) => lp_indices
+                        .iter()
+                        .rev()
+                        .try_fold((None, None), |(tail, prev_lp_index), lp_index| {
+                            let slice = match prev_lp_index {
+                                Some(i) => &tokens[*lp_index..i],
+                                None => &tokens[*lp_index..],
+                            };
+                            let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                            Ok((
+                                Some(match tail {
+                                    None => lp_with_the_rest,
+                                    Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
+                                }),
+                                Some(*lp_index),
+                            ))
+                        })?
+                        .0
+                        .ok_or(ZiaError::AmbiguousExpression),
+                    Some(Associativity::Left) => lp_indices
+                        .iter()
+                        .try_fold((None, None), |(head, prev_lp_index), lp_index| {
+                            let slice = match prev_lp_index {
+                                Some(i) => &tokens[i..*lp_index],
+                                None => &tokens[..*lp_index],
+                            };
+                            let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                            Ok((
+                                Some(match head {
+                                    None => lp_with_the_rest,
+                                    Some(h) => self.combine(deltas, &h, &lp_with_the_rest),
+                                }),
+                                Some(*lp_index),
+                            ))
+                        })?
+                        .0
+                        .ok_or(ZiaError::AmbiguousExpression),
+                    _ => Err(ZiaError::AmbiguousExpression),
+                }
+            }
+        }
+    }
+    fn ast_from_pair(&self, deltas: &ContextDelta, left: &str, right: &str) -> ZiaResult<Rc<SyntaxTree>> {
+        let lefthand = self.ast_from_token(deltas, left)?;
+        let righthand = self.ast_from_token(deltas, right)?;
+        Ok(self.combine(deltas, &lefthand, &righthand))
+    }
+    fn ast_from_token(&self, deltas: &ContextDelta, t: &str) -> ZiaResult<Rc<SyntaxTree>> {
+        if t.contains(' ') || t.contains('(') || t.contains(')') {
+            self.ast_from_expression(deltas, t)
+        } else {
+            Ok(Rc::new(self.ast_from_symbol::<SyntaxTree>(deltas, t)))
+        }
     }
 }
 
@@ -1640,135 +1756,16 @@ impl ConceptMaker<Concept, SyntaxTree> for Context {
 }
 
 impl SyntaxFinder<Concept> for Context {
-    fn concept_from_label(&self, deltas: &Self::Delta, s: &str) -> Option<usize> {
+    fn concept_from_label(&self, deltas: &ContextDelta, s: &str) -> Option<usize> {
         self.get_string_concept(deltas, s)
             .and_then(|c| self.get_labellee(deltas, c))
     }
-    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &Self::Delta, s: &str) -> U
+    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &ContextDelta, s: &str) -> U
     where <U as FromStr>::Err: Debug,
     {
         self.concept_from_label(deltas, s)
             .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
             .unwrap_or_else(|| s.parse().unwrap())
-    }
-}
-
-impl SyntaxConverter<Concept, SyntaxTree>  for Context {
-    fn ast_from_expression(&self, deltas: &Self::Delta, s: &str) -> ZiaResult<Rc<SyntaxTree>> {
-        let tokens: Vec<String> = parse_line(s)?;
-        self.ast_from_tokens(deltas, &tokens)
-    }
-    fn ast_from_tokens(&self, deltas: &Self::Delta, tokens: &[String]) -> ZiaResult<Rc<SyntaxTree>> {
-        match tokens.len() {
-            0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token(deltas, &tokens[0]),
-            2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
-            _ => {
-                let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
-                let (lp_syntax, lp_indices, _number_of_tokens) = tokens.iter().try_fold(
-                    (Vec::<Rc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
-                    |(lowest_precedence_syntax, lp_indices, prev_index), token| {
-                        let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                        let syntax_of_token = self.ast_from_token(deltas, token)?;
-                        let comparing_precedence_of_token =
-                            self.combine(deltas, &precedence_syntax, &syntax_of_token);
-                        for syntax in lowest_precedence_syntax.clone() {
-                            let comparing_between_tokens =
-                                self.combine(deltas, &syntax, &comparing_precedence_of_token);
-                            match self
-                                .reduce(deltas, &comparing_between_tokens, &HashMap::new())
-                                .and_then(|s| s.get_concept())
-                            {
-                                // syntax of token has even lower precedence than some previous lowest precendence syntax
-                                Some(TRUE) => {
-                                    return Ok((
-                                        vec![syntax_of_token],
-                                        vec![this_index.unwrap()],
-                                        this_index,
-                                    ))
-                                }
-                                // syntax of token has higher precedence than some previous lowest precendence syntax
-                                Some(FALSE) => {
-                                    return Ok((lowest_precedence_syntax, lp_indices, this_index))
-                                }
-                                _ => (),
-                            };
-                        }
-                        // syntax of token has neither higher or lower precedence than the lowest precedence syntax
-                        let mut hps = lowest_precedence_syntax.clone();
-                        hps.push(syntax_of_token);
-                        let mut hi = lp_indices.clone();
-                        hi.push(this_index.unwrap());
-                        Ok((hps, hi, this_index))
-                    },
-                )?;
-                let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (self.get_associativity(deltas, &syntax), assoc) {
-                        (Some(x), Some(y)) => {
-                            if x == y {
-                                Ok(Some(x))
-                            } else {
-                                Err(ZiaError::AmbiguousExpression)
-                            }
-                        }
-                        (Some(x), None) => Ok(Some(x)),
-                        (None, _) => Err(ZiaError::AmbiguousExpression),
-                    }
-                });
-                match assoc? {
-                    Some(Associativity::Right) => lp_indices
-                        .iter()
-                        .rev()
-                        .try_fold((None, None), |(tail, prev_lp_index), lp_index| {
-                            let slice = match prev_lp_index {
-                                Some(i) => &tokens[*lp_index..i],
-                                None => &tokens[*lp_index..],
-                            };
-                            let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
-                            Ok((
-                                Some(match tail {
-                                    None => lp_with_the_rest,
-                                    Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
-                                }),
-                                Some(*lp_index),
-                            ))
-                        })?
-                        .0
-                        .ok_or(ZiaError::AmbiguousExpression),
-                    Some(Associativity::Left) => lp_indices
-                        .iter()
-                        .try_fold((None, None), |(head, prev_lp_index), lp_index| {
-                            let slice = match prev_lp_index {
-                                Some(i) => &tokens[i..*lp_index],
-                                None => &tokens[..*lp_index],
-                            };
-                            let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
-                            Ok((
-                                Some(match head {
-                                    None => lp_with_the_rest,
-                                    Some(h) => self.combine(deltas, &h, &lp_with_the_rest),
-                                }),
-                                Some(*lp_index),
-                            ))
-                        })?
-                        .0
-                        .ok_or(ZiaError::AmbiguousExpression),
-                    _ => Err(ZiaError::AmbiguousExpression),
-                }
-            }
-        }
-    }
-    fn ast_from_pair(&self, deltas: &Self::Delta, left: &str, right: &str) -> ZiaResult<Rc<SyntaxTree>> {
-        let lefthand = self.ast_from_token(deltas, left)?;
-        let righthand = self.ast_from_token(deltas, right)?;
-        Ok(self.combine(deltas, &lefthand, &righthand))
-    }
-    fn ast_from_token(&self, deltas: &Self::Delta, t: &str) -> ZiaResult<Rc<SyntaxTree>> {
-        if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression(deltas, t)
-        } else {
-            Ok(Rc::new(self.ast_from_symbol::<SyntaxTree>(deltas, t)))
-        }
     }
 }
 
