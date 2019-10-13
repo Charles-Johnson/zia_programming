@@ -117,9 +117,6 @@ extern crate slog;
 extern crate slog_term;
 extern crate snafu;
 
-/// Traits for adding concepts to the context.
-mod adding;
-
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 
@@ -137,9 +134,6 @@ mod delta;
 
 /// The errors that the users could make when making commands.
 mod errors;
-
-/// Traits for reading concepts within the context.
-mod reading;
 
 /// Traits for writing concepts within the context.
 mod writing;

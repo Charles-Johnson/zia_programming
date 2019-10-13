@@ -21,9 +21,9 @@ use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
 use std::{collections::HashSet, iter::FromIterator};
 use writing::{
-    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
-    RemoveDefinition, RemoveReduction, SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition,
-    SetDefinitionDelta, SetReduction, SetReductionDelta,
+    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveDefinition, RemoveReduction,
+    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
+    SetReductionDelta,
 };
 
 /// Data type for any type of concept.
@@ -181,6 +181,12 @@ impl Concept {
             _ => None,
         }
     }
+    pub fn remove_as_lefthand_of(&mut self, index: usize) {
+        self.lefthand_of.remove(&index);
+    }
+    pub fn remove_as_righthand_of(&mut self, index: usize) {
+        self.righthand_of.remove(&index);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -314,15 +320,6 @@ impl From<AbstractDelta> for ConceptDelta {
             reduces_from: SetChange::default(),
             specific_part: ap,
         }
-    }
-}
-
-impl RemoveAsDefinitionOf for Concept {
-    fn remove_as_lefthand_of(&mut self, index: usize) {
-        self.lefthand_of.remove(&index);
-    }
-    fn remove_as_righthand_of(&mut self, index: usize) {
-        self.righthand_of.remove(&index);
     }
 }
 

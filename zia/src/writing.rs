@@ -17,7 +17,6 @@
 
 pub use delta::{ApplyDelta, Delta};
 pub use errors::{ZiaError, ZiaResult};
-pub use reading::{FindDefinition, MaybeConcept};
 
 pub trait DeleteReduction<U>: ApplyDelta {
     fn try_removing_reduction(&self, deltas: &mut Self::Delta, syntax: &U) -> ZiaResult<()>;
@@ -111,18 +110,4 @@ where
 
 pub trait RemoveDefinition {
     fn remove_definition(&mut self);
-}
-
-pub trait RemoveAsDefinitionOf {
-    fn remove_as_lefthand_of(&mut self, usize);
-    fn remove_as_righthand_of(&mut self, usize);
-}
-
-pub trait RemoveDefinitionDelta
-where
-    Self: ApplyDelta,
-{
-    fn remove_as_lefthand_of_delta(&self, &Self::Delta, usize) -> Self::Delta;
-    fn remove_as_righthand_of_delta(&self, &Self::Delta, usize) -> Self::Delta;
-    fn remove_definition_delta(&self, &Self::Delta) -> Self::Delta;
 }

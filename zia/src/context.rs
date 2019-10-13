@@ -15,25 +15,17 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::Container as SyntaxContainer;
 use ast::SyntaxTree;
 use concepts::{AbstractPart, Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
-use reading::{
-    Associativity, BindConcept, BindPair, Container, FindDefinition,
-    GetLabel, Label, MaybeConcept,
-    MightExpand, SyntaxReader,
-};
 use slog;
 use slog::Drain;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     default::Default,
-    fmt::Debug,
     rc::Rc,
-    str::FromStr,
 };
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
@@ -52,6 +44,12 @@ pub struct Context {
     gaps: Vec<usize>,
     logger: slog::Logger,
     variables: HashSet<usize>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Associativity {
+    Left,
+    Right,
 }
 
 impl Context {
@@ -842,19 +840,16 @@ impl Context {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(deltas, t)
         } else {
-            Ok(Rc::new(self.ast_from_symbol::<SyntaxTree>(deltas, t)))
+            Ok(Rc::new(self.ast_from_symbol(deltas, t)))
         }
     }
     fn concept_from_label(&self, deltas: &ContextDelta, s: &str) -> Option<usize> {
         self.get_string_concept(deltas, s)
             .and_then(|c| self.get_labellee(deltas, c))
     }
-    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &ContextDelta, s: &str) -> U
-    where
-        <U as FromStr>::Err: Debug,
-    {
+    fn ast_from_symbol(&self, deltas: &ContextDelta, s: &str) -> SyntaxTree {
         self.concept_from_label(deltas, s)
-            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
+            .map(|concept| s.parse::<SyntaxTree>().unwrap().bind_concept(concept))
             .unwrap_or_else(|| s.parse().unwrap())
     }
     fn get_string_concept(&self, delta: &ContextDelta, s: &str) -> Option<usize> {
@@ -902,8 +897,8 @@ impl Context {
         }
     }
     fn new_labelled_default(&self, deltas: &mut ContextDelta, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.new_default::<AbstractPart>(deltas, string.starts_with('_') && string.ends_with('_'));
+        let new_default = self
+            .new_default::<AbstractPart>(deltas, string.starts_with('_') && string.ends_with('_'));
         self.label(deltas, new_default, string)?;
         Ok(new_default)
     }
@@ -1004,25 +999,6 @@ impl Context {
             }
         }
     }
-}
-
-fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
-    entry
-        .and_modify(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => {
-                d.combine(concept_delta.clone());
-                *cd = ConceptDelta::Update(d.clone());
-            }
-            ConceptDelta::Insert(c) => {
-                c.apply(concept_delta.clone());
-                *cd = ConceptDelta::Insert(c.clone());
-            }
-            ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
-        })
-        .or_insert((ConceptDelta::Update(concept_delta), false));
-}
-
-impl Container for Context {
     fn contains(&self, deltas: &ContextDelta, outer: usize, inner: usize) -> bool {
         if let Some((left, right)) = self.read_concept(deltas, outer).get_definition() {
             left == inner
@@ -1033,288 +1009,6 @@ impl Container for Context {
             false
         }
     }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ContextDelta {
-    string: HashMap<String, StringDelta>,
-    concept: HashMap<usize, (ConceptDelta, bool)>,
-}
-
-#[derive(Clone, Debug)]
-pub enum StringDelta {
-    Insert(usize),
-    Remove(usize),
-    Update { before: usize, after: usize },
-}
-
-#[derive(Clone, Debug)]
-pub enum ConceptDelta {
-    Insert(Concept),
-    Remove(Concept),
-    Update(CD),
-}
-
-impl Delta for ContextDelta {
-    fn combine(&mut self, other: ContextDelta) {
-        for (other_key, (other_value, v2)) in other.concept {
-            let mut remove_key = false;
-            let mut update_delta = None;
-            self.concept
-                .entry(other_key)
-                .and_modify(|(cd, v1)| match (cd, &other_value) {
-                    (ConceptDelta::Insert(c1), ConceptDelta::Remove(c2))
-                        if c1 == c2 && *v1 == v2 =>
-                    {
-                        remove_key = true;
-                    }
-                    (ConceptDelta::Remove(c1), ConceptDelta::Insert(c2)) => {
-                        if c1 == c2 {
-                            remove_key = true;
-                        } else {
-                            update_delta = Some(c1.diff(c2.clone()));
-                        }
-                    }
-                    (ConceptDelta::Insert(c), ConceptDelta::Update(cd)) => {
-                        c.apply(cd.clone());
-                        *v1 = v2;
-                    }
-                    (ConceptDelta::Update(cd1), ConceptDelta::Update(cd2)) => {
-                        cd1.combine(cd2.clone());
-                        *v1 = v2;
-                    }
-                    _ => panic!("Something went wrong when combining concept deltas!"),
-                })
-                .or_insert((other_value, v2));
-            if remove_key {
-                self.concept.remove(&other_key);
-            }
-            update_delta.map(|cd| {
-                self.concept
-                    .insert(other_key, (ConceptDelta::Update(cd), v2))
-            });
-        }
-        for (other_key, other_sd) in other.string {
-            let mut remove_string = false;
-            let mut sd_to_update = None;
-            self.string
-                .entry(other_key.clone())
-                .and_modify(|sd| match (sd, &other_sd) {
-                    (StringDelta::Insert(u1), StringDelta::Remove(u2)) if u1 == u2 => {
-                        remove_string = true;
-                    }
-                    (StringDelta::Remove(u1), StringDelta::Insert(u2)) => {
-                        if u1 == u2 {
-                            remove_string = true;
-                        } else {
-                            sd_to_update = Some(StringDelta::Update {
-                                before: *u1,
-                                after: *u2,
-                            });
-                        }
-                    }
-                    (StringDelta::Insert(u), StringDelta::Update { before, after })
-                        if u == before =>
-                    {
-                        *u = *after;
-                    }
-                    (
-                        StringDelta::Update { after: a1, .. },
-                        StringDelta::Update {
-                            before: b2,
-                            after: a2,
-                        },
-                    ) if a1 == b2 => {
-                        *a1 = *a2;
-                    }
-                    _ => panic!("Something went wrong when combining string deltas!"),
-                })
-                .or_insert(other_sd);
-            if remove_string {
-                self.string.remove(&other_key);
-            }
-            sd_to_update.map(|sd| self.string.insert(other_key, sd));
-        }
-    }
-}
-
-impl ApplyDelta for Context {
-    type Delta = ContextDelta;
-    fn apply(&mut self, delta: ContextDelta) {
-        delta.string.iter().for_each(|(s, sd)| match sd {
-            StringDelta::Update { after, .. } => {
-                self.string_map.insert(s.to_string(), *after);
-            }
-            StringDelta::Insert(id) => {
-                info!(self.logger, "add_string({}, {})", id, &s);
-                self.add_string(*id, &s);
-            }
-            StringDelta::Remove(_) => self.remove_string(&s),
-        });
-        for (id, (cd, v)) in delta.concept {
-            match cd {
-                ConceptDelta::Insert(c) => {
-                    let padding_needed = id as isize - self.concepts.len() as isize;
-                    if 0 <= padding_needed {
-                        self.concepts.extend(vec![None; padding_needed as usize]);
-                        self.concepts.push(Some(c));
-                    } else {
-                        self.concepts[id] = Some(c);
-                    }
-                    if v {
-                        self.variables.insert(id);
-                    }
-                }
-                ConceptDelta::Remove(_) => {
-                    self.blindly_remove_concept(id);
-                    if v {
-                        self.variables.remove(&id);
-                    }
-                }
-                ConceptDelta::Update(d) => self.write_concept(id).apply(d),
-            }
-        }
-    }
-    fn diff(&self, _other: Context) -> ContextDelta {
-        ContextDelta {
-            string: hashmap! {},
-            concept: hashmap! {},
-        }
-    }
-}
-
-impl Default for Context {
-    fn default() -> Context {
-        let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-        let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
-        Context {
-            string_map: HashMap::new(),
-            concepts: Vec::new(),
-            gaps: Vec::new(),
-            logger,
-            variables: HashSet::new(),
-        }
-    }
-}
-
-impl InsertDefinition for Context {
-    fn insert_definition(
-        &self,
-        deltas: &mut ContextDelta,
-        definition: usize,
-        lefthand: usize,
-        righthand: usize,
-    ) -> ZiaResult<()> {
-        if self.contains(deltas, lefthand, definition)
-            || self.contains(deltas, righthand, definition)
-        {
-            Err(ZiaError::InfiniteDefinition)
-        } else {
-            self.check_reductions(deltas, definition, lefthand)?;
-            self.check_reductions(deltas, definition, righthand)?;
-            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)?;
-            Ok(())
-        }
-    }
-    fn check_reductions(
-        &self,
-        deltas: &ContextDelta,
-        outer_concept: usize,
-        inner_concept: usize,
-    ) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(deltas, inner_concept).get_reduction() {
-            if r == outer_concept || self.contains(deltas, r, outer_concept) {
-                Err(ZiaError::InfiniteDefinition)
-            } else {
-                self.check_reductions(deltas, outer_concept, r)
-            }
-        } else {
-            Ok(())
-        }
-    }
-}
-
-impl UpdateReduction for Context {
-    fn update_reduction(
-        &self,
-        deltas: &mut ContextDelta,
-        concept: usize,
-        reduction: usize,
-    ) -> ZiaResult<()> {
-        self.get_normal_form(deltas, reduction)
-            .and_then(|n| {
-                if concept == n {
-                    Some(Err(ZiaError::CyclicReduction))
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_else(|| {
-                self.read_concept(deltas, concept)
-                    .get_reduction()
-                    .and_then(|r| {
-                        if r == reduction {
-                            Some(Err(ZiaError::RedundantReduction))
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_else(|| {
-                        if reduction == self.get_reduction_of_composition(deltas, concept) {
-                            Err(ZiaError::RedundantReduction)
-                        } else {
-                            self.concept_reduction_deltas(deltas, concept, reduction)
-                        }
-                    })
-            })
-    }
-    fn get_reduction_of_composition(&self, deltas: &ContextDelta, concept: usize) -> usize {
-        self.read_concept(deltas, concept)
-            .get_definition()
-            .and_then(|(left, right)| {
-                self.find_definition(
-                    deltas,
-                    self.get_reduction_or_reduction_of_composition(deltas, left),
-                    self.get_reduction_or_reduction_of_composition(deltas, right),
-                )
-            })
-            .unwrap_or(concept)
-    }
-    fn get_reduction_or_reduction_of_composition(
-        &self,
-        deltas: &ContextDelta,
-        concept: usize,
-    ) -> usize {
-        self.read_concept(deltas, concept)
-            .get_reduction()
-            .unwrap_or_else(|| self.get_reduction_of_composition(deltas, concept))
-    }
-}
-
-impl DeleteReduction<SyntaxTree> for Context {
-    fn try_removing_reduction(
-        &self,
-        deltas: &mut ContextDelta,
-        syntax: &SyntaxTree,
-    ) -> ZiaResult<()> {
-        if let Some(c) = syntax.get_concept() {
-            self.delete_reduction(deltas, c)
-        } else {
-            Err(ZiaError::RedundantReduction)
-        }
-    }
-    fn delete_reduction(&self, delta: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
-        self.read_concept(delta, concept)
-            .get_reduction()
-            .map(|n| {
-                let extra_delta = self.remove_concept_reduction(delta, concept, n);
-                delta.combine(extra_delta);
-            })
-            .ok_or(ZiaError::RedundantReduction)
-    }
-}
-
-impl FindDefinition for Context {
     fn find_definition(
         &self,
         delta: &ContextDelta,
@@ -1332,9 +1026,6 @@ impl FindDefinition for Context {
             })
         })
     }
-}
-
-impl Label for Context {
     fn get_labellee(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
         let mut candidates: Vec<usize> = Vec::new();
         for label in self.find_what_its_a_normal_form_of(deltas, concept) {
@@ -1355,9 +1046,6 @@ impl Label for Context {
             _ => panic!("Multiple concepts are labelled with the same string"),
         }
     }
-}
-
-impl GetLabel for Context {
     fn get_label(&self, deltas: &ContextDelta, concept: usize) -> Option<String> {
         match self.get_concept_of_label(deltas, concept) {
             None => self
@@ -1369,10 +1057,7 @@ impl GetLabel for Context {
                 .and_then(|n| self.read_concept(deltas, n).get_string()),
         }
     }
-}
-
-impl SyntaxReader<SyntaxTree> for Context {
-    /// Expands syntax by definition of its associated concept.
+        /// Expands syntax by definition of its associated concept.
     fn expand(&self, deltas: &ContextDelta, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) = self.read_concept(deltas, con).get_definition() {
@@ -1755,6 +1440,301 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
+    }
+}
+
+fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
+    entry
+        .and_modify(|(cd, _)| match cd {
+            ConceptDelta::Update(d) => {
+                d.combine(concept_delta.clone());
+                *cd = ConceptDelta::Update(d.clone());
+            }
+            ConceptDelta::Insert(c) => {
+                c.apply(concept_delta.clone());
+                *cd = ConceptDelta::Insert(c.clone());
+            }
+            ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
+        })
+        .or_insert((ConceptDelta::Update(concept_delta), false));
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ContextDelta {
+    string: HashMap<String, StringDelta>,
+    concept: HashMap<usize, (ConceptDelta, bool)>,
+}
+
+#[derive(Clone, Debug)]
+pub enum StringDelta {
+    Insert(usize),
+    Remove(usize),
+    Update { before: usize, after: usize },
+}
+
+#[derive(Clone, Debug)]
+pub enum ConceptDelta {
+    Insert(Concept),
+    Remove(Concept),
+    Update(CD),
+}
+
+impl Delta for ContextDelta {
+    fn combine(&mut self, other: ContextDelta) {
+        for (other_key, (other_value, v2)) in other.concept {
+            let mut remove_key = false;
+            let mut update_delta = None;
+            self.concept
+                .entry(other_key)
+                .and_modify(|(cd, v1)| match (cd, &other_value) {
+                    (ConceptDelta::Insert(c1), ConceptDelta::Remove(c2))
+                        if c1 == c2 && *v1 == v2 =>
+                    {
+                        remove_key = true;
+                    }
+                    (ConceptDelta::Remove(c1), ConceptDelta::Insert(c2)) => {
+                        if c1 == c2 {
+                            remove_key = true;
+                        } else {
+                            update_delta = Some(c1.diff(c2.clone()));
+                        }
+                    }
+                    (ConceptDelta::Insert(c), ConceptDelta::Update(cd)) => {
+                        c.apply(cd.clone());
+                        *v1 = v2;
+                    }
+                    (ConceptDelta::Update(cd1), ConceptDelta::Update(cd2)) => {
+                        cd1.combine(cd2.clone());
+                        *v1 = v2;
+                    }
+                    _ => panic!("Something went wrong when combining concept deltas!"),
+                })
+                .or_insert((other_value, v2));
+            if remove_key {
+                self.concept.remove(&other_key);
+            }
+            update_delta.map(|cd| {
+                self.concept
+                    .insert(other_key, (ConceptDelta::Update(cd), v2))
+            });
+        }
+        for (other_key, other_sd) in other.string {
+            let mut remove_string = false;
+            let mut sd_to_update = None;
+            self.string
+                .entry(other_key.clone())
+                .and_modify(|sd| match (sd, &other_sd) {
+                    (StringDelta::Insert(u1), StringDelta::Remove(u2)) if u1 == u2 => {
+                        remove_string = true;
+                    }
+                    (StringDelta::Remove(u1), StringDelta::Insert(u2)) => {
+                        if u1 == u2 {
+                            remove_string = true;
+                        } else {
+                            sd_to_update = Some(StringDelta::Update {
+                                before: *u1,
+                                after: *u2,
+                            });
+                        }
+                    }
+                    (StringDelta::Insert(u), StringDelta::Update { before, after })
+                        if u == before =>
+                    {
+                        *u = *after;
+                    }
+                    (
+                        StringDelta::Update { after: a1, .. },
+                        StringDelta::Update {
+                            before: b2,
+                            after: a2,
+                        },
+                    ) if a1 == b2 => {
+                        *a1 = *a2;
+                    }
+                    _ => panic!("Something went wrong when combining string deltas!"),
+                })
+                .or_insert(other_sd);
+            if remove_string {
+                self.string.remove(&other_key);
+            }
+            sd_to_update.map(|sd| self.string.insert(other_key, sd));
+        }
+    }
+}
+
+impl ApplyDelta for Context {
+    type Delta = ContextDelta;
+    fn apply(&mut self, delta: ContextDelta) {
+        delta.string.iter().for_each(|(s, sd)| match sd {
+            StringDelta::Update { after, .. } => {
+                self.string_map.insert(s.to_string(), *after);
+            }
+            StringDelta::Insert(id) => {
+                info!(self.logger, "add_string({}, {})", id, &s);
+                self.add_string(*id, &s);
+            }
+            StringDelta::Remove(_) => self.remove_string(&s),
+        });
+        for (id, (cd, v)) in delta.concept {
+            match cd {
+                ConceptDelta::Insert(c) => {
+                    let padding_needed = id as isize - self.concepts.len() as isize;
+                    if 0 <= padding_needed {
+                        self.concepts.extend(vec![None; padding_needed as usize]);
+                        self.concepts.push(Some(c));
+                    } else {
+                        self.concepts[id] = Some(c);
+                    }
+                    if v {
+                        self.variables.insert(id);
+                    }
+                }
+                ConceptDelta::Remove(_) => {
+                    self.blindly_remove_concept(id);
+                    if v {
+                        self.variables.remove(&id);
+                    }
+                }
+                ConceptDelta::Update(d) => self.write_concept(id).apply(d),
+            }
+        }
+    }
+    fn diff(&self, _other: Context) -> ContextDelta {
+        ContextDelta {
+            string: hashmap! {},
+            concept: hashmap! {},
+        }
+    }
+}
+
+impl Default for Context {
+    fn default() -> Context {
+        let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+        let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
+        Context {
+            string_map: HashMap::new(),
+            concepts: Vec::new(),
+            gaps: Vec::new(),
+            logger,
+            variables: HashSet::new(),
+        }
+    }
+}
+
+impl InsertDefinition for Context {
+    fn insert_definition(
+        &self,
+        deltas: &mut ContextDelta,
+        definition: usize,
+        lefthand: usize,
+        righthand: usize,
+    ) -> ZiaResult<()> {
+        if self.contains(deltas, lefthand, definition)
+            || self.contains(deltas, righthand, definition)
+        {
+            Err(ZiaError::InfiniteDefinition)
+        } else {
+            self.check_reductions(deltas, definition, lefthand)?;
+            self.check_reductions(deltas, definition, righthand)?;
+            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)?;
+            Ok(())
+        }
+    }
+    fn check_reductions(
+        &self,
+        deltas: &ContextDelta,
+        outer_concept: usize,
+        inner_concept: usize,
+    ) -> ZiaResult<()> {
+        if let Some(r) = self.read_concept(deltas, inner_concept).get_reduction() {
+            if r == outer_concept || self.contains(deltas, r, outer_concept) {
+                Err(ZiaError::InfiniteDefinition)
+            } else {
+                self.check_reductions(deltas, outer_concept, r)
+            }
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl UpdateReduction for Context {
+    fn update_reduction(
+        &self,
+        deltas: &mut ContextDelta,
+        concept: usize,
+        reduction: usize,
+    ) -> ZiaResult<()> {
+        self.get_normal_form(deltas, reduction)
+            .and_then(|n| {
+                if concept == n {
+                    Some(Err(ZiaError::CyclicReduction))
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| {
+                self.read_concept(deltas, concept)
+                    .get_reduction()
+                    .and_then(|r| {
+                        if r == reduction {
+                            Some(Err(ZiaError::RedundantReduction))
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| {
+                        if reduction == self.get_reduction_of_composition(deltas, concept) {
+                            Err(ZiaError::RedundantReduction)
+                        } else {
+                            self.concept_reduction_deltas(deltas, concept, reduction)
+                        }
+                    })
+            })
+    }
+    fn get_reduction_of_composition(&self, deltas: &ContextDelta, concept: usize) -> usize {
+        self.read_concept(deltas, concept)
+            .get_definition()
+            .and_then(|(left, right)| {
+                self.find_definition(
+                    deltas,
+                    self.get_reduction_or_reduction_of_composition(deltas, left),
+                    self.get_reduction_or_reduction_of_composition(deltas, right),
+                )
+            })
+            .unwrap_or(concept)
+    }
+    fn get_reduction_or_reduction_of_composition(
+        &self,
+        deltas: &ContextDelta,
+        concept: usize,
+    ) -> usize {
+        self.read_concept(deltas, concept)
+            .get_reduction()
+            .unwrap_or_else(|| self.get_reduction_of_composition(deltas, concept))
+    }
+}
+
+impl DeleteReduction<SyntaxTree> for Context {
+    fn try_removing_reduction(
+        &self,
+        deltas: &mut ContextDelta,
+        syntax: &SyntaxTree,
+    ) -> ZiaResult<()> {
+        if let Some(c) = syntax.get_concept() {
+            self.delete_reduction(deltas, c)
+        } else {
+            Err(ZiaError::RedundantReduction)
+        }
+    }
+    fn delete_reduction(&self, delta: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
+        self.read_concept(delta, concept)
+            .get_reduction()
+            .map(|n| {
+                let extra_delta = self.remove_concept_reduction(delta, concept, n);
+                delta.combine(extra_delta);
+            })
+            .ok_or(ZiaError::RedundantReduction)
     }
 }
 
