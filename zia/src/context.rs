@@ -30,7 +30,6 @@ use reading::{
     GetDefinition, GetDefinitionOf, GetLabel, GetReduction, Label, MaybeConcept, MaybeString,
     MightExpand, SyntaxReader,
 };
-use removing::DefinitionDeleter;
 use slog;
 use slog::Drain;
 use std::{
@@ -874,6 +873,29 @@ impl Context {
             .unwrap_or_else(|| self.string_map.get(s))
             .cloned()
     }
+    fn cleanly_delete_definition(&self, delta: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
+        match self.read_concept(delta, concept).get_definition() {
+            None => Err(ZiaError::RedundantDefinitionRemoval),
+            Some((left, right)) => {
+                let extra_delta = self.delete_definition(delta, concept, left, right);
+                delta.combine(extra_delta);
+                self.try_delete_concept(delta, concept)?;
+                self.try_delete_concept(delta, left)?;
+                self.try_delete_concept(delta, right)
+            }
+        }
+    }
+    fn try_delete_concept(
+        &self,
+        previous_deltas: &mut ContextDelta,
+        concept: usize,
+    ) -> ZiaResult<()> {
+        if self.is_disconnected(previous_deltas, concept) {
+            self.unlabel(previous_deltas, concept)?;
+            self.remove_concept(previous_deltas, concept)
+        }
+        Ok(())
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -1070,32 +1092,6 @@ impl Default for Context {
             logger,
             variables: HashSet::new(),
         }
-    }
-}
-
-impl DefinitionDeleter for Context {
-    fn cleanly_delete_definition(&self, delta: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
-        match self.read_concept(delta, concept).get_definition() {
-            None => Err(ZiaError::RedundantDefinitionRemoval),
-            Some((left, right)) => {
-                let extra_delta = self.delete_definition(delta, concept, left, right);
-                delta.combine(extra_delta);
-                self.try_delete_concept(delta, concept)?;
-                self.try_delete_concept(delta, left)?;
-                self.try_delete_concept(delta, right)
-            }
-        }
-    }
-    fn try_delete_concept(
-        &self,
-        previous_deltas: &mut ContextDelta,
-        concept: usize,
-    ) -> ZiaResult<()> {
-        if self.is_disconnected(previous_deltas, concept) {
-            self.unlabel(previous_deltas, concept)?;
-            self.remove_concept(previous_deltas, concept)
-        }
-        Ok(())
     }
 }
 

@@ -144,9 +144,6 @@ mod logging;
 /// Traits for reading concepts within the context.
 mod reading;
 
-/// Traits for removing concepts from the context.
-mod removing;
-
 /// Traits for writing concepts within the context.
 mod writing;
 
