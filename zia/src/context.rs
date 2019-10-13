@@ -16,8 +16,7 @@
 */
 
 use adding::{
-    ConceptMaker, Container as SyntaxContainer, DefaultMaker, ExecuteReduction,
-    FindOrInsertDefinition, Labeller, StringMaker,
+    ConceptMaker, Container as SyntaxContainer, ExecuteReduction,
 };
 use ast::SyntaxTree;
 use concepts::{AbstractPart, Concept, ConceptDelta as CD};
@@ -895,6 +894,73 @@ impl Context {
         }
         Ok(())
     }
+    fn label(&self, deltas: &mut ContextDelta, concept: usize, string: &str) -> ZiaResult<()> {
+        if string.starts_with('_') && string.ends_with('_') {
+            Ok(())
+        } else {
+            let definition = self.find_or_insert_definition(deltas, LABEL, concept, false)?;
+            let string_id = self.new_string(deltas, string);
+            self.update_reduction(deltas, definition, string_id)
+        }
+    }
+    fn new_labelled_default(&self, deltas: &mut ContextDelta, string: &str) -> ZiaResult<usize> {
+        let new_default =
+            self.new_default::<AbstractPart>(deltas, string.starts_with('_') && string.ends_with('_'));
+        self.label(deltas, new_default, string)?;
+        Ok(new_default)
+    }
+    fn setup(&mut self) -> ZiaResult<ContextDelta> {
+        let mut delta = ContextDelta::default();
+        let concrete_constructor = |local_delta: &mut ContextDelta| {
+            let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
+            local_delta.combine(delta);
+            index
+        };
+        let labels = vec![
+            "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
+        ];
+        let concepts = delta.repeat(concrete_constructor, labels.len());
+        let label = |local_delta: &mut ContextDelta, concept: usize, string: &str| {
+            self.label(local_delta, concept, string)
+        };
+        delta.multiply(label, concepts, labels)?;
+        Ok(delta)
+    }
+    fn find_or_insert_definition(
+        &self,
+        deltas: &mut ContextDelta,
+        lefthand: usize,
+        righthand: usize,
+        variable: bool,
+    ) -> ZiaResult<usize> {
+        let pair = self.find_definition(deltas, lefthand, righthand);
+        match pair {
+            None => {
+                let definition = self.new_default::<AbstractPart>(deltas, variable);
+                self.insert_definition(deltas, definition, lefthand, righthand)?;
+                Ok(definition)
+            }
+            Some(def) => Ok(def),
+        }
+    }
+    fn new_string(&self, original_delta: &mut ContextDelta, string: &str) -> usize {
+        let string_concept = string.to_string().into();
+        let (delta, index) = self.add_concept_delta(original_delta, string_concept, false);
+        original_delta.combine(delta);
+        let string_delta = Self::add_string_delta(index, string);
+        original_delta.combine(string_delta);
+        index
+    }
+    fn new_default<V: Default + Into<Concept>>(
+        &self,
+        original_delta: &mut ContextDelta,
+        variable: bool,
+    ) -> usize {
+        let concept: Concept = V::default().into();
+        let (delta, index) = self.add_concept_delta(original_delta, concept, variable);
+        original_delta.combine(delta);
+        index
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -1202,30 +1268,6 @@ impl DeleteReduction<SyntaxTree> for Context {
                 delta.combine(extra_delta);
             })
             .ok_or(ZiaError::RedundantReduction)
-    }
-}
-
-impl DefaultMaker<Concept> for Context {
-    fn new_default<V: Default + Into<Concept>>(
-        &self,
-        original_delta: &mut ContextDelta,
-        variable: bool,
-    ) -> usize {
-        let concept: Concept = V::default().into();
-        let (delta, index) = self.add_concept_delta(original_delta, concept, variable);
-        original_delta.combine(delta);
-        index
-    }
-}
-
-impl StringMaker for Context {
-    fn new_string(&self, original_delta: &mut ContextDelta, string: &str) -> usize {
-        let string_concept = string.to_string().into();
-        let (delta, index) = self.add_concept_delta(original_delta, string_concept, false);
-        original_delta.combine(delta);
-        let string_delta = Self::add_string_delta(index, string);
-        original_delta.combine(string_delta);
-        index
     }
 }
 
@@ -1670,62 +1712,6 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
-    }
-}
-
-impl Labeller<Concept> for Context {
-    fn label(&self, deltas: &mut ContextDelta, concept: usize, string: &str) -> ZiaResult<()> {
-        if string.starts_with('_') && string.ends_with('_') {
-            Ok(())
-        } else {
-            let definition = self.find_or_insert_definition(deltas, LABEL, concept, false)?;
-            let string_id = self.new_string(deltas, string);
-            self.update_reduction(deltas, definition, string_id)
-        }
-    }
-    fn new_labelled_default(&self, deltas: &mut ContextDelta, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.new_default::<Self::A>(deltas, string.starts_with('_') && string.ends_with('_'));
-        self.label(deltas, new_default, string)?;
-        Ok(new_default)
-    }
-    fn setup(&mut self) -> ZiaResult<ContextDelta> {
-        let mut delta = ContextDelta::default();
-        let concrete_constructor = |local_delta: &mut ContextDelta| {
-            let (delta, index) = self.add_concept_delta(local_delta, Concept::default(), false);
-            local_delta.combine(delta);
-            index
-        };
-        let labels = vec![
-            "label_of", ":=", "->", "let", "true", "false", "assoc", "right", "left", ">-",
-        ];
-        let concepts = delta.repeat(concrete_constructor, labels.len());
-        let label = |local_delta: &mut ContextDelta, concept: usize, string: &str| {
-            self.label(local_delta, concept, string)
-        };
-        delta.multiply(label, concepts, labels)?;
-        Ok(delta)
-    }
-}
-
-impl FindOrInsertDefinition<Concept> for Context {
-    type A = AbstractPart;
-    fn find_or_insert_definition(
-        &self,
-        deltas: &mut ContextDelta,
-        lefthand: usize,
-        righthand: usize,
-        variable: bool,
-    ) -> ZiaResult<usize> {
-        let pair = self.find_definition(deltas, lefthand, righthand);
-        match pair {
-            None => {
-                let definition = self.new_default::<Self::A>(deltas, variable);
-                self.insert_definition(deltas, definition, lefthand, righthand)?;
-                Ok(definition)
-            }
-            Some(def) => Ok(def),
-        }
     }
 }
 

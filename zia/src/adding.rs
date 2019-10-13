@@ -15,14 +15,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{ApplyDelta, Delta};
+use delta::Delta;
 use errors::{ZiaError, ZiaResult};
 use reading::FindWhatReducesToIt;
-use reading::{FindDefinition, MaybeString, MightExpand};
+use reading::{MaybeString, MightExpand};
 use std::{fmt, rc::Rc};
 use writing::{
-    DeleteReduction, GetDefinition, GetDefinitionOf, GetReduction, InsertDefinition,
-    MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
+    DeleteReduction, GetDefinition, GetDefinitionOf, GetReduction, MakeReduceFrom, MaybeConcept,
+    SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
 };
 
 pub trait ExecuteReduction<T, U>
@@ -96,42 +96,7 @@ impl<T> Container for T where T: MightExpand + PartialEq<Rc<T>> + Sized {}
 
 pub trait ConceptMaker<T, U>
 where
-    Self: UpdateReduction
+    Self: UpdateReduction,
 {
     fn concept_from_ast(&self, deltas: &mut Self::Delta, ast: &U) -> ZiaResult<usize>;
-}
-
-pub trait Labeller<T>
-where
-    Self: StringMaker + FindOrInsertDefinition<T> + UpdateReduction,
-{
-    fn label(&self, deltas: &mut Self::Delta, concept: usize, string: &str) -> ZiaResult<()>;
-    fn new_labelled_default(&self, deltas: &mut Self::Delta, string: &str) -> ZiaResult<usize>;
-    fn setup(&mut self) -> ZiaResult<Self::Delta>;
-}
-
-pub trait FindOrInsertDefinition<T>
-where
-    Self: DefaultMaker<T> + InsertDefinition + FindDefinition,
-{
-    type A: Default;
-    fn find_or_insert_definition(
-        &self,
-        deltas: &mut Self::Delta,
-        lefthand: usize,
-        righthand: usize,
-        variable: bool,
-    ) -> ZiaResult<usize>;
-}
-
-pub trait StringMaker: ApplyDelta {
-    fn new_string(&self, original_delta: &mut Self::Delta, string: &str) -> usize;
-}
-
-pub trait DefaultMaker<T>: ApplyDelta {
-    fn new_default<V: Default + Into<T>>(
-        &self,
-        original_delta: &mut Self::Delta,
-        variable: bool,
-    ) -> usize;
 }
