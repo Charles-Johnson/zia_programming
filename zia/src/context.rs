@@ -15,9 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use adding::{
-    ConceptMaker, Container as SyntaxContainer, ExecuteReduction,
-};
+use adding::Container as SyntaxContainer;
 use ast::SyntaxTree;
 use concepts::{AbstractPart, Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
@@ -961,6 +959,51 @@ impl Context {
         original_delta.combine(delta);
         index
     }
+    fn execute_reduction(
+        &self,
+        deltas: &mut ContextDelta,
+        syntax: &SyntaxTree,
+        normal_form: &SyntaxTree,
+    ) -> ZiaResult<()> {
+        if normal_form.contains(syntax) {
+            Err(ZiaError::ExpandingReduction)
+        } else if syntax == normal_form {
+            self.try_removing_reduction(deltas, syntax)
+        } else {
+            let syntax_concept = self.concept_from_ast(deltas, syntax)?;
+            let normal_form_concept = self.concept_from_ast(deltas, normal_form)?;
+            self.update_reduction(deltas, syntax_concept, normal_form_concept)
+        }
+    }
+    fn concept_from_ast(&self, deltas: &mut ContextDelta, ast: &SyntaxTree) -> ZiaResult<usize> {
+        if let Some(c) = ast.get_concept() {
+            Ok(c)
+        } else if let Some(c) = self.concept_from_label(deltas, &ast.to_string()) {
+            Ok(c)
+        } else {
+            let string = &ast.to_string();
+            match ast.get_expansion() {
+                None => self.new_labelled_default(deltas, string),
+                Some((ref left, ref right)) => {
+                    let leftc = self.concept_from_ast(deltas, left)?;
+                    let rightc = self.concept_from_ast(deltas, right)?;
+                    let ls = left.to_string();
+                    let rs = right.to_string();
+                    let concept = self.find_or_insert_definition(
+                        deltas,
+                        leftc,
+                        rightc,
+                        ls.starts_with('_') && ls.ends_with('_')
+                            || rs.starts_with('_') && rs.ends_with('_'),
+                    )?;
+                    if !string.contains(' ') {
+                        self.label(deltas, concept, string)?;
+                    }
+                    Ok(concept)
+                }
+            }
+        }
+    }
 }
 
 fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
@@ -1712,38 +1755,6 @@ impl SyntaxReader<SyntaxTree> for Context {
                 })
                 .bind_pair(lefthand, righthand),
         )
-    }
-}
-
-impl ConceptMaker<Concept, SyntaxTree> for Context {
-    fn concept_from_ast(&self, deltas: &mut ContextDelta, ast: &SyntaxTree) -> ZiaResult<usize> {
-        if let Some(c) = ast.get_concept() {
-            Ok(c)
-        } else if let Some(c) = self.concept_from_label(deltas, &ast.to_string()) {
-            Ok(c)
-        } else {
-            let string = &ast.to_string();
-            match ast.get_expansion() {
-                None => self.new_labelled_default(deltas, string),
-                Some((ref left, ref right)) => {
-                    let leftc = self.concept_from_ast(deltas, left)?;
-                    let rightc = self.concept_from_ast(deltas, right)?;
-                    let ls = left.to_string();
-                    let rs = right.to_string();
-                    let concept = self.find_or_insert_definition(
-                        deltas,
-                        leftc,
-                        rightc,
-                        ls.starts_with('_') && ls.ends_with('_')
-                            || rs.starts_with('_') && rs.ends_with('_'),
-                    )?;
-                    if !string.contains(' ') {
-                        self.label(deltas, concept, string)?;
-                    }
-                    Ok(concept)
-                }
-            }
-        }
     }
 }
 
