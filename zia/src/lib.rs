@@ -147,9 +147,6 @@ mod reading;
 /// Traits for removing concepts from the context.
 mod removing;
 
-/// Traits for the context to translate strings into abstract syntax trees.
-mod translating;
-
 /// Traits for writing concepts within the context.
 mod writing;
 

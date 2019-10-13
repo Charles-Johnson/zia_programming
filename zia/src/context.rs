@@ -40,7 +40,6 @@ use std::{
     rc::Rc,
     str::FromStr,
 };
-use translating::{StringConcept, SyntaxFinder};
 use writing::{
     DeleteReduction, InsertDefinition, MakeReduceFromDelta, SetAsDefinitionOfDelta,
     SetDefinitionDelta, SetReductionDelta, UpdateReduction,
@@ -726,11 +725,15 @@ impl Context {
         cont.apply(delta);
         cont
     }
-        fn ast_from_expression(&self, deltas: &ContextDelta, s: &str) -> ZiaResult<Rc<SyntaxTree>> {
+    fn ast_from_expression(&self, deltas: &ContextDelta, s: &str) -> ZiaResult<Rc<SyntaxTree>> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
-    fn ast_from_tokens(&self, deltas: &ContextDelta, tokens: &[String]) -> ZiaResult<Rc<SyntaxTree>> {
+    fn ast_from_tokens(
+        &self,
+        deltas: &ContextDelta,
+        tokens: &[String],
+    ) -> ZiaResult<Rc<SyntaxTree>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(deltas, &tokens[0]),
@@ -830,7 +833,12 @@ impl Context {
             }
         }
     }
-    fn ast_from_pair(&self, deltas: &ContextDelta, left: &str, right: &str) -> ZiaResult<Rc<SyntaxTree>> {
+    fn ast_from_pair(
+        &self,
+        deltas: &ContextDelta,
+        left: &str,
+        right: &str,
+    ) -> ZiaResult<Rc<SyntaxTree>> {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
@@ -841,6 +849,30 @@ impl Context {
         } else {
             Ok(Rc::new(self.ast_from_symbol::<SyntaxTree>(deltas, t)))
         }
+    }
+    fn concept_from_label(&self, deltas: &ContextDelta, s: &str) -> Option<usize> {
+        self.get_string_concept(deltas, s)
+            .and_then(|c| self.get_labellee(deltas, c))
+    }
+    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &ContextDelta, s: &str) -> U
+    where
+        <U as FromStr>::Err: Debug,
+    {
+        self.concept_from_label(deltas, s)
+            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
+            .unwrap_or_else(|| s.parse().unwrap())
+    }
+    fn get_string_concept(&self, delta: &ContextDelta, s: &str) -> Option<usize> {
+        delta
+            .string
+            .get(s)
+            .map(|string_delta| match string_delta {
+                StringDelta::Update { after, .. } => Some(after),
+                StringDelta::Insert(concept) => Some(concept),
+                StringDelta::Remove(_) => None,
+            })
+            .unwrap_or_else(|| self.string_map.get(s))
+            .cloned()
     }
 }
 
@@ -1038,21 +1070,6 @@ impl Default for Context {
             logger,
             variables: HashSet::new(),
         }
-    }
-}
-
-impl StringConcept for Context {
-    fn get_string_concept(&self, delta: &ContextDelta, s: &str) -> Option<usize> {
-        delta
-            .string
-            .get(s)
-            .map(|string_delta| match string_delta {
-                StringDelta::Update { after, .. } => Some(after),
-                StringDelta::Insert(concept) => Some(concept),
-                StringDelta::Remove(_) => None,
-            })
-            .unwrap_or_else(|| self.string_map.get(s))
-            .cloned()
     }
 }
 
@@ -1752,20 +1769,6 @@ impl ConceptMaker<Concept, SyntaxTree> for Context {
                 }
             }
         }
-    }
-}
-
-impl SyntaxFinder<Concept> for Context {
-    fn concept_from_label(&self, deltas: &ContextDelta, s: &str) -> Option<usize> {
-        self.get_string_concept(deltas, s)
-            .and_then(|c| self.get_labellee(deltas, c))
-    }
-    fn ast_from_symbol<U: FromStr + BindConcept>(&self, deltas: &ContextDelta, s: &str) -> U
-    where <U as FromStr>::Err: Debug,
-    {
-        self.concept_from_label(deltas, s)
-            .map(|concept| s.parse::<U>().unwrap().bind_concept(concept))
-            .unwrap_or_else(|| s.parse().unwrap())
     }
 }
 

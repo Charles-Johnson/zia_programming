@@ -17,11 +17,9 @@
 
 use delta::{ApplyDelta, Delta};
 use errors::{ZiaError, ZiaResult};
-use logging::Logger;
 use reading::FindWhatReducesToIt;
 use reading::{FindDefinition, MaybeString, MightExpand};
 use std::{fmt, rc::Rc};
-use translating::SyntaxFinder;
 use writing::{
     DeleteReduction, GetDefinition, GetDefinitionOf, GetReduction, InsertDefinition,
     MakeReduceFrom, MaybeConcept, SetAsDefinitionOf, SetDefinition, SetReduction, UpdateReduction,
@@ -31,7 +29,6 @@ pub trait ExecuteReduction<T, U>
 where
     Self: ConceptMaker<T, U> + DeleteReduction<U>,
     T: SetReduction
-        + From<Self::A>
         + MakeReduceFrom
         + GetDefinitionOf
         + From<String>
@@ -69,7 +66,6 @@ where
     T: SetReduction
         + MakeReduceFrom
         + GetDefinitionOf
-        + From<S::A>
         + From<String>
         + GetReduction
         + SetDefinition
@@ -100,51 +96,9 @@ impl<T> Container for T where T: MightExpand + PartialEq<Rc<T>> + Sized {}
 
 pub trait ConceptMaker<T, U>
 where
-    T: From<String>
-        + From<Self::A>
-        + SetReduction
-        + MakeReduceFrom
-        + GetDefinitionOf
-        + GetDefinition
-        + SetDefinition
-        + SetAsDefinitionOf
-        + MaybeString
-        + GetReduction
-        + FindWhatReducesToIt
-        + Clone,
-    Self: Labeller<T> + Logger + SyntaxFinder<T>,
-    Self::Delta: Clone + fmt::Debug + Default + Delta,
-    U: MightExpand + MaybeConcept + fmt::Display,
+    Self: UpdateReduction
 {
-    fn concept_from_ast(&self, deltas: &mut Self::Delta, ast: &U) -> ZiaResult<usize> {
-        if let Some(c) = ast.get_concept() {
-            Ok(c)
-        } else if let Some(c) = self.concept_from_label(deltas, &ast.to_string()) {
-            Ok(c)
-        } else {
-            let string = &ast.to_string();
-            match ast.get_expansion() {
-                None => self.new_labelled_default(deltas, string),
-                Some((ref left, ref right)) => {
-                    let leftc = self.concept_from_ast(deltas, left)?;
-                    let rightc = self.concept_from_ast(deltas, right)?;
-                    let ls = left.to_string();
-                    let rs = right.to_string();
-                    let concept = self.find_or_insert_definition(
-                        deltas,
-                        leftc,
-                        rightc,
-                        ls.starts_with('_') && ls.ends_with('_')
-                            || rs.starts_with('_') && rs.ends_with('_'),
-                    )?;
-                    if !string.contains(' ') {
-                        self.label(deltas, concept, string)?;
-                    }
-                    Ok(concept)
-                }
-            }
-        }
-    }
+    fn concept_from_ast(&self, deltas: &mut Self::Delta, ast: &U) -> ZiaResult<usize>;
 }
 
 pub trait Labeller<T>
