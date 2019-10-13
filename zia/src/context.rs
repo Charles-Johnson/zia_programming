@@ -24,7 +24,6 @@ use concepts::{AbstractPart, Concept, ConceptDelta as CD};
 use constants::{ASSOC, DEFINE, FALSE, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
-use logging::Logger;
 use reading::{
     Associativity, BindConcept, BindPair, Container, FindDefinition, FindWhatReducesToIt,
     GetDefinition, GetDefinitionOf, GetLabel, GetReduction, Label, MaybeConcept, MaybeString,
@@ -60,13 +59,13 @@ pub struct Context {
 
 impl Context {
     pub fn execute(&mut self, command: &str) -> String {
-        info!(*self.logger(), "execute({})", command);
+        info!(self.logger, "execute({})", command);
         let mut delta = ContextDelta::default();
         let string = self
             .ast_from_expression(&delta, command)
             .and_then(|a| self.call(&mut delta, &a))
             .unwrap_or_else(|e| e.to_string());
-        info!(*self.logger(), "execute({}) -> {:?}", command, delta);
+        info!(self.logger, "execute({}) -> {:?}", command, delta);
         self.apply(delta);
         string
     }
@@ -720,7 +719,7 @@ impl Context {
     pub fn new() -> Self {
         let mut cont = Self::default();
         let delta = cont.setup().unwrap();
-        info!(*cont.logger(), "Setup a new context: {:?}", &delta);
+        info!(cont.logger, "Setup a new context: {:?}", &delta);
         cont.apply(delta);
         cont
     }
@@ -924,12 +923,6 @@ impl Container for Context {
         } else {
             false
         }
-    }
-}
-
-impl Logger for Context {
-    fn logger(&mut self) -> &mut slog::Logger {
-        &mut self.logger
     }
 }
 

@@ -138,9 +138,6 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
-// Trait for logging.
-mod logging;
-
 /// Traits for reading concepts within the context.
 mod reading;
 
