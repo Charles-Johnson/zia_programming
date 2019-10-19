@@ -264,53 +264,18 @@ impl ApplyDelta for Concept {
             reduces_from,
             specific_part,
         } = delta;
-        self.lefthand_of.retain(|c| !lefthand_of.remove.contains(c));
-        self.lefthand_of.extend(lefthand_of.add);
-        self.righthand_of
-            .retain(|c| !righthand_of.remove.contains(c));
-        self.righthand_of.extend(righthand_of.add);
-        self.reduces_from
-            .retain(|c| !reduces_from.remove.contains(c));
-        self.reduces_from.extend(reduces_from.add);
+        self.lefthand_of.apply(lefthand_of);
+        self.righthand_of.apply(righthand_of);
+        self.reduces_from.apply(reduces_from);
         match self.specific_part {
             SpecificPart::Abstract(ref mut ap) => ap.apply(specific_part),
             _ => (),
         };
     }
     fn diff(&self, next: Concept) -> ConceptDelta {
-        let mut lefthand_of = SetChange::default();
-        for next_item in &next.lefthand_of {
-            if self.lefthand_of.get(&next_item).is_none() {
-                lefthand_of.add.insert(*next_item);
-            }
-        }
-        for prev_item in &self.lefthand_of {
-            if next.lefthand_of.get(&prev_item).is_none() {
-                lefthand_of.remove.insert(*prev_item);
-            }
-        }
-        let mut righthand_of = SetChange::default();
-        for next_item in &next.righthand_of {
-            if self.righthand_of.get(&next_item).is_none() {
-                righthand_of.add.insert(*next_item);
-            }
-        }
-        for prev_item in &self.righthand_of {
-            if next.righthand_of.get(&prev_item).is_none() {
-                righthand_of.remove.insert(*prev_item);
-            }
-        }
-        let mut reduces_from = SetChange::default();
-        for next_item in &next.reduces_from {
-            if self.reduces_from.get(&next_item).is_none() {
-                reduces_from.add.insert(*next_item);
-            }
-        }
-        for prev_item in &self.lefthand_of {
-            if next.lefthand_of.get(&prev_item).is_none() {
-                reduces_from.remove.insert(*prev_item);
-            }
-        }
+        let lefthand_of = self.lefthand_of.diff(next.lefthand_of);
+        let righthand_of = self.righthand_of.diff(next.righthand_of);
+        let reduces_from = self.reduces_from.diff(next.reduces_from);
         ConceptDelta {
             lefthand_of,
             righthand_of,

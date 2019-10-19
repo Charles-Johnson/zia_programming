@@ -26,7 +26,7 @@ pub trait ApplyDelta {
 
 impl<T> ApplyDelta for Option<T>
 where
-    T: PartialEq + Clone
+    T: PartialEq + Clone,
 {
     type Delta = Change<Option<T>>;
     fn apply(&mut self, delta: Self::Delta) {
@@ -136,5 +136,27 @@ impl Delta for SetChange {
                 self.add.insert(*item);
             }
         });
+    }
+}
+
+impl ApplyDelta for HashSet<usize> {
+    type Delta = SetChange;
+    fn apply(&mut self, delta: SetChange) {
+        self.retain(|c| !delta.remove.contains(c));
+        self.extend(delta.add);
+    }
+    fn diff(&self, next: HashSet<usize>) -> SetChange {
+        let mut set_change = SetChange::default();
+        for next_item in &next {
+            if self.get(&next_item).is_none() {
+                set_change.add.insert(*next_item);
+            }
+        }
+        for prev_item in self {
+            if next.get(&prev_item).is_none() {
+                set_change.remove.insert(*prev_item);
+            }
+        }
+        set_change
     }
 }
