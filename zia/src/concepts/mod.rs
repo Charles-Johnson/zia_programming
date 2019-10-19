@@ -40,7 +40,7 @@ impl Concept {
         concept: usize,
     ) -> ConceptDelta {
         assert!({
-            let lefthand_of_concept = self.get_lefthand_of().contains(&concept);
+            let lefthand_of_concept = self.lefthand_of.contains(&concept);
             let SetChange { add, remove } = &delta.lefthand_of;
             if remove.contains(&concept) {
                 false
@@ -66,7 +66,7 @@ impl Concept {
         concept: usize,
     ) -> ConceptDelta {
         assert!({
-            let righthand_of_concept = self.get_righthand_of().contains(&concept);
+            let righthand_of_concept = self.righthand_of.contains(&concept);
             let SetChange { add, remove } = &delta.righthand_of;
             if remove.contains(&concept) {
                 false
@@ -106,7 +106,7 @@ impl Concept {
         concept: usize,
     ) -> ConceptDelta {
         assert!({
-            let reduces_from_concept = self.find_what_reduces_to_it().contains(&concept);
+            let reduces_from_concept = self.reduces_from.contains(&concept);
             let SetChange { add, remove } = &delta.reduces_from;
             if remove.contains(&concept) {
                 false
@@ -187,35 +187,29 @@ impl Concept {
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
-    pub fn add_as_lefthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            lefthand_of: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            righthand_of: SetChange::default(),
-            reduces_from: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    pub fn add_as_righthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            righthand_of: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            lefthand_of: SetChange::default(),
-            reduces_from: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    pub fn set_definition_delta(
-        &self,
-        lefthand: usize,
-        righthand: usize,
-    ) -> ZiaResult<ConceptDelta> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(c.set_definition_delta(lefthand, righthand).into()),
+    pub fn set_definition(&self, d: usize, l: usize, r: usize) -> ZiaResult<[ConceptDelta; 3]> {
+        match &self.specific_part {
+            SpecificPart::Abstract(c) => Ok([
+                c.set_definition_delta(l, r).into(),
+                ConceptDelta {
+                    lefthand_of: SetChange {
+                        add: hashset! {d},
+                        remove: hashset! {},
+                    },
+                    righthand_of: SetChange::default(),
+                    reduces_from: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+                ConceptDelta {
+                    lefthand_of: SetChange::default(),
+                    righthand_of: SetChange {
+                        add: hashset! {d},
+                        remove: hashset! {},
+                    },
+                    reduces_from: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+            ]),
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }

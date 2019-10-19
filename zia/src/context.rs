@@ -370,27 +370,6 @@ impl Context {
             .expect("No label to remove");
         self.delete_reduction(deltas, concept_of_label)
     }
-    fn set_concept_definition_deltas(
-        &self,
-        delta: &mut ContextDelta,
-        concept: usize,
-        lefthand: usize,
-        righthand: usize,
-    ) -> ZiaResult<()> {
-        let concept_delta = self
-            .read_concept(delta, concept)
-            .set_definition_delta(lefthand, righthand)?;
-        update_concept_delta(delta.concept.entry(concept), concept_delta);
-        let lefthand_delta = self
-            .read_concept(delta, lefthand)
-            .add_as_lefthand_of_delta(concept);
-        update_concept_delta(delta.concept.entry(lefthand), lefthand_delta);
-        let righthand_delta = self
-            .read_concept(delta, righthand)
-            .add_as_righthand_of_delta(concept);
-        update_concept_delta(delta.concept.entry(righthand), righthand_delta);
-        Ok(())
-    }
     fn concept_reduction_deltas(
         &self,
         delta: &mut ContextDelta,
@@ -1423,19 +1402,27 @@ impl Context {
     }
     fn insert_definition(
         &self,
-        deltas: &mut ContextDelta,
+        delta: &mut ContextDelta,
         definition: usize,
         lefthand: usize,
         righthand: usize,
     ) -> ZiaResult<()> {
-        if self.contains(deltas, lefthand, definition)
-            || self.contains(deltas, righthand, definition)
+        if self.contains(delta, lefthand, definition) || self.contains(delta, righthand, definition)
         {
             Err(ZiaError::InfiniteDefinition)
         } else {
-            self.check_reductions(deltas, definition, lefthand)?;
-            self.check_reductions(deltas, definition, righthand)?;
-            self.set_concept_definition_deltas(deltas, definition, lefthand, righthand)?;
+            self.check_reductions(delta, definition, lefthand)?;
+            self.check_reductions(delta, definition, righthand)?;
+            let id_array = [definition, lefthand, righthand];
+            let concept_delta_array = self
+                .read_concept(delta, definition)
+                .set_definition(definition, lefthand, righthand)?;
+            concept_delta_array
+                .iter()
+                .enumerate()
+                .for_each(|(i, concept_delta)| {
+                    update_concept_delta(delta.concept.entry(id_array[i]), concept_delta.clone())
+                });
             Ok(())
         }
     }
