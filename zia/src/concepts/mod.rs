@@ -95,10 +95,7 @@ impl Concept {
             }
         });
         AbstractDelta {
-            definition: Change::Different {
-                before: definition,
-                after: None,
-            },
+            definition: definition.diff(None),
             reduction: Change::Same,
         }
         .into()
@@ -138,10 +135,7 @@ impl Concept {
             }
         });
         AbstractDelta {
-            reduction: Change::Different {
-                before: self.get_reduction(),
-                after: None,
-            },
+            reduction: self.get_reduction().diff(None),
             definition: Change::Same,
         }
         .into()

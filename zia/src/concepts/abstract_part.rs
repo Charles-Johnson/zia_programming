@@ -66,20 +66,14 @@ impl Default for AbstractPart {
 impl AbstractPart {
     pub fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> AbstractDelta {
         AbstractDelta {
-            definition: Change::Different {
-                before: self.definition,
-                after: Some((lefthand, righthand)),
-            },
+            definition: self.definition.diff(Some((lefthand, righthand))),
             reduction: Change::Same,
         }
     }
     pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
         AbstractDelta {
             definition: Change::Same,
-            reduction: Change::Different {
-                before: self.reduces_to,
-                after: Some(concept),
-            },
+            reduction: self.reduces_to.diff(Some(concept)),
         }
     }
 }
