@@ -61,45 +61,28 @@ impl Concept {
             },
         ]
     }
-    pub fn no_longer_reduces_from_delta(
-        &self,
-        delta: &ConceptDelta,
-        concept: usize,
-    ) -> ConceptDelta {
-        assert!({
-            let reduces_from_concept = self.reduces_from.contains(&concept);
-            let SetChange { add, remove } = &delta.reduces_from;
-            if remove.contains(&concept) {
-                false
-            } else if add.contains(&concept) {
-                true
-            } else {
-                reduces_from_concept
-            }
-        });
-        ConceptDelta {
-            reduces_from: SetChange {
-                remove: HashSet::from_iter(std::iter::once(concept)),
-                add: HashSet::default(),
-            },
-            lefthand_of: SetChange::default(),
-            righthand_of: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    pub fn make_reduce_to_none_delta(&self, delta: &ConceptDelta) -> ConceptDelta {
-        assert!({
-            let reduces = self.get_reduction().is_some();
-            match delta.specific_part.reduction {
-                Change::Different { after, .. } => after.is_some(),
-                Change::Same => reduces,
-            }
-        });
-        AbstractDelta {
-            reduction: self.get_reduction().diff(None),
-            definition: Change::Same,
-        }
-        .into()
+    pub fn remove_reduction(&self, id: usize) -> ZiaResult<[(usize, ConceptDelta); 2]> {
+        self
+            .get_reduction()
+            .map(|reduction| {
+                [
+                    (id, AbstractDelta {
+                            reduction: self.get_reduction().diff(None),
+                            definition: Change::Same,
+                        }
+                        .into()),
+                    (reduction, ConceptDelta {
+                            reduces_from: SetChange {
+                                remove: hashset! {id},
+                                add: hashset! {},
+                            },
+                            lefthand_of: SetChange::default(),
+                            righthand_of: SetChange::default(),
+                            specific_part: AbstractDelta::default(),
+                        },),
+                ]
+            })
+            .ok_or(ZiaError::RedundantReduction)
     }
     pub fn find_what_reduces_to_it(&self) -> &HashSet<usize> {
         &self.reduces_from

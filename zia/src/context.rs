@@ -319,54 +319,6 @@ impl Context {
         update_concept_delta(delta.concept.entry(reduction), &reduction_delta);
         Ok(())
     }
-    fn remove_concept_reduction(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-        reduction: usize,
-    ) -> ContextDelta {
-        let mut edited_concept: Option<Concept> = Some(self.read_concept(delta, concept));
-        let mut concept_delta = CD::default();
-        delta.concept.get(&concept).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => concept_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_concept = None;
-                concept_delta = CD::default();
-            }
-        });
-        let mut edited_reduction: Option<Concept> = Some(self.read_concept(delta, reduction));
-        let mut reduction_delta = CD::default();
-        delta.concept.get(&reduction).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => reduction_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_reduction = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_reduction = None;
-                reduction_delta = CD::default();
-            }
-        });
-        ContextDelta {
-            concept: hashmap! {
-                concept => (
-                    ConceptDelta::Update(
-                        edited_concept
-                            .expect("Concept previously removed!")
-                            .make_reduce_to_none_delta(&concept_delta),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-                reduction => (
-                    ConceptDelta::Update(
-                        edited_reduction
-                            .expect("Reduction previously removed!")
-                            .no_longer_reduces_from_delta(&reduction_delta, concept),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-            },
-            string: hashmap! {},
-        }
-    }
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&self, delta: &mut ContextDelta, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
         match ast
@@ -1447,14 +1399,14 @@ impl Context {
             Err(ZiaError::RedundantReduction)
         }
     }
-    fn delete_reduction(&self, delta: &mut ContextDelta, concept: usize) -> ZiaResult<()> {
-        self.read_concept(delta, concept)
-            .get_reduction()
-            .map(|n| {
-                let extra_delta = self.remove_concept_reduction(delta, concept, n);
-                delta.combine(extra_delta);
+    fn delete_reduction(&self, delta: &mut ContextDelta, concept_id: usize) -> ZiaResult<()> {
+        self.read_concept(delta, concept_id)
+            .remove_reduction(concept_id)
+            .map(|z| {
+                z.iter().for_each(|(id, concept_delta)| {
+                    update_concept_delta(delta.concept.entry(*id), concept_delta)
+                })
             })
-            .ok_or(ZiaError::RedundantReduction)
     }
 }
 
