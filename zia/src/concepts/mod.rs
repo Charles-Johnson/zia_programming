@@ -19,7 +19,7 @@ mod abstract_part;
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
-use std::{collections::HashSet, iter::FromIterator};
+use std::collections::HashSet;
 
 /// Data type for any type of concept.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -62,16 +62,20 @@ impl Concept {
         ]
     }
     pub fn remove_reduction(&self, id: usize) -> ZiaResult<[(usize, ConceptDelta); 2]> {
-        self
-            .get_reduction()
+        self.get_reduction()
             .map(|reduction| {
                 [
-                    (id, AbstractDelta {
+                    (
+                        id,
+                        AbstractDelta {
                             reduction: self.get_reduction().diff(None),
                             definition: Change::Same,
                         }
-                        .into()),
-                    (reduction, ConceptDelta {
+                        .into(),
+                    ),
+                    (
+                        reduction,
+                        ConceptDelta {
                             reduces_from: SetChange {
                                 remove: hashset! {id},
                                 add: hashset! {},
@@ -79,7 +83,8 @@ impl Concept {
                             lefthand_of: SetChange::default(),
                             righthand_of: SetChange::default(),
                             specific_part: AbstractDelta::default(),
-                        },),
+                        },
+                    ),
                 ]
             })
             .ok_or(ZiaError::RedundantReduction)
@@ -114,20 +119,20 @@ impl Concept {
             _ => None,
         }
     }
-    pub fn make_reduce_from_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta {
-            reduces_from: SetChange {
-                add: HashSet::from_iter(std::iter::once(index)),
-                remove: HashSet::default(),
-            },
-            lefthand_of: SetChange::default(),
-            righthand_of: SetChange::default(),
-            specific_part: AbstractDelta::default(),
-        }
-    }
-    pub fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
+    pub fn reduce_to(&self, id: usize, reduction: usize) -> ZiaResult<[ConceptDelta; 2]> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(c.make_reduce_to_delta(concept).into()),
+            SpecificPart::Abstract(ref c) => Ok([
+                c.make_reduce_to_delta(reduction).into(),
+                ConceptDelta {
+                    reduces_from: SetChange {
+                        add: hashset! {id},
+                        remove: hashset! {},
+                    },
+                    lefthand_of: SetChange::default(),
+                    righthand_of: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+            ]),
             _ => Err(ZiaError::ConcreteReduction),
         }
     }

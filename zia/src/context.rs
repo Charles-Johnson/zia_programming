@@ -303,22 +303,6 @@ impl Context {
             .expect("No label to remove");
         self.delete_reduction(deltas, concept_of_label)
     }
-    fn concept_reduction_deltas(
-        &self,
-        delta: &mut ContextDelta,
-        concept: usize,
-        reduction: usize,
-    ) -> ZiaResult<()> {
-        let concept_delta = self
-            .read_concept(delta, concept)
-            .make_reduce_to_delta(reduction)?;
-        let reduction_delta = self
-            .read_concept(delta, reduction)
-            .make_reduce_from_delta(concept);
-        update_concept_delta(delta.concept.entry(concept), &concept_delta);
-        update_concept_delta(delta.concept.entry(reduction), &reduction_delta);
-        Ok(())
-    }
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&self, delta: &mut ContextDelta, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
         match ast
@@ -1336,11 +1320,11 @@ impl Context {
     }
     fn update_reduction(
         &self,
-        deltas: &mut ContextDelta,
+        delta: &mut ContextDelta,
         concept: usize,
         reduction: usize,
     ) -> ZiaResult<()> {
-        self.get_normal_form(deltas, reduction)
+        self.get_normal_form(delta, reduction)
             .and_then(|n| {
                 if concept == n {
                     Some(Err(ZiaError::CyclicReduction))
@@ -1349,7 +1333,7 @@ impl Context {
                 }
             })
             .unwrap_or_else(|| {
-                self.read_concept(deltas, concept)
+                self.read_concept(delta, concept)
                     .get_reduction()
                     .and_then(|r| {
                         if r == reduction {
@@ -1359,10 +1343,18 @@ impl Context {
                         }
                     })
                     .unwrap_or_else(|| {
-                        if reduction == self.get_reduction_of_composition(deltas, concept) {
+                        if reduction == self.get_reduction_of_composition(delta, concept) {
                             Err(ZiaError::RedundantReduction)
                         } else {
-                            self.concept_reduction_deltas(deltas, concept, reduction)
+                            let concept_deltas = self
+                                .read_concept(delta, concept)
+                                .reduce_to(concept, reduction)?;
+                            update_concept_delta(delta.concept.entry(concept), &concept_deltas[0]);
+                            update_concept_delta(
+                                delta.concept.entry(reduction),
+                                &concept_deltas[1],
+                            );
+                            Ok(())
                         }
                     })
             })
