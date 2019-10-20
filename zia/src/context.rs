@@ -181,73 +181,6 @@ impl Context {
             index,
         )
     }
-    fn delete_definition(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-        left: usize,
-        right: usize,
-    ) -> ContextDelta {
-        let mut edited_concept: Option<Concept> = Some(self.read_concept(delta, concept));
-        let mut edited_left: Option<Concept> = Some(self.read_concept(delta, left));
-        let mut edited_right: Option<Concept> = Some(self.read_concept(delta, right));
-        let mut concept_delta = CD::default();
-        let mut left_delta = CD::default();
-        let mut right_delta = CD::default();
-        delta.concept.get(&concept).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => concept_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_concept = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_concept = None;
-                concept_delta = CD::default();
-            }
-        });
-        delta.concept.get(&left).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => left_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_left = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_left = None;
-                left_delta = CD::default();
-            }
-        });
-        delta.concept.get(&right).map(|(cd, _)| match cd {
-            ConceptDelta::Update(d) => right_delta.combine(d.clone()),
-            ConceptDelta::Insert(t) => edited_right = Some(t.clone()),
-            ConceptDelta::Remove(_) => {
-                edited_right = None;
-                right_delta = CD::default();
-            }
-        });
-        ContextDelta {
-            concept: hashmap! {
-                concept => (
-                    ConceptDelta::Update(
-                        edited_concept
-                            .expect("Concept previously removed!")
-                            .remove_definition_delta(&concept_delta),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-                left => (
-                    ConceptDelta::Update(
-                        edited_left
-                            .expect("Left previously removed!")
-                            .remove_as_lefthand_of_delta(&left_delta, concept),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-                right => (
-                    ConceptDelta::Update(
-                        edited_right
-                            .expect("Right previously removed!")
-                            .remove_as_righthand_of_delta(&right_delta, concept),
-                    ),
-                    false, // Doesn't affect anything whether true or false
-                ),
-            },
-            string: hashmap! {},
-        }
-    }
     fn add_string_delta(string_id: usize, string: &str) -> ContextDelta {
         ContextDelta {
             string: hashmap! {string.to_string() => StringDelta::Insert(string_id)},
@@ -382,8 +315,8 @@ impl Context {
         let reduction_delta = self
             .read_concept(delta, reduction)
             .make_reduce_from_delta(concept);
-        update_concept_delta(delta.concept.entry(concept), concept_delta);
-        update_concept_delta(delta.concept.entry(reduction), reduction_delta);
+        update_concept_delta(delta.concept.entry(concept), &concept_delta);
+        update_concept_delta(delta.concept.entry(reduction), &reduction_delta);
         Ok(())
     }
     fn remove_concept_reduction(
@@ -843,8 +776,15 @@ impl Context {
         match self.read_concept(delta, concept).get_definition() {
             None => Err(ZiaError::RedundantDefinitionRemoval),
             Some((left, right)) => {
-                let extra_delta = self.delete_definition(delta, concept, left, right);
-                delta.combine(extra_delta);
+                let concept_delta_array =
+                    self.read_concept(delta, concept).delete_definition(concept);
+                let concept_id_array = [concept, left, right];
+                (0..3).for_each(|index| {
+                    update_concept_delta(
+                        delta.concept.entry(concept_id_array[index]),
+                        &concept_delta_array[index],
+                    )
+                });
                 self.try_delete_concept(delta, concept)?;
                 self.try_delete_concept(delta, left)?;
                 self.try_delete_concept(delta, right)
@@ -1421,7 +1361,7 @@ impl Context {
                 .iter()
                 .enumerate()
                 .for_each(|(i, concept_delta)| {
-                    update_concept_delta(delta.concept.entry(id_array[i]), concept_delta.clone())
+                    update_concept_delta(delta.concept.entry(id_array[i]), concept_delta)
                 });
             Ok(())
         }
@@ -1518,7 +1458,7 @@ impl Context {
     }
 }
 
-fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: CD) {
+fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: &CD) {
     entry
         .and_modify(|(cd, _)| match cd {
             ConceptDelta::Update(d) => {
@@ -1531,7 +1471,7 @@ fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta
             }
             ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
         })
-        .or_insert((ConceptDelta::Update(concept_delta), false));
+        .or_insert((ConceptDelta::Update(concept_delta.clone()), false));
 }
 
 #[derive(Clone, Debug, Default)]
