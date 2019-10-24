@@ -23,7 +23,7 @@ use errors::{map_err_variant, ZiaError, ZiaResult};
 use slog;
 use slog::Drain;
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
     default::Default,
     rc::Rc,
 };
@@ -222,8 +222,7 @@ impl Context {
             && self.righthand_of_without_label_is_empty(deltas, concept)
             && self
                 .read_concept(deltas, concept)
-                .find_what_reduces_to_it()
-                .is_empty()
+                .find_what_reduces_to_it().next().is_none()
     }
     fn righthand_of_without_label_is_empty(&self, deltas: &ContextDelta, con: usize) -> bool {
         self.read_concept(deltas, con)
@@ -236,18 +235,6 @@ impl Context {
             })
             .nth(0)
             .is_none()
-    }
-    fn find_what_its_a_normal_form_of(&self, deltas: &ContextDelta, con: usize) -> HashSet<usize> {
-        let mut normal_form_of = self
-            .read_concept(deltas, con)
-            .find_what_reduces_to_it()
-            .clone();
-        for concept in normal_form_of.clone().iter() {
-            for concept2 in self.find_what_its_a_normal_form_of(deltas, *concept).iter() {
-                normal_form_of.insert(*concept2);
-            }
-        }
-        normal_form_of
     }
     fn remove_concept(&self, delta: &mut ContextDelta, concept: usize) {
         if let Some(ref s) = self.read_concept(delta, concept).get_string() {
@@ -877,24 +864,22 @@ impl Context {
             })
         })
     }
-    fn get_labellee(&self, deltas: &ContextDelta, concept: usize) -> Option<usize> {
-        let mut candidates: Vec<usize> = Vec::new();
-        for label in self.find_what_its_a_normal_form_of(deltas, concept) {
-            match self.read_concept(deltas, label).get_definition() {
-                None => continue,
-                Some((r, x)) => {
+    fn get_labellee(&self, delta: &ContextDelta, c: usize) -> Option<usize> {
+        let concept = self.read_concept(delta, c);
+        let mut candidates: VecDeque<usize> = concept.find_what_reduces_to_it().copied().collect();
+        loop {
+            if let Some(candidate) = candidates.pop_front() {
+                let candidate_concept = self.read_concept(delta, candidate);
+                if let Some((r, x)) = candidate_concept.get_definition() {
                     if r == LABEL {
-                        candidates.push(x)
-                    } else {
-                        continue;
+                        return Some(x);
                     }
                 }
-            };
-        }
-        match candidates.len() {
-            0 => None,
-            1 => Some(candidates[0]),
-            _ => panic!("Multiple concepts are labelled with the same string"),
+                let extra_candidates = candidate_concept.find_what_reduces_to_it().copied();
+                candidates.extend(extra_candidates);
+            } else {
+                return None;
+            }
         }
     }
     fn get_label(&self, deltas: &ContextDelta, concept: usize) -> Option<String> {

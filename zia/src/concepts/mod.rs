@@ -89,8 +89,8 @@ impl Concept {
             })
             .ok_or(ZiaError::RedundantReduction)
     }
-    pub fn find_what_reduces_to_it(&self) -> &HashSet<usize> {
-        &self.reduces_from
+    pub fn find_what_reduces_to_it(&self) -> std::collections::hash_set::Iter<usize> {
+        self.reduces_from.iter()
     }
     /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
     pub fn get_string(&self) -> Option<String> {
