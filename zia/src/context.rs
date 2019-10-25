@@ -28,8 +28,46 @@ use std::{
     rc::Rc,
 };
 
-/// A container for adding, reading, writing and removing concepts of generic type `T`.
 pub struct Context {
+    snap_shot: SnapShot,
+    logger: slog::Logger,
+}
+
+impl Context {
+    pub fn new() -> Self {
+        let mut cont = Self::default();
+        let delta = cont.snap_shot.setup().unwrap();
+        info!(cont.logger, "Setup a new context: {:?}", &delta);
+        cont.snap_shot.apply(delta);
+        cont
+    }
+    pub fn execute(&mut self, command: &str) -> String {
+        info!(self.logger, "execute({})", command);
+        let mut delta = ContextDelta::default();
+        let string = self.snap_shot
+            .ast_from_expression(&delta, command)
+            .and_then(|a| self.snap_shot.call(&mut delta, &a))
+            .unwrap_or_else(|e| e.to_string());
+        info!(self.logger, "execute({}) -> {:?}", command, delta);
+        self.snap_shot.apply(delta);
+        string
+    }
+}
+
+impl Default for Context {
+    fn default() -> Context {
+        let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+        let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
+        Context {
+            snap_shot: SnapShot::default(),
+            logger,
+        }
+    }
+}
+
+/// A container for adding, reading, writing and removing concepts of generic type `T`.
+#[derive(Default)]
+struct SnapShot {
     /// Relates a String value to the index where the concept corresponding to the String is stored
     /// in the `concepts` field.
     string_map: HashMap<String, usize>,
@@ -38,7 +76,6 @@ pub struct Context {
     concepts: Vec<Option<Concept>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
-    logger: slog::Logger,
     variables: HashSet<usize>,
 }
 
@@ -48,18 +85,7 @@ pub enum Associativity {
     Right,
 }
 
-impl Context {
-    pub fn execute(&mut self, command: &str) -> String {
-        info!(self.logger, "execute({})", command);
-        let mut delta = ContextDelta::default();
-        let string = self
-            .ast_from_expression(&delta, command)
-            .and_then(|a| self.call(&mut delta, &a))
-            .unwrap_or_else(|e| e.to_string());
-        info!(self.logger, "execute({}) -> {:?}", command, delta);
-        self.apply(delta);
-        string
-    }
+impl SnapShot {
     fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
         let in_previous_variables = self.variables.contains(&concept);
         delta
@@ -541,13 +567,6 @@ impl Context {
             .bind_pair(left, right);
         self.concept_from_ast(delta, &new_syntax_tree)?;
         Ok(())
-    }
-    pub fn new() -> Self {
-        let mut cont = Self::default();
-        let delta = cont.setup().unwrap();
-        info!(cont.logger, "Setup a new context: {:?}", &delta);
-        cont.apply(delta);
-        cont
     }
     fn ast_from_expression(&self, deltas: &ContextDelta, s: &str) -> ZiaResult<Rc<SyntaxTree>> {
         let tokens: Vec<String> = parse_line(s)?;
@@ -1506,17 +1525,14 @@ impl Delta for ContextDelta {
     }
 }
 
-impl ApplyDelta for Context {
+impl ApplyDelta for SnapShot {
     type Delta = ContextDelta;
     fn apply(&mut self, delta: ContextDelta) {
         delta.string.iter().for_each(|(s, sd)| match sd {
             StringDelta::Update { after, .. } => {
                 self.string_map.insert(s.to_string(), *after);
             }
-            StringDelta::Insert(id) => {
-                info!(self.logger, "add_string({}, {})", id, &s);
-                self.add_string(*id, &s);
-            }
+            StringDelta::Insert(id) => self.add_string(*id, &s),
             StringDelta::Remove(_) => self.remove_string(&s),
         });
         for (id, (cd, v)) in delta.concept {
@@ -1543,24 +1559,10 @@ impl ApplyDelta for Context {
             }
         }
     }
-    fn diff(&self, _other: Context) -> ContextDelta {
+    fn diff(&self, _other: SnapShot) -> ContextDelta {
         ContextDelta {
             string: hashmap! {},
             concept: hashmap! {},
-        }
-    }
-}
-
-impl Default for Context {
-    fn default() -> Context {
-        let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-        let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
-        Context {
-            string_map: HashMap::new(),
-            concepts: Vec::new(),
-            gaps: Vec::new(),
-            logger,
-            variables: HashSet::new(),
         }
     }
 }
