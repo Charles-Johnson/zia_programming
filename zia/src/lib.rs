@@ -131,6 +131,8 @@ mod context;
 
 mod context_delta;
 
+mod context_search;
+
 /// The trait for describing incremental changes in state.
 mod delta;
 

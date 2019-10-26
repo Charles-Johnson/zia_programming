@@ -19,11 +19,12 @@ use ast::SyntaxTree;
 use concepts::{AbstractPart, Concept};
 use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
 use context_delta::{update_concept_delta, ConceptDelta, ContextDelta, StringDelta};
+use context_search::ContextSearch;
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
 use slog;
 use slog::Drain;
-use snap_shot::{ContextSearch, SnapShot};
+use snap_shot::SnapShot;
 use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 
 pub struct Context {

@@ -17,7 +17,7 @@
 
 use concepts::{Concept, ConceptDelta as CD};
 use delta::{ApplyDelta, Delta};
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Clone, Debug, Default)]
 pub struct ContextDelta {
@@ -38,7 +38,6 @@ pub enum ConceptDelta {
     Remove(Concept),
     Update(CD),
 }
-
 
 pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: &CD) {
     entry
