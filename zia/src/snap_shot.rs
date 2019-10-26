@@ -26,6 +26,168 @@ use std::{
     rc::Rc,
 };
 
+pub struct ContextSearch<'a> {
+    snap_shot: &'a SnapShot,
+    variable_mask: VariableMask,
+}
+
+impl<'a> ContextSearch<'a> {
+    /// Returns the syntax for the reduction of a concept.
+    fn reduce_concept(&self, deltas: &ContextDelta, concept: usize) -> Option<Rc<SyntaxTree>> {
+        self.variable_mask
+            .get(&concept)
+            .and_then(|ast| self.reduce(deltas, ast))
+            .or_else(|| {
+                self.snap_shot
+                    .read_concept(deltas, concept)
+                    .get_reduction()
+                    .map(|n| self.snap_shot.to_ast(deltas, n))
+                    .or_else(|| {
+                        self.snap_shot
+                            .read_concept(deltas, concept)
+                            .get_definition()
+                            .and_then(|(left, right)| {
+                                let left_result = self.reduce_concept(deltas, left);
+                                let right_result = self.reduce_concept(deltas, right);
+                                self.snap_shot.match_left_right(
+                                    deltas,
+                                    left_result,
+                                    right_result,
+                                    &self.snap_shot.to_ast(deltas, left),
+                                    &self.snap_shot.to_ast(deltas, right),
+                                )
+                            })
+                    })
+            })
+    }
+    /// Reduces the syntax by using the reduction rules of associated concepts.
+    pub fn reduce(&self, deltas: &ContextDelta, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
+        ast.get_concept()
+            .and_then(|c| self.reduce_concept(deltas, c))
+            .or_else(|| {
+                ast.get_expansion()
+                    .and_then(|(ref left, ref right)| self.reduce_pair(deltas, left, right))
+            })
+    }
+    // Reduces a syntax tree based on the properties of the left and right branches
+    fn reduce_pair(
+        &self,
+        deltas: &ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<Rc<SyntaxTree>> {
+        left.get_concept()
+            .and_then(|lc| match lc {
+                ASSOC => Some(self.snap_shot.to_ast(deltas, RIGHT)),
+                _ => self
+                    .variable_mask
+                    .get(&lc)
+                    .and_then(|ast| self.reduce(deltas, ast)),
+            })
+            .or_else(|| {
+                right
+                    .get_expansion()
+                    .and_then(|(ref rightleft, ref rightright)| {
+                        self.reduce_by_expanded_right_branch(deltas, left, rightleft, rightright)
+                    })
+                    .or_else(|| {
+                        self.snap_shot
+                            .match_left_right(
+                                deltas,
+                                self.reduce(deltas, left),
+                                self.reduce(deltas, right),
+                                left,
+                                right,
+                            )
+                            .or_else(|| {
+                                self.snap_shot
+                                    .filter_generalisations_for_pair(deltas, left, right)
+                                    .iter()
+                                    .filter_map(|(generalisation, variable, syntax)| {
+                                        let context_search = ContextSearch {
+                                            variable_mask: hashmap! {*variable => syntax.clone()},
+                                            snap_shot: self.snap_shot.clone(),
+                                        };
+                                        context_search.reduce_concept(deltas, *generalisation)
+                                    })
+                                    .nth(0)
+                            })
+                    })
+            })
+    }
+    /// Reduces the syntax as much as possible (returns the normal form syntax).
+    pub fn recursively_reduce(
+        &self,
+        deltas: &ContextDelta,
+        ast: &Rc<SyntaxTree>,
+    ) -> Rc<SyntaxTree> {
+        match self.reduce(deltas, ast) {
+            Some(ref a) => self.recursively_reduce(deltas, a),
+            None => ast.clone(),
+        }
+    }
+    // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
+    fn reduce_by_expanded_right_branch(
+        &self,
+        deltas: &ContextDelta,
+        left: &Rc<SyntaxTree>,
+        rightleft: &Rc<SyntaxTree>,
+        rightright: &Rc<SyntaxTree>,
+    ) -> Option<Rc<SyntaxTree>> {
+        rightleft.get_concept().and_then(|rlc| match rlc {
+            REDUCTION => self
+                .determine_reduction_truth(deltas, left, &rightright)
+                .map(|x| {
+                    if x {
+                        self.snap_shot.to_ast(deltas, TRUE)
+                    } else {
+                        self.snap_shot.to_ast(deltas, FALSE)
+                    }
+                }),
+            _ => None,
+        })
+    }
+    fn determine_reduction_truth(
+        &self,
+        deltas: &ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<bool> {
+        if left == right {
+            Some(false)
+        } else {
+            self.determine_evidence_of_reduction(deltas, left, right)
+                .or_else(|| {
+                    self.determine_evidence_of_reduction(deltas, right, left)
+                        .map(|x| !x)
+                })
+        }
+    }
+    fn determine_evidence_of_reduction(
+        &self,
+        deltas: &ContextDelta,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<bool> {
+        self.reduce(deltas, left).and_then(|reduced_left| {
+            if &reduced_left == right {
+                Some(true)
+            } else {
+                self.determine_evidence_of_reduction(deltas, &reduced_left, right)
+            }
+        })
+    }
+}
+
+impl<'a> From<&'a SnapShot> for ContextSearch<'a> {
+    fn from(snap_shot: &SnapShot) -> ContextSearch {
+        ContextSearch {
+            snap_shot,
+            variable_mask: hashmap! {},
+        }
+    }
+}
+
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 #[derive(Default)]
 pub struct SnapShot {
@@ -259,8 +421,8 @@ impl SnapShot {
                         for syntax in lowest_precedence_syntax.clone() {
                             let comparing_between_tokens =
                                 self.combine(deltas, &syntax, &comparing_precedence_of_token);
-                            match self
-                                .reduce(deltas, &comparing_between_tokens, &HashMap::new())
+                            match ContextSearch::from(self)
+                                .reduce(deltas, &comparing_between_tokens)
                                 .and_then(|s| s.get_concept())
                             {
                                 // syntax of token has even lower precedence than some previous lowest precendence syntax
@@ -458,107 +620,6 @@ impl SnapShot {
             ast.clone()
         }
     }
-    /// Reduces the syntax as much as possible (returns the normal form syntax).
-    pub fn recursively_reduce(
-        &self,
-        deltas: &ContextDelta,
-        ast: &Rc<SyntaxTree>,
-    ) -> Rc<SyntaxTree> {
-        match self.reduce(deltas, ast, &HashMap::new()) {
-            Some(ref a) => self.recursively_reduce(deltas, a),
-            None => ast.clone(),
-        }
-    }
-    fn determine_reduction_truth(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<bool> {
-        if left == right {
-            Some(false)
-        } else {
-            self.determine_evidence_of_reduction(deltas, left, right)
-                .or_else(|| {
-                    self.determine_evidence_of_reduction(deltas, right, left)
-                        .map(|x| !x)
-                })
-        }
-    }
-    fn determine_evidence_of_reduction(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<bool> {
-        self.reduce(deltas, left, &HashMap::new())
-            .and_then(|reduced_left| {
-                if &reduced_left == right {
-                    Some(true)
-                } else {
-                    self.determine_evidence_of_reduction(deltas, &reduced_left, right)
-                }
-            })
-    }
-    /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(
-        &self,
-        deltas: &ContextDelta,
-        ast: &Rc<SyntaxTree>,
-        variable_mask: &HashMap<usize, Rc<SyntaxTree>>,
-    ) -> Option<Rc<SyntaxTree>> {
-        ast.get_concept()
-            .and_then(|c| self.reduce_concept(deltas, c, variable_mask))
-            .or_else(|| {
-                ast.get_expansion().and_then(|(ref left, ref right)| {
-                    self.reduce_pair(deltas, left, right, variable_mask)
-                })
-            })
-    }
-    // Reduces a syntax tree based on the properties of the left and right branches
-    fn reduce_pair(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-        variable_mask: &HashMap<usize, Rc<SyntaxTree>>,
-    ) -> Option<Rc<SyntaxTree>> {
-        left.get_concept()
-            .and_then(|lc| match lc {
-                ASSOC => Some(self.to_ast(deltas, RIGHT)),
-                _ => variable_mask
-                    .get(&lc)
-                    .and_then(|ast| self.reduce(deltas, ast, variable_mask)),
-            })
-            .or_else(|| {
-                right
-                    .get_expansion()
-                    .and_then(|(ref rightleft, ref rightright)| {
-                        self.reduce_by_expanded_right_branch(deltas, left, rightleft, rightright)
-                    })
-                    .or_else(|| {
-                        self.match_left_right(
-                            deltas,
-                            self.reduce(deltas, left, variable_mask),
-                            self.reduce(deltas, right, variable_mask),
-                            left,
-                            right,
-                        )
-                        .or_else(|| {
-                            self.filter_generalisations_for_pair(deltas, left, right)
-                                .iter()
-                                .filter_map(|(generalisation, variable, syntax)| {
-                                    self.reduce_concept(
-                                        deltas,
-                                        *generalisation,
-                                        &hashmap! {*variable => syntax.clone()},
-                                    )
-                                })
-                                .nth(0)
-                        })
-                    })
-            })
-    }
     fn is_leaf_variable(&self, delta: &ContextDelta, lv: usize) -> bool {
         self.has_variable(delta, lv) && self.read_concept(delta, lv).get_definition().is_none()
     }
@@ -621,59 +682,6 @@ impl SnapShot {
                 .unwrap_or_else(|| Vec::default()),
         );
         generalisations
-    }
-    // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
-    fn reduce_by_expanded_right_branch(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
-        rightleft.get_concept().and_then(|rlc| match rlc {
-            REDUCTION => self
-                .determine_reduction_truth(deltas, left, &rightright)
-                .map(|x| {
-                    if x {
-                        self.to_ast(deltas, TRUE)
-                    } else {
-                        self.to_ast(deltas, FALSE)
-                    }
-                }),
-            _ => None,
-        })
-    }
-    /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(
-        &self,
-        deltas: &ContextDelta,
-        concept: usize,
-        variable_mask: &HashMap<usize, Rc<SyntaxTree>>,
-    ) -> Option<Rc<SyntaxTree>> {
-        variable_mask
-            .get(&concept)
-            .and_then(|ast| self.reduce(deltas, ast, variable_mask))
-            .or_else(|| {
-                self.read_concept(deltas, concept)
-                    .get_reduction()
-                    .map(|n| self.to_ast(deltas, n))
-                    .or_else(|| {
-                        self.read_concept(deltas, concept)
-                            .get_definition()
-                            .and_then(|(left, right)| {
-                                let left_result = self.reduce_concept(deltas, left, variable_mask);
-                                let right_result =
-                                    self.reduce_concept(deltas, right, variable_mask);
-                                self.match_left_right(
-                                    deltas,
-                                    left_result,
-                                    right_result,
-                                    &self.to_ast(deltas, left),
-                                    &self.to_ast(deltas, right),
-                                )
-                            })
-                    })
-            })
     }
     /// Returns the syntax for a concept.
     pub fn to_ast(&self, deltas: &ContextDelta, concept: usize) -> Rc<SyntaxTree> {
@@ -752,7 +760,8 @@ impl SnapShot {
         ast: &Rc<SyntaxTree>,
     ) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
-        self.reduce(deltas, &assoc_of_ast, &HashMap::new())
+        ContextSearch::from(self)
+            .reduce(deltas, &assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),
@@ -940,3 +949,5 @@ fn push_token(letter: char, parenthesis_level: u8, token: &mut String, tokens: &
         token.push(letter);
     }
 }
+
+type VariableMask = HashMap<usize, Rc<SyntaxTree>>;

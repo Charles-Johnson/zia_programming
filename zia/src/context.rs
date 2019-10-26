@@ -18,19 +18,13 @@
 use ast::SyntaxTree;
 use concepts::{AbstractPart, Concept};
 use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
-use context_delta::{ConceptDelta, ContextDelta, StringDelta, update_concept_delta};
+use context_delta::{update_concept_delta, ConceptDelta, ContextDelta, StringDelta};
 use delta::{ApplyDelta, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
-use snap_shot::SnapShot;
 use slog;
 use slog::Drain;
-use std::{
-    collections::HashMap,
-    default::Default,
-    iter::from_fn,
-    mem::swap,
-    rc::Rc,
-};
+use snap_shot::{ContextSearch, SnapShot};
+use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 
 pub struct Context {
     snap_shot: SnapShot,
@@ -94,8 +88,8 @@ impl Context {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let reduced_left = self.snap_shot.reduce(&self.delta, left, &HashMap::new());
-        let reduced_right = self.snap_shot.reduce(&self.delta, right, &HashMap::new());
+        let reduced_left = ContextSearch::from(&self.snap_shot).reduce(&self.delta, left);
+        let reduced_right = ContextSearch::from(&self.snap_shot).reduce(&self.delta, right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
@@ -114,7 +108,8 @@ impl Context {
     }
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
-        let normal_form = &self.snap_shot.recursively_reduce(&self.delta, ast);
+        let normal_form =
+            &ContextSearch::from(&self.snap_shot).recursively_reduce(&self.delta, ast);
         if normal_form != ast {
             self.call(normal_form)
         } else {
