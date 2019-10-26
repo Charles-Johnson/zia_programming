@@ -31,4 +31,12 @@ proptest!{
         assert_eq!(context.execute(&format!("let (_{}_ {}) -> {}", a, b, c)), "");
         assert_eq!(context.execute(&format!("{} {}", d, b)), c);
     }
+    #[test]
+    fn repeated_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+        assume_symbols!(a, b, c);
+        let mut context = Context::new();
+        assert_eq!(context.execute(&format!("let (_{0}_ + _{0}_) -> 2 _{0}_", a)), "");
+        assert_eq!(context.execute(&format!("{0} + {0}", b)), format!("2 {}", b));
+        assert_eq!(context.execute(&format!("{} + {}", b, c)), format!("{} {}", b, c));
+    }
 }
