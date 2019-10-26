@@ -16,14 +16,28 @@
 */
 
 use delta::{ApplyDelta, Change, Delta};
+use std::fmt::Debug;
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
     pub definition: Option<(usize, usize)>,
     /// The concept may reduce to another concept.
     pub reduces_to: Option<usize>,
+}
+
+impl Debug for AbstractPart {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str("{")?;
+        self.definition
+            .iter()
+            .try_for_each(|(l, r)| formatter.write_str(&format!("definition: {}, {},", l, r)))?;
+        self.reduces_to
+            .iter()
+            .try_for_each(|r| formatter.write_str(&format!("reduces_to: {},", r)))?;
+        formatter.write_str("}")
+    }
 }
 
 impl ApplyDelta for AbstractPart {

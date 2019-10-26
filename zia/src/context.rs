@@ -37,7 +37,7 @@ impl Context {
     pub fn new() -> Self {
         let mut cont = Self::default();
         cont.setup();
-        info!(cont.logger, "Setup a new context: {:?}", &cont.delta);
+        info!(cont.logger, "Setup a new context: {:#?}", &cont.delta);
         cont.commit();
         cont
     }
@@ -48,7 +48,7 @@ impl Context {
             .ast_from_expression(&self.delta, command)
             .and_then(|a| self.call(&a))
             .unwrap_or_else(|e| e.to_string());
-        info!(self.logger, "execute({}) -> {:?}", command, self.delta);
+        info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
         string
     }

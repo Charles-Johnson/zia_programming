@@ -91,10 +91,39 @@ where
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct SetChange {
     pub remove: HashSet<usize>,
     pub add: HashSet<usize>,
+}
+
+impl SetChange {
+    pub fn is_same(&self) -> bool {
+        self.remove.len() == 0 && self.add.len() == 0
+    }
+}
+
+impl std::fmt::Debug for SetChange {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if self.remove.len() > 0 {
+            string += " remove:";
+            let mut indices: Vec<&usize> = self.remove.iter().collect();
+            indices.sort();
+            for index in indices {
+                string += &format!(" {},", index);
+            }
+        }
+        if self.add.len() > 0 {
+            string += " add:";
+            let mut indices: Vec<&usize> = self.add.iter().collect();
+            indices.sort();
+            for index in indices {
+                string += &format!(" {},", index);
+            }
+        }
+        formatter.write_str(&(string + "}"))
+    }
 }
 
 impl Delta for SetChange {

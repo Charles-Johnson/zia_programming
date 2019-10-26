@@ -17,26 +17,81 @@
 
 use concepts::{Concept, ConceptDelta as CD};
 use delta::{ApplyDelta, Delta};
-use std::collections::{hash_map::Entry, HashMap};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fmt::Debug,
+};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ContextDelta {
     pub string: HashMap<String, StringDelta>,
     pub concept: HashMap<usize, (ConceptDelta, bool)>,
 }
 
-#[derive(Clone, Debug)]
+impl Debug for ContextDelta {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{\n".to_string();
+        if self.string.len() > 0 {
+            string += "    string: {\n";
+            let mut unsorted_keys: Vec<&String> = self.string.keys().collect();
+            unsorted_keys.sort();
+            for key in unsorted_keys {
+                let sd = self.string.get(key).unwrap();
+                string += &format!("\t{}: {:#?},\n", key, sd);
+            }
+            string += "    },\n";
+        }
+        if self.concept.len() > 0 {
+            string += "    concept: {\n";
+            let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
+            unsorted_keys.sort();
+            for key in unsorted_keys {
+                let (cd, variable) = self.concept.get(key).unwrap();
+                string += &format!("\t{}: {:#?}", key, cd);
+                if *variable {
+                    string += " (variable)";
+                }
+                string += ",\n";
+            }
+            string += "    },\n";
+        }
+        string += "}";
+        formatter.write_str(&string)
+    }
+}
+
+#[derive(Clone)]
 pub enum StringDelta {
     Insert(usize),
     Remove(usize),
     Update { before: usize, after: usize },
 }
 
-#[derive(Clone, Debug)]
+impl Debug for StringDelta {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str(&match *self {
+            StringDelta::Insert(n) => format!("+ {}", n),
+            StringDelta::Remove(n) => format!("- {}", n),
+            StringDelta::Update { before, after } => format!("{} -> {}", before, after),
+        })
+    }
+}
+
+#[derive(Clone)]
 pub enum ConceptDelta {
     Insert(Concept),
     Remove(Concept),
     Update(CD),
+}
+
+impl Debug for ConceptDelta {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str(&match *self {
+            ConceptDelta::Insert(ref c) => format!("+ {:#?}", c),
+            ConceptDelta::Remove(ref c) => format!("- {:#?}", c),
+            ConceptDelta::Update(ref cd) => format!("{:#?}", cd),
+        })
+    }
 }
 
 pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: &CD) {

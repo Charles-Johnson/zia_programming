@@ -21,7 +21,7 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context, ZiaError};
+use zia::{Context};
 
 proptest!{
     #[test]

@@ -19,10 +19,10 @@ mod abstract_part;
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Debug};
 
 /// Data type for any type of concept.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct Concept {
     /// Set of all indices of the concepts which have this concept as the lefthand of their definition
     lefthand_of: HashSet<usize>,
@@ -31,6 +31,41 @@ pub struct Concept {
     /// Set of all indices of the concepts which reduce to this concept.
     reduces_from: HashSet<usize>,
     specific_part: SpecificPart,
+}
+
+impl Debug for Concept {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if self.lefthand_of.len() > 0 {
+            string += " lefthand_of: {";
+            let mut unorder_keys: Vec<&usize> = self.lefthand_of.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        if self.righthand_of.len() > 0 {
+            string += " righthand_of: {";
+            let mut unorder_keys: Vec<&usize> = self.righthand_of.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        if self.reduces_from.len() > 0 {
+            string += " reduces_from: {";
+            let mut unorder_keys: Vec<&usize> = self.reduces_from.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        string += &format!(" specific_part: {:#?}", self.specific_part);
+        formatter.write_str(&(string + "}"))
+    }
 }
 
 impl Concept {
@@ -164,7 +199,7 @@ impl Concept {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,
@@ -175,18 +210,50 @@ enum SpecificPart {
     String(String),
 }
 
+impl Debug for SpecificPart {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str(&match *self {
+            SpecificPart::Concrete => "Concrete".to_string(),
+            SpecificPart::Abstract(ref ap) => format!("{:#?}", ap),
+            SpecificPart::String(ref s) => format!("\"{}\"", s),
+        })
+    }
+}
+
 impl Default for SpecificPart {
     fn default() -> SpecificPart {
         SpecificPart::Concrete
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ConceptDelta {
     specific_part: AbstractDelta,
     lefthand_of: SetChange,
     righthand_of: SetChange,
     reduces_from: SetChange,
+}
+
+impl std::fmt::Debug for ConceptDelta {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if let Change::Different { before, after } = self.specific_part.definition {
+            string += &format!(" definition: {:?} -> {:?},", before, after);
+        }
+        if let Change::Different { before, after } = self.specific_part.reduction {
+            string += &format!(" reduction: {:?} -> {:?},", before, after);
+        }
+        if !self.lefthand_of.is_same() {
+            string += &format!(" lefthand_of: {:#?},", self.lefthand_of);
+        }
+        if !self.righthand_of.is_same() {
+            string += &format!(" righthand_of: {:#?},", self.righthand_of);
+        }
+        if !self.reduces_from.is_same() {
+            string += &format!(" reduces_from: {:#?},", self.reduces_from);
+        }
+        formatter.write_str(&(string + "}"))
+    }
 }
 
 impl Delta for ConceptDelta {
