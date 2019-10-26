@@ -547,20 +547,27 @@ impl SnapShot {
                         .or_else(|| {
                             self.filter_generalisations_for_pair(deltas, left, right)
                                 .iter()
-                                .filter_map(|(generalisation, v_mask)| {
-                                    self.reduce_concept(deltas, *generalisation, v_mask)
+                                .filter_map(|(generalisation, variable, syntax)| {
+                                    self.reduce_concept(
+                                        deltas,
+                                        *generalisation,
+                                        &hashmap! {*variable => syntax.clone()},
+                                    )
                                 })
                                 .nth(0)
                         })
                     })
             })
     }
+    fn is_leaf_variable(&self, delta: &ContextDelta, lv: usize) -> bool {
+        self.has_variable(delta, lv) && self.read_concept(delta, lv).get_definition().is_none()
+    }
     fn filter_generalisations_for_pair(
         &self,
         deltas: &ContextDelta,
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
-    ) -> Vec<(usize, HashMap<usize, Rc<SyntaxTree>>)> {
+    ) -> Vec<(usize, usize, Rc<SyntaxTree>)> {
         let mut generalisations = left
             .get_concept()
             .map(|lc| {
@@ -569,18 +576,12 @@ impl SnapShot {
                     .iter()
                     .filter_map(|lo| {
                         if self.has_variable(deltas, *lo) {
+                            // Left hand branch of syntax's concept is also the left hand of a variable concept
                             self.read_concept(deltas, *lo)
                                 .get_definition()
                                 .and_then(|(_, r)| {
-                                    if self.has_variable(deltas, r) {
-                                        match self.read_concept(deltas, r).get_definition() {
-                                            Some(_) => None,
-                                            None => {
-                                                let mut hash_map = HashMap::new();
-                                                hash_map.insert(r, right.clone());
-                                                Some((*lo, hash_map))
-                                            }
-                                        }
+                                    if self.is_leaf_variable(deltas, r) {
+                                        Some((*lo, r, right.clone()))
                                     } else {
                                         None
                                     }
@@ -601,17 +602,11 @@ impl SnapShot {
                         .iter()
                         .filter_map(|ro| {
                             if self.has_variable(deltas, *ro) {
+                                // Right hand branch of syntax's concept is also the right hand of a variable concept
                                 self.read_concept(deltas, *ro).get_definition().and_then(
                                     |(l, _)| {
-                                        if self.has_variable(deltas, l) {
-                                            match self.read_concept(deltas, l).get_definition() {
-                                                Some(_) => None,
-                                                None => {
-                                                    let mut hash_map = HashMap::new();
-                                                    hash_map.insert(l, left.clone());
-                                                    Some((*ro, hash_map))
-                                                }
-                                            }
+                                        if self.is_leaf_variable(deltas, l) {
+                                            Some((*ro, l, left.clone()))
                                         } else {
                                             None
                                         }
