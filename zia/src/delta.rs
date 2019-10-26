@@ -15,8 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use errors::ZiaResult;
-use std::{collections::HashSet, iter::from_fn};
+use std::collections::HashSet;
 
 pub trait ApplyDelta {
     type Delta;
@@ -47,28 +46,6 @@ where
 }
 pub trait Delta {
     fn combine(&mut self, Self);
-    // Repeat mutation, f, n times on self and return vector of n results
-    fn repeat<F>(&mut self, mut f: F, n: usize) -> Vec<usize>
-    where
-        F: for<'a> FnMut(&'a mut Self) -> usize,
-    {
-        let mut counter = 0;
-        from_fn(|| {
-            if counter < n {
-                counter += 1;
-                Some(f(self))
-            } else {
-                None
-            }
-        })
-        .collect()
-    }
-    fn multiply<F>(&mut self, mut f: F, ns: Vec<usize>, ms: Vec<&str>) -> ZiaResult<()>
-    where
-        F: for<'a> FnMut(&'a mut Self, usize, &str) -> ZiaResult<()>,
-    {
-        ns.iter().zip(ms).try_for_each(|(n, m)| f(self, *n, m))
-    }
 }
 
 #[derive(Clone, Debug)]
