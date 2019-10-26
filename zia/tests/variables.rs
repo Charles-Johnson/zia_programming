@@ -1,5 +1,5 @@
 /*  Library for the Zia programming language.
-    Copyright (C) 2018 to 2019 Charles Johnson
+    Copyright (C) 2019 Charles Johnson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
 #[macro_use]
 extern crate proptest;
 #[macro_use]
@@ -22,26 +23,12 @@ extern crate zia;
 
 use zia::{Context, ZiaError};
 
-#[test]
-fn empty_parentheses() {
-    let mut cont = Context::new();
-    assert_eq!(cont.execute("()"), ZiaError::EmptyParentheses.to_string());
-}
-proptest! {
+proptest!{
     #[test]
-    fn ambiguous_expression(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_symbols!(a, b, c);
-        let mut cont = Context::new();
-        assert_eq!(cont.execute(&format!("let (assoc {}) -> left", c)), "");
-        assert_eq!(
-            cont.execute(&format!("{} {} {}", a, b, c)),
-            ZiaError::AmbiguousExpression.to_string()
-        );
-    }
-    // No input should crash the interpreter
-    #[test]
-    fn random_input(a in "\\PC*") {
-        let mut cont = Context::new();
-        cont.execute(&a);
+    fn single_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
+        assume_symbols!(a, b, c, d);
+        let mut context = Context::new();
+        assert_eq!(context.execute(&format!("let (_{}_ {}) -> {}", a, b, c)), "");
+        assert_eq!(context.execute(&format!("{} {}", d, b)), c);
     }
 }

@@ -23,7 +23,7 @@ extern crate zia;
 use zia::{Context, ZiaError};
 
 proptest! {
-    // If a pair of symbols reduces to another symbol then the label of the reduction of that pair must be a string of that other symbol.
+    // A pair of symbols reduces to another symbol
     #[test]
     fn pair_to_symbol(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
@@ -44,7 +44,7 @@ proptest! {
     // A concept should not be able to reduce to a concept whose normal form is the former concept.
     #[test]
     fn cycle(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
-        // to prevent redundant reduction
+        // to prevent redundant reduction then the reduction of that pair must be a string of that other symbol.
         prop_assume!(a != b);
         assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
