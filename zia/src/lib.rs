@@ -129,11 +129,15 @@ mod constants;
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
+mod context_delta;
+
 /// The trait for describing incremental changes in state.
 mod delta;
 
 /// The errors that the users could make when making commands.
 mod errors;
+
+mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
 pub use context::Context;
