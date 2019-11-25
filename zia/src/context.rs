@@ -89,8 +89,8 @@ impl Context {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let reduced_left = ContextSearch::from(&self.snap_shot).reduce(&self.delta, left);
-        let reduced_right = ContextSearch::from(&self.snap_shot).reduce(&self.delta, right);
+        let reduced_left = ContextSearch::from((&self.snap_shot, &self.delta)).reduce(left);
+        let reduced_right = ContextSearch::from((&self.snap_shot, &self.delta)).reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
@@ -110,7 +110,7 @@ impl Context {
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
         let normal_form =
-            &ContextSearch::from(&self.snap_shot).recursively_reduce(&self.delta, ast);
+            &ContextSearch::from((&self.snap_shot, &self.delta)).recursively_reduce(ast);
         if normal_form != ast {
             self.call(normal_form)
         } else {

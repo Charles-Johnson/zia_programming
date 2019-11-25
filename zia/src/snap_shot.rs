@@ -260,8 +260,8 @@ impl SnapShot {
                         for syntax in lowest_precedence_syntax.clone() {
                             let comparing_between_tokens =
                                 self.combine(deltas, &syntax, &comparing_precedence_of_token);
-                            match ContextSearch::from(self)
-                                .reduce(deltas, &comparing_between_tokens)
+                            match ContextSearch::from((self, deltas))
+                                .reduce(&comparing_between_tokens)
                                 .and_then(|s| s.get_concept())
                             {
                                 // syntax of token has even lower precedence than some previous lowest precendence syntax
@@ -459,78 +459,18 @@ impl SnapShot {
             ast.clone()
         }
     }
-    fn is_leaf_variable(&self, delta: &ContextDelta, lv: usize) -> bool {
-        self.has_variable(delta, lv) && self.read_concept(delta, lv).get_definition().is_none()
-    }
-    pub fn filter_generalisations_for_pair(
-        &self,
-        deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Vec<(usize, usize, Rc<SyntaxTree>)> {
-        let mut generalisations = left
-            .get_concept()
-            .map(|lc| {
-                self.read_concept(deltas, lc)
-                    .get_lefthand_of()
-                    .iter()
-                    .filter_map(|lo| {
-                        if self.has_variable(deltas, *lo) {
-                            // Left hand branch of syntax's concept is also the left hand of a variable concept
-                            self.read_concept(deltas, *lo)
-                                .get_definition()
-                                .and_then(|(_, r)| {
-                                    if self.is_leaf_variable(deltas, r) {
-                                        Some((*lo, r, right.clone()))
-                                    } else {
-                                        None
-                                    }
-                                })
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_else(|| Vec::default());
-        generalisations.extend(
-            right
-                .get_concept()
-                .map(|rc| {
-                    self.read_concept(deltas, rc)
-                        .get_righthand_of()
-                        .iter()
-                        .filter_map(|ro| {
-                            if self.has_variable(deltas, *ro) {
-                                // Right hand branch of syntax's concept is also the right hand of a variable concept
-                                self.read_concept(deltas, *ro).get_definition().and_then(
-                                    |(l, _)| {
-                                        if self.is_leaf_variable(deltas, l) {
-                                            Some((*ro, l, left.clone()))
-                                        } else {
-                                            None
-                                        }
-                                    },
-                                )
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                })
-                .unwrap_or_else(|| Vec::default()),
-        );
-        generalisations
-    }
     /// Returns the syntax for a concept.
     pub fn to_ast(&self, deltas: &ContextDelta, concept: usize) -> Rc<SyntaxTree> {
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept)),
             None => {
-                let (left, right) = self
-                    .read_concept(deltas, concept)
-                    .get_definition()
-                    .expect("Unlabelled concept with no definition");
+                let (left, right) =
+                    self.read_concept(deltas, concept)
+                        .get_definition()
+                        .expect(&format!(
+                            "Unlabelled concept ({}) with no definition",
+                            concept
+                        ));
                 self.combine(
                     deltas,
                     &self.to_ast(deltas, left),
@@ -599,8 +539,8 @@ impl SnapShot {
         ast: &Rc<SyntaxTree>,
     ) -> Option<Associativity> {
         let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
-        ContextSearch::from(self)
-            .reduce(deltas, &assoc_of_ast)
+        ContextSearch::from((self, deltas))
+            .reduce(&assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),
