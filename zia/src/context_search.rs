@@ -30,16 +30,14 @@ pub struct ContextSearch<'a> {
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
-        if self.snap_shot.has_variable(self.delta, id) {
-            if let Some(ast) = self.variable_mask.get(&id) {
-                return self.reduce(ast);
-            }
-        }
+        // if let Some(ast) = self.variable_mask.get(&id) {
+        //     return self.reduce(ast);
+        // }
         let concept = self.snap_shot.read_concept(self.delta, id);
         concept
             .get_reduction()
             .and_then(|n| {
-                if self.snap_shot.has_variable(self.delta, n) {
+                if self.is_leaf_variable(n) {
                     self.variable_mask.get(&n).cloned()
                 } else {
                     Some(self.snap_shot.to_ast(self.delta, n))
@@ -111,7 +109,8 @@ impl<'a> ContextSearch<'a> {
                                     .filter_map(|(generalisation, variable_to_syntax)| {
                                         let mut context_search = self.clone();
                                         context_search
-                                            .variable_mask.extend(variable_to_syntax.clone());
+                                            .variable_mask
+                                            .extend(variable_to_syntax.clone());
                                         context_search.reduce_concept(*generalisation)
                                     })
                                     .nth(0)
@@ -139,7 +138,7 @@ impl<'a> ContextSearch<'a> {
                                 .get_definition()
                                 .and_then(|(_, r)| {
                                     if self.is_leaf_variable(r) {
-                                        Some((*lo, hashmap!{r => right.clone()}))
+                                        Some((*lo, hashmap! {r => right.clone()}))
                                     } else {
                                         None
                                     }
@@ -167,7 +166,7 @@ impl<'a> ContextSearch<'a> {
                                     .get_definition()
                                     .and_then(|(l, _)| {
                                         if self.is_leaf_variable(l) {
-                                            Some((*ro, hashmap!{l => left.clone()}))
+                                            Some((*ro, hashmap! {l => left.clone()}))
                                         } else {
                                             None
                                         }
@@ -197,15 +196,21 @@ impl<'a> ContextSearch<'a> {
                                     self.snap_shot.read_concept(self.delta, *lefthand_of);
                                 for righthand_of in left_concept.get_righthand_of().clone() {
                                     if self.snap_shot.has_variable(self.delta, righthand_of) {
-                                        if let Some((l, _)) = self
+                                        if let Some((l, r)) = self
                                             .snap_shot
                                             .read_concept(self.delta, righthand_of)
                                             .get_definition()
                                         {
-                                            variable_in_expressions.push((
-                                                righthand_of,
-                                                hashmap!{l => left.clone()},
-                                            ));
+                                            variable_in_expressions
+                                                .push((righthand_of, hashmap! {l => left.clone()}));
+                                            self.snap_shot
+                                                .read_concept(self.delta, r)
+                                                .get_definition()
+                                                .map(|(_, rr)| {
+                                                    variable_in_expressions.last_mut().map(
+                                                        |(_, hm)| hm.insert(rr, rightright.clone()),
+                                                    )
+                                                });
                                         }
                                     }
                                 }

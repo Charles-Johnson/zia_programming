@@ -53,7 +53,7 @@ impl SnapShot {
         delta
             .concept
             .get(&concept)
-            .map(|(cd, v)| match cd {
+            .map(|(cd, v, temporary)| match cd {
                 ConceptDelta::Insert(_) => *v,
                 ConceptDelta::Remove(_) => false,
                 ConceptDelta::Update(_) => in_previous_variables,
@@ -76,7 +76,7 @@ impl SnapShot {
         delta
             .concept
             .get(&id)
-            .and_then(|(cd, _)| match cd {
+            .and_then(|(cd, _, temporary)| match cd {
                 ConceptDelta::Insert(c) => Some(c.clone()),
                 ConceptDelta::Remove(_) => None,
                 ConceptDelta::Update(d) => {
@@ -103,7 +103,7 @@ impl SnapShot {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _)) in &delta.concept {
+        for (id, (cd, _, _)) in &delta.concept {
             match cd {
                 ConceptDelta::Insert(_) => {
                     if *id >= new_concept_length {
@@ -113,7 +113,7 @@ impl SnapShot {
                 _ => (),
             };
         }
-        for (id, (cd, _)) in &delta.concept {
+        for (id, (cd, _, _)) in &delta.concept {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
@@ -163,7 +163,7 @@ impl SnapShot {
         }
         (
             ContextDelta {
-                concept: hashmap! {index => (ConceptDelta::Insert(concept), variable)},
+                concept: hashmap! {index => (ConceptDelta::Insert(concept), variable, false)},
                 string: hashmap! {},
             },
             index,
@@ -640,27 +640,29 @@ impl ApplyDelta for SnapShot {
             StringDelta::Insert(id) => self.add_string(*id, &s),
             StringDelta::Remove(_) => self.remove_string(&s),
         });
-        for (id, (cd, v)) in delta.concept {
-            match cd {
-                ConceptDelta::Insert(c) => {
-                    let padding_needed = id as isize - self.concepts.len() as isize;
-                    if 0 <= padding_needed {
-                        self.concepts.extend(vec![None; padding_needed as usize]);
-                        self.concepts.push(Some(c));
-                    } else {
-                        self.concepts[id] = Some(c);
+        for (id, (cd, v, temporary)) in delta.concept {
+            if !temporary {
+                match cd {
+                    ConceptDelta::Insert(c) => {
+                        let padding_needed = id as isize - self.concepts.len() as isize;
+                        if 0 <= padding_needed {
+                            self.concepts.extend(vec![None; padding_needed as usize]);
+                            self.concepts.push(Some(c));
+                        } else {
+                            self.concepts[id] = Some(c);
+                        }
+                        if v {
+                            self.variables.insert(id);
+                        }
                     }
-                    if v {
-                        self.variables.insert(id);
+                    ConceptDelta::Remove(_) => {
+                        self.blindly_remove_concept(id);
+                        if v {
+                            self.variables.remove(&id);
+                        }
                     }
+                    ConceptDelta::Update(d) => self.write_concept(id).apply(d),
                 }
-                ConceptDelta::Remove(_) => {
-                    self.blindly_remove_concept(id);
-                    if v {
-                        self.variables.remove(&id);
-                    }
-                }
-                ConceptDelta::Update(d) => self.write_concept(id).apply(d),
             }
         }
     }

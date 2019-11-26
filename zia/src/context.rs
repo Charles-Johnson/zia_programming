@@ -288,6 +288,7 @@ impl Context {
                     update_concept_delta(
                         self.delta.concept.entry(concept_id_array[index]),
                         &concept_delta_array[index],
+                        false,
                     )
                 });
                 self.try_delete_concept(concept)?;
@@ -333,7 +334,7 @@ impl Context {
             .delta
             .concept
             .get(&id)
-            .and_then(|(cd, _)| match cd {
+            .and_then(|(cd, _, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c),
                 ConceptDelta::Remove(_) => None,
                 ConceptDelta::Update(_) => self.snap_shot.get_concept(id),
@@ -349,6 +350,7 @@ impl Context {
             (
                 ConceptDelta::Remove(concept),
                 self.snap_shot.has_variable(&self.delta, id),
+                false,
             ),
         );
     }
@@ -368,7 +370,7 @@ impl Context {
         } else {
             let left_concept = self.concept_from_ast(left)?;
             let right_concept = self.concept_from_ast(right)?;
-            self.insert_definition(concept, left_concept, right_concept)
+            self.insert_definition(concept, left_concept, right_concept, false)
         }
     }
     fn relabel(&mut self, concept: usize, new_label: &str) -> ZiaResult<()> {
@@ -415,7 +417,7 @@ impl Context {
         } else {
             let syntax_concept = self.concept_from_ast(syntax)?;
             let normal_form_concept = self.concept_from_ast(normal_form)?;
-            self.update_reduction(syntax_concept, normal_form_concept)
+            self.update_reduction(syntax_concept, normal_form_concept, false)
         }
     }
     fn try_removing_reduction(&mut self, syntax: &SyntaxTree) -> ZiaResult<()> {
@@ -431,7 +433,7 @@ impl Context {
             .remove_reduction(concept_id)
             .map(|z| {
                 z.iter().for_each(|(id, concept_delta)| {
-                    update_concept_delta(self.delta.concept.entry(*id), concept_delta)
+                    update_concept_delta(self.delta.concept.entry(*id), concept_delta, false)
                 })
             })
     }
@@ -457,6 +459,7 @@ impl Context {
                         rightc,
                         ls.starts_with('_') && ls.ends_with('_')
                             || rs.starts_with('_') && rs.ends_with('_'),
+                        false,
                     )?;
                     if !string.contains(' ') {
                         self.label(concept, string)?;
@@ -473,13 +476,10 @@ impl Context {
         Ok(new_default)
     }
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
-        if string.starts_with('_') && string.ends_with('_') {
-            Ok(())
-        } else {
-            let definition = self.find_or_insert_definition(LABEL, concept, false)?;
-            let string_id = self.new_string(string);
-            self.update_reduction(definition, string_id)
-        }
+        let variable = string.starts_with('_') && string.ends_with('_');
+        let definition = self.find_or_insert_definition(LABEL, concept, variable, variable)?;
+        let string_id = self.new_string(string);
+        self.update_reduction(definition, string_id, variable)
     }
     fn new_string(&mut self, string: &str) -> usize {
         let string_concept = string.to_string().into();
@@ -496,6 +496,7 @@ impl Context {
         lefthand: usize,
         righthand: usize,
         variable: bool,
+        temporary: bool,
     ) -> ZiaResult<usize> {
         let pair = self
             .snap_shot
@@ -503,7 +504,7 @@ impl Context {
         match pair {
             None => {
                 let definition = self.new_default::<AbstractPart>(variable);
-                self.insert_definition(definition, lefthand, righthand)?;
+                self.insert_definition(definition, lefthand, righthand, temporary)?;
                 Ok(definition)
             }
             Some(def) => Ok(def),
@@ -522,6 +523,7 @@ impl Context {
         definition: usize,
         lefthand: usize,
         righthand: usize,
+        temporary: bool
     ) -> ZiaResult<()> {
         if self.snap_shot.contains(&self.delta, lefthand, definition)
             || self.snap_shot.contains(&self.delta, righthand, definition)
@@ -541,12 +543,21 @@ impl Context {
                 .iter()
                 .enumerate()
                 .for_each(|(i, concept_delta)| {
-                    update_concept_delta(self.delta.concept.entry(id_array[i]), concept_delta)
+                    update_concept_delta(
+                        self.delta.concept.entry(id_array[i]),
+                        concept_delta,
+                        temporary,
+                    )
                 });
             Ok(())
         }
     }
-    fn update_reduction(&mut self, concept: usize, reduction: usize) -> ZiaResult<()> {
+    fn update_reduction(
+        &mut self,
+        concept: usize,
+        reduction: usize,
+        temporary: bool,
+    ) -> ZiaResult<()> {
         self.snap_shot
             .get_normal_form(&self.delta, reduction)
             .and_then(|n| {
@@ -582,10 +593,12 @@ impl Context {
                             update_concept_delta(
                                 self.delta.concept.entry(concept),
                                 &concept_deltas[0],
+                                temporary,
                             );
                             update_concept_delta(
                                 self.delta.concept.entry(reduction),
                                 &concept_deltas[1],
+                                temporary,
                             );
                             Ok(())
                         }
