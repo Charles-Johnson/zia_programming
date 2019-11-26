@@ -38,10 +38,12 @@ impl<'a> ContextSearch<'a> {
         let concept = self.snap_shot.read_concept(self.delta, id);
         concept
             .get_reduction()
-            .and_then(|n| if self.snap_shot.has_variable(self.delta, n) {
-                self.variable_mask.get(&n).cloned()
-            } else {
-                Some(self.snap_shot.to_ast(self.delta, n))
+            .and_then(|n| {
+                if self.snap_shot.has_variable(self.delta, n) {
+                    self.variable_mask.get(&n).cloned()
+                } else {
+                    Some(self.snap_shot.to_ast(self.delta, n))
+                }
             })
             .or_else(|| {
                 concept.get_definition().and_then(|(left, right)| {
@@ -106,11 +108,10 @@ impl<'a> ContextSearch<'a> {
                             .or_else(|| {
                                 self.filter_generalisations_for_pair(left, right)
                                     .iter()
-                                    .filter_map(|(generalisation, variable, syntax)| {
+                                    .filter_map(|(generalisation, variable_to_syntax)| {
                                         let mut context_search = self.clone();
                                         context_search
-                                            .variable_mask
-                                            .insert(*variable, syntax.clone());
+                                            .variable_mask.extend(variable_to_syntax.clone());
                                         context_search.reduce_concept(*generalisation)
                                     })
                                     .nth(0)
@@ -122,7 +123,7 @@ impl<'a> ContextSearch<'a> {
         &self,
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
-    ) -> Vec<(usize, usize, Rc<SyntaxTree>)> {
+    ) -> Vec<(usize, HashMap<usize, Rc<SyntaxTree>>)> {
         let mut generalisations = left
             .get_concept()
             .map(|lc| {
@@ -138,7 +139,7 @@ impl<'a> ContextSearch<'a> {
                                 .get_definition()
                                 .and_then(|(_, r)| {
                                     if self.is_leaf_variable(r) {
-                                        Some((*lo, r, right.clone()))
+                                        Some((*lo, hashmap!{r => right.clone()}))
                                     } else {
                                         None
                                     }
@@ -166,7 +167,7 @@ impl<'a> ContextSearch<'a> {
                                     .get_definition()
                                     .and_then(|(l, _)| {
                                         if self.is_leaf_variable(l) {
-                                            Some((*ro, l, left.clone()))
+                                            Some((*ro, hashmap!{l => left.clone()}))
                                         } else {
                                             None
                                         }
@@ -203,8 +204,7 @@ impl<'a> ContextSearch<'a> {
                                         {
                                             variable_in_expressions.push((
                                                 righthand_of,
-                                                l,
-                                                left.clone(),
+                                                hashmap!{l => left.clone()},
                                             ));
                                         }
                                     }
