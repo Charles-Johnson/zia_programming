@@ -53,11 +53,13 @@ impl<'a> ContextSearch<'a> {
                         self.variable_mask.get(&left),
                         self.variable_mask.get(&right),
                     ) {
-                        (None, _, None, _) => None,
-                        (_, None, _, None) => None,
                         (Some(l), Some(r), _, _) => {
                             Some(self.snap_shot.contract_pair(self.delta, &l, &r))
                         }
+                        (None, _, None, Some(subbed_r)) if !self.snap_shot.has_variable(self.delta, left) => Some(self.snap_shot.contract_pair(self.delta, &self.snap_shot.to_ast(self.delta, left), subbed_r)),
+                        (None, _, Some(subbed_l), None) if !self.snap_shot.has_variable(self.delta, right) => Some(self.snap_shot.contract_pair(self.delta, subbed_l, &self.snap_shot.to_ast(self.delta, right))),
+                        (None, _, None, _) => None,
+                        (_, None, _, None) => None,
                         (Some(l), None, _, Some(original_r)) => {
                             Some(self.snap_shot.contract_pair(self.delta, &l, original_r))
                         }
@@ -137,8 +139,8 @@ impl<'a> ContextSearch<'a> {
                                 .read_concept(self.delta, *lo)
                                 .get_definition()
                                 .and_then(|(_, r)| {
-                                    if self.is_leaf_variable(r) {
-                                        Some((*lo, hashmap! {r => right.clone()}))
+                                    if self.is_leaf_variable(r) && !(right.to_string().starts_with('_') && right.to_string().ends_with('_')) {
+                                        dbg!(Some((*lo, hashmap! {r => right.clone()})))
                                     } else {
                                         None
                                     }
