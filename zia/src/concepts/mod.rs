@@ -36,7 +36,7 @@ pub struct Concept {
 impl Debug for Concept {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
-        if self.lefthand_of.len() > 0 {
+        if !self.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             let mut unorder_keys: Vec<&usize> = self.lefthand_of.iter().collect();
             unorder_keys.sort();
@@ -45,7 +45,7 @@ impl Debug for Concept {
             }
             string += "},";
         }
-        if self.righthand_of.len() > 0 {
+        if !self.righthand_of.is_empty() {
             string += " righthand_of: {";
             let mut unorder_keys: Vec<&usize> = self.righthand_of.iter().collect();
             unorder_keys.sort();
@@ -54,7 +54,7 @@ impl Debug for Concept {
             }
             string += "},";
         }
-        if self.reduces_from.len() > 0 {
+        if !self.reduces_from.is_empty() {
             string += " reduces_from: {";
             let mut unorder_keys: Vec<&usize> = self.reduces_from.iter().collect();
             unorder_keys.sort();
@@ -277,9 +277,8 @@ impl ApplyDelta for Concept {
         self.lefthand_of.apply(lefthand_of);
         self.righthand_of.apply(righthand_of);
         self.reduces_from.apply(reduces_from);
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut ap) => ap.apply(specific_part),
-            _ => (),
+        if let SpecificPart::Abstract(ref mut ap) = self.specific_part {
+            ap.apply(specific_part);
         };
     }
     fn diff(&self, next: Concept) -> ConceptDelta {

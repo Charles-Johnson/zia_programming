@@ -31,7 +31,7 @@ pub struct ContextDelta {
 impl Debug for ContextDelta {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let mut string = "{\n".to_string();
-        if self.string.len() > 0 {
+        if !self.string.is_empty() {
             string += "    string: {\n";
             let mut unsorted_keys: Vec<&String> = self.string.keys().collect();
             unsorted_keys.sort();
@@ -41,7 +41,7 @@ impl Debug for ContextDelta {
             }
             string += "    },\n";
         }
-        if self.concept.len() > 0 {
+        if !self.concept.is_empty() {
             string += "    concept: {\n";
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();

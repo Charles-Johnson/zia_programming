@@ -72,8 +72,10 @@ impl<'a> ContextSearch<'a> {
                         if let (None, None) = (&left_result, &right_result) {
                             None
                         } else {
-                            let l = left_result.unwrap_or(maybe_subbed_l.unwrap_or(left).clone());
-                            let r = right_result.unwrap_or(maybe_subbed_r.unwrap_or(right).clone());
+                            let l = left_result
+                                .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
+                            let r = right_result
+                                .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
                             Some(self.snap_shot.contract_pair(self.delta, &l, &r))
                         }
                     })
@@ -107,7 +109,7 @@ impl<'a> ContextSearch<'a> {
                             &self.substitute(&r),
                         )
                     })
-                    .unwrap_or(ast.clone())
+                    .unwrap_or_else(|| ast.clone())
             })
     }
     fn filter_generalisations_for_pair(
