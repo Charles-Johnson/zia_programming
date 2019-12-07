@@ -66,6 +66,7 @@ proptest! {
     fn used_symbol_in_a_pair_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
+        prop_assume!(b != c);
         let command = format!("{} {}", a, c);
         assert_eq!(cont.execute(&command), command);
     }

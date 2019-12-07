@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 6be90939e065c158522e47a25df3b571d67afb2c1e8baed6c5a6cc029203d033 # shrinks to a = "ᤰ", b = "🌀", d = "®"
+cc c46061a6f16d47ebb3cdc3c6454af4be1d8187560ba38995c88ff4e83f137401 # shrinks to a = "a", b = "\"", c = "\""
