@@ -65,28 +65,16 @@ impl<'a> ContextSearch<'a> {
                     .or_else(|| {
                         let left_result = self.reduce(left);
                         let right_result = self.reduce(right);
-                        match (
-                            left_result,
-                            right_result,
-                            left.get_concept().and_then(|l| self.variable_mask.get(&l)),
-                            right.get_concept().and_then(|r| self.variable_mask.get(&r)),
-                        ) {
-                            (Some(l), Some(r), _, _) => {
-                                Some(self.snap_shot.contract_pair(self.delta, &l, &r))
-                            }
-                            (Some(l), None, _, Some(subbed_r)) => {
-                                Some(self.snap_shot.contract_pair(self.delta, &l, subbed_r))
-                            }
-                            (None, Some(r), Some(subbed_l), _) => {
-                                Some(self.snap_shot.contract_pair(self.delta, subbed_l, &r))
-                            }
-                            (None, Some(r), None, _) => {
-                                Some(self.snap_shot.contract_pair(self.delta, left, &r))
-                            }
-                            (Some(l), None, _, None) => {
-                                Some(self.snap_shot.contract_pair(self.delta, &l, right))
-                            }
-                            (None, None, _, _) => None,
+                        let maybe_subbed_r =
+                            right.get_concept().and_then(|r| self.variable_mask.get(&r));
+                        let maybe_subbed_l =
+                            left.get_concept().and_then(|l| self.variable_mask.get(&l));
+                        if let (None, None) = (&left_result, &right_result) {
+                            None
+                        } else {
+                            let l = left_result.unwrap_or(maybe_subbed_l.unwrap_or(left).clone());
+                            let r = right_result.unwrap_or(maybe_subbed_r.unwrap_or(right).clone());
+                            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
                         }
                     })
                     .or_else(|| {
