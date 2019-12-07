@@ -168,7 +168,7 @@ impl<'a> ContextSearch<'a> {
         generalisations.extend(
             right
                 .get_expansion()
-                .map(|(rightleft, rightright)| {
+                .map(|(rightleft, _)| {
                     rightleft
                         .get_concept()
                         .map(|rlc| {
@@ -181,33 +181,12 @@ impl<'a> ContextSearch<'a> {
                                 let left_concept =
                                     self.snap_shot.read_concept(self.delta, *lefthand_of);
                                 for righthand_of in left_concept.get_righthand_of().clone() {
-                                    if self.snap_shot.has_variable(self.delta, righthand_of) {
-                                        if let Some((l, r)) = self
-                                            .snap_shot
-                                            .read_concept(self.delta, righthand_of)
-                                            .get_definition()
-                                        {
-                                            let mut hash_map = hashmap! {};
-                                            if self.is_leaf_variable(l) {
-                                                hash_map.insert(l, left.clone());
-                                            }
-                                            if let Some((_, rr)) = self
-                                                .snap_shot
-                                                .read_concept(self.delta, r)
-                                                .get_definition()
-                                            {
-                                                if self.is_leaf_variable(rr) {
-                                                    if rr == l && left != &rightright {
-                                                        hash_map.remove(&l);
-                                                    } else {
-                                                        hash_map.insert(rr, rightright.clone());
-                                                    }
-                                                }
-                                            }
-                                            if !hash_map.is_empty() {
-                                                variable_in_expressions
-                                                    .push((righthand_of, hash_map));
-                                            }
+                                    if let Some(vm) = self.check_generalisation(
+                                        &self.snap_shot.contract_pair(self.delta, left, right),
+                                        righthand_of,
+                                    ) {
+                                        if !vm.is_empty() {
+                                            variable_in_expressions.push((righthand_of, vm));
                                         }
                                     }
                                 }
