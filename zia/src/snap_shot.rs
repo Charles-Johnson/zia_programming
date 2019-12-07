@@ -53,7 +53,7 @@ impl SnapShot {
         delta
             .concept
             .get(&concept)
-            .map(|(cd, v, temporary)| match cd {
+            .map(|(cd, v, _)| match cd {
                 ConceptDelta::Insert(_) => *v,
                 ConceptDelta::Remove(_) => false,
                 ConceptDelta::Update(_) => in_previous_variables,
@@ -76,7 +76,7 @@ impl SnapShot {
         delta
             .concept
             .get(&id)
-            .and_then(|(cd, _, temporary)| match cd {
+            .and_then(|(cd, _, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c.clone()),
                 ConceptDelta::Remove(_) => None,
                 ConceptDelta::Update(d) => {

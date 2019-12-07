@@ -46,7 +46,7 @@ impl Debug for ContextDelta {
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();
             for key in unsorted_keys {
-                let (cd, variable, temporary) = self.concept.get(key).unwrap();
+                let (cd, variable, _) = self.concept.get(key).unwrap();
                 string += &format!("\t{}: {:#?}", key, cd);
                 if *variable {
                     string += " (variable)";
@@ -94,9 +94,13 @@ impl Debug for ConceptDelta {
     }
 }
 
-pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool, bool)>, concept_delta: &CD, temporary: bool) {
+pub fn update_concept_delta(
+    entry: Entry<usize, (ConceptDelta, bool, bool)>,
+    concept_delta: &CD,
+    temporary: bool,
+) {
     entry
-        .and_modify(|(cd, _, temporary)| match cd {
+        .and_modify(|(cd, _, _)| match cd {
             ConceptDelta::Update(d) => {
                 d.combine(concept_delta.clone());
                 *cd = ConceptDelta::Update(d.clone());
@@ -107,7 +111,11 @@ pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool, bool)>, con
             }
             ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
         })
-        .or_insert((ConceptDelta::Update(concept_delta.clone()), false, temporary));
+        .or_insert((
+            ConceptDelta::Update(concept_delta.clone()),
+            false,
+            temporary,
+        ));
 }
 
 impl Delta for ContextDelta {
