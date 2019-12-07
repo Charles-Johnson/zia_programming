@@ -120,70 +120,17 @@ impl<'a> ContextSearch<'a> {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let mut generalisation_candidates = HashSet::<usize>::new();
-        if let Some(lc) = left.get_concept() {
-            generalisation_candidates.extend(
-                self.snap_shot
-                    .read_concept(self.delta, lc)
-                    .get_lefthand_of(),
-            );
-        }
-        if let Some(rc) = right.get_concept() {
-            generalisation_candidates.extend(
-                self.snap_shot
-                    .read_concept(self.delta, rc)
-                    .get_righthand_of(),
-            );
-        }
-        let mut generalisations: Vec<_> = generalisation_candidates
+        let generalisation_candidates = self.find_generalisations(&self.snap_shot.contract_pair(self.delta, left, right));
+        generalisation_candidates
             .iter()
             .filter_map(|gc| {
                 self.check_generalisation(
                     &self.snap_shot.contract_pair(self.delta, left, right),
                     *gc,
                 )
-                .and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
+                .and_then(|vm| if vm.is_empty() { None } else { Some((*gc, vm)) })
             })
-            .collect();
-        generalisations.extend(
-            right
-                .get_expansion()
-                .map(|(rightleft, _)| {
-                    rightleft
-                        .get_concept()
-                        .map(|rlc| {
-                            let mut variable_in_expressions = Vec::new();
-                            for lefthand_of in self
-                                .snap_shot
-                                .read_concept(self.delta, rlc)
-                                .get_lefthand_of()
-                            {
-                                let left_concept =
-                                    self.snap_shot.read_concept(self.delta, *lefthand_of);
-                                for righthand_of in left_concept.get_righthand_of().clone() {
-                                    if let Some(vm) = self.check_generalisation(
-                                        &self.snap_shot.contract_pair(self.delta, left, right),
-                                        righthand_of,
-                                    ) {
-                                        if !vm.is_empty() {
-                                            variable_in_expressions.push((righthand_of, vm));
-                                        }
-                                    }
-                                }
-                            }
-                            variable_in_expressions
-                        })
-                        .unwrap_or_default()
-                })
-                .unwrap_or_default(),
-        );
-        generalisations
+            .collect()
     }
     fn check_generalisation(
         &self,
@@ -246,13 +193,39 @@ impl<'a> ContextSearch<'a> {
             None
         }
     }
-    // fn find_generalisations(&self, ast: &Rc<SyntaxTree>) -> Vec<usize> {
-    //     if let Some((l, r)) = ast.get_expansion() {
-
-    //     } else {
-    //         Vec::default()
-    //     }
-    // }
+    fn find_generalisations(&self, ast: &Rc<SyntaxTree>) -> HashSet<usize> {
+        let mut generalisations = HashSet::new();
+        if let Some((l, r)) = ast.get_expansion() {
+            if let Some(c) = l.get_concept() {
+                generalisations
+                    .extend(self.snap_shot.read_concept(self.delta, c).get_lefthand_of());
+            }
+            if let Some(c) = r.get_concept() {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta, c)
+                        .get_righthand_of(),
+                );
+            }
+            self.find_generalisations(&l).iter().for_each(|g| {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta, *g)
+                        .get_lefthand_of(),
+                )
+            });
+            self.find_generalisations(&r).iter().for_each(|g| {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta, *g)
+                        .get_righthand_of(),
+                )
+            });
+            generalisations
+        } else {
+            generalisations
+        }
+    }
     fn is_leaf_variable(&self, lv: usize) -> bool {
         self.is_free_variable(lv) && self.is_leaf_concept(lv)
     }
