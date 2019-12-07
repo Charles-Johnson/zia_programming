@@ -457,8 +457,7 @@ impl Context {
                     let concept = self.find_or_insert_definition(
                         leftc,
                         rightc,
-                        ls.starts_with('_') && ls.ends_with('_')
-                            || rs.starts_with('_') && rs.ends_with('_'),
+                        is_variable(&ls) || is_variable(&rs),
                         false,
                     )?;
                     if !string.contains(' ') {
@@ -470,13 +469,12 @@ impl Context {
         }
     }
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.new_default::<AbstractPart>(string.starts_with('_') && string.ends_with('_'));
+        let new_default = self.new_default::<AbstractPart>(is_variable(string));
         self.label(new_default, string)?;
         Ok(new_default)
     }
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
-        let variable = string.starts_with('_') && string.ends_with('_');
+        let variable = is_variable(string);
         let definition = self.find_or_insert_definition(LABEL, concept, variable, variable)?;
         let string_id = self.new_string(string);
         self.update_reduction(definition, string_id, variable)
@@ -523,7 +521,7 @@ impl Context {
         definition: usize,
         lefthand: usize,
         righthand: usize,
-        temporary: bool
+        temporary: bool,
     ) -> ZiaResult<()> {
         if self.snap_shot.contains(&self.delta, lefthand, definition)
             || self.snap_shot.contains(&self.delta, righthand, definition)
@@ -617,4 +615,8 @@ impl Default for Context {
             delta: ContextDelta::default(),
         }
     }
+}
+
+pub fn is_variable(string: &str) -> bool {
+    string.starts_with('_') && string.ends_with('_')
 }
