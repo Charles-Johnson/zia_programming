@@ -21,6 +21,7 @@ use context_delta::ContextDelta;
 use snap_shot::SnapShot;
 use std::{collections::HashMap, rc::Rc};
 
+#[derive(Debug)]
 pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
     variable_mask: HashMap<usize, Rc<SyntaxTree>>,
@@ -98,10 +99,27 @@ impl<'a> ContextSearch<'a> {
                                     .extend(variable_to_syntax.clone());
                                 let gen_ast =
                                     context_search.snap_shot.to_ast(self.delta, *generalisation);
-                                context_search.reduce(&gen_ast)
+                                context_search
+                                    .reduce(&gen_ast)
+                                    .map(|ast| context_search.substitute(&ast))
                             })
                             .nth(0)
                     })
+            })
+    }
+    fn substitute(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
+        ast.get_concept()
+            .and_then(|c| self.variable_mask.get(&c).cloned())
+            .unwrap_or_else(|| {
+                ast.get_expansion()
+                    .map(|(l, r)| {
+                        self.snap_shot.contract_pair(
+                            self.delta,
+                            &self.substitute(&l),
+                            &self.substitute(&r),
+                        )
+                    })
+                    .unwrap_or(ast.clone())
             })
     }
     fn filter_generalisations_for_pair(
@@ -127,7 +145,7 @@ impl<'a> ContextSearch<'a> {
                                         && !(right.to_string().starts_with('_')
                                             && right.to_string().ends_with('_'))
                                     {
-                                        dbg!(Some((*lo, hashmap! {r => right.clone()})))
+                                        Some((*lo, hashmap! {r => right.clone()}))
                                     } else {
                                         None
                                     }
@@ -216,7 +234,7 @@ impl<'a> ContextSearch<'a> {
                 })
                 .unwrap_or_else(|| Vec::default()),
         );
-        dbg!(generalisations)
+        generalisations
     }
     fn is_leaf_variable(&self, lv: usize) -> bool {
         self.snap_shot.has_variable(self.delta, lv)

@@ -21,9 +21,9 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context};
+use zia::Context;
 
-proptest!{
+proptest! {
     #[test]
     fn single_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
         assume_symbols!(a, b, c, d);
@@ -35,8 +35,11 @@ proptest!{
     fn repeated_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
         assume_symbols!(a, b, c);
         let mut context = Context::new();
+        // Define how a + a can be written as 2 a
         assert_eq!(context.execute(&format!("let (_{0}_ + _{0}_) -> 2 _{0}_", a)), "");
+        // Check whether a + b -> 2 a if a = b
         assert_eq!(context.execute(&format!("{0} + {0}", b)), format!("2 {}", b));
-        assert_eq!(context.execute(&format!("{} + {}", b, c)), format!("{} {}", b, c));
+        // Check whether a + b doesn't reduce if a != b
+        assert_eq!(context.execute(&format!("{} + {}", b, c)), format!("{} + {}", b, c));
     }
 }
