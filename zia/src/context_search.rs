@@ -30,49 +30,14 @@ pub struct ContextSearch<'a> {
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
-        // if let Some(ast) = self.variable_mask.get(&id) {
-        //     return self.reduce(ast);
-        // }
         let concept = self.snap_shot.read_concept(self.delta, id);
-        concept
-            .get_reduction()
-            .and_then(|n| {
-                if self.is_leaf_variable(n) {
-                    self.variable_mask.get(&n).cloned()
-                } else {
-                    Some(self.snap_shot.to_ast(self.delta, n))
-                }
-            })
-            .or_else(|| {
-                concept.get_definition().and_then(|(left, right)| {
-                    let left_result = self.reduce_concept(left);
-                    let right_result = self.reduce_concept(right);
-                    match (
-                        left_result,
-                        right_result,
-                        self.variable_mask.get(&left),
-                        self.variable_mask.get(&right),
-                    ) {
-                        (Some(l), Some(r), _, _) => {
-                            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
-                        }
-                        (None, _, None, Some(subbed_r)) if !self.snap_shot.has_variable(self.delta, left) => Some(self.snap_shot.contract_pair(self.delta, &self.snap_shot.to_ast(self.delta, left), subbed_r)),
-                        (None, _, Some(subbed_l), None) if !self.snap_shot.has_variable(self.delta, right) => Some(self.snap_shot.contract_pair(self.delta, subbed_l, &self.snap_shot.to_ast(self.delta, right))),
-                        (None, _, None, _) => None,
-                        (_, None, _, None) => None,
-                        (Some(l), None, _, Some(original_r)) => {
-                            Some(self.snap_shot.contract_pair(self.delta, &l, original_r))
-                        }
-                        (None, Some(r), Some(original_l), _) => {
-                            Some(self.snap_shot.contract_pair(self.delta, original_l, &r))
-                        }
-                        (None, None, Some(original_l), Some(original_r)) => Some(
-                            self.snap_shot
-                                .contract_pair(self.delta, original_l, original_r),
-                        ),
-                    }
-                })
-            })
+        concept.get_reduction().and_then(|n| {
+            if self.is_leaf_variable(n) {
+                self.variable_mask.get(&n).cloned()
+            } else {
+                Some(self.snap_shot.to_ast(self.delta, n))
+            }
+        })
     }
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
@@ -97,26 +62,45 @@ impl<'a> ContextSearch<'a> {
                         self.reduce_by_expanded_right_branch(left, rightleft, rightright)
                     })
                     .or_else(|| {
-                        self.snap_shot
-                            .match_left_right(
-                                self.delta,
-                                self.reduce(left),
-                                self.reduce(right),
-                                left,
-                                right,
-                            )
-                            .or_else(|| {
-                                self.filter_generalisations_for_pair(left, right)
-                                    .iter()
-                                    .filter_map(|(generalisation, variable_to_syntax)| {
-                                        let mut context_search = self.clone();
-                                        context_search
-                                            .variable_mask
-                                            .extend(variable_to_syntax.clone());
-                                        context_search.reduce_concept(*generalisation)
-                                    })
-                                    .nth(0)
+                        let left_result = self.reduce(left);
+                        let right_result = self.reduce(right);
+                        match (
+                            left_result,
+                            right_result,
+                            left.get_concept().and_then(|l| self.variable_mask.get(&l)),
+                            right.get_concept().and_then(|r| self.variable_mask.get(&r)),
+                        ) {
+                            (Some(l), Some(r), _, _) => {
+                                Some(self.snap_shot.contract_pair(self.delta, &l, &r))
+                            }
+                            (Some(l), None, _, Some(subbed_r)) => {
+                                Some(self.snap_shot.contract_pair(self.delta, &l, subbed_r))
+                            }
+                            (None, Some(r), Some(subbed_l), _) => {
+                                Some(self.snap_shot.contract_pair(self.delta, subbed_l, &r))
+                            }
+                            (None, Some(r), None, _) => {
+                                Some(self.snap_shot.contract_pair(self.delta, left, &r))
+                            }
+                            (Some(l), None, _, None) => {
+                                Some(self.snap_shot.contract_pair(self.delta, &l, right))
+                            }
+                            (None, None, _, _) => None,
+                        }
+                    })
+                    .or_else(|| {
+                        self.filter_generalisations_for_pair(left, right)
+                            .iter()
+                            .filter_map(|(generalisation, variable_to_syntax)| {
+                                let mut context_search = self.clone();
+                                context_search
+                                    .variable_mask
+                                    .extend(variable_to_syntax.clone());
+                                let gen_ast =
+                                    context_search.snap_shot.to_ast(self.delta, *generalisation);
+                                context_search.reduce(&gen_ast)
                             })
+                            .nth(0)
                     })
             })
     }
@@ -139,7 +123,10 @@ impl<'a> ContextSearch<'a> {
                                 .read_concept(self.delta, *lo)
                                 .get_definition()
                                 .and_then(|(_, r)| {
-                                    if self.is_leaf_variable(r) && !(right.to_string().starts_with('_') && right.to_string().ends_with('_')) {
+                                    if self.is_leaf_variable(r)
+                                        && !(right.to_string().starts_with('_')
+                                            && right.to_string().ends_with('_'))
+                                    {
                                         dbg!(Some((*lo, hashmap! {r => right.clone()})))
                                     } else {
                                         None
@@ -203,16 +190,22 @@ impl<'a> ContextSearch<'a> {
                                             .read_concept(self.delta, righthand_of)
                                             .get_definition()
                                         {
-                                            variable_in_expressions
-                                                .push((righthand_of, hashmap! {l => left.clone()}));
+                                            let mut hash_map = hashmap! {};
+                                            if self.is_leaf_variable(l) {
+                                                hash_map.insert(l, left.clone());
+                                            }
                                             self.snap_shot
                                                 .read_concept(self.delta, r)
                                                 .get_definition()
                                                 .map(|(_, rr)| {
-                                                    variable_in_expressions.last_mut().map(
-                                                        |(_, hm)| hm.insert(rr, rightright.clone()),
-                                                    )
+                                                    if self.is_leaf_variable(rr) {
+                                                        hash_map.insert(rr, rightright.clone());
+                                                    }
                                                 });
+                                            if !hash_map.is_empty() {
+                                                variable_in_expressions
+                                                    .push((righthand_of, hash_map));
+                                            }
                                         }
                                     }
                                 }
@@ -227,6 +220,7 @@ impl<'a> ContextSearch<'a> {
     }
     fn is_leaf_variable(&self, lv: usize) -> bool {
         self.snap_shot.has_variable(self.delta, lv)
+            && self.variable_mask.get(&lv).is_none()
             && self
                 .snap_shot
                 .read_concept(self.delta, lv)

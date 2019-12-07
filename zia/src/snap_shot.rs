@@ -547,24 +547,6 @@ impl SnapShot {
                 _ => None,
             })
     }
-    /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
-    pub fn match_left_right(
-        &self,
-        deltas: &ContextDelta,
-        left: Option<Rc<SyntaxTree>>,
-        right: Option<Rc<SyntaxTree>>,
-        original_left: &Rc<SyntaxTree>,
-        original_right: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
-        match (left, right) {
-            (None, None) => None,
-            (Some(new_left), None) => Some(self.contract_pair(deltas, &new_left, original_right)),
-            (None, Some(new_right)) => Some(self.contract_pair(deltas, original_left, &new_right)),
-            (Some(new_left), Some(new_right)) => {
-                Some(self.contract_pair(deltas, &new_left, &new_right))
-            }
-        }
-    }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
     pub fn contract_pair(
         &self,
