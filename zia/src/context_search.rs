@@ -19,7 +19,10 @@ use ast::SyntaxTree;
 use constants::{ASSOC, FALSE, REDUCTION, RIGHT, TRUE};
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 #[derive(Debug)]
 pub struct ContextSearch<'a> {
@@ -117,54 +120,37 @@ impl<'a> ContextSearch<'a> {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let mut generalisations = left
-            .get_concept()
-            .map(|lc| {
+        let mut generalisation_candidates = HashSet::<usize>::new();
+        if let Some(lc) = left.get_concept() {
+            generalisation_candidates.extend(
                 self.snap_shot
                     .read_concept(self.delta, lc)
-                    .get_lefthand_of()
-                    .iter()
-                    .filter_map(|lo| {
-                        self.check_generalisation(
-                            &self.snap_shot.contract_pair(self.delta, left, right),
-                            *lo,
-                        )
-                        .and_then(|vm| {
-                            if vm.is_empty() {
-                                None
-                            } else {
-                                Some((*lo, vm))
-                            }
-                        })
-                    })
-                    .collect()
-            })
-            .unwrap_or_else(|| Vec::default());
-        generalisations.extend(
-            right
-                .get_concept()
-                .map(|rc| {
-                    self.snap_shot
-                        .read_concept(self.delta, rc)
-                        .get_righthand_of()
-                        .iter()
-                        .filter_map(|ro| {
-                            self.check_generalisation(
-                                &self.snap_shot.contract_pair(self.delta, left, right),
-                                *ro,
-                            )
-                            .and_then(|vm| {
-                                if vm.is_empty() {
-                                    None
-                                } else {
-                                    Some((*ro, vm))
-                                }
-                            })
-                        })
-                        .collect()
+                    .get_lefthand_of(),
+            );
+        }
+        if let Some(rc) = right.get_concept() {
+            generalisation_candidates.extend(
+                self.snap_shot
+                    .read_concept(self.delta, rc)
+                    .get_righthand_of(),
+            );
+        }
+        let mut generalisations: Vec<_> = generalisation_candidates
+            .iter()
+            .filter_map(|gc| {
+                self.check_generalisation(
+                    &self.snap_shot.contract_pair(self.delta, left, right),
+                    *gc,
+                )
+                .and_then(|vm| {
+                    if vm.is_empty() {
+                        None
+                    } else {
+                        Some((*gc, vm))
+                    }
                 })
-                .unwrap_or_else(|| Vec::default()),
-        );
+            })
+            .collect();
         generalisations.extend(
             right
                 .get_expansion()
