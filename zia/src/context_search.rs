@@ -217,7 +217,11 @@ impl<'a> ContextSearch<'a> {
                                                 .get_definition()
                                                 .map(|(_, rr)| {
                                                     if self.is_leaf_variable(rr) {
-                                                        hash_map.insert(rr, rightright.clone());
+                                                        if rr == l && left != &rightright {
+                                                            hash_map.remove(&l);
+                                                        } else {
+                                                            hash_map.insert(rr, rightright.clone());
+                                                        }
                                                     }
                                                 });
                                             if !hash_map.is_empty() {
