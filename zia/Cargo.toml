@@ -18,6 +18,7 @@ name = "zia"
 crate-type = ["lib"]
 
 [dependencies]
+maplit = "1.0.2"
 slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}
 slog-term = "2.4.0"
 snafu = "0.5.0"

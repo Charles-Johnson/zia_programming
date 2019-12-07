@@ -1,6 +1,6 @@
 extern crate zia;
 
-use zia::{Context, ContextMaker, Execute};
+use zia::Context;
 
 fn main() {
     let contents = include_str!("../../zia/src/lib.rs")
@@ -11,23 +11,6 @@ fn main() {
     let presentation = String::new() + "
 # Zia programming language
 A programming language to program itself.
-
-# API
-```rust
-// Implements the traits below
-type Context = GenericContext<Concept>;
-
-trait ContextMaker<T> where ... {
-    // Initialises context with labelled built-in concepts
-    fn new() -> Self { ... }
-}
-
-trait Execute<T> where ... {
-    // Executes operation on context corresponding to its 
-    // interpretation of the command.
-    fn execute(&mut self, command: &str) -> String { ... }
-}
-```
 
 # Context {.fragile}
 

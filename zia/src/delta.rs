@@ -15,42 +15,154 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use errors::ZiaResult;
-use std::iter::from_fn;
+use std::collections::HashSet;
 
-pub trait Delta {
+pub trait ApplyDelta {
     type Delta;
-    fn apply(&mut self, &Self::Delta);
-    fn apply_all(&mut self, deltas: &[Self::Delta]) {
-        for delta in deltas {
-            self.apply(delta);
+    fn apply(&mut self, Self::Delta);
+    fn diff(&self, Self) -> Self::Delta;
+}
+
+impl<T> ApplyDelta for Option<T>
+where
+    T: PartialEq + Clone,
+{
+    type Delta = Change<Option<T>>;
+    fn apply(&mut self, delta: Self::Delta) {
+        if let Change::Different { after, .. } = delta {
+            *self = after;
         }
     }
-    // Repeat mutation, f, n times on self and return vector of n results
-    fn repeat<F>(deltas: &mut Vec<Self::Delta>, mut f: F, n: usize) -> Vec<usize>
-    where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>) -> usize,
-    {
-        let mut counter = 0;
-        from_fn(|| {
-            if counter < n {
-                counter += 1;
-                Some(f(deltas))
-            } else {
-                None
+    fn diff(&self, next: Option<T>) -> Change<Option<T>> {
+        if self == &next {
+            Change::Same
+        } else {
+            Change::Different {
+                before: self.as_ref().cloned(),
+                after: next,
             }
-        })
-        .collect()
+        }
     }
-    fn multiply<F>(
-        deltas: &mut Vec<Self::Delta>,
-        mut f: F,
-        ns: Vec<usize>,
-        ms: Vec<&str>,
-    ) -> ZiaResult<()>
-    where
-        F: for<'a> FnMut(&'a mut Vec<Self::Delta>, usize, &str) -> ZiaResult<()>,
-    {
-        ns.iter().zip(ms).try_for_each(|(n, m)| f(deltas, *n, m))
+}
+pub trait Delta {
+    fn combine(&mut self, Self);
+}
+
+#[derive(Clone, Debug)]
+pub enum Change<T> {
+    Same,
+    Different { before: T, after: T },
+}
+
+impl<T> Default for Change<T> {
+    fn default() -> Self {
+        Change::Same
+    }
+}
+
+impl<T> Change<T>
+where
+    T: PartialEq,
+{
+    pub fn combine(self, other: Change<T>) -> Change<T> {
+        match (self, other) {
+            (Change::Same, x) => x,
+            (x, Change::Same) => x,
+            (
+                Change::Different {
+                    after: y1,
+                    before: x,
+                },
+                Change::Different {
+                    before: y2,
+                    after: z,
+                },
+            ) => {
+                if y1 == y2 {
+                    Change::Different {
+                        before: x,
+                        after: z,
+                    }
+                } else {
+                    panic!("Deltas do not align")
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct SetChange {
+    pub remove: HashSet<usize>,
+    pub add: HashSet<usize>,
+}
+
+impl SetChange {
+    pub fn is_same(&self) -> bool {
+        self.remove.is_empty() && self.add.is_empty()
+    }
+}
+
+impl std::fmt::Debug for SetChange {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if !self.remove.is_empty() {
+            string += " remove:";
+            let mut indices: Vec<&usize> = self.remove.iter().collect();
+            indices.sort();
+            for index in indices {
+                string += &format!(" {},", index);
+            }
+        }
+        if !self.add.is_empty() {
+            string += " add:";
+            let mut indices: Vec<&usize> = self.add.iter().collect();
+            indices.sort();
+            for index in indices {
+                string += &format!(" {},", index);
+            }
+        }
+        formatter.write_str(&(string + "}"))
+    }
+}
+
+impl Delta for SetChange {
+    fn combine(&mut self, other: SetChange) {
+        other.remove.iter().for_each(|item| {
+            if self.add.contains(item) {
+                self.add.remove(item);
+            } else {
+                self.remove.insert(*item);
+            }
+        });
+        other.add.iter().for_each(|item| {
+            if self.remove.contains(item) {
+                self.remove.remove(item);
+            } else {
+                self.add.insert(*item);
+            }
+        });
+    }
+}
+
+impl ApplyDelta for HashSet<usize> {
+    type Delta = SetChange;
+    fn apply(&mut self, delta: SetChange) {
+        self.retain(|c| !delta.remove.contains(c));
+        self.extend(delta.add);
+    }
+    fn diff(&self, next: HashSet<usize>) -> SetChange {
+        let mut set_change = SetChange::default();
+        for next_item in &next {
+            if self.get(&next_item).is_none() {
+                set_change.add.insert(*next_item);
+            }
+        }
+        for prev_item in self {
+            if next.get(&prev_item).is_none() {
+                set_change.remove.insert(*prev_item);
+            }
+        }
+        set_change
     }
 }

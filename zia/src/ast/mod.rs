@@ -15,7 +15,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 use errors::{ZiaError, ZiaResult};
-use reading::{BindConcept, BindPair, MaybeConcept, MightExpand};
 use std::{fmt, rc::Rc, str::FromStr};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
@@ -27,13 +26,6 @@ pub struct SyntaxTree {
     concept: Option<usize>,
     /// This syntax tree may expand to two syntax trees or not expand further.
     expansion: Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)>,
-}
-
-impl MaybeConcept for SyntaxTree {
-    /// Gets the possible concept from the inside type of the variant.
-    fn get_concept(&self) -> Option<usize> {
-        self.concept
-    }
 }
 
 impl PartialEq<SyntaxTree> for SyntaxTree {
@@ -50,24 +42,10 @@ impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
     }
 }
 
-impl MightExpand for SyntaxTree {
-    /// An expression does have an expansion while a symbol does not.
-    fn get_expansion(&self) -> Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)> {
-        self.expansion.clone()
-    }
-}
-
 impl fmt::Display for SyntaxTree {
     /// Displays the same as the inside of an `SyntaxTree` variant.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.syntax)
-    }
-}
-
-impl BindPair for SyntaxTree {
-    fn bind_pair(mut self, lefthand: &Rc<SyntaxTree>, righthand: &Rc<SyntaxTree>) -> SyntaxTree {
-        self.expansion = Some((lefthand.clone(), righthand.clone()));
-        self
     }
 }
 
@@ -82,9 +60,27 @@ impl FromStr for SyntaxTree {
     }
 }
 
-impl BindConcept for SyntaxTree {
-    fn bind_concept(mut self, concept: usize) -> SyntaxTree {
+impl SyntaxTree {
+    pub fn bind_concept(mut self, concept: usize) -> SyntaxTree {
         self.concept = Some(concept);
         self
+    }
+    pub fn contains(&self, other: &Self) -> bool {
+        if let Some((ref left, ref right)) = self.get_expansion() {
+            other == left || other == right || left.contains(other) || right.contains(other)
+        } else {
+            false
+        }
+    }
+        /// An expression does have an expansion while a symbol does not.
+    pub fn get_expansion(&self) -> Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)> {
+        self.expansion.clone()
+    }
+    pub fn bind_pair(mut self, lefthand: &Rc<SyntaxTree>, righthand: &Rc<SyntaxTree>) -> SyntaxTree {
+        self.expansion = Some((lefthand.clone(), righthand.clone()));
+        self
+    }
+    pub fn get_concept(&self) -> Option<usize> {
+        self.concept
     }
 }

@@ -22,7 +22,7 @@ extern crate zia;
 
 // Needed for assume_abstract macro which is needed for let_definition macro
 use test_zia::CONCRETE_SYMBOLS;
-use zia::{Context, ContextMaker, Execute, ZiaError};
+use zia::{Context, ZiaError};
 
 proptest! {
     // The label of a new symbol should reduce to the string of the symbol.
@@ -84,6 +84,8 @@ proptest! {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let_definition!(cont, f, d, e);
+        prop_assume!(!((a == d || a == e) && (f == b || f == c))); // Otherwise definition is circular!
+        prop_assume!(a != f); // b c will no longer be used if a and f are the same symbol
         let let_command = format!("let {} := {} {}", d, b, c);
         prop_assert_eq!(
             cont.execute(&let_command),

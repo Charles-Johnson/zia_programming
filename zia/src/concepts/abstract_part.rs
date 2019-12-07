@@ -15,37 +15,56 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::Delta;
-use reading::{GetDefinition, GetReduction};
-use writing::{RemoveDefinition, RemoveReduction};
+use delta::{ApplyDelta, Change, Delta};
+use std::fmt::Debug;
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
-    definition: Option<(usize, usize)>,
+    pub definition: Option<(usize, usize)>,
     /// The concept may reduce to another concept.
-    reduces_to: Option<usize>,
+    pub reduces_to: Option<usize>,
 }
 
-impl Delta for AbstractPart {
-    type Delta = AbstractDelta;
-    fn apply(&mut self, delta: &AbstractDelta) {
-        match delta {
-            AbstractDelta::SetDefinition(left, right) => self.set_definition(*left, *right),
-            AbstractDelta::RemoveDefinition => self.remove_definition(),
-            AbstractDelta::SetReduction(concept) => self.make_reduce_to(*concept),
-            AbstractDelta::RemoveReduction => self.make_reduce_to_none(),
-        };
+impl Debug for AbstractPart {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str("{")?;
+        self.definition
+            .iter()
+            .try_for_each(|(l, r)| formatter.write_str(&format!("definition: {}, {},", l, r)))?;
+        self.reduces_to
+            .iter()
+            .try_for_each(|r| formatter.write_str(&format!("reduces_to: {},", r)))?;
+        formatter.write_str("}")
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum AbstractDelta {
-    SetDefinition(usize, usize),
-    RemoveDefinition,
-    SetReduction(usize),
-    RemoveReduction,
+impl ApplyDelta for AbstractPart {
+    type Delta = AbstractDelta;
+    fn apply(&mut self, delta: AbstractDelta) {
+        self.definition.apply(delta.definition);
+        self.reduces_to.apply(delta.reduction);
+    }
+    fn diff(&self, next: AbstractPart) -> AbstractDelta {
+        AbstractDelta {
+            definition: self.definition.diff(next.definition),
+            reduction: self.reduces_to.diff(next.reduces_to),
+        }
+    }
+}
+
+impl Delta for AbstractDelta {
+    fn combine(&mut self, other: AbstractDelta) {
+        self.definition = self.definition.clone().combine(other.definition);
+        self.reduction = self.reduction.clone().combine(other.reduction);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct AbstractDelta {
+    pub definition: Change<Option<(usize, usize)>>,
+    pub reduction: Change<Option<usize>>,
 }
 
 impl Default for AbstractPart {
@@ -58,41 +77,17 @@ impl Default for AbstractPart {
     }
 }
 
-impl GetDefinition for AbstractPart {
-    fn get_definition(&self) -> Option<(usize, usize)> {
-        self.definition
-    }
-}
-
 impl AbstractPart {
-    pub fn set_definition(&mut self, lefthand: usize, righthand: usize) {
-        self.definition = Some((lefthand, righthand));
-    }
     pub fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> AbstractDelta {
-        AbstractDelta::SetDefinition(lefthand, righthand)
-    }
-    pub fn make_reduce_to(&mut self, concept: usize) {
-        self.reduces_to = Some(concept);
+        AbstractDelta {
+            definition: self.definition.diff(Some((lefthand, righthand))),
+            reduction: Change::Same,
+        }
     }
     pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
-        AbstractDelta::SetReduction(concept)
-    }
-}
-
-impl RemoveDefinition for AbstractPart {
-    fn remove_definition(&mut self) {
-        self.definition = None
-    }
-}
-
-impl GetReduction for AbstractPart {
-    fn get_reduction(&self) -> Option<usize> {
-        self.reduces_to
-    }
-}
-
-impl RemoveReduction for AbstractPart {
-    fn make_reduce_to_none(&mut self) {
-        self.reduces_to = None;
+        AbstractDelta {
+            definition: Change::Same,
+            reduction: self.reduces_to.diff(Some(concept)),
+        }
     }
 }

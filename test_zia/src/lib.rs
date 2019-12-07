@@ -26,7 +26,7 @@ use std::collections::HashSet;
 macro_rules! reduce_pair {
     ($cont:ident, $a:ident, $b:ident, $c:ident) => {
         assume_symbols!($a, $b, $c);
-        let reduction = format!("let (({} {}) (-> {}))", $a, $b, $c);
+        let reduction = format!("let ({} {}) -> {}", $a, $b, $c);
         prop_assert_eq!($cont.execute(&reduction), "");
     };
 }
@@ -39,6 +39,7 @@ macro_rules! assume_symbol {
         prop_assume!(!$a.contains(' '));
         prop_assume!(!$a.contains('('));
         prop_assume!(!$a.contains(')'));
+        prop_assume!(!$a.starts_with('_') || !$a.ends_with('_'));
     };
 }
 
@@ -83,7 +84,7 @@ macro_rules! let_definition {
         assume_symbols!($a, $b, $c);
         prop_assume!($a != $b);
         prop_assume!($a != $c);
-        let let_command = format!("let ({} (:= ({} {})))", $a, $b, $c);
+        let let_command = format!("let {} := {} {}", $a, $b, $c);
         prop_assert_eq!($cont.execute(&let_command), "");
     };
 }

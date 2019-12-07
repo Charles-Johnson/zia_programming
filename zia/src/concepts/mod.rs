@@ -15,29 +15,191 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 mod abstract_part;
-mod common_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
-pub use self::common_part::{CommonDelta, CommonPart};
-use delta::Delta;
+use delta::{ApplyDelta, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
-use reading::{FindWhatReducesToIt, GetDefinition, GetDefinitionOf, GetReduction, MaybeString};
-use std::collections::HashSet;
-use writing::{
-    MakeReduceFrom, MakeReduceFromDelta, NoLongerReducesFrom, RemoveAsDefinitionOf,
-    RemoveDefinition, RemoveDefinitionDelta, RemoveReduction, RemoveReductionDelta,
-    SetAsDefinitionOf, SetAsDefinitionOfDelta, SetDefinition, SetDefinitionDelta, SetReduction,
-    SetReductionDelta,
-};
+use std::{collections::HashSet, fmt::Debug};
 
 /// Data type for any type of concept.
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, PartialEq)]
 pub struct Concept {
-    common_part: CommonPart,
+    /// Set of all indices of the concepts which have this concept as the lefthand of their definition
+    lefthand_of: HashSet<usize>,
+    /// Set of all indices of the concepts which have this concept as the righthand of their definition
+    righthand_of: HashSet<usize>,
+    /// Set of all indices of the concepts which reduce to this concept.
+    reduces_from: HashSet<usize>,
     specific_part: SpecificPart,
 }
 
-#[derive(Clone, Debug)]
+impl Debug for Concept {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if !self.lefthand_of.is_empty() {
+            string += " lefthand_of: {";
+            let mut unorder_keys: Vec<&usize> = self.lefthand_of.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        if !self.righthand_of.is_empty() {
+            string += " righthand_of: {";
+            let mut unorder_keys: Vec<&usize> = self.righthand_of.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        if !self.reduces_from.is_empty() {
+            string += " reduces_from: {";
+            let mut unorder_keys: Vec<&usize> = self.reduces_from.iter().collect();
+            unorder_keys.sort();
+            for key in unorder_keys {
+                string += &format!("{},", key);
+            }
+            string += "},";
+        }
+        string += &format!(" specific_part: {:#?}", self.specific_part);
+        formatter.write_str(&(string + "}"))
+    }
+}
+
+impl Concept {
+    pub fn delete_definition(&self, id: usize) -> [ConceptDelta; 3] {
+        [
+            AbstractDelta {
+                definition: self.get_definition().diff(None),
+                reduction: Change::Same,
+            }
+            .into(),
+            ConceptDelta {
+                lefthand_of: SetChange {
+                    remove: hashset! {id},
+                    add: hashset! {},
+                },
+                reduces_from: SetChange::default(),
+                righthand_of: SetChange::default(),
+                specific_part: AbstractDelta::default(),
+            },
+            ConceptDelta {
+                righthand_of: SetChange {
+                    remove: hashset! {id},
+                    add: hashset! {},
+                },
+                reduces_from: SetChange::default(),
+                lefthand_of: SetChange::default(),
+                specific_part: AbstractDelta::default(),
+            },
+        ]
+    }
+    pub fn remove_reduction(&self, id: usize) -> ZiaResult<[(usize, ConceptDelta); 2]> {
+        self.get_reduction()
+            .map(|reduction| {
+                [
+                    (
+                        id,
+                        AbstractDelta {
+                            reduction: self.get_reduction().diff(None),
+                            definition: Change::Same,
+                        }
+                        .into(),
+                    ),
+                    (
+                        reduction,
+                        ConceptDelta {
+                            reduces_from: SetChange {
+                                remove: hashset! {id},
+                                add: hashset! {},
+                            },
+                            lefthand_of: SetChange::default(),
+                            righthand_of: SetChange::default(),
+                            specific_part: AbstractDelta::default(),
+                        },
+                    ),
+                ]
+            })
+            .ok_or(ZiaError::RedundantReduction)
+    }
+    pub fn find_what_reduces_to_it(&self) -> std::collections::hash_set::Iter<usize> {
+        self.reduces_from.iter()
+    }
+    /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
+    pub fn get_string(&self) -> Option<String> {
+        match self.specific_part {
+            SpecificPart::String(ref s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+    pub fn get_lefthand_of(&self) -> &HashSet<usize> {
+        &self.lefthand_of
+    }
+    pub fn get_righthand_of(&self) -> &HashSet<usize> {
+        &self.righthand_of
+    }
+    /// Gets the index of the concept that `self` may reduce to.
+    pub fn get_reduction(&self) -> Option<usize> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => c.reduces_to,
+            _ => None,
+        }
+    }
+    /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
+    pub fn get_definition(&self) -> Option<(usize, usize)> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => c.definition,
+            _ => None,
+        }
+    }
+    pub fn reduce_to(&self, id: usize, reduction: usize) -> ZiaResult<[ConceptDelta; 2]> {
+        match self.specific_part {
+            SpecificPart::Abstract(ref c) => Ok([
+                c.make_reduce_to_delta(reduction).into(),
+                ConceptDelta {
+                    reduces_from: SetChange {
+                        add: hashset! {id},
+                        remove: hashset! {},
+                    },
+                    lefthand_of: SetChange::default(),
+                    righthand_of: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+            ]),
+            _ => Err(ZiaError::ConcreteReduction),
+        }
+    }
+    pub fn set_definition(&self, d: usize, l: usize, r: usize) -> ZiaResult<[ConceptDelta; 3]> {
+        match &self.specific_part {
+            SpecificPart::Abstract(c) => Ok([
+                c.set_definition_delta(l, r).into(),
+                ConceptDelta {
+                    lefthand_of: SetChange {
+                        add: hashset! {d},
+                        remove: hashset! {},
+                    },
+                    righthand_of: SetChange::default(),
+                    reduces_from: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+                ConceptDelta {
+                    lefthand_of: SetChange::default(),
+                    righthand_of: SetChange {
+                        add: hashset! {d},
+                        remove: hashset! {},
+                    },
+                    reduces_from: SetChange::default(),
+                    specific_part: AbstractDelta::default(),
+                },
+            ]),
+            _ => Err(ZiaError::SettingDefinitionOfConcrete),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
 enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,
@@ -48,262 +210,127 @@ enum SpecificPart {
     String(String),
 }
 
-#[derive(Clone, Debug)]
-pub enum ConceptDelta {
-    Abstract(AbstractDelta),
-    Common(CommonDelta),
+impl Debug for SpecificPart {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        formatter.write_str(&match *self {
+            SpecificPart::Concrete => "Concrete".to_string(),
+            SpecificPart::Abstract(ref ap) => format!("{:#?}", ap),
+            SpecificPart::String(ref s) => format!("\"{}\"", s),
+        })
+    }
 }
 
-impl Delta for Concept {
+impl Default for SpecificPart {
+    fn default() -> SpecificPart {
+        SpecificPart::Concrete
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct ConceptDelta {
+    specific_part: AbstractDelta,
+    lefthand_of: SetChange,
+    righthand_of: SetChange,
+    reduces_from: SetChange,
+}
+
+impl std::fmt::Debug for ConceptDelta {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let mut string = "{".to_string();
+        if let Change::Different { before, after } = self.specific_part.definition {
+            string += &format!(" definition: {:?} -> {:?},", before, after);
+        }
+        if let Change::Different { before, after } = self.specific_part.reduction {
+            string += &format!(" reduction: {:?} -> {:?},", before, after);
+        }
+        if !self.lefthand_of.is_same() {
+            string += &format!(" lefthand_of: {:#?},", self.lefthand_of);
+        }
+        if !self.righthand_of.is_same() {
+            string += &format!(" righthand_of: {:#?},", self.righthand_of);
+        }
+        if !self.reduces_from.is_same() {
+            string += &format!(" reduces_from: {:#?},", self.reduces_from);
+        }
+        formatter.write_str(&(string + "}"))
+    }
+}
+
+impl Delta for ConceptDelta {
+    fn combine(&mut self, other: ConceptDelta) {
+        self.specific_part.combine(other.specific_part);
+        self.lefthand_of.combine(other.lefthand_of);
+        self.righthand_of.combine(other.righthand_of);
+        self.reduces_from.combine(other.reduces_from);
+    }
+}
+
+impl ApplyDelta for Concept {
     type Delta = ConceptDelta;
-    fn apply(&mut self, delta: &ConceptDelta) {
-        match delta {
-            ConceptDelta::Abstract(ad) => match self.specific_part {
-                SpecificPart::Abstract(ref mut ap) => ap.apply(ad),
-                _ => panic!("AbstractDelta applied to concrete concept."),
-            },
-            ConceptDelta::Common(cd) => self.common_part.apply(cd),
+    fn apply(&mut self, delta: ConceptDelta) {
+        let ConceptDelta {
+            lefthand_of,
+            righthand_of,
+            reduces_from,
+            specific_part,
+        } = delta;
+        self.lefthand_of.apply(lefthand_of);
+        self.righthand_of.apply(righthand_of);
+        self.reduces_from.apply(reduces_from);
+        if let SpecificPart::Abstract(ref mut ap) = self.specific_part {
+            ap.apply(specific_part);
         };
+    }
+    fn diff(&self, next: Concept) -> ConceptDelta {
+        let lefthand_of = self.lefthand_of.diff(next.lefthand_of);
+        let righthand_of = self.righthand_of.diff(next.righthand_of);
+        let reduces_from = self.reduces_from.diff(next.reduces_from);
+        ConceptDelta {
+            lefthand_of,
+            righthand_of,
+            reduces_from,
+            specific_part: match (&self.specific_part, next.specific_part) {
+                (SpecificPart::Abstract(ap1), SpecificPart::Abstract(ref ap2)) => {
+                    ap1.diff(ap2.clone())
+                }
+                (SpecificPart::Abstract(ap1), _) => ap1.diff(AbstractPart::default()),
+                (_, SpecificPart::Abstract(ap2)) => AbstractPart::default().diff(ap2),
+                _ => AbstractDelta::default(),
+            },
+        }
     }
 }
 
 impl From<AbstractPart> for Concept {
     fn from(ap: AbstractPart) -> Concept {
+        SpecificPart::Abstract(ap).into()
+    }
+}
+
+impl From<SpecificPart> for Concept {
+    fn from(sp: SpecificPart) -> Concept {
         Concept {
-            common_part: CommonPart::default(),
-            specific_part: SpecificPart::Abstract(ap),
+            lefthand_of: HashSet::default(),
+            righthand_of: HashSet::default(),
+            reduces_from: HashSet::default(),
+            specific_part: sp,
         }
     }
 }
 
-impl From<CommonPart> for Concept {
-    fn from(cp: CommonPart) -> Concept {
-        Concept {
-            common_part: cp,
-            specific_part: SpecificPart::Concrete,
+impl From<AbstractDelta> for ConceptDelta {
+    fn from(ap: AbstractDelta) -> ConceptDelta {
+        ConceptDelta {
+            lefthand_of: SetChange::default(),
+            righthand_of: SetChange::default(),
+            reduces_from: SetChange::default(),
+            specific_part: ap,
         }
-    }
-}
-
-impl GetDefinitionOf for Concept {
-    fn get_lefthand_of(&self) -> HashSet<usize> {
-        self.common_part.get_lefthand_of()
-    }
-    fn get_righthand_of(&self) -> HashSet<usize> {
-        self.common_part.get_righthand_of()
-    }
-}
-
-impl FindWhatReducesToIt for Concept {
-    fn find_what_reduces_to_it(&self) -> HashSet<usize> {
-        self.common_part.find_what_reduces_to_it()
-    }
-}
-
-impl RemoveAsDefinitionOf for Concept {
-    fn remove_as_lefthand_of(&mut self, index: usize) {
-        self.common_part.remove_as_lefthand_of(index);
-    }
-    fn remove_as_righthand_of(&mut self, index: usize) {
-        self.common_part.remove_as_righthand_of(index);
-    }
-}
-
-impl NoLongerReducesFrom for Concept {
-    fn no_longer_reduces_from(&mut self, index: usize) {
-        self.common_part.no_longer_reduces_from(index);
-    }
-}
-
-impl MakeReduceFrom for Concept {
-    fn make_reduce_from(&mut self, index: usize) {
-        self.common_part.make_reduce_from(index);
-    }
-}
-
-impl MakeReduceFromDelta for Concept {
-    fn make_reduce_from_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta::Common(self.common_part.make_reduce_from_delta(index))
-    }
-}
-
-impl SetAsDefinitionOf for Concept {
-    fn add_as_lefthand_of(&mut self, index: usize) {
-        self.common_part.add_as_lefthand_of(index);
-    }
-    fn add_as_righthand_of(&mut self, index: usize) {
-        self.common_part.add_as_righthand_of(index);
-    }
-}
-
-impl SetAsDefinitionOfDelta for Concept {
-    fn add_as_lefthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta::Common(self.common_part.add_as_lefthand_of_delta(index))
-    }
-    fn add_as_righthand_of_delta(&self, index: usize) -> ConceptDelta {
-        ConceptDelta::Common(self.common_part.add_as_righthand_of_delta(index))
-    }
-}
-
-impl GetDefinition for Concept {
-    /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
-    fn get_definition(&self) -> Option<(usize, usize)> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => c.get_definition(),
-            _ => None,
-        }
-    }
-}
-
-impl SetDefinition for Concept {
-    /// Sets the definition of the concept if abstract, otherwise returns an error.
-    fn set_definition(&mut self, lefthand: usize, righthand: usize) -> ZiaResult<()> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.set_definition(lefthand, righthand);
-                Ok(())
-            }
-            _ => Err(ZiaError::SettingDefinitionOfConcrete),
-        }
-    }
-}
-
-impl SetDefinitionDelta for Concept {
-    fn set_definition_delta(&self, lefthand: usize, righthand: usize) -> ZiaResult<ConceptDelta> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(ConceptDelta::Abstract(
-                c.set_definition_delta(lefthand, righthand),
-            )),
-            _ => Err(ZiaError::SettingDefinitionOfConcrete),
-        }
-    }
-}
-
-impl RemoveDefinition for Concept {
-    /// Removes the definition of the concept if abstract, otherwise panics.
-    fn remove_definition(&mut self) {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.remove_definition(),
-            SpecificPart::String(_) => panic!("String concepts do not have a definition to remove"),
-            SpecificPart::Concrete => {
-                panic!("Concrete concepts do not have a definition to remove")
-            }
-        }
-    }
-}
-
-impl GetReduction for Concept {
-    /// Gets the index of the concept that `self` may reduce to.
-    fn get_reduction(&self) -> Option<usize> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => c.get_reduction(),
-            _ => None,
-        }
-    }
-}
-
-impl SetReduction for Concept {
-    /// Sets the index of the concept that `self` reduces to if abstract. Otherwise returns an error.
-    fn make_reduce_to(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => {
-                c.make_reduce_to(concept);
-                Ok(())
-            }
-            _ => Err(ZiaError::ConcreteReduction),
-        }
-    }
-}
-
-impl SetReductionDelta for Concept {
-    fn make_reduce_to_delta(&self, concept: usize) -> ZiaResult<ConceptDelta> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => {
-                Ok(ConceptDelta::Abstract(c.make_reduce_to_delta(concept)))
-            }
-            _ => Err(ZiaError::ConcreteReduction),
-        }
-    }
-}
-
-impl RemoveReduction for Concept {
-    /// Removes the reduction rule of the concept if abstract, otherwise panics.
-    fn make_reduce_to_none(&mut self) {
-        match self.specific_part {
-            SpecificPart::Abstract(ref mut c) => c.make_reduce_to_none(),
-            SpecificPart::String(_) => panic!("String concepts have no reduction rule to remove"),
-            SpecificPart::Concrete => panic!("Concrete concepts have no reduction rule to remove"),
-        };
     }
 }
 
 impl From<String> for Concept {
     fn from(string: String) -> Concept {
-        Concept {
-            common_part: CommonPart::default(),
-            specific_part: SpecificPart::String(string),
-        }
-    }
-}
-
-impl MaybeString for Concept {
-    /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
-    fn get_string(&self) -> Option<String> {
-        match self.specific_part {
-            SpecificPart::String(ref s) => Some(s.clone()),
-            _ => None,
-        }
-    }
-}
-
-impl RemoveReductionDelta for Concept {
-    fn no_longer_reduces_from_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |reduces_from_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveReducesFrom(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddReducesFrom(c)) if *c == concept => true,
-                _ => reduces_from_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveReducesFrom(concept))
-    }
-    fn make_reduce_to_none_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
-        assert!(deltas.iter().fold(true, |reduces, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta::RemoveReduction) => false,
-            ConceptDelta::Abstract(AbstractDelta::SetReduction(_)) => true,
-            _ => reduces,
-        }));
-        ConceptDelta::Abstract(AbstractDelta::RemoveReduction)
-    }
-}
-
-impl RemoveDefinitionDelta for Concept {
-    fn remove_as_lefthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |lefthand_of_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveLeft(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddLeft(c)) if *c == concept => true,
-                _ => lefthand_of_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveLeft(concept))
-    }
-    fn remove_as_righthand_of_delta(&self, deltas: &[Self::Delta], concept: usize) -> Self::Delta {
-        assert!(deltas
-            .iter()
-            .fold(true, |righthand_of_concept, delta| match delta {
-                ConceptDelta::Common(CommonDelta::RemoveRight(c)) if *c == concept => false,
-                ConceptDelta::Common(CommonDelta::AddRight(c)) if *c == concept => true,
-                _ => righthand_of_concept,
-            }));
-        ConceptDelta::Common(CommonDelta::RemoveRight(concept))
-    }
-    fn remove_definition_delta(&self, deltas: &[Self::Delta]) -> Self::Delta {
-        assert!(deltas.iter().fold(true, |definition, delta| match delta {
-            ConceptDelta::Abstract(AbstractDelta::RemoveDefinition) => false,
-            ConceptDelta::Abstract(AbstractDelta::SetDefinition(_, _)) => true,
-            _ => definition,
-        }));
-        ConceptDelta::Abstract(AbstractDelta::RemoveDefinition)
+        SpecificPart::String(string).into()
     }
 }

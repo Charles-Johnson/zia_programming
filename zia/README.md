@@ -48,23 +48,7 @@ Definition concept, symbol: `:=`
 # Public API  
 
 The current implementation exposes the `Context` type that can be used in an interface such as 
-[IZia](https://github.com/Charles-Johnson/izia). Importing the following traits allows the 
-corresponding methods to be called with `Context`.
-
-```rust
-trait ContextMaker<T> {
-	fn new() -> Self { 
-		// Constructs a new Context and labels the 4 built-in concepts.
-    }
-}
-
-trait Execute<T> {
-    fn execute(&mut self, command: &str) -> String { 
-		// Executes the commands given by the user that may modify the `Context` and outputs a 
-		// `String` that maybe empty, an error message or the answer to a query.
-	}
-}
-```
+[IZia](https://github.com/Charles-Johnson/izia).
 
 # Testing
 

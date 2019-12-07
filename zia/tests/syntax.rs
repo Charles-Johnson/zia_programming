@@ -20,7 +20,7 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context, ContextMaker, Execute, ZiaError};
+use zia::{Context, ZiaError};
 
 #[test]
 fn empty_parentheses() {
@@ -37,5 +37,11 @@ proptest! {
             cont.execute(&format!("{} {} {}", a, b, c)),
             ZiaError::AmbiguousExpression.to_string()
         );
+    }
+    // No input should crash the interpreter
+    #[test]
+    fn random_input(a in "\\PC*") {
+        let mut cont = Context::new();
+        cont.execute(&a);
     }
 }

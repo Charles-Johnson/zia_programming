@@ -3,7 +3,7 @@ extern crate criterion;
 extern crate zia;
 
 use criterion::{BenchmarkId, Criterion};
-use zia::{Context, ContextMaker, Execute};
+use zia::Context;
 
 fn let_reduction(context: &mut Context, size: u8) {
     let mut i = 0u8;
