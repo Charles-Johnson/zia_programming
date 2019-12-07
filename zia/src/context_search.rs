@@ -24,7 +24,7 @@ use std::{collections::HashMap, rc::Rc};
 #[derive(Debug)]
 pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
-    variable_mask: HashMap<usize, Rc<SyntaxTree>>,
+    variable_mask: VariableMask,
     delta: &'a ContextDelta,
 }
 
@@ -116,7 +116,7 @@ impl<'a> ContextSearch<'a> {
         &self,
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
-    ) -> Vec<(usize, HashMap<usize, Rc<SyntaxTree>>)> {
+    ) -> Vec<(usize, VariableMask)> {
         let mut generalisations = left
             .get_concept()
             .map(|lc| {
@@ -125,24 +125,11 @@ impl<'a> ContextSearch<'a> {
                     .get_lefthand_of()
                     .iter()
                     .filter_map(|lo| {
-                        if self.snap_shot.has_variable(self.delta, *lo) {
-                            // Left hand branch of syntax's concept is also the left hand of a variable concept
-                            self.snap_shot
-                                .read_concept(self.delta, *lo)
-                                .get_definition()
-                                .and_then(|(_, r)| {
-                                    if self.is_leaf_variable(r)
-                                        && !(right.to_string().starts_with('_')
-                                            && right.to_string().ends_with('_'))
-                                    {
-                                        Some((*lo, hashmap! {r => right.clone()}))
-                                    } else {
-                                        None
-                                    }
-                                })
-                        } else {
-                            None
-                        }
+                        self.check_generalisation(
+                            &self.snap_shot.contract_pair(self.delta, left, right),
+                            *lo,
+                        )
+                        .map(|vm| (*lo, vm))
                     })
                     .collect()
             })
@@ -231,14 +218,63 @@ impl<'a> ContextSearch<'a> {
         );
         generalisations
     }
-    fn is_leaf_variable(&self, lv: usize) -> bool {
-        self.snap_shot.has_variable(self.delta, lv)
-            && self.variable_mask.get(&lv).is_none()
-            && self
+    fn check_generalisation(
+        &self,
+        ast: &Rc<SyntaxTree>,
+        generalisation: usize,
+    ) -> Option<VariableMask> {
+        if self.is_free_variable(generalisation) {
+            if let Some((gl, gr)) = self
                 .snap_shot
-                .read_concept(self.delta, lv)
+                .read_concept(self.delta, generalisation)
                 .get_definition()
-                .is_none()
+            {
+                if let Some((l, r)) = ast.get_expansion() {
+                    if let (Some(lm), Some(mut rm)) = (
+                        self.check_generalisation(&l, gl),
+                        self.check_generalisation(&r, gr),
+                    ) {
+                        for (lmk, lmv) in lm {
+                            if let Some(rmv) = rm.get(&lmk) {
+                                if rmv != &lmv {
+                                    return None;
+                                }
+                            } else {
+                                rm.insert(lmk, lmv);
+                            }
+                        }
+                        Some(rm)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                Some(hashmap! {generalisation => ast.clone()})
+            }
+        } else {
+            None
+        }
+    }
+    // fn find_generalisations(&self, ast: &Rc<SyntaxTree>) -> Vec<usize> {
+    //     if let Some((l, r)) = ast.get_expansion() {
+
+    //     } else {
+    //         Vec::default()
+    //     }
+    // }
+    fn is_leaf_variable(&self, lv: usize) -> bool {
+        self.is_free_variable(lv) && self.is_leaf_concept(lv)
+    }
+    fn is_free_variable(&self, v: usize) -> bool {
+        self.snap_shot.has_variable(self.delta, v) && self.variable_mask.get(&v).is_none()
+    }
+    fn is_leaf_concept(&self, l: usize) -> bool {
+        self.snap_shot
+            .read_concept(self.delta, l)
+            .get_definition()
+            .is_none()
     }
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     pub fn recursively_reduce(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
@@ -314,3 +350,5 @@ impl<'a> Clone for ContextSearch<'a> {
         }
     }
 }
+
+type VariableMask = HashMap<usize, Rc<SyntaxTree>>;
