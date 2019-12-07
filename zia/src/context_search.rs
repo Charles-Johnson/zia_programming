@@ -129,7 +129,13 @@ impl<'a> ContextSearch<'a> {
                             &self.snap_shot.contract_pair(self.delta, left, right),
                             *lo,
                         )
-                        .map(|vm| (*lo, vm))
+                        .and_then(|vm| {
+                            if vm.is_empty() {
+                                None
+                            } else {
+                                Some((*lo, vm))
+                            }
+                        })
                     })
                     .collect()
             })
@@ -143,21 +149,17 @@ impl<'a> ContextSearch<'a> {
                         .get_righthand_of()
                         .iter()
                         .filter_map(|ro| {
-                            if self.snap_shot.has_variable(self.delta, *ro) {
-                                // Right hand branch of syntax's concept is also the right hand of a variable concept
-                                self.snap_shot
-                                    .read_concept(self.delta, *ro)
-                                    .get_definition()
-                                    .and_then(|(l, _)| {
-                                        if self.is_leaf_variable(l) {
-                                            Some((*ro, hashmap! {l => left.clone()}))
-                                        } else {
-                                            None
-                                        }
-                                    })
-                            } else {
-                                None
-                            }
+                            self.check_generalisation(
+                                &self.snap_shot.contract_pair(self.delta, left, right),
+                                *ro,
+                            )
+                            .and_then(|vm| {
+                                if vm.is_empty() {
+                                    None
+                                } else {
+                                    Some((*ro, vm))
+                                }
+                            })
                         })
                         .collect()
                 })
@@ -230,20 +232,42 @@ impl<'a> ContextSearch<'a> {
                 .get_definition()
             {
                 if let Some((l, r)) = ast.get_expansion() {
-                    if let (Some(lm), Some(mut rm)) = (
-                        self.check_generalisation(&l, gl),
-                        self.check_generalisation(&r, gr),
-                    ) {
-                        for (lmk, lmv) in lm {
-                            if let Some(rmv) = rm.get(&lmk) {
-                                if rmv != &lmv {
-                                    return None;
+                    let glv = self.is_free_variable(gl);
+                    let grv = self.is_free_variable(gr);
+                    if glv && grv {
+                        if let (Some(lm), Some(mut rm)) = (
+                            self.check_generalisation(&l, gl),
+                            self.check_generalisation(&r, gr),
+                        ) {
+                            for (lmk, lmv) in lm {
+                                if let Some(rmv) = rm.get(&lmk) {
+                                    if rmv != &lmv {
+                                        return None;
+                                    }
+                                } else {
+                                    rm.insert(lmk, lmv);
                                 }
-                            } else {
-                                rm.insert(lmk, lmv);
                             }
+                            Some(rm)
+                        } else {
+                            None
                         }
-                        Some(rm)
+                    } else if glv {
+                        if r.get_concept().map(|c| c == gr).unwrap_or(false) {
+                            self.check_generalisation(&l, gl)
+                        } else {
+                            None
+                        }
+                    } else if grv {
+                        if l.get_concept().map(|c| c == gl).unwrap_or(false) {
+                            self.check_generalisation(&r, gr)
+                        } else {
+                            None
+                        }
+                    } else if l.get_concept().map(|c| c == gl).unwrap_or(false)
+                        && r.get_concept().map(|c| c == gr).unwrap_or(false)
+                    {
+                        Some(hashmap! {})
                     } else {
                         None
                     }
