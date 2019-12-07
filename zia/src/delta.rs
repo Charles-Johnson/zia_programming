@@ -99,14 +99,14 @@ pub struct SetChange {
 
 impl SetChange {
     pub fn is_same(&self) -> bool {
-        self.remove.len() == 0 && self.add.len() == 0
+        self.remove.is_empty() && self.add.is_empty()
     }
 }
 
 impl std::fmt::Debug for SetChange {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
-        if self.remove.len() > 0 {
+        if !self.remove.is_empty() {
             string += " remove:";
             let mut indices: Vec<&usize> = self.remove.iter().collect();
             indices.sort();
@@ -114,7 +114,7 @@ impl std::fmt::Debug for SetChange {
                 string += &format!(" {},", index);
             }
         }
-        if self.add.len() > 0 {
+        if !self.add.is_empty() {
             string += " add:";
             let mut indices: Vec<&usize> = self.add.iter().collect();
             indices.sort();

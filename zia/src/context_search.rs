@@ -200,18 +200,19 @@ impl<'a> ContextSearch<'a> {
                                             if self.is_leaf_variable(l) {
                                                 hash_map.insert(l, left.clone());
                                             }
-                                            self.snap_shot
+                                            if let Some((_, rr)) = self
+                                                .snap_shot
                                                 .read_concept(self.delta, r)
                                                 .get_definition()
-                                                .map(|(_, rr)| {
-                                                    if self.is_leaf_variable(rr) {
-                                                        if rr == l && left != &rightright {
-                                                            hash_map.remove(&l);
-                                                        } else {
-                                                            hash_map.insert(rr, rightright.clone());
-                                                        }
+                                            {
+                                                if self.is_leaf_variable(rr) {
+                                                    if rr == l && left != &rightright {
+                                                        hash_map.remove(&l);
+                                                    } else {
+                                                        hash_map.insert(rr, rightright.clone());
                                                     }
-                                                });
+                                                }
+                                            }
                                             if !hash_map.is_empty() {
                                                 variable_in_expressions
                                                     .push((righthand_of, hash_map));
@@ -222,9 +223,9 @@ impl<'a> ContextSearch<'a> {
                             }
                             variable_in_expressions
                         })
-                        .unwrap_or_else(|| Vec::default())
+                        .unwrap_or_default()
                 })
-                .unwrap_or_else(|| Vec::default()),
+                .unwrap_or_default(),
         );
         generalisations
     }

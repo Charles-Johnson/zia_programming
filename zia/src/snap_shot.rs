@@ -90,7 +90,7 @@ impl SnapShot {
             })
             .unwrap_or_else(|| {
                 self.get_concept(id)
-                    .expect(&format!("No concept with id = {}", id))
+                    .unwrap_or_else(|| panic!("No concept with id = {}", id))
                     .clone()
             })
     }
@@ -104,14 +104,11 @@ impl SnapShot {
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
         for (id, (cd, _, _)) in &delta.concept {
-            match cd {
-                ConceptDelta::Insert(_) => {
-                    if *id >= new_concept_length {
-                        new_concept_length = *id + 1
-                    }
+            if let ConceptDelta::Insert(_) = cd {
+                if *id >= new_concept_length {
+                    new_concept_length = *id + 1
                 }
-                _ => (),
-            };
+            }
         }
         for (id, (cd, _, _)) in &delta.concept {
             match cd {
@@ -464,13 +461,12 @@ impl SnapShot {
         match self.get_label(deltas, concept) {
             Some(s) => Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept)),
             None => {
-                let (left, right) =
-                    self.read_concept(deltas, concept)
-                        .get_definition()
-                        .expect(&format!(
-                            "Unlabelled concept ({}) with no definition",
-                            concept
-                        ));
+                let (left, right) = self
+                    .read_concept(deltas, concept)
+                    .get_definition()
+                    .unwrap_or_else(|| {
+                        panic!("Unlabelled concept ({}) with no definition", concept)
+                    });
                 self.combine(
                     deltas,
                     &self.to_ast(deltas, left),
