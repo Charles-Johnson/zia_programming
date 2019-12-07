@@ -28,7 +28,7 @@ use std::{
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SnapShot {
     /// Relates a String value to the index where the concept corresponding to the String is stored
     /// in the `concepts` field.
@@ -53,7 +53,7 @@ impl SnapShot {
         delta
             .concept
             .get(&concept)
-            .map(|(cd, v)| match cd {
+            .map(|(cd, v, temporary)| match cd {
                 ConceptDelta::Insert(_) => *v,
                 ConceptDelta::Remove(_) => false,
                 ConceptDelta::Update(_) => in_previous_variables,
@@ -76,7 +76,7 @@ impl SnapShot {
         delta
             .concept
             .get(&id)
-            .and_then(|(cd, _)| match cd {
+            .and_then(|(cd, _, temporary)| match cd {
                 ConceptDelta::Insert(c) => Some(c.clone()),
                 ConceptDelta::Remove(_) => None,
                 ConceptDelta::Update(d) => {
@@ -103,7 +103,7 @@ impl SnapShot {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _)) in &delta.concept {
+        for (id, (cd, _, _)) in &delta.concept {
             match cd {
                 ConceptDelta::Insert(_) => {
                     if *id >= new_concept_length {
@@ -113,7 +113,7 @@ impl SnapShot {
                 _ => (),
             };
         }
-        for (id, (cd, _)) in &delta.concept {
+        for (id, (cd, _, _)) in &delta.concept {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
@@ -163,7 +163,7 @@ impl SnapShot {
         }
         (
             ContextDelta {
-                concept: hashmap! {index => (ConceptDelta::Insert(concept), variable)},
+                concept: hashmap! {index => (ConceptDelta::Insert(concept), variable, false)},
                 string: hashmap! {},
             },
             index,
@@ -547,24 +547,6 @@ impl SnapShot {
                 _ => None,
             })
     }
-    /// Returns the updated branch of abstract syntax tree that may have had the left or right parts updated.
-    pub fn match_left_right(
-        &self,
-        deltas: &ContextDelta,
-        left: Option<Rc<SyntaxTree>>,
-        right: Option<Rc<SyntaxTree>>,
-        original_left: &Rc<SyntaxTree>,
-        original_right: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
-        match (left, right) {
-            (None, None) => None,
-            (Some(new_left), None) => Some(self.contract_pair(deltas, &new_left, original_right)),
-            (None, Some(new_right)) => Some(self.contract_pair(deltas, original_left, &new_right)),
-            (Some(new_left), Some(new_right)) => {
-                Some(self.contract_pair(deltas, &new_left, &new_right))
-            }
-        }
-    }
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
     pub fn contract_pair(
         &self,
@@ -640,27 +622,29 @@ impl ApplyDelta for SnapShot {
             StringDelta::Insert(id) => self.add_string(*id, &s),
             StringDelta::Remove(_) => self.remove_string(&s),
         });
-        for (id, (cd, v)) in delta.concept {
-            match cd {
-                ConceptDelta::Insert(c) => {
-                    let padding_needed = id as isize - self.concepts.len() as isize;
-                    if 0 <= padding_needed {
-                        self.concepts.extend(vec![None; padding_needed as usize]);
-                        self.concepts.push(Some(c));
-                    } else {
-                        self.concepts[id] = Some(c);
+        for (id, (cd, v, temporary)) in delta.concept {
+            if !temporary {
+                match cd {
+                    ConceptDelta::Insert(c) => {
+                        let padding_needed = id as isize - self.concepts.len() as isize;
+                        if 0 <= padding_needed {
+                            self.concepts.extend(vec![None; padding_needed as usize]);
+                            self.concepts.push(Some(c));
+                        } else {
+                            self.concepts[id] = Some(c);
+                        }
+                        if v {
+                            self.variables.insert(id);
+                        }
                     }
-                    if v {
-                        self.variables.insert(id);
+                    ConceptDelta::Remove(_) => {
+                        self.blindly_remove_concept(id);
+                        if v {
+                            self.variables.remove(&id);
+                        }
                     }
+                    ConceptDelta::Update(d) => self.write_concept(id).apply(d),
                 }
-                ConceptDelta::Remove(_) => {
-                    self.blindly_remove_concept(id);
-                    if v {
-                        self.variables.remove(&id);
-                    }
-                }
-                ConceptDelta::Update(d) => self.write_concept(id).apply(d),
             }
         }
     }

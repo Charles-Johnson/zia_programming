@@ -25,7 +25,7 @@ use std::{
 #[derive(Clone, Default)]
 pub struct ContextDelta {
     pub string: HashMap<String, StringDelta>,
-    pub concept: HashMap<usize, (ConceptDelta, bool)>,
+    pub concept: HashMap<usize, (ConceptDelta, bool, bool)>,
 }
 
 impl Debug for ContextDelta {
@@ -46,7 +46,7 @@ impl Debug for ContextDelta {
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();
             for key in unsorted_keys {
-                let (cd, variable) = self.concept.get(key).unwrap();
+                let (cd, variable, temporary) = self.concept.get(key).unwrap();
                 string += &format!("\t{}: {:#?}", key, cd);
                 if *variable {
                     string += " (variable)";
@@ -94,9 +94,9 @@ impl Debug for ConceptDelta {
     }
 }
 
-pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_delta: &CD) {
+pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool, bool)>, concept_delta: &CD, temporary: bool) {
     entry
-        .and_modify(|(cd, _)| match cd {
+        .and_modify(|(cd, _, temporary)| match cd {
             ConceptDelta::Update(d) => {
                 d.combine(concept_delta.clone());
                 *cd = ConceptDelta::Update(d.clone());
@@ -107,17 +107,17 @@ pub fn update_concept_delta(entry: Entry<usize, (ConceptDelta, bool)>, concept_d
             }
             ConceptDelta::Remove(_) => panic!("Concept will already be removed"),
         })
-        .or_insert((ConceptDelta::Update(concept_delta.clone()), false));
+        .or_insert((ConceptDelta::Update(concept_delta.clone()), false, temporary));
 }
 
 impl Delta for ContextDelta {
     fn combine(&mut self, other: ContextDelta) {
-        for (other_key, (other_value, v2)) in other.concept {
+        for (other_key, (other_value, v2, temporary)) in other.concept {
             let mut remove_key = false;
             let mut update_delta = None;
             self.concept
                 .entry(other_key)
-                .and_modify(|(cd, v1)| match (cd, &other_value) {
+                .and_modify(|(cd, v1, _)| match (cd, &other_value) {
                     (ConceptDelta::Insert(c1), ConceptDelta::Remove(c2))
                         if c1 == c2 && *v1 == v2 =>
                     {
@@ -140,13 +140,13 @@ impl Delta for ContextDelta {
                     }
                     _ => panic!("Something went wrong when combining concept deltas!"),
                 })
-                .or_insert((other_value, v2));
+                .or_insert((other_value, v2, temporary));
             if remove_key {
                 self.concept.remove(&other_key);
             }
             update_delta.map(|cd| {
                 self.concept
-                    .insert(other_key, (ConceptDelta::Update(cd), v2))
+                    .insert(other_key, (ConceptDelta::Update(cd), v2, temporary))
             });
         }
         for (other_key, other_sd) in other.string {
