@@ -15,7 +15,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-use delta::{ApplyDelta, Change, Delta};
+use delta::{Apply, Change, Delta};
 use std::fmt::Debug;
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
@@ -40,13 +40,13 @@ impl Debug for AbstractPart {
     }
 }
 
-impl ApplyDelta for AbstractPart {
+impl Apply for AbstractPart {
     type Delta = AbstractDelta;
     fn apply(&mut self, delta: AbstractDelta) {
         self.definition.apply(delta.definition);
         self.reduces_to.apply(delta.reduction);
     }
-    fn diff(&self, next: AbstractPart) -> AbstractDelta {
+    fn diff(&self, next: Self) -> AbstractDelta {
         AbstractDelta {
             definition: self.definition.diff(next.definition),
             reduction: self.reduces_to.diff(next.reduces_to),
@@ -55,7 +55,7 @@ impl ApplyDelta for AbstractPart {
 }
 
 impl Delta for AbstractDelta {
-    fn combine(&mut self, other: AbstractDelta) {
+    fn combine(&mut self, other: Self) {
         self.definition = self.definition.clone().combine(other.definition);
         self.reduction = self.reduction.clone().combine(other.reduction);
     }
@@ -69,8 +69,8 @@ pub struct AbstractDelta {
 
 impl Default for AbstractPart {
     /// The default concept doesn't have a definition and doesn't further reduce.
-    fn default() -> AbstractPart {
-        AbstractPart {
+    fn default() -> Self {
+        Self {
             definition: None,
             reduces_to: None,
         }

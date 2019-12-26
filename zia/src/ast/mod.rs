@@ -30,14 +30,14 @@ pub struct SyntaxTree {
 
 impl PartialEq<SyntaxTree> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &SyntaxTree) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.to_string() == other.to_string()
     }
 }
 
 impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &Rc<SyntaxTree>) -> bool {
+    fn eq(&self, other: &Rc<Self>) -> bool {
         self.to_string() == other.to_string()
     }
 }
@@ -51,8 +51,8 @@ impl fmt::Display for SyntaxTree {
 
 impl FromStr for SyntaxTree {
     type Err = ZiaError;
-    fn from_str(syntax: &str) -> ZiaResult<SyntaxTree> {
-        Ok(SyntaxTree {
+    fn from_str(syntax: &str) -> ZiaResult<Self> {
+        Ok(Self {
             syntax: syntax.to_string(),
             concept: None,
             expansion: None,
@@ -61,7 +61,7 @@ impl FromStr for SyntaxTree {
 }
 
 impl SyntaxTree {
-    pub fn bind_concept(mut self, concept: usize) -> SyntaxTree {
+    pub fn bind_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self
     }
@@ -72,15 +72,15 @@ impl SyntaxTree {
             false
         }
     }
-        /// An expression does have an expansion while a symbol does not.
-    pub fn get_expansion(&self) -> Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)> {
+    /// An expression does have an expansion while a symbol does not.
+    pub fn get_expansion(&self) -> Option<(Rc<Self>, Rc<Self>)> {
         self.expansion.clone()
     }
-    pub fn bind_pair(mut self, lefthand: &Rc<SyntaxTree>, righthand: &Rc<SyntaxTree>) -> SyntaxTree {
+    pub fn bind_pair(mut self, lefthand: &Rc<Self>, righthand: &Rc<Self>) -> Self {
         self.expansion = Some((lefthand.clone(), righthand.clone()));
         self
     }
-    pub fn get_concept(&self) -> Option<usize> {
+    pub const fn get_concept(&self) -> Option<usize> {
         self.concept
     }
 }

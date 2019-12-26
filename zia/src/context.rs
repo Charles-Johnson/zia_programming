@@ -20,7 +20,7 @@ use concepts::{AbstractPart, Concept};
 use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
 use context_delta::{update_concept_delta, ConceptDelta, ContextDelta, StringDelta};
 use context_search::ContextSearch;
-use delta::{ApplyDelta, Delta};
+use delta::{Apply, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
 use slog;
 use slog::Drain;
@@ -101,20 +101,20 @@ impl Context {
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
         let expansion = &self.snap_shot.expand(&self.delta, ast);
-        if expansion != ast {
-            self.call(expansion)
-        } else {
+        if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
+        } else {
+            self.call(expansion)
         }
     }
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
         let normal_form =
             &ContextSearch::from((&self.snap_shot, &self.delta)).recursively_reduce(ast);
-        if normal_form != ast {
-            self.call(normal_form)
-        } else {
+        if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
+        } else {
+            self.call(normal_form)
         }
     }
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
@@ -163,8 +163,9 @@ impl Context {
                     .get_expansion()
                     .and_then(|(left, right)| {
                         self.execute_let(&left, &right).and_then(|x| match x {
-                            Err(ZiaError::CannotReduceFurther) => None,
-                            Err(ZiaError::UnusedSymbol) => None,
+                            Err(ZiaError::CannotReduceFurther) | Err(ZiaError::UnusedSymbol) => {
+                                None
+                            }
                             _ => Some(x),
                         })
                     })
@@ -184,7 +185,7 @@ impl Context {
                 _ => None,
             })
             .unwrap_or_else(|| match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(&left),
+                Some(c) if c == REDUCTION => self.try_reducing_then_call(left),
                 _ => self.reduce_and_call_pair(left, right),
             })
     }
@@ -606,10 +607,10 @@ impl Context {
 }
 
 impl Default for Context {
-    fn default() -> Context {
+    fn default() -> Self {
         let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
         let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
-        Context {
+        Self {
             snap_shot: SnapShot::default(),
             logger,
             delta: ContextDelta::default(),

@@ -17,23 +17,23 @@
 
 use std::collections::HashSet;
 
-pub trait ApplyDelta {
+pub trait Apply {
     type Delta;
     fn apply(&mut self, Self::Delta);
     fn diff(&self, Self) -> Self::Delta;
 }
 
-impl<T> ApplyDelta for Option<T>
+impl<T> Apply for Option<T>
 where
     T: PartialEq + Clone,
 {
-    type Delta = Change<Option<T>>;
+    type Delta = Change<Self>;
     fn apply(&mut self, delta: Self::Delta) {
         if let Change::Different { after, .. } = delta {
             *self = after;
         }
     }
-    fn diff(&self, next: Option<T>) -> Change<Option<T>> {
+    fn diff(&self, next: Self) -> Change<Self> {
         if self == &next {
             Change::Same
         } else {
@@ -56,7 +56,7 @@ pub enum Change<T> {
 
 impl<T> Default for Change<T> {
     fn default() -> Self {
-        Change::Same
+        Self::Same
     }
 }
 
@@ -64,22 +64,21 @@ impl<T> Change<T>
 where
     T: PartialEq,
 {
-    pub fn combine(self, other: Change<T>) -> Change<T> {
+    pub fn combine(self, other: Self) -> Self {
         match (self, other) {
-            (Change::Same, x) => x,
-            (x, Change::Same) => x,
+            (Self::Same, x) | (x, Self::Same) => x,
             (
-                Change::Different {
+                Self::Different {
                     after: y1,
                     before: x,
                 },
-                Change::Different {
+                Self::Different {
                     before: y2,
                     after: z,
                 },
             ) => {
                 if y1 == y2 {
-                    Change::Different {
+                    Self::Different {
                         before: x,
                         after: z,
                     }
@@ -127,7 +126,7 @@ impl std::fmt::Debug for SetChange {
 }
 
 impl Delta for SetChange {
-    fn combine(&mut self, other: SetChange) {
+    fn combine(&mut self, other: Self) {
         other.remove.iter().for_each(|item| {
             if self.add.contains(item) {
                 self.add.remove(item);
@@ -145,21 +144,21 @@ impl Delta for SetChange {
     }
 }
 
-impl ApplyDelta for HashSet<usize> {
+impl Apply for HashSet<usize> {
     type Delta = SetChange;
     fn apply(&mut self, delta: SetChange) {
         self.retain(|c| !delta.remove.contains(c));
         self.extend(delta.add);
     }
-    fn diff(&self, next: HashSet<usize>) -> SetChange {
+    fn diff(&self, next: Self) -> SetChange {
         let mut set_change = SetChange::default();
         for next_item in &next {
-            if self.get(&next_item).is_none() {
+            if self.get(next_item).is_none() {
                 set_change.add.insert(*next_item);
             }
         }
         for prev_item in self {
-            if next.get(&prev_item).is_none() {
+            if next.get(prev_item).is_none() {
                 set_change.remove.insert(*prev_item);
             }
         }

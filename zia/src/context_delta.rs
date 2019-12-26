@@ -16,7 +16,7 @@
 */
 
 use concepts::{Concept, ConceptDelta as CD};
-use delta::{ApplyDelta, Delta};
+use delta::{Apply, Delta};
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
@@ -70,9 +70,9 @@ pub enum StringDelta {
 impl Debug for StringDelta {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            StringDelta::Insert(n) => format!("+ {}", n),
-            StringDelta::Remove(n) => format!("- {}", n),
-            StringDelta::Update { before, after } => format!("{} -> {}", before, after),
+            Self::Insert(n) => format!("+ {}", n),
+            Self::Remove(n) => format!("- {}", n),
+            Self::Update { before, after } => format!("{} -> {}", before, after),
         })
     }
 }
@@ -87,9 +87,9 @@ pub enum ConceptDelta {
 impl Debug for ConceptDelta {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            ConceptDelta::Insert(ref c) => format!("+ {:#?}", c),
-            ConceptDelta::Remove(ref c) => format!("- {:#?}", c),
-            ConceptDelta::Update(ref cd) => format!("{:#?}", cd),
+            Self::Insert(ref c) => format!("+ {:#?}", c),
+            Self::Remove(ref c) => format!("- {:#?}", c),
+            Self::Update(ref cd) => format!("{:#?}", cd),
         })
     }
 }
@@ -119,7 +119,7 @@ pub fn update_concept_delta(
 }
 
 impl Delta for ContextDelta {
-    fn combine(&mut self, other: ContextDelta) {
+    fn combine(&mut self, other: Self) {
         for (other_key, (other_value, v2, temporary)) in other.concept {
             let mut remove_key = false;
             let mut update_delta = None;

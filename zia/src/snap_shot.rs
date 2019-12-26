@@ -20,7 +20,7 @@ use concepts::Concept;
 use constants::{ASSOC, FALSE, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE};
 use context_delta::{ConceptDelta, ContextDelta, StringDelta};
 use context_search::ContextSearch;
-use delta::ApplyDelta;
+use delta::Apply;
 use errors::{ZiaError, ZiaResult};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -53,12 +53,11 @@ impl SnapShot {
         delta
             .concept
             .get(&concept)
-            .map(|(cd, v, _)| match cd {
+            .map_or(in_previous_variables, |(cd, v, _)| match cd {
                 ConceptDelta::Insert(_) => *v,
                 ConceptDelta::Remove(_) => false,
                 ConceptDelta::Update(_) => in_previous_variables,
             })
-            .unwrap_or(in_previous_variables)
     }
     pub fn get_concept(&self, id: usize) -> Option<&Concept> {
         match self.concepts.get(id) {
@@ -277,15 +276,15 @@ impl SnapShot {
                             };
                         }
                         // syntax of token has neither higher or lower precedence than the lowest precedence syntax
-                        let mut hps = lowest_precedence_syntax.clone();
+                        let mut hps = lowest_precedence_syntax;
                         hps.push(syntax_of_token);
-                        let mut hi = lp_indices.clone();
+                        let mut hi = lp_indices;
                         hi.push(this_index.unwrap());
                         Ok((hps, hi, this_index))
                     },
                 )?;
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (self.get_associativity(deltas, &syntax), assoc) {
+                    match (self.get_associativity(deltas, syntax), assoc) {
                         (Some(x), Some(y)) => {
                             if x == y {
                                 Ok(Some(x))
@@ -362,20 +361,23 @@ impl SnapShot {
             .and_then(|c| self.get_labellee(deltas, c))
     }
     fn ast_from_symbol(&self, deltas: &ContextDelta, s: &str) -> SyntaxTree {
-        self.concept_from_label(deltas, s)
-            .map(|concept| s.parse::<SyntaxTree>().unwrap().bind_concept(concept))
-            .unwrap_or_else(|| s.parse().unwrap())
+        self.concept_from_label(deltas, s).map_or_else(
+            || s.parse().unwrap(),
+            |concept| s.parse::<SyntaxTree>().unwrap().bind_concept(concept),
+        )
     }
     fn get_string_concept(&self, delta: &ContextDelta, s: &str) -> Option<usize> {
         delta
             .string
             .get(s)
-            .map(|string_delta| match string_delta {
-                StringDelta::Update { after, .. } => Some(after),
-                StringDelta::Insert(concept) => Some(concept),
-                StringDelta::Remove(_) => None,
-            })
-            .unwrap_or_else(|| self.string_map.get(s))
+            .map_or_else(
+                || self.string_map.get(s),
+                |string_delta| match string_delta {
+                    StringDelta::Update { after, .. } => Some(after),
+                    StringDelta::Insert(concept) => Some(concept),
+                    StringDelta::Remove(_) => None,
+                },
+            )
             .cloned()
     }
     pub fn contains(&self, deltas: &ContextDelta, outer: usize, inner: usize) -> bool {
@@ -398,7 +400,7 @@ impl SnapShot {
         let rc = self.read_concept(delta, righthand);
         let has_lefthand = lc.get_lefthand_of();
         let has_righthand = rc.get_righthand_of();
-        let mut candidates = has_lefthand.intersection(&has_righthand);
+        let mut candidates = has_lefthand.intersection(has_righthand);
         candidates.next().map(|index| {
             candidates.next().map_or(*index, |_| {
                 panic!("Multiple definitions with the same lefthand and righthand pair exist.")
@@ -458,21 +460,18 @@ impl SnapShot {
     }
     /// Returns the syntax for a concept.
     pub fn to_ast(&self, deltas: &ContextDelta, concept: usize) -> Rc<SyntaxTree> {
-        match self.get_label(deltas, concept) {
-            Some(s) => Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept)),
-            None => {
-                let (left, right) = self
-                    .read_concept(deltas, concept)
-                    .get_definition()
-                    .unwrap_or_else(|| {
-                        panic!("Unlabelled concept ({}) with no definition", concept)
-                    });
-                self.combine(
-                    deltas,
-                    &self.to_ast(deltas, left),
-                    &self.to_ast(deltas, right),
-                )
-            }
+        if let Some(s) = self.get_label(deltas, concept) {
+            Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept))
+        } else {
+            let (left, right) = self
+                .read_concept(deltas, concept)
+                .get_definition()
+                .unwrap_or_else(|| panic!("Unlabelled concept ({}) with no definition", concept));
+            self.combine(
+                deltas,
+                &self.to_ast(deltas, left),
+                &self.to_ast(deltas, right),
+            )
         }
     }
     fn combine(
@@ -509,24 +508,24 @@ impl SnapShot {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> String {
-        let left_string = left
-            .get_expansion()
-            .map(|(l, r)| match self.get_associativity(deltas, &r).unwrap() {
+        let left_string = left.get_expansion().map_or_else(
+            || left.to_string(),
+            |(l, r)| match self.get_associativity(deltas, &r).unwrap() {
                 Associativity::Left => l.to_string() + " " + &r.to_string(),
                 Associativity::Right => {
                     "(".to_string() + &l.to_string() + " " + &r.to_string() + ")"
                 }
-            })
-            .unwrap_or_else(|| left.to_string());
-        let right_string = right
-            .get_expansion()
-            .map(|(l, r)| match self.get_associativity(deltas, &l).unwrap() {
+            },
+        );
+        let right_string = right.get_expansion().map_or_else(
+            || right.to_string(),
+            |(l, r)| match self.get_associativity(deltas, &l).unwrap() {
                 Associativity::Left => {
                     "(".to_string() + &l.to_string() + " " + &r.to_string() + ")"
                 }
                 Associativity::Right => l.to_string() + " " + &r.to_string(),
-            })
-            .unwrap_or_else(|| right.to_string());
+            },
+        );
         left_string + " " + &right_string
     }
     fn get_associativity(
@@ -534,7 +533,7 @@ impl SnapShot {
         deltas: &ContextDelta,
         ast: &Rc<SyntaxTree>,
     ) -> Option<Associativity> {
-        let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), &ast);
+        let assoc_of_ast = self.combine(deltas, &self.to_ast(deltas, ASSOC), ast);
         ContextSearch::from((self, deltas))
             .reduce(&assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
@@ -608,23 +607,22 @@ impl SnapShot {
     }
 }
 
-impl ApplyDelta for SnapShot {
+impl Apply for SnapShot {
     type Delta = ContextDelta;
     fn apply(&mut self, delta: ContextDelta) {
         delta.string.iter().for_each(|(s, sd)| match sd {
             StringDelta::Update { after, .. } => {
                 self.string_map.insert(s.to_string(), *after);
             }
-            StringDelta::Insert(id) => self.add_string(*id, &s),
-            StringDelta::Remove(_) => self.remove_string(&s),
+            StringDelta::Insert(id) => self.add_string(*id, s),
+            StringDelta::Remove(_) => self.remove_string(s),
         });
         for (id, (cd, v, temporary)) in delta.concept {
             if !temporary {
                 match cd {
                     ConceptDelta::Insert(c) => {
-                        let padding_needed = id as isize - self.concepts.len() as isize;
-                        if 0 <= padding_needed {
-                            self.concepts.extend(vec![None; padding_needed as usize]);
+                        if self.concepts.len() <= id {
+                            self.concepts.extend(vec![None; id - self.concepts.len()]);
                             self.concepts.push(Some(c));
                         } else {
                             self.concepts[id] = Some(c);
@@ -644,7 +642,7 @@ impl ApplyDelta for SnapShot {
             }
         }
     }
-    fn diff(&self, _other: SnapShot) -> ContextDelta {
+    fn diff(&self, _other: Self) -> ContextDelta {
         ContextDelta {
             string: hashmap! {},
             concept: hashmap! {},
@@ -662,7 +660,7 @@ fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
         return Err(ZiaError::MissingSymbol { symbol: ")" });
     }
     if token != "" {
-        tokens.push(token.clone());
+        tokens.push(token);
     }
     Ok(tokens)
 }

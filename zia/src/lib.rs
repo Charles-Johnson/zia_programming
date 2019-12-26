@@ -20,7 +20,7 @@
 //! Instead of storing the source code as plain text and editing the raw text (which can easily break
 //! the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
 //! used in other programs. All the programming is done using an interactive shell such as
-//! [IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
+//! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
 //! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.  
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions

@@ -17,7 +17,7 @@
 mod abstract_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
-use delta::{ApplyDelta, Change, Delta, SetChange};
+use delta::{Apply, Change, Delta, SetChange};
 use errors::{ZiaError, ZiaResult};
 use std::{collections::HashSet, fmt::Debug};
 
@@ -134,10 +134,10 @@ impl Concept {
             _ => None,
         }
     }
-    pub fn get_lefthand_of(&self) -> &HashSet<usize> {
+    pub const fn get_lefthand_of(&self) -> &HashSet<usize> {
         &self.lefthand_of
     }
-    pub fn get_righthand_of(&self) -> &HashSet<usize> {
+    pub const fn get_righthand_of(&self) -> &HashSet<usize> {
         &self.righthand_of
     }
     /// Gets the index of the concept that `self` may reduce to.
@@ -213,16 +213,16 @@ enum SpecificPart {
 impl Debug for SpecificPart {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            SpecificPart::Concrete => "Concrete".to_string(),
-            SpecificPart::Abstract(ref ap) => format!("{:#?}", ap),
-            SpecificPart::String(ref s) => format!("\"{}\"", s),
+            Self::Concrete => "Concrete".to_string(),
+            Self::Abstract(ref ap) => format!("{:#?}", ap),
+            Self::String(ref s) => format!("\"{}\"", s),
         })
     }
 }
 
 impl Default for SpecificPart {
-    fn default() -> SpecificPart {
-        SpecificPart::Concrete
+    fn default() -> Self {
+        Self::Concrete
     }
 }
 
@@ -257,7 +257,7 @@ impl std::fmt::Debug for ConceptDelta {
 }
 
 impl Delta for ConceptDelta {
-    fn combine(&mut self, other: ConceptDelta) {
+    fn combine(&mut self, other: Self) {
         self.specific_part.combine(other.specific_part);
         self.lefthand_of.combine(other.lefthand_of);
         self.righthand_of.combine(other.righthand_of);
@@ -265,7 +265,7 @@ impl Delta for ConceptDelta {
     }
 }
 
-impl ApplyDelta for Concept {
+impl Apply for Concept {
     type Delta = ConceptDelta;
     fn apply(&mut self, delta: ConceptDelta) {
         let ConceptDelta {
@@ -281,7 +281,7 @@ impl ApplyDelta for Concept {
             ap.apply(specific_part);
         };
     }
-    fn diff(&self, next: Concept) -> ConceptDelta {
+    fn diff(&self, next: Self) -> ConceptDelta {
         let lefthand_of = self.lefthand_of.diff(next.lefthand_of);
         let righthand_of = self.righthand_of.diff(next.righthand_of);
         let reduces_from = self.reduces_from.diff(next.reduces_from);
@@ -302,14 +302,14 @@ impl ApplyDelta for Concept {
 }
 
 impl From<AbstractPart> for Concept {
-    fn from(ap: AbstractPart) -> Concept {
+    fn from(ap: AbstractPart) -> Self {
         SpecificPart::Abstract(ap).into()
     }
 }
 
 impl From<SpecificPart> for Concept {
-    fn from(sp: SpecificPart) -> Concept {
-        Concept {
+    fn from(sp: SpecificPart) -> Self {
+        Self {
             lefthand_of: HashSet::default(),
             righthand_of: HashSet::default(),
             reduces_from: HashSet::default(),
@@ -319,8 +319,8 @@ impl From<SpecificPart> for Concept {
 }
 
 impl From<AbstractDelta> for ConceptDelta {
-    fn from(ap: AbstractDelta) -> ConceptDelta {
-        ConceptDelta {
+    fn from(ap: AbstractDelta) -> Self {
+        Self {
             lefthand_of: SetChange::default(),
             righthand_of: SetChange::default(),
             reduces_from: SetChange::default(),
@@ -330,7 +330,7 @@ impl From<AbstractDelta> for ConceptDelta {
 }
 
 impl From<String> for Concept {
-    fn from(string: String) -> Concept {
+    fn from(string: String) -> Self {
         SpecificPart::String(string).into()
     }
 }

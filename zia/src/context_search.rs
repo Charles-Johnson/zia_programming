@@ -104,15 +104,16 @@ impl<'a> ContextSearch<'a> {
         ast.get_concept()
             .and_then(|c| self.variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
-                ast.get_expansion()
-                    .map(|(l, r)| {
+                ast.get_expansion().map_or_else(
+                    || ast.clone(),
+                    |(l, r)| {
                         self.snap_shot.contract_pair(
                             self.delta,
                             &self.substitute(&l),
                             &self.substitute(&r),
                         )
-                    })
-                    .unwrap_or_else(|| ast.clone())
+                    },
+                )
             })
     }
     fn filter_generalisations_for_pair(
@@ -120,7 +121,8 @@ impl<'a> ContextSearch<'a> {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let generalisation_candidates = self.find_generalisations(&self.snap_shot.contract_pair(self.delta, left, right));
+        let generalisation_candidates =
+            self.find_generalisations(&self.snap_shot.contract_pair(self.delta, left, right));
         generalisation_candidates
             .iter()
             .filter_map(|gc| {
@@ -144,9 +146,9 @@ impl<'a> ContextSearch<'a> {
                 .get_definition()
             {
                 if let Some((l, r)) = ast.get_expansion() {
-                    let glv = self.is_free_variable(gl);
-                    let grv = self.is_free_variable(gr);
-                    if glv && grv {
+                    let gen_left_var = self.is_free_variable(gl);
+                    let gen_right_var = self.is_free_variable(gr);
+                    if gen_left_var && gen_right_var {
                         if let (Some(lm), Some(mut rm)) = (
                             self.check_generalisation(&l, gl),
                             self.check_generalisation(&r, gr),
@@ -164,20 +166,20 @@ impl<'a> ContextSearch<'a> {
                         } else {
                             None
                         }
-                    } else if glv {
-                        if r.get_concept().map(|c| c == gr).unwrap_or(false) {
+                    } else if gen_left_var {
+                        if r.get_concept().map_or(false, |c| c == gr) {
                             self.check_generalisation(&l, gl)
                         } else {
                             None
                         }
-                    } else if grv {
-                        if l.get_concept().map(|c| c == gl).unwrap_or(false) {
+                    } else if gen_right_var {
+                        if l.get_concept().map_or(false, |c| c == gl) {
                             self.check_generalisation(&r, gr)
                         } else {
                             None
                         }
-                    } else if l.get_concept().map(|c| c == gl).unwrap_or(false)
-                        && r.get_concept().map(|c| c == gr).unwrap_or(false)
+                    } else if l.get_concept().map_or(false, |c| c == gl)
+                        && r.get_concept().map_or(false, |c| c == gr)
                     {
                         Some(hashmap! {})
                     } else {
@@ -253,7 +255,7 @@ impl<'a> ContextSearch<'a> {
         rightright: &Rc<SyntaxTree>,
     ) -> Option<Rc<SyntaxTree>> {
         rightleft.get_concept().and_then(|rlc| match rlc {
-            REDUCTION => self.determine_reduction_truth(left, &rightright).map(|x| {
+            REDUCTION => self.determine_reduction_truth(left, rightright).map(|x| {
                 if x {
                     self.snap_shot.to_ast(self.delta, TRUE)
                 } else {
