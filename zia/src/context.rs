@@ -22,14 +22,15 @@ use context_delta::{update_concept_delta, ConceptDelta, ContextDelta, StringDelt
 use context_search::ContextSearch;
 use delta::{Apply, Delta};
 use errors::{map_err_variant, ZiaError, ZiaResult};
-use slog;
-use slog::Drain;
+#[cfg(not(target_arch = "wasm32"))]
+use slog::{Drain, Logger};
 use snap_shot::SnapShot;
 use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 
 pub struct Context {
     snap_shot: SnapShot,
-    logger: slog::Logger,
+    #[cfg(not(target_arch = "wasm32"))]
+    logger: Logger,
     delta: ContextDelta,
 }
 
@@ -37,17 +38,20 @@ impl Context {
     pub fn new() -> Self {
         let mut cont = Self::default();
         cont.setup();
+        #[cfg(not(target_arch = "wasm32"))]
         info!(cont.logger, "Setup a new context: {:#?}", &cont.delta);
         cont.commit();
         cont
     }
     pub fn execute(&mut self, command: &str) -> String {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
         let string = self
             .snap_shot
             .ast_from_expression(&self.delta, command)
             .and_then(|a| self.call(&a))
             .unwrap_or_else(|e| e.to_string());
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
         string
@@ -608,10 +612,14 @@ impl Context {
 
 impl Default for Context {
     fn default() -> Self {
-        let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-        let logger = slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!());
+        #[cfg(not(target_arch = "wasm32"))]
+        let logger = {
+            let plain = slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
+        };
         Self {
             snap_shot: SnapShot::default(),
+            #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),
         }

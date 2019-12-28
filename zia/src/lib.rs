@@ -112,8 +112,10 @@
 
 #[macro_use]
 extern crate maplit;
+#[cfg(not(target_arch = "wasm32"))]
 #[macro_use]
 extern crate slog;
+#[cfg(not(target_arch = "wasm32"))]
 extern crate slog_term;
 extern crate snafu;
 
