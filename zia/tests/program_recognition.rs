@@ -25,7 +25,7 @@ use test_zia::CONCRETE_SYMBOLS;
 use zia::Context;
 
 proptest! {
-    // A previously unused symbol cannotreduce
+    // A previously unused symbol cannot reduce
     #[test]
     fn fresh_symbol_is_not_a_program(a in "\\PC*") {
         assume_abstract!(a);
@@ -45,25 +45,21 @@ proptest! {
     }
     // An expression of previously unused symbols containing a nested pair cannot reduce
     #[test]
-    fn fresh_nested_pair_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_abstract!(a);
-        assume_abstract!(b);
-        assume_abstract!(c);
-        assume_symbols!(a, b, c);
+    fn fresh_nested_pair_does_not_reduce(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let command = format!("{} {} {}", a, b, c);
         assert_eq!(cont.execute(&command), command);
     }
     // A previously used symbol cannot reduce unless it is a reducible concepts.
     #[test]
-    fn used_symbol_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn used_symbol_does_not_reduce(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         assert_eq!(cont.execute(&c), c);
     }
     // A pair of previously used symbols cannot reduce unless their concepts are composed of any reducible concepts.
     #[test]
-    fn used_symbol_in_a_pair_does_not_reduce(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn used_symbol_in_a_pair_does_not_reduce(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         prop_assume!(b != c);
