@@ -10,3 +10,5 @@ cc c2a36ad66a4c2daf8343d15066959d187702970332c1d37161cbf7dd1166b001 # shrinks to
 cc 6c0061504d5d6534018a8157e6e59f331b46fe85a0b3803caeb2b2282d613637 # shrinks to a = "෦", b = "ପ", c = "Ⴭ", d = "0", e = "\u{f71}"
 cc aa5b803f7157299337e49a202440ec64025d1bfc6e531d0cdfe95977d6b37c1c # shrinks to a = "ￚ", b = "!", c = "𒑰", d = "￼", e = "ݍ", f = "a", g = "🌀"
 cc 546edc28bd57109cc1cfb2bab6b841316c4026c7810f85e8e9ebc7031c2593bc # shrinks to a = "\u{102e0}", b = "𐦼", c = "&", d = "&"
+cc b1287be7c74defa6133ea338a8a0890a483f9032031cf2f0ce13bfc57cfb07cb # shrinks to e = "a", f = "b", g = "a"
+cc bc376cede910d5b5282e8ef306a046bbb428513313d05abc15ce288b01cdd3ad # shrinks to e = "c", f = "d", g = "a"
