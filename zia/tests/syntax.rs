@@ -16,8 +16,6 @@
 */
 #[macro_use]
 extern crate proptest;
-#[macro_use]
-extern crate test_zia;
 extern crate zia;
 
 use zia::{Context, ZiaError};
@@ -29,8 +27,7 @@ fn empty_parentheses() {
 }
 proptest! {
     #[test]
-    fn ambiguous_expression(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_symbols!(a, b, c);
+    fn ambiguous_expression(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         assert_eq!(cont.execute(&format!("let (assoc {}) -> left", c)), "");
         assert_eq!(
