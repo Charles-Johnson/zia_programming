@@ -32,8 +32,8 @@ proptest! {
         assert_eq!(context.execute(&format!("{} {}", d, b)), c);
     }
     #[test]
-    fn repeated_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_symbols!(a, b, c);
+    fn repeated_variable_reduction(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
+        prop_assume!(b != c);
         let mut context = Context::new();
         // Define how a + a can be written as 2 a
         assert_eq!(context.execute(&format!("let (_{0}_ + _{0}_) -> 2 _{0}_", a)), "");
