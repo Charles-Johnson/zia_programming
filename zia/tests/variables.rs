@@ -17,16 +17,13 @@
 
 #[macro_use]
 extern crate proptest;
-#[macro_use]
-extern crate test_zia;
 extern crate zia;
 
 use zia::Context;
 
 proptest! {
     #[test]
-    fn single_variable_reduction(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
-        assume_symbols!(a, b, c, d);
+    fn single_variable_reduction(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         let mut context = Context::new();
         assert_eq!(context.execute(&format!("let (_{}_ {}) -> {}", a, b, c)), "");
         assert_eq!(context.execute(&format!("{} {}", d, b)), c);
