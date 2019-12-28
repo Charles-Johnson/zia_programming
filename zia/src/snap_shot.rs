@@ -323,6 +323,10 @@ impl SnapShot {
                                 Some(i) => &tokens[i..*lp_index],
                                 None => &tokens[..*lp_index],
                             };
+                            // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
+                            if slice.len() == 0 {
+                                return Err(ZiaError::AmbiguousExpression);
+                            }
                             let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
                             Ok((
                                 Some(match head {
