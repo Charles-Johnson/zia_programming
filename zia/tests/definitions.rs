@@ -36,8 +36,7 @@ proptest! {
     // The label of the expansion of a previously used concept which is composed of a pair of previously used concepts should reduce to the string representation of the pair.
     // The interpreter should not accept a definition where the lefthand side is not a symbol
     #[test]
-    fn pair_on_the_left(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
-        assume_symbols!(a, b, c);
+    fn pair_on_the_left(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let let_command = format!("let ({} {}) := {}", a, b, c);
         prop_assert_eq!(
@@ -62,7 +61,7 @@ proptest! {
     }
     // Should not be able to refactor a used symbol to another used symbol
     #[test]
-    fn bad_refactor(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn bad_refactor(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let let_command = format!("let {} := {}", b, a);
@@ -74,19 +73,19 @@ proptest! {
     // Should not be able to define a used symbol in terms of a pair of symbols that have already been defined.
     #[test]
     fn defining_used_symbol_as_used_pair(
-        a in "\\PC*",
-        b in "\\PC*",
-        c in "\\PC*",
-        d in "\\PC*",
-        e in "\\PC*",
-        f in "\\PC*",
+        a in "a|b|c|e|f",
+        b in "a|b|c|e|f",
+        c in "a|b|c|e|f",
+        e in "a|b|c|d|e|f",
+        f in "a|b|c|d|e|f",
     ) {
+        let d = "d".to_string();
+        prop_assume!(!(a == e && (f == b || f == c))); // Otherwise the first two definitions are circular
+        prop_assume!(a != f); // b c will no longer be used if a and f are the same symbol
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let_definition!(cont, f, d, e);
-        prop_assume!(!((a == d || a == e) && (f == b || f == c))); // Otherwise definition is circular!
-        prop_assume!(a != f); // b c will no longer be used if a and f are the same symbol
-        let let_command = format!("let {} := {} {}", d, b, c);
+        let let_command = format!("let d := {} {}", b, c);
         prop_assert_eq!(
             cont.execute(&let_command),
             ZiaError::DefinitionCollision.to_string()
@@ -117,7 +116,7 @@ proptest! {
     }
     // Cannot define a concept in terms of concepts defined in terms of the former concept.
     #[test]
-    fn chained_definitions_loop(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn chained_definitions_loop(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let_definition!(cont, c, a, b);
         let let_command = format!("let {} := {} {}", a, c, b);
@@ -128,7 +127,7 @@ proptest! {
     }
     // If a concept's definition that doesn't exist tries to get removed than the interpreter should let the user know
     #[test]
-    fn redundantly_remove_definition(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn redundantly_remove_definition(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let remove_definition_command = format!("let {} := {}", b, b);
@@ -139,7 +138,7 @@ proptest! {
     }
     // If the definition has already been specified in the same way, the interpreter will let the user know
     #[test]
-    fn redundancy(a in "\\PC*", b in "\\PC*", c in "\\PC*") {
+    fn redundancy(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = Context::new();
         let_definition!(cont, a, b, c);
         let let_command = format!("let {} := {} {}", a, b, c);
@@ -150,7 +149,7 @@ proptest! {
     }
     // Concrete concepts should not be able to be expanded.
     #[test]
-    fn setting_definition_of_concrete(a in "\\PC*", b in "\\PC*", c in "label_of|:=|->|let") {
+    fn setting_definition_of_concrete(a in "a|b", b in "a|b", c in "label_of|:=|->|let") {
         assume_symbols!(a,b);
         let mut cont = Context::new();
         let let_command = format!("let {} := {} {}", c, a, b);

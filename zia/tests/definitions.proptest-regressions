@@ -14,3 +14,5 @@ cc ca4d21dc48a9a7e0d74ae55a8ca2b1626c6011b55dcf25437019350a2414b614 # shrinks to
 cc a80416bdde60e3077429394712f29f0eba6352b9c70946d1deb4f9745ac0886a # shrinks to a = "A", b = "ⴭ", c = "0", d = "_", e = "𐌀", f = "𑈓"
 cc 7851307e98185a50a9cfb7893873d7315a14eec2524aee2b2953a931fc28fa7c # shrinks to a = "0", b = "_", c = "!"
 cc 8f4bb068a4cfb1065aaf258501d8524f75258878e1e8dd5ca31df8c6e76799f1 # shrinks to a = "/", b = "a", c = "ᦰ", d = "¡", e = "a", f = "/"
+cc 2a4b53788cae445cce16f60ca39b7db1f757ff64ab2c72dbdc65817fea7aeb95 # shrinks to a = "e", b = "f", c = "f", d = "e", e = "c", f = "a"
+cc 7a671b7b8625f73d0107550dad2b7ca6647de9b23cdaf20949d9d2af290e845d # shrinks to a = "label_of", b = "->", c = ":="
