@@ -14,3 +14,4 @@ cc 095651bc655820451e49d4a6a56680682af535794fa32f99fcb79a4326119466 # shrinks to
 cc 8ec2da08a2f486101e57fd127fad218a106c37ecd9e757245c95d74c65acd2c8 # shrinks to a = "f", b = "b", c = "b", d = "f", e = "b", f = "a", g = "c"
 cc e959ade63c937944db3c4d550052ca2e72bff73980380384a0a8e7f8feb4fa24 # shrinks to a = "a", b = "f", c = "a", d = "a", e = "a", f = "f", g = "b"
 cc 88c345cd03bfe2fbec3b865386fcf93a7a080a6be20a450727f7422130f1716e # shrinks to a = "a", b = "a", c = "d", d = "d", e = "g", f = "g", g = "e"
+cc 569cf098f2cf254ddf784c0bb9649b346f6ca8d88367417c65333ca6bcfaad55 # shrinks to a = "a", b = "e", c = "e", d = "e", e = "e"

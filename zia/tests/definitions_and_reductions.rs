@@ -50,7 +50,7 @@ proptest! {
     }
     // The interpreter should not allow a definition of a concept in terms of concepts that may reduce to the former concept.
     #[test]
-    fn sneeky_infinite_reduction_chain(a in "\\PC*", b in "\\PC*", c in "\\PC*", d in "\\PC*") {
+    fn sneeky_infinite_reduction_chain(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d);
         let mut cont = Context::new();
@@ -65,22 +65,22 @@ proptest! {
     // A reduction defined for a concept which is used to compose labelled concepts should not be accepted by the interpreter.
     #[test]
     fn reducing_part_of_a_labelled_concept(
-        a in "\\PC*",
-        b in "\\PC*",
-        c in "\\PC*",
-        d in "\\PC*",
-        e in "\\PC*",
+        a in "a|b|c|d|e",
+        b in "a|b|c|d|e",
+        c in "a|b|c|d|e",
+        d in "a|b|c|d|e",
+        e in "a|b|c|d|e",
     ) {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d, e);
-        prop_assume!(a != b && a != c && a != d);
+        prop_assume!(a != b && a != c && a != d); // To avoid a circular definition
         let mut cont = Context::new();
         let definition = format!("let {} := {} {} {}", a, b, c, d);
         assert_eq!(cont.execute(&definition), "");
-        let reduction = format!("let ({} {}) -> {}", c, d, e);
+        reduce_pair!(cont, c, d, e);
         assert_eq!(
-            cont.execute(&reduction),
-            ""
+            cont.execute(&a),
+            cont.execute(&format!("{} {}", b, e))
         );
     }
 }
