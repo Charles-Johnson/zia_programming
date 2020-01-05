@@ -10,3 +10,7 @@ xs 3170015357 3585183642 3405613536 3112735755 # shrinks to a = "A", b = "0", c 
 xs 1071121374 2976848996 2736711986 189718145 # shrinks to a = "𐘀", b = "0", c = "𑨀 𐏈", d = "𐠊", e = "", f = "\u{cbc}"
 cc 1aa666f85facc99d126aeef93d21ec2962a4d4959ceb9ea94e1c12ae6b0e1af8 # shrinks to a = "g", b = "A", c = "g", d = "🌀", e = "🌀"
 cc 52abd8c3f4c1facafb6bd96cd960bf4952e3368054d33e20d881aab09473d00f # shrinks to a = "®", b = "a", c = "_", d = "!"
+cc 095651bc655820451e49d4a6a56680682af535794fa32f99fcb79a4326119466 # shrinks to a = "c", b = "g", c = "d", d = "c", e = "g", f = "d", g = "a"
+cc 8ec2da08a2f486101e57fd127fad218a106c37ecd9e757245c95d74c65acd2c8 # shrinks to a = "f", b = "b", c = "b", d = "f", e = "b", f = "a", g = "c"
+cc e959ade63c937944db3c4d550052ca2e72bff73980380384a0a8e7f8feb4fa24 # shrinks to a = "a", b = "f", c = "a", d = "a", e = "a", f = "f", g = "b"
+cc 88c345cd03bfe2fbec3b865386fcf93a7a080a6be20a450727f7422130f1716e # shrinks to a = "a", b = "a", c = "d", d = "d", e = "g", f = "g", g = "e"

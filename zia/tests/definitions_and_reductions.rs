@@ -27,14 +27,17 @@ use zia::{Context, ZiaError};
 proptest! {
     #[test]
     fn indirect_reduction(
-        a in "\\PC*",
-        b in "\\PC*",
-        c in "\\PC*",
-        d in "\\PC*",
-        e in "\\PC*",
-        f in "\\PC*",
-        g in "\\PC*",
+        a in "a|b|c|d|e|f|g",
+        b in "a|b|c|d|e|f|g",
+        c in "a|b|c|d|e|f|g",
+        d in "a|b|c|d|e|f|g",
+        e in "a|b|c|d|e|f|g",
+        f in "a|b|c|d|e|f|g",
+        g in "a|b|c|d|e|f|g",
     ) {
+        prop_assume!((a != d || b != e) && c != f); // To prevent redundant reduction
+        prop_assume!((a != c) || (b != f)); // Without this assumption, (a b) d e -> c is possibly true
+        prop_assume!((d != c) || (e != f)); // Without this assumption, (a b) d e -> f is possibly true
         let mut cont = Context::new();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, d, e, f);

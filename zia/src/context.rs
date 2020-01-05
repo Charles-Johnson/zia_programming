@@ -249,7 +249,11 @@ impl Context {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
                 (None, Some(b), None) => self.relabel(b, &new.to_string()),
                 (None, Some(b), Some(_)) => {
-                    if self.snap_shot.get_label(&self.delta, b).is_none() {
+                    if self
+                        .snap_shot
+                        .get_concept_of_label(&self.delta, b)
+                        .is_none()
+                    {
                         self.label(b, &new.to_string())
                     } else {
                         self.relabel(b, &new.to_string())
