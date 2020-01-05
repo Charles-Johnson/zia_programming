@@ -24,3 +24,4 @@ pub const ASSOC: usize = 6;
 pub const RIGHT: usize = 7;
 pub const LEFT: usize = 8;
 pub const PRECEDENCE: usize = 9;
+pub const DEFAULT: usize = 10;

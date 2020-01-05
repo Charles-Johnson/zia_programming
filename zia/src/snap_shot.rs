@@ -256,11 +256,11 @@ impl SnapShot {
                         for syntax in lowest_precedence_syntax.clone() {
                             let comparing_between_tokens =
                                 self.combine(deltas, &syntax, &comparing_precedence_of_token);
-                            match ContextSearch::from((self, deltas))
-                                .reduce(&comparing_between_tokens)
-                                .and_then(|s| s.get_concept())
+                            match dbg!(ContextSearch::from((self, deltas))
+                                .reduce(&dbg!(comparing_between_tokens))
+                                .and_then(|s| s.get_concept()))
                             {
-                                // syntax of token has even lower precedence than some previous lowest precendence syntax
+                                // syntax of token has an even lower precedence than some previous lowest precendence syntax
                                 Some(TRUE) => {
                                     return Ok((
                                         vec![syntax_of_token],
@@ -268,7 +268,7 @@ impl SnapShot {
                                         this_index,
                                     ))
                                 }
-                                // syntax of token has higher precedence than some previous lowest precendence syntax
+                                // syntax of token has a higher precedence than some previous lowest precendence syntax
                                 Some(FALSE) => {
                                     return Ok((lowest_precedence_syntax, lp_indices, this_index))
                                 }
@@ -283,6 +283,9 @@ impl SnapShot {
                         Ok((hps, hi, this_index))
                     },
                 )?;
+                if lp_indices.is_empty() {
+                    return Err(ZiaError::AmbiguousExpression);
+                }
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
                     match (self.get_associativity(deltas, syntax), assoc) {
                         (Some(x), Some(y)) => {
@@ -297,25 +300,33 @@ impl SnapShot {
                     }
                 });
                 match assoc? {
-                    Some(Associativity::Right) => lp_indices
-                        .iter()
-                        .rev()
-                        .try_fold((None, None), |(tail, prev_lp_index), lp_index| {
-                            let slice = match prev_lp_index {
-                                Some(i) => &tokens[*lp_index..i],
-                                None => &tokens[*lp_index..],
-                            };
-                            let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
-                            Ok((
-                                Some(match tail {
-                                    None => lp_with_the_rest,
-                                    Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
-                                }),
-                                Some(*lp_index),
-                            ))
-                        })?
-                        .0
-                        .ok_or(ZiaError::AmbiguousExpression),
+                    Some(Associativity::Right) => {
+                        let tail = lp_indices
+                            .iter()
+                            .rev()
+                            .try_fold((None, None), |(tail, prev_lp_index), lp_index| {
+                                let slice = match prev_lp_index {
+                                    Some(i) => &tokens[*lp_index..i],
+                                    None => &tokens[*lp_index..],
+                                };
+                                let lp_with_the_rest = self.ast_from_tokens(deltas, slice)?;
+                                Ok((
+                                    Some(match tail {
+                                        None => lp_with_the_rest,
+                                        Some(t) => self.combine(deltas, &lp_with_the_rest, &t),
+                                    }),
+                                    Some(*lp_index),
+                                ))
+                            })?
+                            .0
+                            .unwrap(); // Already checked that lp_indices is non-empty;
+                        if lp_indices[0] != 0 {
+                            let head = self.ast_from_tokens(deltas, &tokens[..lp_indices[0]])?;
+                            Ok(self.combine(deltas, &head, &tail))
+                        } else {
+                            Ok(tail)
+                        }
+                    }
                     Some(Associativity::Left) => lp_indices
                         .iter()
                         .try_fold((None, None), |(head, prev_lp_index), lp_index| {
@@ -338,7 +349,7 @@ impl SnapShot {
                         })?
                         .0
                         .ok_or(ZiaError::AmbiguousExpression),
-                    _ => Err(ZiaError::AmbiguousExpression),
+                    None => Err(ZiaError::AmbiguousExpression),
                 }
             }
         }
@@ -478,7 +489,7 @@ impl SnapShot {
             )
         }
     }
-    fn combine(
+    pub fn combine(
         &self,
         deltas: &ContextDelta,
         ast: &Rc<SyntaxTree>,

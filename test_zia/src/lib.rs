@@ -64,6 +64,7 @@ lazy_static! {
         cs.insert("right".to_string());
         cs.insert("left".to_string());
         cs.insert(">-".to_string());
+        cs.insert("default".to_string());
         cs
     };
 }

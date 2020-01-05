@@ -16,7 +16,7 @@
 */
 
 use ast::SyntaxTree;
-use constants::{ASSOC, FALSE, REDUCTION, RIGHT, TRUE};
+use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
 use std::{
@@ -63,42 +63,39 @@ impl<'a> ContextSearch<'a> {
                 right
                     .get_expansion()
                     .and_then(|(ref rightleft, ref rightright)| {
-                        self.reduce_by_expanded_right_branch(left, rightleft, rightright)
+                        self.reduce_by_expanded_right_branch(left, right, rightleft, rightright)
                     })
-                    .or_else(|| {
-                        let left_result = self.reduce(left);
-                        let right_result = self.reduce(right);
-                        let maybe_subbed_r =
-                            right.get_concept().and_then(|r| self.variable_mask.get(&r));
-                        let maybe_subbed_l =
-                            left.get_concept().and_then(|l| self.variable_mask.get(&l));
-                        if let (None, None) = (&left_result, &right_result) {
-                            None
-                        } else {
-                            let l = left_result
-                                .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
-                            let r = right_result
-                                .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
-                            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
-                        }
-                    })
-                    .or_else(|| {
-                        self.filter_generalisations_for_pair(left, right)
-                            .iter()
-                            .filter_map(|(generalisation, variable_to_syntax)| {
-                                let mut context_search = self.clone();
-                                context_search
-                                    .variable_mask
-                                    .extend(variable_to_syntax.clone());
-                                let gen_ast =
-                                    context_search.snap_shot.to_ast(self.delta, *generalisation);
-                                context_search
-                                    .reduce(&gen_ast)
-                                    .map(|ast| context_search.substitute(&ast))
-                            })
-                            .nth(0)
-                    })
+                    .or_else(|| self.recursively_reduce_pair(left, right))
             })
+    }
+    fn recursively_reduce_pair(
+        &self,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<Rc<SyntaxTree>> {
+        let left_result = self.reduce(left);
+        let right_result = self.reduce(right);
+        let maybe_subbed_r = right.get_concept().and_then(|r| self.variable_mask.get(&r));
+        let maybe_subbed_l = left.get_concept().and_then(|l| self.variable_mask.get(&l));
+        if let (None, None) = (&left_result, &right_result) {
+            self.filter_generalisations_for_pair(left, right)
+                .iter()
+                .filter_map(|(generalisation, variable_to_syntax)| {
+                    let mut context_search = self.clone();
+                    context_search
+                        .variable_mask
+                        .extend(variable_to_syntax.clone());
+                    let gen_ast = context_search.snap_shot.to_ast(self.delta, *generalisation);
+                    context_search
+                        .reduce(&gen_ast)
+                        .map(|ast| context_search.substitute(&ast))
+                })
+                .nth(0)
+        } else {
+            let l = left_result.unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
+            let r = right_result.unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
+            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
+        }
     }
     fn substitute(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
         ast.get_concept()
@@ -251,6 +248,7 @@ impl<'a> ContextSearch<'a> {
     fn reduce_by_expanded_right_branch(
         &self,
         left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
         rightleft: &Rc<SyntaxTree>,
         rightright: &Rc<SyntaxTree>,
     ) -> Option<Rc<SyntaxTree>> {
@@ -261,6 +259,42 @@ impl<'a> ContextSearch<'a> {
                 } else {
                     self.snap_shot.to_ast(self.delta, FALSE)
                 }
+            }),
+            PRECEDENCE => self.recursively_reduce_pair(left, right).or_else(|| {
+                if let Some(DEFAULT) = left.get_concept() {
+                    return None;
+                }
+                self.reduce(&self.snap_shot.combine(
+                    self.delta,
+                    &self.snap_shot.to_ast(self.delta, DEFAULT),
+                    right,
+                ))
+                .and_then(|s| match s.get_concept() {
+                    Some(TRUE) => Some(self.snap_shot.to_ast(self.delta, TRUE)),
+                    Some(FALSE) => Some(self.snap_shot.to_ast(self.delta, FALSE)),
+                    _ => {
+                        if let Some(DEFAULT) = rightright.get_concept() {
+                            return None;
+                        }
+                        let does_it_preceed_default = self.snap_shot.combine(
+                            self.delta,
+                            &self.snap_shot.to_ast(self.delta, PRECEDENCE),
+                            &self.snap_shot.to_ast(self.delta, DEFAULT),
+                        );
+                        match self
+                            .reduce(&self.snap_shot.combine(
+                                self.delta,
+                                left,
+                                &does_it_preceed_default,
+                            ))
+                            .map(|s| s.get_concept())
+                        {
+                            Some(Some(TRUE)) => Some(self.snap_shot.to_ast(self.delta, TRUE)),
+                            Some(Some(FALSE)) => Some(self.snap_shot.to_ast(self.delta, FALSE)),
+                            _ => None,
+                        }
+                    }
+                })
             }),
             _ => None,
         })

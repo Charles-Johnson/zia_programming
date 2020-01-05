@@ -38,7 +38,7 @@
 //! of concepts.
 //!
 //! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, ">-", but the labels
+//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, ">-", "default" but the labels
 //! can be changed to different symbols for different languages or disciplines.
 //!
 //! # Examples
@@ -50,8 +50,16 @@
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
 //!
+//! // Let the reduction symbol, "->" have higher operator precedence than
+//! // the "let" symbol
+//! assert_eq!(context.execute("let -> >- let"), "");
+//!
+//! // Make any symbol by default have a higher operator precendence than the
+//! // reduction symbol
+//! assert_eq!(context.execute("let default >- ->"), "");
+//!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
-//! assert_eq!(context.execute("let (a b) -> c"), "");
+//! assert_eq!(context.execute("let a b -> c"), "");
 //! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
