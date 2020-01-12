@@ -1,19 +1,18 @@
-/*  Library for the Zia programming language.
-    Copyright (C) 2018 to 2019 Charles Johnson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+//  Library for the Zia programming language.
+// Copyright (C) 2018 to 2019 Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 mod abstract_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
@@ -34,11 +33,15 @@ pub struct Concept {
 }
 
 impl Debug for Concept {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
         if !self.lefthand_of.is_empty() {
             string += " lefthand_of: {";
-            let mut unorder_keys: Vec<&usize> = self.lefthand_of.iter().collect();
+            let mut unorder_keys: Vec<&usize> =
+                self.lefthand_of.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -47,7 +50,8 @@ impl Debug for Concept {
         }
         if !self.righthand_of.is_empty() {
             string += " righthand_of: {";
-            let mut unorder_keys: Vec<&usize> = self.righthand_of.iter().collect();
+            let mut unorder_keys: Vec<&usize> =
+                self.righthand_of.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -56,7 +60,8 @@ impl Debug for Concept {
         }
         if !self.reduces_from.is_empty() {
             string += " reduces_from: {";
-            let mut unorder_keys: Vec<&usize> = self.reduces_from.iter().collect();
+            let mut unorder_keys: Vec<&usize> =
+                self.reduces_from.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -96,7 +101,11 @@ impl Concept {
             },
         ]
     }
-    pub fn remove_reduction(&self, id: usize) -> ZiaResult<[(usize, ConceptDelta); 2]> {
+
+    pub fn remove_reduction(
+        &self,
+        id: usize,
+    ) -> ZiaResult<[(usize, ConceptDelta); 2]> {
         self.get_reduction()
             .map(|reduction| {
                 [
@@ -124,9 +133,13 @@ impl Concept {
             })
             .ok_or(ZiaError::RedundantReduction)
     }
-    pub fn find_what_reduces_to_it(&self) -> std::collections::hash_set::Iter<usize> {
+
+    pub fn find_what_reduces_to_it(
+        &self,
+    ) -> std::collections::hash_set::Iter<usize> {
         self.reduces_from.iter()
     }
+
     /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
     pub fn get_string(&self) -> Option<String> {
         match self.specific_part {
@@ -134,12 +147,15 @@ impl Concept {
             _ => None,
         }
     }
+
     pub const fn get_lefthand_of(&self) -> &HashSet<usize> {
         &self.lefthand_of
     }
+
     pub const fn get_righthand_of(&self) -> &HashSet<usize> {
         &self.righthand_of
     }
+
     /// Gets the index of the concept that `self` may reduce to.
     pub fn get_reduction(&self) -> Option<usize> {
         match self.specific_part {
@@ -147,6 +163,7 @@ impl Concept {
             _ => None,
         }
     }
+
     /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
     pub fn get_definition(&self) -> Option<(usize, usize)> {
         match self.specific_part {
@@ -154,7 +171,12 @@ impl Concept {
             _ => None,
         }
     }
-    pub fn reduce_to(&self, id: usize, reduction: usize) -> ZiaResult<[ConceptDelta; 2]> {
+
+    pub fn reduce_to(
+        &self,
+        id: usize,
+        reduction: usize,
+    ) -> ZiaResult<[ConceptDelta; 2]> {
         match self.specific_part {
             SpecificPart::Abstract(ref c) => Ok([
                 c.make_reduce_to_delta(reduction).into(),
@@ -171,7 +193,13 @@ impl Concept {
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
-    pub fn set_definition(&self, d: usize, l: usize, r: usize) -> ZiaResult<[ConceptDelta; 3]> {
+
+    pub fn set_definition(
+        &self,
+        d: usize,
+        l: usize,
+        r: usize,
+    ) -> ZiaResult<[ConceptDelta; 3]> {
         match &self.specific_part {
             SpecificPart::Abstract(c) => Ok([
                 c.set_definition_delta(l, r).into(),
@@ -211,7 +239,10 @@ enum SpecificPart {
 }
 
 impl Debug for SpecificPart {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
             Self::Concrete => "Concrete".to_string(),
             Self::Abstract(ref ap) => format!("{:#?}", ap),
@@ -235,12 +266,23 @@ pub struct ConceptDelta {
 }
 
 impl std::fmt::Debug for ConceptDelta {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
-        if let Change::Different { before, after } = self.specific_part.definition {
+        if let Change::Different {
+            before,
+            after,
+        } = self.specific_part.definition
+        {
             string += &format!(" definition: {:?} -> {:?},", before, after);
         }
-        if let Change::Different { before, after } = self.specific_part.reduction {
+        if let Change::Different {
+            before,
+            after,
+        } = self.specific_part.reduction
+        {
             string += &format!(" reduction: {:?} -> {:?},", before, after);
         }
         if !self.lefthand_of.is_same() {
@@ -267,6 +309,7 @@ impl Delta for ConceptDelta {
 
 impl Apply for Concept {
     type Delta = ConceptDelta;
+
     fn apply(&mut self, delta: ConceptDelta) {
         let ConceptDelta {
             lefthand_of,
@@ -281,6 +324,7 @@ impl Apply for Concept {
             ap.apply(specific_part);
         };
     }
+
     fn diff(&self, next: Self) -> ConceptDelta {
         let lefthand_of = self.lefthand_of.diff(next.lefthand_of);
         let righthand_of = self.righthand_of.diff(next.righthand_of);
@@ -290,11 +334,16 @@ impl Apply for Concept {
             righthand_of,
             reduces_from,
             specific_part: match (&self.specific_part, next.specific_part) {
-                (SpecificPart::Abstract(ap1), SpecificPart::Abstract(ref ap2)) => {
-                    ap1.diff(ap2.clone())
-                }
-                (SpecificPart::Abstract(ap1), _) => ap1.diff(AbstractPart::default()),
-                (_, SpecificPart::Abstract(ap2)) => AbstractPart::default().diff(ap2),
+                (
+                    SpecificPart::Abstract(ap1),
+                    SpecificPart::Abstract(ref ap2),
+                ) => ap1.diff(ap2.clone()),
+                (SpecificPart::Abstract(ap1), _) => {
+                    ap1.diff(AbstractPart::default())
+                },
+                (_, SpecificPart::Abstract(ap2)) => {
+                    AbstractPart::default().diff(ap2)
+                },
                 _ => AbstractDelta::default(),
             },
         }

@@ -1,18 +1,18 @@
-/*  Library for the Zia programming language.
-Copyright (C) 2018 to 2019 Charles Johnson
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.*/
+//  Library for the Zia programming language.
+// Copyright (C) 2018 to 2019 Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use snafu::Snafu;
 
@@ -43,10 +43,14 @@ pub enum ZiaError {
     #[snafu(display("That definition already exists."))]
     RedundantDefinition,
     /// When refactoring a symbol that hasn't been used.
-    #[snafu(display("Relabelling something that doesn't yet exist has no effect."))]
+    #[snafu(display(
+        "Relabelling something that doesn't yet exist has no effect."
+    ))]
     RedundantRefactor,
     /// When removing a definition from a concept with no definition.
-    #[snafu(display("Removing a definition that doesn't exist is redundant."))]
+    #[snafu(display(
+        "Removing a definition that doesn't exist is redundant."
+    ))]
     RedundantDefinitionRemoval,
     /// When defining an expanded expression.
     #[snafu(display("Cannot define expressions."))]
@@ -60,12 +64,16 @@ pub enum ZiaError {
     /// When syntax tree cannot be reduced further
     #[snafu(display("Cannot reduce syntax further"))]
     CannotReduceFurther,
-    /// When a concept is contained within the concept that it reduces to.  
-    #[snafu(display("Cannot reduce a concept to an expression containing itself."))]
+    /// When a concept is contained within the concept that it reduces to.
+    #[snafu(display(
+        "Cannot reduce a concept to an expression containing itself."
+    ))]
     ExpandingReduction,
     /// When a required symbol is missing from a command
     #[snafu(display("Missing {}", symbol))]
-    MissingSymbol { symbol: &'static str },
+    MissingSymbol {
+        symbol: &'static str,
+    },
     /// When a concept is contained within the normal form of its definition.
     #[snafu(display(
         "Cannot define a concept as an expression whose normal form contains itself."
@@ -78,7 +86,9 @@ pub enum ZiaError {
     #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]
     AmbiguousExpression,
     /// When trying to refactor a used symbol as another used symbol or expression.
-    #[snafu(display("Cannot define a used symbol as another used symbol or expression."))]
+    #[snafu(display(
+        "Cannot define a used symbol as another used symbol or expression."
+    ))]
     DefinitionCollision,
     /// When trying to define the composition of a concrete concept.
     #[snafu(display("Cannot set a definition of a concrete concept"))]
@@ -90,6 +100,8 @@ pub enum ZiaError {
     #[snafu(display("Concept is already composed of concepts with their own reduction rules."))]
     MultipleReductionPaths,
     /// When symbol is expected to be used by a concept but isn't.
-    #[snafu(display("Symbol was expected to be used to label a concept but isn't."))]
+    #[snafu(display(
+        "Symbol was expected to be used to label a concept but isn't."
+    ))]
     UnusedSymbol,
 }

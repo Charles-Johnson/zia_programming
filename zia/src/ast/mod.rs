@@ -1,19 +1,18 @@
-/*  Library for the Zia programming language.
-    Copyright (C) 2018 to 2019 Charles Johnson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+//  Library for the Zia programming language.
+// Copyright (C) 2018 to 2019 Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 use errors::{ZiaError, ZiaResult};
 use std::{fmt, rc::Rc, str::FromStr};
 
@@ -51,6 +50,7 @@ impl fmt::Display for SyntaxTree {
 
 impl FromStr for SyntaxTree {
     type Err = ZiaError;
+
     fn from_str(syntax: &str) -> ZiaResult<Self> {
         Ok(Self {
             syntax: syntax.to_string(),
@@ -65,21 +65,32 @@ impl SyntaxTree {
         self.concept = Some(concept);
         self
     }
+
     pub fn contains(&self, other: &Self) -> bool {
         if let Some((ref left, ref right)) = self.get_expansion() {
-            other == left || other == right || left.contains(other) || right.contains(other)
+            other == left
+                || other == right
+                || left.contains(other)
+                || right.contains(other)
         } else {
             false
         }
     }
+
     /// An expression does have an expansion while a symbol does not.
     pub fn get_expansion(&self) -> Option<(Rc<Self>, Rc<Self>)> {
         self.expansion.clone()
     }
-    pub fn bind_pair(mut self, lefthand: &Rc<Self>, righthand: &Rc<Self>) -> Self {
+
+    pub fn bind_pair(
+        mut self,
+        lefthand: &Rc<Self>,
+        righthand: &Rc<Self>,
+    ) -> Self {
         self.expansion = Some((lefthand.clone(), righthand.clone()));
         self
     }
+
     pub const fn get_concept(&self) -> Option<usize> {
         self.concept
     }

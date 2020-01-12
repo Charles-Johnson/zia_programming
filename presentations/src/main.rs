@@ -3,10 +3,8 @@ extern crate zia;
 use zia::Context;
 
 fn main() {
-    let contents = include_str!("../../zia/src/lib.rs")
-        .split("//! ```\n")
-        .nth(1)
-        .unwrap();
+    let contents =
+        include_str!("../../zia/src/lib.rs").split("//! ```\n").nth(1).unwrap();
     let code_blocks = contents.split("//!\n");
     let presentation = String::new() + "
 # Zia programming language
