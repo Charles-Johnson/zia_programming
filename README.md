@@ -20,6 +20,19 @@ If you already have Rust installed, you may need to upgrade to the latest stable
 rustup update stable
 ```
 
+You should also install the following to check whether the CI will pass
+
+   - [cargo-make](https://sagiegurari.github.io/cargo-make/)
+
+     - Check: `$ cargo make -V` => `cargo-make 0.24.1`
+     - Install: `$ cargo install --force cargo-make`
+
+   - [nightly rustfmt](https://github.com/rust-lang/rustfmt#on-the-nightly-toolchain)
+     - Check: `$ cargo +nightly fmt -- -V` => `rustfmt 1.4.11-nightly (1838235 2019-12-03)`
+     - Install:
+       1. `$ rustup toolchain install nightly`
+       2. `$ rustup component add rustfmt --toolchain nightly`
+
 ### Downloading Source Code
 
 The repository can be downloaded using Git:
