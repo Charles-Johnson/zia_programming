@@ -2,11 +2,7 @@ extern crate zia;
 
 use zia::Context;
 
-fn main() {
-    let contents =
-        include_str!("../../zia/src/lib.rs").split("//! ```\n").nth(1).unwrap();
-    let code_blocks = contents.split("//!\n");
-    let presentation = String::new() + "
+const PRESENTATION: &str = "
 # Zia programming language
 A programming language to program itself.
 
@@ -134,10 +130,15 @@ context.execute(\"let (b (:= (a b)))\")
 # Relabelling concepts
 
 ```rust
-context.execute(\"let (표시 (:= label_of))\");
+context.execute(\"let (\u{D45C}\u{C2DC} (:= label_of))\");
 ```
 
 ![](relabel.pdf)";
+
+fn main() {
+    let contents =
+        include_str!("../../zia/src/lib.rs").split("//! ```\n").nth(1).unwrap();
+    let code_blocks = contents.split("//!\n");
     let mut blocks = Vec::<String>::new();
     let mut commands = Vec::<String>::new();
     for code_block in code_blocks {
@@ -145,13 +146,9 @@ context.execute(\"let (표시 (:= label_of))\");
         block += "```rust\n";
         for line in code_block.split("//! ") {
             block += line;
-            match line.split("context.execute(\"").nth(1) {
-                None => (),
-                Some(s) => match s.split("\")").nth(0) {
-                    Some(s) => commands.push(s.to_string()),
-                    None => (),
-                },
-            };
+            line.split("context.execute(\"").nth(1).map(|s| {
+                s.split("\")").nth(0).map(|s| commands.push(s.to_string()))
+            });
         }
         block += "```\n";
         blocks.push(block);
@@ -160,5 +157,5 @@ context.execute(\"let (표시 (:= label_of))\");
     for command in commands {
         context.execute(&command);
     }
-    println!("{}", presentation);
+    println!("{}", PRESENTATION);
 }

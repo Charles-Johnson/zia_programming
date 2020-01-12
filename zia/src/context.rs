@@ -36,6 +36,7 @@ pub struct Context {
 }
 
 impl Context {
+    #[must_use]
     pub fn new() -> Self {
         let mut cont = Self::default();
         cont.setup();
@@ -688,6 +689,7 @@ impl Context {
 }
 
 impl Default for Context {
+    #[must_use]
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let logger = {

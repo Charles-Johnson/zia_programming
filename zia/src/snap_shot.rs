@@ -16,7 +16,7 @@
 
 use ast::SyntaxTree;
 use concepts::Concept;
-use constants::{ASSOC, FALSE, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE};
+use constants::{ASSOC, LABEL, LEFT, RIGHT};
 use context_delta::{ConceptDelta, ContextDelta, StringDelta};
 use context_search::ContextSearch;
 use delta::Apply;
@@ -270,7 +270,6 @@ impl SnapShot {
             1 => self.ast_from_token(deltas, &tokens[0]),
             2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
             _ => {
-                let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
                 let (lp_syntax, lp_indices, _number_of_tokens) =
                     tokens.iter().try_fold(
                         (
@@ -284,40 +283,6 @@ impl SnapShot {
                                 prev_index.map(|x| x + 1).or(Some(0));
                             let syntax_of_token =
                                 self.ast_from_token(deltas, token)?;
-                            let comparing_precedence_of_token = self.combine(
-                                deltas,
-                                &precedence_syntax,
-                                &syntax_of_token,
-                            );
-                            for syntax in lowest_precedence_syntax.clone() {
-                                let comparing_between_tokens = self.combine(
-                                    deltas,
-                                    &syntax,
-                                    &comparing_precedence_of_token,
-                                );
-                                match ContextSearch::from((self, deltas))
-                                    .reduce(&comparing_between_tokens)
-                                    .and_then(|s| s.get_concept())
-                                {
-                                    // syntax of token has even lower precedence than some previous lowest precendence syntax
-                                    Some(TRUE) => {
-                                        return Ok((
-                                            vec![syntax_of_token],
-                                            vec![this_index.unwrap()],
-                                            this_index,
-                                        ))
-                                    },
-                                    // syntax of token has higher precedence than some previous lowest precendence syntax
-                                    Some(FALSE) => {
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ))
-                                    },
-                                    _ => (),
-                                };
-                            }
                             // syntax of token has neither higher or lower precedence than the lowest precedence syntax
                             let mut hps = lowest_precedence_syntax;
                             hps.push(syntax_of_token);
@@ -377,7 +342,7 @@ impl SnapShot {
                                     None => &tokens[..*lp_index],
                                 };
                                 // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
-                                if slice.len() == 0 {
+                                if slice.is_empty() {
                                     return Err(ZiaError::AmbiguousExpression);
                                 }
                                 let lp_with_the_rest =
