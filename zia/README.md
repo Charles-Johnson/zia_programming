@@ -4,9 +4,9 @@ The Zia project aims to develop a programming language that can be used to progr
 Instead of storing the source code as plain text and editing the raw text (which can easily break 
 the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and 
 used in other programs. All the programming is done using an interactive shell such as
-[IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
-interpreted based on the `Context`. They are used to incrementally modify, test and debug the 
-`Context`.  
+[IZia](https://github.com/Charles-Johnson/zia_programming/tree/master/izia) or via an online IDE 
+(https://zia-lang.org). The commands sent are interpreted based on the `Context`. They are used to
+incrementally modify, test and debug the `Context`.  
 
 Expressions for Zia commands represent a binary tree where parentheses group a pair of 
 expressions and a space separates a pair of expressions.
@@ -34,21 +34,9 @@ be possible once more functionality is added. For example, the need to group pai
 in parentheses will be alleviated by functionality to set the relative precedence and associativity
 of concepts. 
 
-So far there are 4 built-in concepts. A new `Context` labels these with the symbols below but the 
-labels can be changed to different symbols (e.g. for different languages or disciplines).  
+# API Documentation
 
-Let concept, symbol: `let`
-
-Label concept, symbol: `label_of`
-
-Reduction concept, symbol: `->`
-
-Definition concept, symbol: `:=`
-
-# Public API  
-
-The current implementation exposes the `Context` type that can be used in an interface such as 
-[IZia](https://github.com/Charles-Johnson/izia).
+Please refer to https://docs.rs/zia for documentation of the latest released version of `zia`.
 
 # Testing
 
@@ -74,7 +62,7 @@ cargo test --test integration_test_filename
 
 # Documentation
 
-To generate documentation for Public API:
+To generate API documentation:
 ```bash
 cargo doc
 ```
