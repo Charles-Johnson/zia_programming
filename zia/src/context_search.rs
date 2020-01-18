@@ -1,19 +1,18 @@
-/*  Library for the Zia programming language.
-    Copyright (C) 2019 Charles Johnson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+//  Library for the Zia programming language.
+// Copyright (C) 2019 Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
 use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE};
@@ -43,27 +42,35 @@ impl<'a> ContextSearch<'a> {
             }
         })
     }
+
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
-        ast.get_concept()
-            .and_then(|c| self.reduce_concept(c))
-            .or_else(|| {
-                ast.get_expansion()
-                    .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
-            })
+        ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
+            ast.get_expansion()
+                .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
+        })
     }
+
     // Reduces a syntax tree based on the properties of the left and right branches
-    fn reduce_pair(&self, left: &Rc<SyntaxTree>, right: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
+    fn reduce_pair(
+        &self,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<Rc<SyntaxTree>> {
         left.get_concept()
             .and_then(|lc| match lc {
                 ASSOC => Some(self.snap_shot.to_ast(self.delta, RIGHT)),
-                _ => self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast)),
+                _ => {
+                    self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
+                }
             })
             .or_else(|| {
                 right
                     .get_expansion()
                     .and_then(|(ref rightleft, ref rightright)| {
-                        self.reduce_by_expanded_right_branch(left, right, rightleft, rightright)
+                        self.reduce_by_expanded_right_branch(
+                            left, right, rightleft, rightright,
+                        )
                     })
                     .or_else(|| self.recursively_reduce_pair(left, right))
             })
@@ -75,8 +82,10 @@ impl<'a> ContextSearch<'a> {
     ) -> Option<Rc<SyntaxTree>> {
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
-        let maybe_subbed_r = right.get_concept().and_then(|r| self.variable_mask.get(&r));
-        let maybe_subbed_l = left.get_concept().and_then(|l| self.variable_mask.get(&l));
+        let maybe_subbed_r =
+            right.get_concept().and_then(|r| self.variable_mask.get(&r));
+        let maybe_subbed_l =
+            left.get_concept().and_then(|l| self.variable_mask.get(&l));
         if let (None, None) = (&left_result, &right_result) {
             self.filter_generalisations_for_pair(left, right)
                 .iter()
@@ -85,15 +94,19 @@ impl<'a> ContextSearch<'a> {
                     context_search
                         .variable_mask
                         .extend(variable_to_syntax.clone());
-                    let gen_ast = context_search.snap_shot.to_ast(self.delta, *generalisation);
+                    let gen_ast = context_search
+                        .snap_shot
+                        .to_ast(self.delta, *generalisation);
                     context_search
                         .reduce(&gen_ast)
                         .map(|ast| context_search.substitute(&ast))
                 })
                 .nth(0)
         } else {
-            let l = left_result.unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
-            let r = right_result.unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
+            let l = left_result
+                .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
+            let r = right_result
+                .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
             Some(self.snap_shot.contract_pair(self.delta, &l, &r))
         }
     }
@@ -113,13 +126,15 @@ impl<'a> ContextSearch<'a> {
                 )
             })
     }
+
     fn filter_generalisations_for_pair(
         &self,
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let generalisation_candidates =
-            self.find_generalisations(&self.snap_shot.contract_pair(self.delta, left, right));
+        let generalisation_candidates = self.find_generalisations(
+            &self.snap_shot.contract_pair(self.delta, left, right),
+        );
         generalisation_candidates
             .iter()
             .filter_map(|gc| {
@@ -127,10 +142,17 @@ impl<'a> ContextSearch<'a> {
                     &self.snap_shot.contract_pair(self.delta, left, right),
                     *gc,
                 )
-                .and_then(|vm| if vm.is_empty() { None } else { Some((*gc, vm)) })
+                .and_then(|vm| {
+                    if vm.is_empty() {
+                        None
+                    } else {
+                        Some((*gc, vm))
+                    }
+                })
             })
             .collect()
     }
+
     fn check_generalisation(
         &self,
         ast: &Rc<SyntaxTree>,
@@ -192,12 +214,16 @@ impl<'a> ContextSearch<'a> {
             None
         }
     }
+
     fn find_generalisations(&self, ast: &Rc<SyntaxTree>) -> HashSet<usize> {
         let mut generalisations = HashSet::new();
         if let Some((l, r)) = ast.get_expansion() {
             if let Some(c) = l.get_concept() {
-                generalisations
-                    .extend(self.snap_shot.read_concept(self.delta, c).get_lefthand_of());
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta, c)
+                        .get_lefthand_of(),
+                );
             }
             if let Some(c) = r.get_concept() {
                 generalisations.extend(
@@ -225,18 +251,20 @@ impl<'a> ContextSearch<'a> {
             generalisations
         }
     }
+
     fn is_leaf_variable(&self, lv: usize) -> bool {
         self.is_free_variable(lv) && self.is_leaf_concept(lv)
     }
+
     fn is_free_variable(&self, v: usize) -> bool {
-        self.snap_shot.has_variable(self.delta, v) && self.variable_mask.get(&v).is_none()
+        self.snap_shot.has_variable(self.delta, v)
+            && self.variable_mask.get(&v).is_none()
     }
+
     fn is_leaf_concept(&self, l: usize) -> bool {
-        self.snap_shot
-            .read_concept(self.delta, l)
-            .get_definition()
-            .is_none()
+        self.snap_shot.read_concept(self.delta, l).get_definition().is_none()
     }
+
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     pub fn recursively_reduce(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
         match self.reduce(ast) {
@@ -244,6 +272,7 @@ impl<'a> ContextSearch<'a> {
             None => ast.clone(),
         }
     }
+
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
     fn reduce_by_expanded_right_branch(
         &self,
@@ -253,52 +282,68 @@ impl<'a> ContextSearch<'a> {
         rightright: &Rc<SyntaxTree>,
     ) -> Option<Rc<SyntaxTree>> {
         rightleft.get_concept().and_then(|rlc| match rlc {
-            REDUCTION => self.determine_reduction_truth(left, rightright).map(|x| {
-                if x {
-                    self.snap_shot.to_ast(self.delta, TRUE)
-                } else {
-                    self.snap_shot.to_ast(self.delta, FALSE)
-                }
-            }),
-            PRECEDENCE => self.recursively_reduce_pair(left, right).or_else(|| {
-                if let Some(DEFAULT) = left.get_concept() {
-                    return None;
-                }
-                self.reduce(&self.snap_shot.combine(
-                    self.delta,
-                    &self.snap_shot.to_ast(self.delta, DEFAULT),
-                    right,
-                ))
-                .and_then(|s| match s.get_concept() {
-                    Some(TRUE) => Some(self.snap_shot.to_ast(self.delta, TRUE)),
-                    Some(FALSE) => Some(self.snap_shot.to_ast(self.delta, FALSE)),
-                    _ => {
-                        if let Some(DEFAULT) = rightright.get_concept() {
-                            return None;
-                        }
-                        let does_it_preceed_default = self.snap_shot.combine(
-                            self.delta,
-                            &self.snap_shot.to_ast(self.delta, PRECEDENCE),
-                            &self.snap_shot.to_ast(self.delta, DEFAULT),
-                        );
-                        match self
-                            .reduce(&self.snap_shot.combine(
-                                self.delta,
-                                left,
-                                &does_it_preceed_default,
-                            ))
-                            .map(|s| s.get_concept())
-                        {
-                            Some(Some(TRUE)) => Some(self.snap_shot.to_ast(self.delta, TRUE)),
-                            Some(Some(FALSE)) => Some(self.snap_shot.to_ast(self.delta, FALSE)),
-                            _ => None,
-                        }
+            REDUCTION => {
+                self.determine_reduction_truth(left, rightright).map(|x| {
+                    if x {
+                        self.snap_shot.to_ast(self.delta, TRUE)
+                    } else {
+                        self.snap_shot.to_ast(self.delta, FALSE)
                     }
                 })
-            }),
+            }
+            PRECEDENCE => {
+                self.recursively_reduce_pair(left, right).or_else(|| {
+                    if let Some(DEFAULT) = left.get_concept() {
+                        return None;
+                    }
+                    self.reduce(&self.snap_shot.combine(
+                        self.delta,
+                        &self.snap_shot.to_ast(self.delta, DEFAULT),
+                        right,
+                    ))
+                    .and_then(|s| match s.get_concept() {
+                        Some(TRUE) => {
+                            Some(self.snap_shot.to_ast(self.delta, TRUE))
+                        }
+                        Some(FALSE) => {
+                            Some(self.snap_shot.to_ast(self.delta, FALSE))
+                        }
+                        _ => {
+                            if let Some(DEFAULT) = rightright.get_concept() {
+                                return None;
+                            }
+                            let does_it_preceed_default =
+                                self.snap_shot.combine(
+                                    self.delta,
+                                    &self
+                                        .snap_shot
+                                        .to_ast(self.delta, PRECEDENCE),
+                                    &self.snap_shot.to_ast(self.delta, DEFAULT),
+                                );
+                            match self
+                                .reduce(&self.snap_shot.combine(
+                                    self.delta,
+                                    left,
+                                    &does_it_preceed_default,
+                                ))
+                                .map(|s| s.get_concept())
+                            {
+                                Some(Some(TRUE)) => Some(
+                                    self.snap_shot.to_ast(self.delta, TRUE),
+                                ),
+                                Some(Some(FALSE)) => Some(
+                                    self.snap_shot.to_ast(self.delta, FALSE),
+                                ),
+                                _ => None,
+                            }
+                        }
+                    })
+                })
+            }
             _ => None,
         })
     }
+
     fn determine_reduction_truth(
         &self,
         left: &Rc<SyntaxTree>,
@@ -307,13 +352,12 @@ impl<'a> ContextSearch<'a> {
         if left == right {
             Some(false)
         } else {
-            self.determine_evidence_of_reduction(left, right)
-                .or_else(|| {
-                    self.determine_evidence_of_reduction(right, left)
-                        .map(|x| !x)
-                })
+            self.determine_evidence_of_reduction(left, right).or_else(|| {
+                self.determine_evidence_of_reduction(right, left).map(|x| !x)
+            })
         }
     }
+
     fn determine_evidence_of_reduction(
         &self,
         left: &Rc<SyntaxTree>,

@@ -1,19 +1,18 @@
-/*  Library for the Zia programming language.
-    Copyright (C) 2018 to 2019 Charles Johnson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+//  Library for the Zia programming language.
+// Copyright (C) 2018 to 2019 Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 //! # Interpreter for the Zia programming language
 //! The Zia project aims to develop a programming language that can be used to program itself.
@@ -21,7 +20,7 @@
 //! the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
 //! used in other programs. All the programming is done using an interactive shell such as
 //! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
-//! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.  
+//! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions
 //! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect

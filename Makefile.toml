@@ -1,0 +1,38 @@
+
+# ---- GENERAL ----
+
+[tasks.verify]
+description = "Format, lint with Clippy and run tests"
+dependencies = ["fmt", "clippy", "test"]
+
+[tasks.verify_only]
+description = "Like `verify`, but fails if the code isn't formatted. Primarily for CI."
+dependencies = ["fmt_check", "clippy", "test"]
+
+# ---- TEST ----
+
+[tasks.test]
+description = "Run tests. i.e.: 'cargo make test'."
+clear = true
+command = "cargo"
+args = ["test"]
+
+# ---- LINT ----
+
+[tasks.fmt]
+description = "Format with nightly rustfmt"
+toolchain = "nightly"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.fmt_check]
+extend = "fmt"
+description = "Check format with nightly rustfmt"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.clippy]
+description = "Lint with Clippy"
+clear = true
+install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
+command = "cargo"
+args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery"]

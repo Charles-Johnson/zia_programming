@@ -1,19 +1,18 @@
-/*  Library for the Zia programming language.
-    Copyright (C) 2018 to 2019  Charles Johnson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+//  Library for the Zia programming language.
+// Copyright (C) 2018 to 2019  Charles Johnson
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashSet;
 
@@ -28,11 +27,17 @@ where
     T: PartialEq + Clone,
 {
     type Delta = Change<Self>;
+
     fn apply(&mut self, delta: Self::Delta) {
-        if let Change::Different { after, .. } = delta {
+        if let Change::Different {
+            after,
+            ..
+        } = delta
+        {
             *self = after;
         }
     }
+
     fn diff(&self, next: Self) -> Change<Self> {
         if self == &next {
             Change::Same
@@ -51,7 +56,10 @@ pub trait Delta {
 #[derive(Clone, Debug)]
 pub enum Change<T> {
     Same,
-    Different { before: T, after: T },
+    Different {
+        before: T,
+        after: T,
+    },
 }
 
 impl<T> Default for Change<T> {
@@ -85,7 +93,7 @@ where
                 } else {
                     panic!("Deltas do not align")
                 }
-            }
+            },
         }
     }
 }
@@ -103,7 +111,10 @@ impl SetChange {
 }
 
 impl std::fmt::Debug for SetChange {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
         if !self.remove.is_empty() {
             string += " remove:";
@@ -146,10 +157,12 @@ impl Delta for SetChange {
 
 impl Apply for HashSet<usize> {
     type Delta = SetChange;
+
     fn apply(&mut self, delta: SetChange) {
         self.retain(|c| !delta.remove.contains(c));
         self.extend(delta.add);
     }
+
     fn diff(&self, next: Self) -> SetChange {
         let mut set_change = SetChange::default();
         for next_item in &next {

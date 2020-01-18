@@ -1,0 +1,49 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - stable
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  build_test_release:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install nightly Rust and rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          components: rustfmt
+
+      - name: Install stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Install cargo-make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Run tests
+        run: cargo make --no-workspace verify_only
+        working-directory: ./
+      
+      - name: Release test_zia
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
+        working-directory: ./test_zia
+      
+      - name: Release zia
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
+        working-directory: ./zia
+
+      - name: Release izia
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
+        working-directory: ./izia
