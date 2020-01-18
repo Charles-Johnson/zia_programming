@@ -37,13 +37,13 @@ jobs:
         working-directory: ./
       
       - name: Release test_zia
-        run: cargo package && cargo release
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./test_zia
       
       - name: Release zia
-        run: cargo package && cargo release
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./zia
 
       - name: Release izia
-        run: cargo package && cargo release
+        run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./izia
