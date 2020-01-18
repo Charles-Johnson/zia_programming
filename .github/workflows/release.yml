@@ -38,12 +38,12 @@ jobs:
       
       - name: Release test_zia
         run: cargo package && cargo release
-        working_directory: ./test_zia
+        working-directory: ./test_zia
       
       - name: Release zia
         run: cargo package && cargo release
-        working_directory: ./zia
+        working-directory: ./zia
 
       - name: Release izia
         run: cargo package && cargo release
-        working_directory: ./izia
+        working-directory: ./izia
