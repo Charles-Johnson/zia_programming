@@ -26,7 +26,7 @@ slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}
 slog-term = "2.4.0"
 
 [dev-dependencies]
-test_zia = {path="../test_zia", version="0.2.0"}
+test_zia = {path="../test_zia", version="0.4.0"}
 proptest = "0.9.1"
 criterion = "0.3.0"
 
