@@ -16,7 +16,9 @@
 
 use ast::SyntaxTree;
 use concepts::Concept;
-use constants::{ASSOC, FALSE, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE};
+use constants::{
+    ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
+};
 use context_delta::{ConceptDelta, ContextDelta, StringDelta};
 use context_search::ContextSearch;
 use delta::Apply;
@@ -271,6 +273,7 @@ impl SnapShot {
             2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
             _ => {
                 let precedence_syntax = self.to_ast(deltas, PRECEDENCE);
+                let greater_than_syntax = self.to_ast(deltas, GREATER_THAN);
                 let (lp_syntax, lp_indices, _number_of_tokens) =
                     tokens.iter().try_fold(
                         (
@@ -284,20 +287,31 @@ impl SnapShot {
                                 prev_index.map(|x| x + 1).or(Some(0));
                             let syntax_of_token =
                                 self.ast_from_token(deltas, token)?;
-                            let comparing_precedence_of_token = self.combine(
+                            let precedence_of_token = self.combine(
                                 deltas,
                                 &precedence_syntax,
                                 &syntax_of_token,
                             );
                             for syntax in lowest_precedence_syntax.clone() {
+                                let precedence_of_syntax = self.combine(
+                                    deltas,
+                                    &precedence_syntax,
+                                    &syntax,
+                                );
                                 let comparing_between_tokens = self.combine(
                                     deltas,
-                                    &syntax,
-                                    &comparing_precedence_of_token,
+                                    &precedence_of_syntax,
+                                    &self.combine(
+                                        deltas,
+                                        &greater_than_syntax,
+                                        &precedence_of_token,
+                                    ),
                                 );
                                 match dbg!(ContextSearch::from((self, deltas))
-                                    .reduce(&dbg!(comparing_between_tokens))
-                                    .and_then(|s| s.get_concept()))
+                                    .recursively_reduce(&dbg!(
+                                        comparing_between_tokens
+                                    ))
+                                    .get_concept())
                                 {
                                     // syntax of token has an even lower precedence than some previous lowest precendence syntax
                                     Some(TRUE) => {
@@ -315,7 +329,44 @@ impl SnapShot {
                                             this_index,
                                         ))
                                     }
-                                    _ => (),
+                                    _ => {
+                                        let comparing_between_tokens_reversed =
+                                            self.combine(
+                                                deltas,
+                                                &precedence_of_token,
+                                                &self.combine(
+                                                    deltas,
+                                                    &greater_than_syntax,
+                                                    &precedence_of_syntax,
+                                                ),
+                                            );
+                                        match dbg!(ContextSearch::from((
+                                            self, deltas,
+                                        ))
+                                        .recursively_reduce(&dbg!(
+                                            comparing_between_tokens_reversed
+                                        ),))
+                                        .get_concept()
+                                        {
+                                            // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                                            Some(FALSE) => {
+                                                return Ok((
+                                                    vec![syntax_of_token],
+                                                    vec![this_index.unwrap()],
+                                                    this_index,
+                                                ))
+                                            }
+                                            // syntax of token has a higher precedence than some previous lowest precendence syntax
+                                            Some(TRUE) => {
+                                                return Ok((
+                                                    lowest_precedence_syntax,
+                                                    lp_indices,
+                                                    this_index,
+                                                ))
+                                            }
+                                            _ => (),
+                                        };
+                                    }
                                 };
                             }
                             // syntax of token has neither higher or lower precedence than the lowest precedence syntax

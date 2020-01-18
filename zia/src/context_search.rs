@@ -60,6 +60,17 @@ impl<'a> ContextSearch<'a> {
         left.get_concept()
             .and_then(|lc| match lc {
                 ASSOC => Some(self.snap_shot.to_ast(self.delta, RIGHT)),
+                PRECEDENCE
+                    if right
+                        .get_concept()
+                        .and_then(|c| {
+                            self.snap_shot
+                                .find_definition(self.delta, PRECEDENCE, c)
+                        })
+                        .is_none() =>
+                {
+                    Some(self.snap_shot.to_ast(self.delta, DEFAULT))
+                }
                 _ => {
                     self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
                 }
@@ -69,7 +80,7 @@ impl<'a> ContextSearch<'a> {
                     .get_expansion()
                     .and_then(|(ref rightleft, ref rightright)| {
                         self.reduce_by_expanded_right_branch(
-                            left, right, rightleft, rightright,
+                            left, rightleft, rightright,
                         )
                     })
                     .or_else(|| self.recursively_reduce_pair(left, right))
@@ -277,7 +288,6 @@ impl<'a> ContextSearch<'a> {
     fn reduce_by_expanded_right_branch(
         &self,
         left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
         rightleft: &Rc<SyntaxTree>,
         rightright: &Rc<SyntaxTree>,
     ) -> Option<Rc<SyntaxTree>> {
@@ -289,55 +299,6 @@ impl<'a> ContextSearch<'a> {
                     } else {
                         self.snap_shot.to_ast(self.delta, FALSE)
                     }
-                })
-            }
-            PRECEDENCE => {
-                self.recursively_reduce_pair(left, right).or_else(|| {
-                    if let Some(DEFAULT) = left.get_concept() {
-                        return None;
-                    }
-                    self.reduce(&self.snap_shot.combine(
-                        self.delta,
-                        &self.snap_shot.to_ast(self.delta, DEFAULT),
-                        right,
-                    ))
-                    .and_then(|s| match s.get_concept() {
-                        Some(TRUE) => {
-                            Some(self.snap_shot.to_ast(self.delta, TRUE))
-                        }
-                        Some(FALSE) => {
-                            Some(self.snap_shot.to_ast(self.delta, FALSE))
-                        }
-                        _ => {
-                            if let Some(DEFAULT) = rightright.get_concept() {
-                                return None;
-                            }
-                            let does_it_preceed_default =
-                                self.snap_shot.combine(
-                                    self.delta,
-                                    &self
-                                        .snap_shot
-                                        .to_ast(self.delta, PRECEDENCE),
-                                    &self.snap_shot.to_ast(self.delta, DEFAULT),
-                                );
-                            match self
-                                .reduce(&self.snap_shot.combine(
-                                    self.delta,
-                                    left,
-                                    &does_it_preceed_default,
-                                ))
-                                .map(|s| s.get_concept())
-                            {
-                                Some(Some(TRUE)) => Some(
-                                    self.snap_shot.to_ast(self.delta, TRUE),
-                                ),
-                                Some(Some(FALSE)) => Some(
-                                    self.snap_shot.to_ast(self.delta, FALSE),
-                                ),
-                                _ => None,
-                            }
-                        }
-                    })
                 })
             }
             _ => None,

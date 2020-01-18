@@ -50,10 +50,11 @@ impl Context {
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
-        let string =
-            dbg!(self.snap_shot.ast_from_expression(&self.delta, command))
-                .and_then(|a| self.call(&a))
-                .unwrap_or_else(|e| e.to_string());
+        let string = self
+            .snap_shot
+            .ast_from_expression(&self.delta, command)
+            .and_then(|a| self.call(&a))
+            .unwrap_or_else(|e| e.to_string());
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
@@ -78,7 +79,7 @@ impl Context {
         };
         let labels = vec![
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right",
-            "left", ">-", "default",
+            "left", "prec", "default", ">",
         ];
         let mut counter = 0;
         let concepts: Vec<usize> = from_fn(|| {
@@ -95,9 +96,6 @@ impl Context {
             .zip(&labels)
             .try_for_each(|(concept, string)| self.label(*concept, string))
             .unwrap();
-        self.execute("let (not true) -> false");
-        self.execute("let (not false) -> true");
-        self.execute("let (_x_ >- _y_) -> not _y_ >- _x_");
     }
 
     fn reduce_and_call_pair(
