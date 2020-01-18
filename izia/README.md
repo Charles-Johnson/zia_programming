@@ -9,12 +9,6 @@ Assuming that the instructions found [here](https://github.com/Charles-Johnson/z
 
 In the command line enter `izia`. This will print a short license notice followed by `>>>` as a prompt. Type in a Zia expression and press enter. `izia` will execute these as commands.
 
-```
->>> let ((not true) (-> false))
-
->>> (label_of((not true) ->)) ->
-false
-```
 You can learn more about the Zia programming language [here](https://github.com/Charles-Johnson/zia_programming/tree/master/zia).
 
 ## License
