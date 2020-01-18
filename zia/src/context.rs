@@ -27,6 +27,7 @@ use slog::{Drain, Logger};
 use snap_shot::SnapShot;
 use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 
+#[derive(Clone)]
 pub struct Context {
     snap_shot: SnapShot,
     #[cfg(not(target_arch = "wasm32"))]

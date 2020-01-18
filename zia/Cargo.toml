@@ -18,8 +18,10 @@ name = "zia"
 crate-type = ["lib"]
 
 [dependencies]
+lazy_static = "1.2.0"
 maplit = "1.0.2"
 snafu = "0.5.0"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}

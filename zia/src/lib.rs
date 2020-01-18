@@ -119,6 +119,8 @@
 //! ```
 
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate maplit;
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_use]
@@ -155,3 +157,9 @@ mod snap_shot;
 pub use context::Context;
 
 pub use errors::ZiaError;
+
+// Saves having to construct a new `Context` each time.
+#[macro_export]
+lazy_static! {
+    pub static ref NEW_CONTEXT: Context = Context::new();
+}

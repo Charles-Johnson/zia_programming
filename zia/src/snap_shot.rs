@@ -28,7 +28,7 @@ use std::{
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct SnapShot {
     /// Relates a String value to the index where the concept corresponding to the String is stored
     /// in the `concepts` field.

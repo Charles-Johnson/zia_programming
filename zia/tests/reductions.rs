@@ -20,13 +20,13 @@ extern crate proptest;
 extern crate test_zia;
 extern crate zia;
 
-use zia::{Context, ZiaError};
+use zia::{ZiaError, NEW_CONTEXT};
 
 proptest! {
     // A pair of symbols reduces to another symbol
     #[test]
     fn pair_to_symbol(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
         let print = format!("{} {}", a, b);
         prop_assert_eq!(cont.execute(&print), c);
@@ -36,7 +36,7 @@ proptest! {
     fn nested_pair_to_symbol(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         // To prevent redundant reductions
         prop_assume!(b != c);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, c, b);
         let print = format!("{} {} {}", a, a, b);
@@ -47,7 +47,7 @@ proptest! {
     fn cycle(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         // to prevent redundant reductions
         prop_assume!(a != c || b != d);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let reduction0 = format!("let ({} {}) -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
         let reduction1 = format!("let ({} {}) -> {} {}", c, d, a, b);
@@ -59,7 +59,7 @@ proptest! {
     // If only a symbol is enclosed in parentheses, then this should be the same as if the parentheses weren't there
     #[test]
     fn trivial_parentheses(a in "\\PC*") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         assume_symbol!(a);
         let print = format!("({})", a);
         prop_assert_eq!(cont.execute(&print), a);
@@ -68,7 +68,7 @@ proptest! {
     #[test]
     fn infinite_expansion(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let reduction = format!("let ({} {}) -> {} {} {}", a, b, c, a, b);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         assert_eq!(
             cont.execute(&reduction),
             ZiaError::ExpandingReduction.to_string()
@@ -77,7 +77,7 @@ proptest! {
     // A concept that used to doubly reduce but whose first reduction no longer reduces should doubly reduce to its first reduction.
     #[test]
     fn broken_end_chain(d in "a|b|c|d|e", e in "a|b|c|d|e") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let reduction0 = format!("let (a b) -> c {}", d);
         assert_eq!(cont.execute(&reduction0), "");
         let reduction1 = format!("let (c {}) -> {}", d, e);
@@ -90,7 +90,7 @@ proptest! {
     // A concept that used to triply reduce but whose second reduction no longer reduces should triply reduce to its second reduction.
     #[test]
     fn broken_middle_chain(e in "b|d|e|f|g", f in "a|c|e|f|g", g in "a|b|c|d|e|f|g") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let reduction0 = format!("let (a b) -> c d");
         assert_eq!(cont.execute(&reduction0), "");
         let reduction1 = format!("let (c d) -> {} {}", e, f);
@@ -107,7 +107,7 @@ proptest! {
     fn change_reduction_rule(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         // to prevent rendundant reductions
         prop_assume!(a != b && b != c && c != d);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, a, b, d);
         let print = format!("{} {}", a, b);
@@ -116,7 +116,7 @@ proptest! {
     // It is not necessarily redundant to make a concept reduce to its normal form.
     #[test]
     fn leapfrog_reduction_rule(d in "a|b|c|d|e", e in "a|b|c|d|e") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let reduction = format!("let (a b) -> c {}", d);
         assert_eq!(cont.execute(&reduction), "");
         let a = "a".to_string();
@@ -130,7 +130,7 @@ proptest! {
     fn redundancy(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         // pairs to reduce must be unique
         prop_assume!(a != c || b != d);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
         let reduction = format!("let ({} {}) -> {}", a, b, c);
         assert_eq!(
