@@ -118,11 +118,11 @@ impl SnapShot {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
-                }
+                },
                 ConceptDelta::Remove(_) => {
                     added_gaps.push(*id);
                     removed_gaps.remove(id);
-                }
+                },
                 ConceptDelta::Update(_) => (),
             }
         }
@@ -141,7 +141,7 @@ impl SnapShot {
                         index = id;
                         break;
                     }
-                }
+                },
                 (None, Some(gi)) => {
                     if removed_gaps.contains(&self.gaps[gi]) {
                         if gi == 0 {
@@ -155,11 +155,11 @@ impl SnapShot {
                         index = self.gaps[gi];
                         break;
                     }
-                }
+                },
                 (None, None) => {
                     index = new_concept_length;
                     break;
-                }
+                },
             };
         }
         (
@@ -320,7 +320,7 @@ impl SnapShot {
                                             vec![this_index.unwrap()],
                                             this_index,
                                         ))
-                                    }
+                                    },
                                     // syntax of token has a higher precedence than some previous lowest precendence syntax
                                     Some(FALSE) => {
                                         return Ok((
@@ -328,7 +328,7 @@ impl SnapShot {
                                             lp_indices,
                                             this_index,
                                         ))
-                                    }
+                                    },
                                     _ => {
                                         let comparing_between_tokens_reversed =
                                             self.combine(
@@ -355,7 +355,7 @@ impl SnapShot {
                                                     vec![this_index.unwrap()],
                                                     this_index,
                                                 ))
-                                            }
+                                            },
                                             // syntax of token has a higher precedence than some previous lowest precendence syntax
                                             Some(TRUE) => {
                                                 return Ok((
@@ -363,10 +363,10 @@ impl SnapShot {
                                                     lp_indices,
                                                     this_index,
                                                 ))
-                                            }
+                                            },
                                             _ => (),
                                         };
-                                    }
+                                    },
                                 };
                             }
                             // syntax of token has neither higher or lower precedence than the lowest precedence syntax
@@ -388,7 +388,7 @@ impl SnapShot {
                             } else {
                                 Err(ZiaError::AmbiguousExpression)
                             }
-                        }
+                        },
                         (Some(x), None) => Ok(Some(x)),
                         (None, _) => Err(ZiaError::AmbiguousExpression),
                     }
@@ -431,7 +431,7 @@ impl SnapShot {
                             )?;
                             Ok(self.combine(deltas, &head, &tail))
                         }
-                    }
+                    },
                     Some(Associativity::Left) => lp_indices
                         .iter()
                         .try_fold(
@@ -464,7 +464,7 @@ impl SnapShot {
                         .ok_or(ZiaError::AmbiguousExpression),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
-            }
+            },
         }
     }
 
@@ -704,7 +704,7 @@ impl SnapShot {
                         + " "
                         + &r.to_string()
                         + ")"
-                }
+                },
             },
         );
         let right_string = right.get_expansion().map_or_else(
@@ -716,7 +716,7 @@ impl SnapShot {
                         + " "
                         + &r.to_string()
                         + ")"
-                }
+                },
                 Associativity::Right => l.to_string() + " " + &r.to_string(),
             },
         );
@@ -831,7 +831,7 @@ impl Apply for SnapShot {
                 ..
             } => {
                 self.string_map.insert(s.to_string(), *after);
-            }
+            },
             StringDelta::Insert(id) => self.add_string(*id, s),
             StringDelta::Remove(_) => self.remove_string(s),
         });
@@ -849,13 +849,13 @@ impl Apply for SnapShot {
                         if v {
                             self.variables.insert(id);
                         }
-                    }
+                    },
                     ConceptDelta::Remove(_) => {
                         self.blindly_remove_concept(id);
                         if v {
                             self.variables.remove(&id);
                         }
-                    }
+                    },
                     ConceptDelta::Update(d) => self.write_concept(id).apply(d),
                 }
             }
@@ -897,7 +897,7 @@ fn parse_letter(
         '(' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level + 1)
-        }
+        },
         ')' => {
             if parenthesis_level > 0 {
                 parenthesis_level -= 1;
@@ -908,16 +908,16 @@ fn parse_letter(
                     symbol: "(",
                 })
             }
-        }
+        },
         ' ' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level)
-        }
+        },
         '\n' | '\r' => Ok(parenthesis_level),
         _ => {
             token.push(letter);
             Ok(parenthesis_level)
-        }
+        },
     }
 }
 
