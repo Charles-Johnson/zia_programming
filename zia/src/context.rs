@@ -254,7 +254,7 @@ impl Context {
                     } else {
                         Err(ZiaError::CannotReduceFurther)
                     }
-                }
+                },
             },
             None => Err(ZiaError::UnusedSymbol),
         }
@@ -295,27 +295,27 @@ impl Context {
                     } else {
                         self.relabel(b, &new.to_string())
                     }
-                }
+                },
                 (None, None, Some((ref left, ref right))) => {
                     self.define_new_syntax(&new.to_string(), left, right)
-                }
+                },
                 (Some(a), Some(b), None) => {
                     if a == b {
                         self.cleanly_delete_definition(a)
                     } else {
                         Err(ZiaError::DefinitionCollision)
                     }
-                }
+                },
                 (Some(a), Some(b), Some(_)) => {
                     if a == b {
                         Err(ZiaError::RedundantDefinition)
                     } else {
                         Err(ZiaError::DefinitionCollision)
                     }
-                }
+                },
                 (Some(a), None, Some((ref left, ref right))) => {
                     self.redefine(a, left, right)
-                }
+                },
             }
         }
     }
@@ -340,7 +340,7 @@ impl Context {
                 self.try_delete_concept(concept)?;
                 self.try_delete_concept(left)?;
                 self.try_delete_concept(right)
-            }
+            },
         }
     }
 
@@ -529,7 +529,7 @@ impl Context {
                         self.label(concept, string)?;
                     }
                     Ok(concept)
-                }
+                },
             }
         }
     }
@@ -577,7 +577,7 @@ impl Context {
                     definition, lefthand, righthand, temporary,
                 )?;
                 Ok(definition)
-            }
+            },
             Some(def) => Ok(def),
         }
     }

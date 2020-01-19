@@ -70,10 +70,10 @@ impl<'a> ContextSearch<'a> {
                         .is_none() =>
                 {
                     Some(self.snap_shot.to_ast(self.delta, DEFAULT))
-                }
+                },
                 _ => {
                     self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
-                }
+                },
             })
             .or_else(|| {
                 right
@@ -86,6 +86,7 @@ impl<'a> ContextSearch<'a> {
                     .or_else(|| self.recursively_reduce_pair(left, right))
             })
     }
+
     fn recursively_reduce_pair(
         &self,
         left: &Rc<SyntaxTree>,
@@ -121,6 +122,7 @@ impl<'a> ContextSearch<'a> {
             Some(self.snap_shot.contract_pair(self.delta, &l, &r))
         }
     }
+
     fn substitute(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
         ast.get_concept()
             .and_then(|c| self.variable_mask.get(&c).cloned())
@@ -300,7 +302,7 @@ impl<'a> ContextSearch<'a> {
                         self.snap_shot.to_ast(self.delta, FALSE)
                     }
                 })
-            }
+            },
             _ => None,
         })
     }
