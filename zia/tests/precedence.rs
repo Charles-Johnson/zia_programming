@@ -23,6 +23,22 @@ extern crate test_zia;
 use test_zia::CONCRETE_SYMBOLS;
 use zia::NEW_CONTEXT;
 
+#[test]
+fn lower_than_default_precedence() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let default > prec b"), "");
+    assert_eq!(context.execute("prec b"), "prec b");
+    assert_eq!(context.execute("c d b"), "(c d) b");
+}
+
+#[test]
+fn set_let_precedence() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let default > prec let"), "");
+    assert_eq!(context.execute("let a -> b"), "");
+    // assert_eq!(context.execute("a"), "b");
+}
+
 proptest! {
     #[test]
     fn default_precedence(a in "\\PC*") {
