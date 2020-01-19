@@ -272,8 +272,10 @@ impl SnapShot {
             1 => self.ast_from_token(deltas, &tokens[0]),
             2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
             _ => {
-                let (lp_syntax, lp_indices, _number_of_tokens) =
-                    self.lowest_precedence_info(deltas, tokens)?;
+                let TokenSubsequence {
+                    syntax: lp_syntax,
+                    positions: lp_indices,
+                } = self.lowest_precedence_info(deltas, tokens)?;
                 if lp_indices.is_empty() {
                     return Err(ZiaError::AmbiguousExpression);
                 }
@@ -369,10 +371,10 @@ impl SnapShot {
         &self,
         delta: &ContextDelta,
         tokens: &[String],
-    ) -> ZiaResult<(Vec<Rc<SyntaxTree>>, Vec<usize>, Option<usize>)> {
+    ) -> ZiaResult<TokenSubsequence> {
         let precedence_syntax = self.to_ast(delta, PRECEDENCE);
         let greater_than_syntax = self.to_ast(delta, GREATER_THAN);
-        tokens.iter().try_fold(
+        let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             (Vec::<Rc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
             |(lowest_precedence_syntax, lp_indices, prev_index), token| {
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
@@ -456,7 +458,11 @@ impl SnapShot {
                 hi.push(this_index.unwrap());
                 Ok((hps, hi, this_index))
             },
-        )
+        )?;
+        Ok(TokenSubsequence {
+            syntax,
+            positions,
+        })
     }
 
     fn ast_from_pair(
@@ -925,4 +931,9 @@ fn push_token(
     if parenthesis_level != 0 {
         token.push(letter);
     }
+}
+
+struct TokenSubsequence {
+    syntax: Vec<Rc<SyntaxTree>>,
+    positions: Vec<usize>,
 }
