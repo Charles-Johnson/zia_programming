@@ -118,11 +118,11 @@ impl SnapShot {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
-                }
+                },
                 ConceptDelta::Remove(_) => {
                     added_gaps.push(*id);
                     removed_gaps.remove(id);
-                }
+                },
                 ConceptDelta::Update(_) => (),
             }
         }
@@ -141,7 +141,7 @@ impl SnapShot {
                         index = id;
                         break;
                     }
-                }
+                },
                 (None, Some(gi)) => {
                     if removed_gaps.contains(&self.gaps[gi]) {
                         if gi == 0 {
@@ -155,11 +155,11 @@ impl SnapShot {
                         index = self.gaps[gi];
                         break;
                     }
-                }
+                },
                 (None, None) => {
                     index = new_concept_length;
                     break;
-                }
+                },
             };
         }
         (
@@ -264,30 +264,30 @@ impl SnapShot {
 
     fn ast_from_tokens(
         &self,
-        deltas: &ContextDelta,
+        delta: &ContextDelta,
         tokens: &[String],
     ) -> ZiaResult<Rc<SyntaxTree>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token(deltas, &tokens[0]),
-            2 => self.ast_from_pair(deltas, &tokens[0], &tokens[1]),
+            1 => self.ast_from_token(delta, &tokens[0]),
+            2 => self.ast_from_pair(delta, &tokens[0], &tokens[1]),
             _ => {
                 let TokenSubsequence {
                     syntax: lp_syntax,
                     positions: lp_indices,
-                } = self.lowest_precedence_info(deltas, tokens)?;
+                } = self.lowest_precedence_info(delta, tokens)?;
                 if lp_indices.is_empty() {
                     return Err(ZiaError::AmbiguousExpression);
                 }
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (self.get_associativity(deltas, syntax), assoc) {
+                    match (self.get_associativity(delta, syntax), assoc) {
                         (Some(x), Some(y)) => {
                             if x == y {
                                 Ok(Some(x))
                             } else {
                                 Err(ZiaError::AmbiguousExpression)
                             }
-                        }
+                        },
                         (Some(x), None) => Ok(Some(x)),
                         (None, _) => Err(ZiaError::AmbiguousExpression),
                     }
@@ -297,89 +297,121 @@ impl SnapShot {
                         let tail = lp_indices
                             .iter()
                             .rev()
-                            .try_fold(
-                                (None, None),
-                                |(tail, prev_lp_index), lp_index| {
-                                    let slice = match prev_lp_index {
-                                        Some(i) => &tokens[*lp_index..i],
-                                        None => &tokens[*lp_index..],
-                                    };
-                                    let lp_with_the_rest = if *lp_index == 0 {
-                                        if slice.len() == 1 {
-                                            self.ast_from_token(deltas, &tokens[0])?
-                                        } else {
-                                            self.combine(
-                                                deltas,
-                                                &self.ast_from_token(deltas, &tokens[0])?,
-                                                &if slice.len() < 3 {
-                                                    self.ast_from_token(deltas, &slice[1])?
-                                                } else {
-                                                    self.ast_from_tokens(deltas, &slice[1..])?
-                                                }
-                                            )
-                                        }
-                                    } else {
-                                        self.ast_from_tokens(deltas, slice)?
-                                    };
-                                    Ok((
-                                        Some(match tail {
-                                            None => lp_with_the_rest,
-                                            Some(t) => self.combine(
-                                                deltas,
-                                                &lp_with_the_rest,
-                                                &t,
-                                            ),
-                                        }),
-                                        Some(*lp_index),
-                                    ))
-                                },
-                            )?
+                            .try_fold((None, None), |state, lp_index| {
+                                self.associativity_try_fold_handler(
+                                    delta,
+                                    tokens,
+                                    state,
+                                    *lp_index,
+                                    &Associativity::Right,
+                                )
+                            })?
                             .0
                             .unwrap(); // Already checked that lp_indices is non-empty;
                         if lp_indices[0] == 0 {
                             Ok(tail)
                         } else {
                             let head = self.ast_from_tokens(
-                                deltas,
+                                delta,
                                 &tokens[..lp_indices[0]],
                             )?;
-                            Ok(self.combine(deltas, &head, &tail))
+                            Ok(self.combine(delta, &head, &tail))
                         }
-                    }
+                    },
                     Some(Associativity::Left) => lp_indices
                         .iter()
-                        .try_fold(
-                            (None, None),
-                            |(head, prev_lp_index), lp_index| {
-                                let slice = match prev_lp_index {
-                                    Some(i) => &tokens[i..*lp_index],
-                                    None => &tokens[..*lp_index],
-                                };
-                                // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
-                                if slice.is_empty() {
-                                    return Err(ZiaError::AmbiguousExpression);
-                                }
-                                let lp_with_the_rest =
-                                    self.ast_from_tokens(deltas, slice)?;
-                                Ok((
-                                    Some(match head {
-                                        None => lp_with_the_rest,
-                                        Some(h) => self.combine(
-                                            deltas,
-                                            &h,
-                                            &lp_with_the_rest,
-                                        ),
-                                    }),
-                                    Some(*lp_index),
-                                ))
-                            },
-                        )?
+                        .try_fold((None, None), |state, lp_index| {
+                            self.associativity_try_fold_handler(
+                                delta,
+                                tokens,
+                                state,
+                                *lp_index,
+                                &Associativity::Left,
+                            )
+                        })?
                         .0
                         .ok_or(ZiaError::AmbiguousExpression),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
-            }
+            },
         }
+    }
+
+    fn associativity_try_fold_handler(
+        &self,
+        delta: &ContextDelta,
+        tokens: &[String],
+        state: (Option<Rc<SyntaxTree>>, Option<usize>),
+        lp_index: usize,
+        assoc: &Associativity,
+    ) -> ZiaResult<(Option<Rc<SyntaxTree>>, Option<usize>)> {
+        let prev_lp_index = state.1;
+        let slice = match assoc {
+            Associativity::Left => match prev_lp_index {
+                Some(i) => &tokens[i..lp_index],
+                None => &tokens[..lp_index],
+            },
+            Associativity::Right => match prev_lp_index {
+                Some(i) => &tokens[lp_index..i],
+                None => &tokens[lp_index..],
+            },
+        };
+        // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
+        if slice.is_empty() {
+            return Err(ZiaError::AmbiguousExpression);
+        }
+        let edge_index = match assoc {
+            Associativity::Left => tokens.len() - 1,
+            Associativity::Right => 0,
+        };
+        let lp_with_the_rest = if lp_index == edge_index {
+            let edge_syntax =
+                self.ast_from_token(delta, &tokens[edge_index])?;
+            if slice.len() == 1 {
+                edge_syntax
+            } else {
+                match assoc {
+                    Associativity::Left => self.combine(
+                        delta,
+                        &if slice.len() < 3 {
+                            self.ast_from_token(delta, &slice[slice.len() - 1])?
+                        } else {
+                            self.ast_from_tokens(
+                                delta,
+                                &slice[..slice.len() - 1],
+                            )?
+                        },
+                        &edge_syntax,
+                    ),
+                    Associativity::Right => self.combine(
+                        delta,
+                        &edge_syntax,
+                        &if slice.len() < 3 {
+                            self.ast_from_token(delta, &slice[1])?
+                        } else {
+                            self.ast_from_tokens(delta, &slice[1..])?
+                        },
+                    ),
+                }
+            }
+        } else {
+            self.ast_from_tokens(delta, slice)?
+        };
+        let edge = state.0;
+        Ok((
+            Some(match edge {
+                None => lp_with_the_rest,
+                Some(e) => match assoc {
+                    Associativity::Left => {
+                        self.combine(delta, &e, &lp_with_the_rest)
+                    },
+                    Associativity::Right => {
+                        self.combine(delta, &lp_with_the_rest, &e)
+                    },
+                },
+            }),
+            Some(lp_index),
+        ))
     }
 
     fn lowest_precedence_info(
@@ -419,7 +451,7 @@ impl SnapShot {
                                 vec![this_index.unwrap()],
                                 this_index,
                             ))
-                        }
+                        },
                         // syntax of token has a higher precedence than some previous lowest precendence syntax
                         Some(FALSE) => {
                             return Ok((
@@ -427,7 +459,7 @@ impl SnapShot {
                                 lp_indices,
                                 this_index,
                             ))
-                        }
+                        },
                         _ => {
                             let comparing_between_tokens_reversed = self
                                 .combine(
@@ -452,7 +484,7 @@ impl SnapShot {
                                         vec![this_index.unwrap()],
                                         this_index,
                                     ))
-                                }
+                                },
                                 // syntax of token has a higher precedence than some previous lowest precendence syntax
                                 Some(TRUE) => {
                                     return Ok((
@@ -460,10 +492,10 @@ impl SnapShot {
                                         lp_indices,
                                         this_index,
                                     ))
-                                }
+                                },
                                 _ => (),
                             };
-                        }
+                        },
                     };
                 }
                 // syntax of token has neither higher or lower precedence than the lowest precedence syntax
@@ -716,7 +748,7 @@ impl SnapShot {
                         + " "
                         + &r.to_string()
                         + ")"
-                }
+                },
             },
         );
         let right_string = right.get_expansion().map_or_else(
@@ -728,7 +760,7 @@ impl SnapShot {
                         + " "
                         + &r.to_string()
                         + ")"
-                }
+                },
                 Associativity::Right => l.to_string() + " " + &r.to_string(),
             },
         );
@@ -843,7 +875,7 @@ impl Apply for SnapShot {
                 ..
             } => {
                 self.string_map.insert(s.to_string(), *after);
-            }
+            },
             StringDelta::Insert(id) => self.add_string(*id, s),
             StringDelta::Remove(_) => self.remove_string(s),
         });
@@ -861,13 +893,13 @@ impl Apply for SnapShot {
                         if v {
                             self.variables.insert(id);
                         }
-                    }
+                    },
                     ConceptDelta::Remove(_) => {
                         self.blindly_remove_concept(id);
                         if v {
                             self.variables.remove(&id);
                         }
-                    }
+                    },
                     ConceptDelta::Update(d) => self.write_concept(id).apply(d),
                 }
             }
@@ -909,7 +941,7 @@ fn parse_letter(
         '(' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level + 1)
-        }
+        },
         ')' => {
             if parenthesis_level > 0 {
                 parenthesis_level -= 1;
@@ -920,16 +952,16 @@ fn parse_letter(
                     symbol: "(",
                 })
             }
-        }
+        },
         ' ' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level)
-        }
+        },
         '\n' | '\r' => Ok(parenthesis_level),
         _ => {
             token.push(letter);
             Ok(parenthesis_level)
-        }
+        },
     }
 }
 
