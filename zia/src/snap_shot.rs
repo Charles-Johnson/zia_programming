@@ -304,8 +304,23 @@ impl SnapShot {
                                         Some(i) => &tokens[*lp_index..i],
                                         None => &tokens[*lp_index..],
                                     };
-                                    let lp_with_the_rest =
-                                        self.ast_from_tokens(deltas, slice)?;
+                                    let lp_with_the_rest = if *lp_index == 0 {
+                                        if slice.len() == 1 {
+                                            self.ast_from_token(deltas, &tokens[0])?
+                                        } else {
+                                            self.combine(
+                                                deltas,
+                                                &self.ast_from_token(deltas, &tokens[0])?,
+                                                &if slice.len() < 3 {
+                                                    self.ast_from_token(deltas, &slice[1])?
+                                                } else {
+                                                    self.ast_from_tokens(deltas, &slice[1..])?
+                                                }
+                                            )
+                                        }
+                                    } else {
+                                        self.ast_from_tokens(deltas, slice)?
+                                    };
                                     Ok((
                                         Some(match tail {
                                             None => lp_with_the_rest,
