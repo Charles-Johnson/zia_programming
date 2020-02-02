@@ -1,6 +1,6 @@
 [package]
 name = "izia"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
 description = "Interactive Shell for the Zia Programming Language"
 repository = "https://github.com/Charles-Johnson/zia_programming"
@@ -13,5 +13,5 @@ license = "GPL-3.0"
 maintenance = {status = "actively-developed"}
 
 [dependencies]
-zia = { path = "../zia", version = "0.4.0"}
+zia = { path = "../zia", version = "0.5.0"}
 linefeed = "0.5.3"

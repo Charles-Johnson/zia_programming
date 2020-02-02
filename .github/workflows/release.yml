@@ -39,10 +39,20 @@ jobs:
       - name: Release test_zia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./test_zia
+
+      - name: Sleep for 30 seconds
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
       
       - name: Release zia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./zia
+
+      - name: Sleep for 30 seconds
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
 
       - name: Release izia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
