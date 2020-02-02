@@ -1,6 +1,9 @@
 # zia
 
+[![Crates.io](https://img.shields.io/crates/v/zia.svg)](https://crates.io/crates/zia)
+
 ## Interpreter for the Zia programming language
+
 The Zia project aims to develop a programming language that can be used to program itself.
 Instead of storing the source code as plain text and editing the raw text (which can easily break
 the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
