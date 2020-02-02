@@ -21,7 +21,7 @@ extern crate zia;
 
 // Needed for assume_abstract macro which is needed for let_definition macro
 use test_zia::CONCRETE_SYMBOLS;
-use zia::{Context, ZiaError};
+use zia::{ZiaError, NEW_CONTEXT};
 
 proptest! {
     #[test]
@@ -37,7 +37,7 @@ proptest! {
         prop_assume!((a != d || b != e) && c != f); // To prevent redundant reduction
         prop_assume!((a != c) || (b != f)); // Without this assumption, (a b) d e -> c is possibly true
         prop_assume!((d != c) || (e != f)); // Without this assumption, (a b) d e -> f is possibly true
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
         reduce_pair!(cont, d, e, f);
         let_definition!(cont, g, c, f);
@@ -52,7 +52,7 @@ proptest! {
     fn sneeky_infinite_reduction_chain(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d);
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let reduction = format!("let ({} {}) -> {}", c, d, a);
         assert_eq!(cont.execute(&reduction), "");
         let definition = format!("let {} := {} {} {}", a, b, c, d);
@@ -73,7 +73,7 @@ proptest! {
         assume_abstract!(a);
         assume_symbols!(a, b, c, d, e);
         prop_assume!(a != b && a != c && a != d); // To avoid a circular definition
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         let definition = format!("let {} := {} {} {}", a, b, c, d);
         assert_eq!(cont.execute(&definition), "");
         reduce_pair!(cont, c, d, e);

@@ -1,6 +1,6 @@
 [package]
 name = "zia"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Charles Johnson <charlesthomasjohnson0@gmail.com>"]
 description = "Interpreter Library for the Zia Programming Language"
 repository = "https://github.com/Charles-Johnson/zia_programming"
@@ -16,17 +16,20 @@ maintenance = {status = "actively-developed"}
 [lib]
 name = "zia"
 crate-type = ["lib"]
+path = "src/lib.rs"
 
 [dependencies]
+lazy_static = "1.2.0"
 maplit = "1.0.2"
 snafu = "0.5.0"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 slog = { version="2.4.1", features=["max_level_info", "release_max_level_warn"]}
 slog-term = "2.4.0"
 
 [dev-dependencies]
-test_zia = {path="../test_zia", version="0.4.0"}
+test_zia = {path="../test_zia", version="0.5.0"}
 proptest = "0.9.1"
 criterion = "0.3.0"
 
