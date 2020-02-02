@@ -16,6 +16,7 @@ maintenance = {status = "actively-developed"}
 [lib]
 name = "zia"
 crate-type = ["lib"]
+path = "src/lib.rs"
 
 [dependencies]
 lazy_static = "1.2.0"

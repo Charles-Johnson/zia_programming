@@ -2,5 +2,8 @@
     "files.watcherExclude": {
         "**/target": true
     },
-    "search.usePCRE2": true
+    "search.usePCRE2": true,
+    "files.exclude": {
+        "**/.git": false,
+    }
 }

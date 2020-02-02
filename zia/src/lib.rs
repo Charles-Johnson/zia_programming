@@ -19,8 +19,9 @@
 //! Instead of storing the source code as plain text and editing the raw text (which can easily break
 //! the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
 //! used in other programs. All the programming is done using an interactive shell such as
-//! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
-//! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.
+//! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia) or via an online IDE 
+//! (https://zia-lang.org). The commands sent are interpreted based on the `Context`. They are used to
+//! incrementally modify, test and debug the `Context`.
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions
 //! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect
@@ -53,7 +54,7 @@
 //! assert_eq!(context.execute("let default > prec ->"), "");
 //! assert_eq!(context.execute("let (prec ->) > prec let"), "");
 //! // Cannot yet infer partial order. Requires implication to express transitive property
-//!  assert_eq!(context.execute("let default > prec let"), "");
+//! assert_eq!(context.execute("let default > prec let"), "");
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
 //! assert_eq!(context.execute("let a b -> c"), "");
