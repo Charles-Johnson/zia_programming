@@ -36,7 +36,17 @@ fn set_let_precedence() {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("let default > prec let"), "");
     assert_eq!(context.execute("let a -> b"), "");
-    // assert_eq!(context.execute("a"), "b");
+    assert_eq!(context.execute("a"), "b");
+}
+#[test]
+fn set_reduction_precedence() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let default > prec ->"), "");
+    assert_eq!(context.execute("let (prec ->) > prec let"), "");
+    // Cannot yet infer partial order. Requires implication to express transitive property
+    assert_eq!(context.execute("let default > prec let"), "");
+    assert_eq!(context.execute("let c d -> e"), "");
+    assert_eq!(context.execute("c d"), "e");
 }
 
 proptest! {

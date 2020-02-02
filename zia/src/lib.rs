@@ -48,23 +48,29 @@
 //!
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
+//! 
+//! // Specify operator precedence for `let` and `->`.
+//! assert_eq!(context.execute("let default > prec ->"), "");
+//! assert_eq!(context.execute("let (prec ->) > prec let"), "");
+//! // Cannot yet infer partial order. Requires implication to express transitive property
+//!  assert_eq!(context.execute("let default > prec let"), "");
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
-//! assert_eq!(context.execute("let (a b) -> c"), "");
+//! assert_eq!(context.execute("let a b -> c"), "");
 //! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
-//! assert_eq!(context.execute("let (a b) -> d"), "");
+//! assert_eq!(context.execute("let a b -> d"), "");
 //! assert_eq!(context.execute("a b"), "d");
 //!
 //! // Change the rule so "a b" doesn't reduce any further
-//! assert_eq!(context.execute("let (a b) -> a b"), "");
+//! assert_eq!(context.execute("let a b -> a b"), "");
 //! assert_eq!(context.execute("a b"), "a b");
 //!
 //! // Try to specify a rule that already exists
-//! assert_eq!(context.execute("let (a b) -> a b"), ZiaError::RedundantReduction.to_string());
-//! assert_eq!(context.execute("let (a b) -> c"), "");
-//! assert_eq!(context.execute("let (a b) -> c"), ZiaError::RedundantReduction.to_string());
+//! assert_eq!(context.execute("let a b -> a b"), ZiaError::RedundantReduction.to_string());
+//! assert_eq!(context.execute("let a b -> c"), "");
+//! assert_eq!(context.execute("let a b -> c"), ZiaError::RedundantReduction.to_string());
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let 표시 := label_of"), "");
@@ -77,7 +83,7 @@
 //! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteDefinition.to_string());
 //!
 //! // Try to specify the reduction of concept in terms of itself
-//! assert_eq!(context.execute("let (c d) -> (c d) e"), ZiaError::ExpandingReduction.to_string());
+//! assert_eq!(context.execute("let c d -> (c d) e"), ZiaError::ExpandingReduction.to_string());
 //!
 //! // Determine the truth of a reduction
 //! assert_eq!(context.execute("a -> d"), "true");
@@ -105,7 +111,7 @@
 //! assert_eq!(context.execute("assoc a"), "right");
 //!
 //! // Define patterns
-//! assert_eq!(context.execute("let (_x_ and false) -> false"), "");
+//! assert_eq!(context.execute("let _x_ and false -> false"), "");
 //! assert_eq!(context.execute("foo and false"), "false");
 //! ```
 

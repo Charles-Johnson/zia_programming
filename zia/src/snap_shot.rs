@@ -294,7 +294,7 @@ impl SnapShot {
                 });
                 match assoc? {
                     Some(Associativity::Right) => {
-                        let tail = lp_indices
+                        let tail = dbg!(&lp_indices)
                             .iter()
                             .rev()
                             .try_fold((None, None), |state, lp_index| {
@@ -361,12 +361,12 @@ impl SnapShot {
             return Err(ZiaError::AmbiguousExpression);
         }
         let edge_index = match assoc {
-            Associativity::Left => tokens.len() - 1,
+            Associativity::Left => slice.len() - 1,
             Associativity::Right => 0,
         };
         let lp_with_the_rest = if lp_index == edge_index {
             let edge_syntax =
-                self.ast_from_token(delta, &tokens[edge_index])?;
+                self.ast_from_token(delta, &slice[edge_index])?;
             if slice.len() == 1 {
                 edge_syntax
             } else {
@@ -413,7 +413,7 @@ impl SnapShot {
             Some(lp_index),
         ))
     }
-
+    /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
     fn lowest_precedence_info(
         &self,
         delta: &ContextDelta,
@@ -422,12 +422,15 @@ impl SnapShot {
         let precedence_syntax = self.to_ast(delta, PRECEDENCE);
         let greater_than_syntax = self.to_ast(delta, GREATER_THAN);
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
+            // Initially assume no concepts have the lowest precedence 
             (Vec::<Rc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
             |(lowest_precedence_syntax, lp_indices, prev_index), token| {
+                // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
                 let syntax_of_token = self.ast_from_token(delta, token)?;
                 let precedence_of_token =
                     self.combine(delta, &precedence_syntax, &syntax_of_token);
+                // Compare current token's precedence with each currently assumed lowest syntax
                 for syntax in lowest_precedence_syntax.clone() {
                     let precedence_of_syntax =
                         self.combine(delta, &precedence_syntax, &syntax);
@@ -445,6 +448,7 @@ impl SnapShot {
                         .get_concept()
                     {
                         // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                        // reset lowest precedence syntax with just this one
                         Some(TRUE) => {
                             return Ok((
                                 vec![syntax_of_token],
@@ -453,6 +457,7 @@ impl SnapShot {
                             ))
                         },
                         // syntax of token has a higher precedence than some previous lowest precendence syntax
+                        // keep existing lowest precedence syntax as-is
                         Some(FALSE) => {
                             return Ok((
                                 lowest_precedence_syntax,
@@ -478,6 +483,7 @@ impl SnapShot {
                                 .get_concept()
                             {
                                 // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                                // reset lowest precedence syntax with just this one
                                 Some(FALSE) => {
                                     return Ok((
                                         vec![syntax_of_token],
@@ -486,6 +492,7 @@ impl SnapShot {
                                     ))
                                 },
                                 // syntax of token has a higher precedence than some previous lowest precendence syntax
+                                // keep existing lowest precedence syntax as-is
                                 Some(TRUE) => {
                                     return Ok((
                                         lowest_precedence_syntax,
@@ -493,17 +500,19 @@ impl SnapShot {
                                         this_index,
                                     ))
                                 },
+                                // Cannot determine if token has higher or lower precedence than this syntax
+                                // Check other syntax with lowest precedence
                                 _ => (),
                             };
                         },
                     };
                 }
                 // syntax of token has neither higher or lower precedence than the lowest precedence syntax
-                let mut hps = lowest_precedence_syntax;
-                hps.push(syntax_of_token);
-                let mut hi = lp_indices;
-                hi.push(this_index.unwrap());
-                Ok((hps, hi, this_index))
+                let mut lps = lowest_precedence_syntax;
+                lps.push(syntax_of_token);
+                let mut lpi = lp_indices;
+                lpi.push(this_index.unwrap());
+                Ok((lps, lpi, this_index))
             },
         )?;
         Ok(TokenSubsequence {

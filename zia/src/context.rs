@@ -53,7 +53,11 @@ impl Context {
         let string = self
             .snap_shot
             .ast_from_expression(&self.delta, command)
-            .and_then(|a| self.call(&a))
+            .and_then(|a| {
+                #[cfg(not(target_arch = "wasm32"))]
+                info!(self.logger, "ast_from_expression({}) -> {:#?}", command, a);
+                self.call(&a)
+            })
             .unwrap_or_else(|e| e.to_string());
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
