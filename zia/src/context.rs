@@ -55,7 +55,10 @@ impl Context {
             .ast_from_expression(&self.delta, command)
             .and_then(|a| {
                 #[cfg(not(target_arch = "wasm32"))]
-                info!(self.logger, "ast_from_expression({}) -> {:#?}", command, a);
+                info!(
+                    self.logger,
+                    "ast_from_expression({}) -> {:#?}", command, a
+                );
                 self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
