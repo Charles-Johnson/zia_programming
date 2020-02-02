@@ -14,13 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+//! [![Crates.io](https://img.shields.io/crates/v/zia.svg)](https://crates.io/crates/zia)
+//!
 //! # Interpreter for the Zia programming language
+//!
 //! The Zia project aims to develop a programming language that can be used to program itself.
 //! Instead of storing the source code as plain text and editing the raw text (which can easily break
 //! the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
 //! used in other programs. All the programming is done using an interactive shell such as
-//! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia). The commands sent are
-//! interpreted based on the `Context`. They are used to incrementally modify, test and debug the `Context`.
+//! [`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia) or via an [online IDE](https://zia-lang.org).
+//! The commands sent are interpreted based on the `Context`. They are used to incrementally modify, test
+//! and debug the `Context`.
 //!
 //! Expressions for Zia commands represent a binary tree where parentheses group a pair of expressions
 //! and a space separates a pair of expressions. For example `"(ll lr) (rl rr)"` represents a perfect
@@ -37,7 +41,7 @@
 //! of concepts.
 //!
 //! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, ">-", but the labels
+//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, "prec", "deafult", ">" but the labels
 //! can be changed to different symbols for different languages or disciplines.
 //!
 //! # Examples
@@ -49,22 +53,28 @@
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
 //!
+//! // Specify operator precedence for `let` and `->`.
+//! assert_eq!(context.execute("let default > prec ->"), "");
+//! assert_eq!(context.execute("let (prec ->) > prec let"), "");
+//! // Cannot yet infer partial order. Requires implication to express transitive property
+//! assert_eq!(context.execute("let default > prec let"), "");
+//!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
-//! assert_eq!(context.execute("let (a b) -> c"), "");
+//! assert_eq!(context.execute("let a b -> c"), "");
 //! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
-//! assert_eq!(context.execute("let (a b) -> d"), "");
+//! assert_eq!(context.execute("let a b -> d"), "");
 //! assert_eq!(context.execute("a b"), "d");
 //!
 //! // Change the rule so "a b" doesn't reduce any further
-//! assert_eq!(context.execute("let (a b) -> a b"), "");
+//! assert_eq!(context.execute("let a b -> a b"), "");
 //! assert_eq!(context.execute("a b"), "a b");
 //!
 //! // Try to specify a rule that already exists
-//! assert_eq!(context.execute("let (a b) -> a b"), ZiaError::RedundantReduction.to_string());
-//! assert_eq!(context.execute("let (a b) -> c"), "");
-//! assert_eq!(context.execute("let (a b) -> c"), ZiaError::RedundantReduction.to_string());
+//! assert_eq!(context.execute("let a b -> a b"), ZiaError::RedundantReduction.to_string());
+//! assert_eq!(context.execute("let a b -> c"), "");
+//! assert_eq!(context.execute("let a b -> c"), ZiaError::RedundantReduction.to_string());
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let 표시 := label_of"), "");
@@ -77,7 +87,7 @@
 //! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteDefinition.to_string());
 //!
 //! // Try to specify the reduction of concept in terms of itself
-//! assert_eq!(context.execute("let (c d) -> (c d) e"), ZiaError::ExpandingReduction.to_string());
+//! assert_eq!(context.execute("let c d -> (c d) e"), ZiaError::ExpandingReduction.to_string());
 //!
 //! // Determine the truth of a reduction
 //! assert_eq!(context.execute("a -> d"), "true");
@@ -105,10 +115,12 @@
 //! assert_eq!(context.execute("assoc a"), "right");
 //!
 //! // Define patterns
-//! assert_eq!(context.execute("let (_x_ and false) -> false"), "");
+//! assert_eq!(context.execute("let _x_ and false -> false"), "");
 //! assert_eq!(context.execute("foo and false"), "false");
 //! ```
 
+#[macro_use]
+extern crate lazy_static;
 #[macro_use]
 extern crate maplit;
 #[cfg(not(target_arch = "wasm32"))]
@@ -146,3 +158,9 @@ mod snap_shot;
 pub use context::Context;
 
 pub use errors::ZiaError;
+
+// Saves having to construct a new `Context` each time.
+#[macro_export]
+lazy_static! {
+    pub static ref NEW_CONTEXT: Context = Context::new();
+}

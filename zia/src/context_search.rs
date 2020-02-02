@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use constants::{ASSOC, FALSE, REDUCTION, RIGHT, TRUE};
+use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE};
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
 use std::{
@@ -60,6 +60,17 @@ impl<'a> ContextSearch<'a> {
         left.get_concept()
             .and_then(|lc| match lc {
                 ASSOC => Some(self.snap_shot.to_ast(self.delta, RIGHT)),
+                PRECEDENCE
+                    if right
+                        .get_concept()
+                        .and_then(|c| {
+                            self.snap_shot
+                                .find_definition(self.delta, PRECEDENCE, c)
+                        })
+                        .is_none() =>
+                {
+                    Some(self.snap_shot.to_ast(self.delta, DEFAULT))
+                },
                 _ => {
                     self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
                 },
@@ -72,50 +83,44 @@ impl<'a> ContextSearch<'a> {
                             left, rightleft, rightright,
                         )
                     })
-                    .or_else(|| {
-                        let left_result = self.reduce(left);
-                        let right_result = self.reduce(right);
-                        let maybe_subbed_r = right
-                            .get_concept()
-                            .and_then(|r| self.variable_mask.get(&r));
-                        let maybe_subbed_l = left
-                            .get_concept()
-                            .and_then(|l| self.variable_mask.get(&l));
-                        if let (None, None) = (&left_result, &right_result) {
-                            None
-                        } else {
-                            let l = left_result.unwrap_or_else(|| {
-                                maybe_subbed_l.unwrap_or(left).clone()
-                            });
-                            let r = right_result.unwrap_or_else(|| {
-                                maybe_subbed_r.unwrap_or(right).clone()
-                            });
-                            Some(
-                                self.snap_shot
-                                    .contract_pair(self.delta, &l, &r),
-                            )
-                        }
-                    })
-                    .or_else(|| {
-                        self.filter_generalisations_for_pair(left, right)
-                            .iter()
-                            .filter_map(
-                                |(generalisation, variable_to_syntax)| {
-                                    let mut context_search = self.clone();
-                                    context_search
-                                        .variable_mask
-                                        .extend(variable_to_syntax.clone());
-                                    let gen_ast = context_search
-                                        .snap_shot
-                                        .to_ast(self.delta, *generalisation);
-                                    context_search.reduce(&gen_ast).map(|ast| {
-                                        context_search.substitute(&ast)
-                                    })
-                                },
-                            )
-                            .nth(0)
-                    })
+                    .or_else(|| self.recursively_reduce_pair(left, right))
             })
+    }
+
+    fn recursively_reduce_pair(
+        &self,
+        left: &Rc<SyntaxTree>,
+        right: &Rc<SyntaxTree>,
+    ) -> Option<Rc<SyntaxTree>> {
+        let left_result = self.reduce(left);
+        let right_result = self.reduce(right);
+        let maybe_subbed_r =
+            right.get_concept().and_then(|r| self.variable_mask.get(&r));
+        let maybe_subbed_l =
+            left.get_concept().and_then(|l| self.variable_mask.get(&l));
+        if let (None, None) = (&left_result, &right_result) {
+            self.filter_generalisations_for_pair(left, right)
+                .iter()
+                .filter_map(|(generalisation, variable_to_syntax)| {
+                    let mut context_search = self.clone();
+                    context_search
+                        .variable_mask
+                        .extend(variable_to_syntax.clone());
+                    let gen_ast = context_search
+                        .snap_shot
+                        .to_ast(self.delta, *generalisation);
+                    context_search
+                        .reduce(&gen_ast)
+                        .map(|ast| context_search.substitute(&ast))
+                })
+                .nth(0)
+        } else {
+            let l = left_result
+                .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
+            let r = right_result
+                .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
+            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
+        }
     }
 
     fn substitute(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {

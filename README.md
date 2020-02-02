@@ -41,21 +41,55 @@ The repository can be downloaded using Git:
 git clone https://github.com/Charles-Johnson/zia_programming.git
 ```
 
-### Building The Libraries
 
-To build all members in debug mode, simply use the command
+# Testing
 
-```
-cargo build
-```
-
-To run tests:
-
-```
+To test all non-ignored tests:
+```bash
 cargo test
 ```
 
-To optimise runtime performance at the cost of compilation time, append `--release` to the above commands.
+To test all tests in the documentation:
+```bash
+cargo test --doc
+```
+
+To test a specific test:
+```bash
+cargo test specific_test
+```
+
+To run a set of integration tests:
+```bash
+cargo test --test integration_test_filename
+```
+
+# Documentation
+
+To generate API documentation:
+```bash
+cargo doc
+```
+You can then view `./target/doc/zia/index.html` in a web browser
+
+To generate internal documentation:
+```bash
+cargo doc --document-private-items
+```
+
+# Releasing New Versions
+In `./Cargo.toml`:
+```toml
+[package]
+version = x.y.z
+```
+Then run in the terminal the following
+```bash
+git commit -a -m "Releasing zia-x.y.z"
+git tag -a zia-x.y.z HEAD
+cargo package
+cargo publish
+```
 
 ## License
 

@@ -17,17 +17,17 @@
 extern crate proptest;
 extern crate zia;
 
-use zia::{Context, ZiaError};
+use zia::{ZiaError, NEW_CONTEXT};
 
 #[test]
 fn empty_parentheses() {
-    let mut cont = Context::new();
+    let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("()"), ZiaError::EmptyParentheses.to_string());
 }
 proptest! {
     #[test]
     fn ambiguous_expression(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         assert_eq!(cont.execute(&format!("let (assoc {}) -> left", c)), "");
         assert_eq!(
             cont.execute(&format!("{} {} {}", a, b, c)),
@@ -37,7 +37,7 @@ proptest! {
     // No input should crash the interpreter
     #[test]
     fn random_input(a in "\\PC*") {
-        let mut cont = Context::new();
+        let mut cont = NEW_CONTEXT.clone();
         cont.execute(&a);
     }
 }
