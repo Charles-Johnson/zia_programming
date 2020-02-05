@@ -17,6 +17,8 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate proptest;
+#[macro_use]
+extern crate maplit;
 
 use std::collections::HashSet;
 
@@ -51,21 +53,8 @@ macro_rules! assume_symbols {
 // Saves having to construct a new `HashSet` each time.
 #[macro_export]
 lazy_static! {
-    pub static ref CONCRETE_SYMBOLS: HashSet<String> = {
-        let mut cs = HashSet::new();
-        cs.insert("label_of".to_string());
-        cs.insert("let".to_string());
-        cs.insert(":=".to_string());
-        cs.insert("->".to_string());
-        cs.insert("true".to_string());
-        cs.insert("false".to_string());
-        cs.insert("assoc".to_string());
-        cs.insert("right".to_string());
-        cs.insert("left".to_string());
-        cs.insert("prec".to_string());
-        cs.insert("default".to_string());
-        cs.insert(">".to_string());
-        cs
+    pub static ref CONCRETE_SYMBOLS: HashSet<String> = hashset!{
+        "label_of".into(), "let".into(), ":=".into(), "->".into(), "true".into(), "false".into(), "assoc".into(), "right".into(), "left".into(), "prec".into(), "default".into(), ">".into(), "=>".into()
     };
 }
 

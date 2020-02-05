@@ -26,8 +26,8 @@ be possible once more functionality is added. For example, the need to group pai
 in parentheses will be alleviated by functionality to set the relative precedence and associativity
 of concepts.
 
-So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-`"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, "prec", "deafult", ">" but the labels
+So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
+`->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>` and `=>` but the labels
 can be changed to different symbols for different languages or disciplines.
 
 ## Examples
