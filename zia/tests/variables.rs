@@ -24,7 +24,7 @@ proptest! {
     #[test]
     fn single_variable_reduction(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         let mut context = NEW_CONTEXT.clone();
-        assert_eq!(context.execute(&format!("let (_{}_ {}) -> {}", a, b, c)), "");
+        assert_eq!(context.execute(&format!("let _{}_ {} -> {}", a, b, c)), "");
         assert_eq!(context.execute(&format!("{} {}", d, b)), c);
     }
     #[test]
@@ -32,7 +32,7 @@ proptest! {
         prop_assume!(b != c);
         let mut context = NEW_CONTEXT.clone();
         // Define how a + a can be written as 2 a
-        assert_eq!(context.execute(&format!("let (_{0}_ + _{0}_) -> 2 _{0}_", a)), "");
+        assert_eq!(context.execute(&format!("let _{0}_ + _{0}_ -> 2 _{0}_", a)), "");
         // Check whether a + b -> 2 a if a = b
         assert_eq!(context.execute(&format!("{0} + {0}", b)), format!("2 {}", b));
         // Check whether a + b doesn't reduce if a != b

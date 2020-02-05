@@ -39,12 +39,6 @@ use zia::{Context, ZiaError};
 // Construct a new `Context` using the `new` method
 let mut context = Context::new();
 
-// Specify operator precedence for `let` and `->`.
-assert_eq!(context.execute("let default > prec ->"), "");
-assert_eq!(context.execute("let (prec ->) > prec let"), "");
-// Cannot yet infer partial order. Requires implication to express transitive property
-assert_eq!(context.execute("let default > prec let"), "");
-
 // Specify the rule that the concept "a b" reduces to concept "c"
 assert_eq!(context.execute("let a b -> c"), "");
 assert_eq!(context.execute("a b"), "c");
@@ -101,8 +95,8 @@ assert_eq!(context.execute("h i j"), "true");
 assert_eq!(context.execute("assoc a"), "right");
 
 // Define patterns
-assert_eq!(context.execute("let _x_ and false -> false"), "");
-assert_eq!(context.execute("foo and false"), "false");
+assert_eq!(context.execute("let _x_ or true -> true"), "");
+assert_eq!(context.execute("false or true"), "true");
 ```
 
 License: GPL-3.0

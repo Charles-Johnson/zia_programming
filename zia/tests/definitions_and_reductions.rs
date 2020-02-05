@@ -51,10 +51,9 @@ proptest! {
     #[test]
     fn sneeky_infinite_reduction_chain(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
         assume_abstract!(a);
-        assume_symbols!(a, b, c, d);
+        assume_symbols!(b);
         let mut cont = NEW_CONTEXT.clone();
-        let reduction = format!("let ({} {}) -> {}", c, d, a);
-        assert_eq!(cont.execute(&reduction), "");
+        reduce_pair!(cont, c, d, a);
         let definition = format!("let {} := {} {} {}", a, b, c, d);
         assert_eq!(
             cont.execute(&definition),

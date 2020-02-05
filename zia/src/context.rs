@@ -103,6 +103,13 @@ impl Context {
             .zip(&labels)
             .try_for_each(|(concept, string)| self.label(*concept, string))
             .unwrap();
+        self.execute("let default > prec ->");
+        self.execute("let (prec ->) > prec let");
+        // Cannot yet infer partial order. Requires implication to express transitive property
+        self.execute("let default > prec let");
+        self.execute("let true and true -> true");
+        self.execute("let _x_ and _y_ -> false");
+
     }
 
     fn reduce_and_call_pair(

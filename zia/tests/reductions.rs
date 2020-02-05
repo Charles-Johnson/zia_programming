@@ -47,9 +47,9 @@ proptest! {
         // to prevent redundant reductions
         prop_assume!(a != c || b != d);
         let mut cont = NEW_CONTEXT.clone();
-        let reduction0 = format!("let ({} {}) -> {} {}", a, b, c, d);
+        let reduction0 = format!("let {} {} -> {} {}", a, b, c, d);
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let ({} {}) -> {} {}", c, d, a, b);
+        let reduction1 = format!("let {} {} -> {} {}", c, d, a, b);
         prop_assert_eq!(
             cont.execute(&reduction1),
             ZiaError::CyclicReduction.to_string()
@@ -66,7 +66,7 @@ proptest! {
     // A concept should not be able to reduce to something composed of that concept.
     #[test]
     fn infinite_expansion(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
-        let reduction = format!("let ({} {}) -> {} {} {}", a, b, c, a, b);
+        let reduction = format!("let {} {} -> {} {} {}", a, b, c, a, b);
         let mut cont = NEW_CONTEXT.clone();
         assert_eq!(
             cont.execute(&reduction),
@@ -77,11 +77,11 @@ proptest! {
     #[test]
     fn broken_end_chain(d in "a|b|c|d|e", e in "a|b|c|d|e") {
         let mut cont = NEW_CONTEXT.clone();
-        let reduction0 = format!("let (a b) -> c {}", d);
+        let reduction0 = format!("let a b -> c {}", d);
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let (c {}) -> {}", d, e);
+        let reduction1 = format!("let c {} -> {}", d, e);
         assert_eq!(cont.execute(&reduction1), "");
-        let reduction2 = format!("let (c {}) -> c {}", d, d);
+        let reduction2 = format!("let c {} -> c {}", d, d);
         assert_eq!(cont.execute(&reduction2), "");
         let print = format!("a b");
         assert_eq!(cont.execute(&print), format!("c {}", d));
@@ -90,13 +90,13 @@ proptest! {
     #[test]
     fn broken_middle_chain(e in "b|d|e|f|g", f in "a|c|e|f|g", g in "a|b|c|d|e|f|g") {
         let mut cont = NEW_CONTEXT.clone();
-        let reduction0 = format!("let (a b) -> c d");
+        let reduction0 = format!("let a b -> c d");
         assert_eq!(cont.execute(&reduction0), "");
-        let reduction1 = format!("let (c d) -> {} {}", e, f);
+        let reduction1 = format!("let c d -> {} {}", e, f);
         assert_eq!(cont.execute(&reduction1), "");
-        let reduction2 = format!("let ({} {}) -> {}", e, f, g);
+        let reduction2 = format!("let {} {} -> {}", e, f, g);
         assert_eq!(cont.execute(&reduction2), "");
-        let reduction3 = format!("let ({} {}) -> {} {}", e, f, e, f);
+        let reduction3 = format!("let {} {} -> {} {}", e, f, e, f);
         assert_eq!(cont.execute(&reduction3), "");
         let print = format!("a b");
         assert_eq!(cont.execute(&print), format!("{} {}", e, f));
@@ -116,7 +116,7 @@ proptest! {
     #[test]
     fn leapfrog_reduction_rule(d in "a|b|c|d|e", e in "a|b|c|d|e") {
         let mut cont = NEW_CONTEXT.clone();
-        let reduction = format!("let (a b) -> c {}", d);
+        let reduction = format!("let a b -> c {}", d);
         assert_eq!(cont.execute(&reduction), "");
         let a = "a".to_string();
         let b = "b".to_string();
@@ -131,12 +131,12 @@ proptest! {
         prop_assume!(a != c || b != d);
         let mut cont = NEW_CONTEXT.clone();
         reduce_pair!(cont, a, b, c);
-        let reduction = format!("let ({} {}) -> {}", a, b, c);
+        let reduction = format!("let {} {} -> {}", a, b, c);
         assert_eq!(
             cont.execute(&reduction),
             ZiaError::RedundantReduction.to_string()
         );
-        let remove_reduction = format!("let ({} {}) -> {} {}", c, d, c, d);
+        let remove_reduction = format!("let {} {} -> {} {}", c, d, c, d);
         assert_eq!(
             cont.execute(&remove_reduction),
             ZiaError::RedundantReduction.to_string()

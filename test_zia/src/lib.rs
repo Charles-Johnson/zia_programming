@@ -25,7 +25,7 @@ use std::collections::HashSet;
 macro_rules! reduce_pair {
     ($cont:ident, $a:ident, $b:ident, $c:ident) => {
         assume_symbols!($a, $b, $c);
-        let reduction = format!("let ({} {}) -> {}", $a, $b, $c);
+        let reduction = format!("let {} {} -> {}", $a, $b, $c);
         prop_assert_eq!($cont.execute(&reduction), "");
     };
 }
