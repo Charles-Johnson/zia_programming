@@ -871,7 +871,7 @@ impl SnapShot {
             || self.get_reduction_of_composition(deltas, concept),
         )
     }
-    fn concept_len(&self, delta: &ContextDelta) -> usize {
+    pub fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, (cd, _, _)) in &delta.concept {
             if let ConceptDelta::Insert(_) = cd {

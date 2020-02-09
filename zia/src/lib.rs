@@ -41,8 +41,9 @@
 //! of concepts.
 //!
 //! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
-//! `->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>` and `=>` but the labels
-//! can be changed to different symbols for different languages or disciplines.
+//! `->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>`, `=>` and
+//! `exists_such_that` but the labels can be changed to different symbols for different languages or
+//! disciplines.
 //!
 //! # Examples
 //!

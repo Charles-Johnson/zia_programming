@@ -15,7 +15,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE, IMPLICATION};
+use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE, IMPLICATION, EXISTS_SUCH_THAT};
+use context::is_variable;
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
 use std::{
@@ -34,7 +35,7 @@ impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
         let concept = self.snap_shot.read_concept(self.delta, id);
-        dbg!(concept.get_righthand_of().iter().filter_map(|ro| {
+        concept.get_righthand_of().iter().filter_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
             if let Some((IMPLICATION, _)) = roc.get_definition() {
                 roc.get_righthand_of().iter().filter_map(|roro| self.snap_shot.read_concept(self.delta, *roro).get_definition().and_then(|(condition, _)| {
@@ -47,7 +48,7 @@ impl<'a> ContextSearch<'a> {
             } else {
                 None
             }
-        }).nth(0)).or_else(||
+        }).nth(0).or_else(||
         concept.get_reduction().and_then(|n| {
             if self.is_leaf_variable(n) {
                 self.variable_mask.get(&n).cloned()
@@ -317,6 +318,22 @@ impl<'a> ContextSearch<'a> {
                     }
                 })
             },
+            EXISTS_SUCH_THAT if is_variable(&left.to_string()) && left == rightright => {
+                let mut might_exist = false;
+                for truth_value in (0..self.snap_shot.concept_len(self.delta)).filter(|i| !self.is_free_variable(*i)).map(|i|
+                    self.recursively_reduce(&self.snap_shot.to_ast(self.delta, i))
+                ) {
+                    match truth_value.get_concept() {
+                        Some(TRUE) => return Some(truth_value),
+                        Some(FALSE) => (),
+                        _ => might_exist = true,
+                    };
+                }
+                if might_exist {
+                    None
+                } else {
+                    Some(self.snap_shot.to_ast(self.delta, FALSE))
+                }},
             _ => None,
         })
     }

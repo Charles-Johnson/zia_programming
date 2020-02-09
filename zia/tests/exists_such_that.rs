@@ -1,5 +1,5 @@
 //  Library for the Zia programming language.
-// Copyright (C) 2018 to 2019 Charles Johnson
+// Copyright (C) 2020 Charles Johnson
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,17 +13,13 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-pub const LABEL: usize = 0;
-pub const DEFINE: usize = 1;
-pub const REDUCTION: usize = 2;
-pub const LET: usize = 3;
-pub const TRUE: usize = 4;
-pub const FALSE: usize = 5;
-pub const ASSOC: usize = 6;
-pub const RIGHT: usize = 7;
-pub const LEFT: usize = 8;
-pub const PRECEDENCE: usize = 9;
-pub const DEFAULT: usize = 10;
-pub const GREATER_THAN: usize = 11;
-pub const IMPLICATION: usize = 12;
-pub const EXISTS_SUCH_THAT: usize = 13;
+
+extern crate zia;
+
+use zia::NEW_CONTEXT;
+
+#[test]
+fn some_concept_is_true() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("_x_ exists_such_that _x_"), "true");
+}

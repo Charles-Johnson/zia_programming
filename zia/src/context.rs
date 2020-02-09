@@ -86,7 +86,7 @@ impl Context {
         };
         let labels = vec![
             "label_of", ":=", "->", "let", "true", "false", "assoc", "right",
-            "left", "prec", "default", ">", "=>"
+            "left", "prec", "default", ">", "=>", "exists_such_that"
         ];
         let mut counter = 0;
         let concepts: Vec<usize> = from_fn(|| {
