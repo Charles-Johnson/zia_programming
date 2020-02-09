@@ -53,7 +53,7 @@ macro_rules! assume_symbols {
 // Saves having to construct a new `HashSet` each time.
 #[macro_export]
 lazy_static! {
-    pub static ref CONCRETE_SYMBOLS: HashSet<String> = hashset!{
+    pub static ref CONCRETE_SYMBOLS: HashSet<String> = hashset! {
         "label_of".into(), "let".into(), ":=".into(), "->".into(), "true".into(), "false".into(), "assoc".into(), "right".into(), "left".into(), "prec".into(), "default".into(), ">".into(), "=>".into(), "exists_such_that".into()
     };
 }

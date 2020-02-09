@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use concepts::{Concept, format_string};
+use concepts::{format_string, Concept};
 use constants::{
     ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
 };
@@ -690,17 +690,15 @@ impl SnapShot {
         concept_id: usize,
     ) -> Rc<SyntaxTree> {
         let concept = self.read_concept(deltas, concept_id);
-        if let Some(s) = concept.get_string().map_or_else(|| self.get_label(deltas, concept_id), |s| Some(format_string(&s))) {
+        if let Some(s) = concept.get_string().map_or_else(
+            || self.get_label(deltas, concept_id),
+            |s| Some(format_string(&s)),
+        ) {
             Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
         } else {
-            let (left, right) = concept
-                .get_definition()
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Unlabelled concept ({:#?}) with no definition",
-                        concept
-                    )
-                });
+            let (left, right) = concept.get_definition().unwrap_or_else(|| {
+                panic!("Unlabelled concept ({:#?}) with no definition", concept)
+            });
             self.combine(
                 deltas,
                 &self.to_ast(deltas, left),
@@ -804,10 +802,18 @@ impl SnapShot {
                 .and_then(|lc| {
                     righthand.get_concept().and_then(|rc| {
                         self.find_definition(deltas, lc, rc).map(|def| {
-                            self.get_label(deltas, def).map_or_else(|| self.display_joint(deltas, lefthand, righthand), |label| {
-                                label
-                            }).parse::<SyntaxTree>().unwrap()
-                                    .bind_concept(def)
+                            self.get_label(deltas, def)
+                                .map_or_else(
+                                    || {
+                                        self.display_joint(
+                                            deltas, lefthand, righthand,
+                                        )
+                                    },
+                                    |label| label,
+                                )
+                                .parse::<SyntaxTree>()
+                                .unwrap()
+                                .bind_concept(def)
                         })
                     })
                 })
@@ -869,6 +875,7 @@ impl SnapShot {
             || self.get_reduction_of_composition(deltas, concept),
         )
     }
+
     pub fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, (cd, _, _)) in &delta.concept {
@@ -898,8 +905,7 @@ impl Apply for SnapShot {
         });
         let concept_len = self.concept_len(&delta);
         if concept_len > self.concepts.len() {
-            self.concepts
-                .extend(vec![None; concept_len - self.concepts.len()]);
+            self.concepts.extend(vec![None; concept_len - self.concepts.len()]);
         }
         for (id, (cd, v, temporary)) in &delta.concept {
             if !temporary {
@@ -913,10 +919,12 @@ impl Apply for SnapShot {
                     ConceptDelta::Remove(_) => {
                         self.blindly_remove_concept(*id);
                         if *v {
-                            self.variables.remove(&id);
+                            self.variables.remove(id);
                         }
                     },
-                    ConceptDelta::Update(d) => self.write_concept(*id).apply(d.clone()),
+                    ConceptDelta::Update(d) => {
+                        self.write_concept(*id).apply(d.clone())
+                    },
                 }
             }
         }

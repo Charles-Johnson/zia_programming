@@ -15,7 +15,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE, IMPLICATION, EXISTS_SUCH_THAT};
+use constants::{
+    ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
+    REDUCTION, RIGHT, TRUE,
+};
 use context::is_variable;
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
@@ -35,27 +38,53 @@ impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
         let concept = self.snap_shot.read_concept(self.delta, id);
-        concept.get_righthand_of().iter().filter_map(|ro| {
-            let roc = self.snap_shot.read_concept(self.delta, *ro);
-            if let Some((IMPLICATION, _)) = roc.get_definition() {
-                roc.get_righthand_of().iter().filter_map(|roro| self.snap_shot.read_concept(self.delta, *roro).get_definition().and_then(|(condition, _)| {
-                    if let Some(TRUE) = self.reduce(&self.snap_shot.to_ast(self.delta, condition)).and_then(|condition_ast| condition_ast.get_concept()) {
-                        Some(self.snap_shot.to_ast(self.delta, TRUE))
+        concept
+            .get_righthand_of()
+            .iter()
+            .filter_map(|ro| {
+                let roc = self.snap_shot.read_concept(self.delta, *ro);
+                if let Some((IMPLICATION, _)) = roc.get_definition() {
+                    roc.get_righthand_of()
+                        .iter()
+                        .filter_map(|roro| {
+                            self.snap_shot
+                                .read_concept(self.delta, *roro)
+                                .get_definition()
+                                .and_then(|(condition, _)| {
+                                    if let Some(TRUE) = self
+                                        .reduce(
+                                            &self
+                                                .snap_shot
+                                                .to_ast(self.delta, condition),
+                                        )
+                                        .and_then(|condition_ast| {
+                                            condition_ast.get_concept()
+                                        })
+                                    {
+                                        Some(
+                                            self.snap_shot
+                                                .to_ast(self.delta, TRUE),
+                                        )
+                                    } else {
+                                        None
+                                    }
+                                })
+                        })
+                        .nth(0)
+                } else {
+                    None
+                }
+            })
+            .nth(0)
+            .or_else(|| {
+                concept.get_reduction().and_then(|n| {
+                    if self.is_leaf_variable(n) {
+                        self.variable_mask.get(&n).cloned()
                     } else {
-                        None
+                        Some(self.snap_shot.to_ast(self.delta, n))
                     }
-                })).nth(0)
-            } else {
-                None
-            }
-        }).nth(0).or_else(||
-        concept.get_reduction().and_then(|n| {
-            if self.is_leaf_variable(n) {
-                self.variable_mask.get(&n).cloned()
-            } else {
-                Some(self.snap_shot.to_ast(self.delta, n))
-            }
-        }))
+                })
+            })
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
@@ -320,15 +349,27 @@ impl<'a> ContextSearch<'a> {
             },
             EXISTS_SUCH_THAT if is_variable(&left.to_string()) => {
                 let mut might_exist = false;
-                for truth_value in (0..self.snap_shot.concept_len(self.delta)).filter(|i| !self.is_free_variable(*i)).map(|i| {
-                    let mut context_search = self.clone();
-                    context_search.variable_mask.insert(left.get_concept().unwrap(), self.snap_shot.to_ast(self.delta, i));
-                    let mut truth_value = context_search.substitute(rightright);
-                    while let Some(reduced_rightright) = self.reduce(&truth_value) {
-                        truth_value = reduced_rightright;
-                    }
-                    truth_value
-                }) {
+                for truth_value in (0..self.snap_shot.concept_len(self.delta))
+                    .filter_map(|i| {
+                        if self.is_free_variable(i) {
+                            None
+                        } else {
+                            let mut context_search = self.clone();
+                            context_search.variable_mask.insert(
+                                left.get_concept().unwrap(),
+                                self.snap_shot.to_ast(self.delta, i),
+                            );
+                            let mut truth_value =
+                                context_search.substitute(rightright);
+                            while let Some(reduced_rightright) =
+                                self.reduce(&truth_value)
+                            {
+                                truth_value = reduced_rightright;
+                            }
+                            Some(truth_value)
+                        }
+                    })
+                {
                     match truth_value.get_concept() {
                         Some(TRUE) => return Some(truth_value.clone()),
                         Some(FALSE) => (),
@@ -339,7 +380,8 @@ impl<'a> ContextSearch<'a> {
                     None
                 } else {
                     Some(self.snap_shot.to_ast(self.delta, FALSE))
-                }},
+                }
+            },
             _ => None,
         })
     }

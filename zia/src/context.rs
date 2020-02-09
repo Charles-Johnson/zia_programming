@@ -85,8 +85,20 @@ impl Context {
             index
         };
         let labels = vec![
-            "label_of", ":=", "->", "let", "true", "false", "assoc", "right",
-            "left", "prec", "default", ">", "=>", "exists_such_that"
+            "label_of",
+            ":=",
+            "->",
+            "let",
+            "true",
+            "false",
+            "assoc",
+            "right",
+            "left",
+            "prec",
+            "default",
+            ">",
+            "=>",
+            "exists_such_that",
         ];
         let mut counter = 0;
         let concepts: Vec<usize> = from_fn(|| {
@@ -109,7 +121,6 @@ impl Context {
         self.execute("let default > prec let");
         self.execute("let true and true -> true");
         self.execute("let _x_ and _y_ -> false");
-
     }
 
     fn reduce_and_call_pair(

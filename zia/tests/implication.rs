@@ -20,7 +20,7 @@ use zia::NEW_CONTEXT;
 
 #[test]
 fn simple_condition() {
-    let mut context= NEW_CONTEXT.clone();
+    let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("let a => b"), "");
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "true");
@@ -29,7 +29,12 @@ fn simple_condition() {
 #[test]
 fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_"), "");
+    assert_eq!(
+        context.execute(
+            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_"
+        ),
+        ""
+    );
     assert_eq!(context.execute("let a > b"), "");
     assert_eq!(context.execute("let b > c"), "");
     assert_eq!(context.execute("a > c"), "true");
