@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use concepts::Concept;
+use concepts::{Concept, format_string};
 use constants::{
     ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
 };
@@ -687,17 +687,17 @@ impl SnapShot {
     pub fn to_ast(
         &self,
         deltas: &ContextDelta,
-        concept: usize,
+        concept_id: usize,
     ) -> Rc<SyntaxTree> {
-        if let Some(s) = self.get_label(deltas, concept) {
-            Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept))
+        let concept = self.read_concept(deltas, concept_id);
+        if let Some(s) = concept.get_string().map_or_else(|| self.get_label(deltas, concept_id), |s| Some(format_string(&s))) {
+            Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
         } else {
-            let (left, right) = self
-                .read_concept(deltas, concept)
+            let (left, right) = concept
                 .get_definition()
                 .unwrap_or_else(|| {
                     panic!(
-                        "Unlabelled concept ({}) with no definition",
+                        "Unlabelled concept ({:#?}) with no definition",
                         concept
                     )
                 });
@@ -803,13 +803,11 @@ impl SnapShot {
                 .get_concept()
                 .and_then(|lc| {
                     righthand.get_concept().and_then(|rc| {
-                        self.find_definition(deltas, lc, rc).and_then(|def| {
-                            self.get_label(deltas, def).map(|label| {
+                        self.find_definition(deltas, lc, rc).map(|def| {
+                            self.get_label(deltas, def).map_or_else(|| self.display_joint(deltas, lefthand, righthand), |label| {
                                 label
-                                    .parse::<SyntaxTree>()
-                                    .unwrap()
+                            }).parse::<SyntaxTree>().unwrap()
                                     .bind_concept(def)
-                            })
                         })
                     })
                 })

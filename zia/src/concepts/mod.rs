@@ -246,9 +246,13 @@ impl Debug for SpecificPart {
         formatter.write_str(&match *self {
             Self::Concrete => "Concrete".to_string(),
             Self::Abstract(ref ap) => format!("{:#?}", ap),
-            Self::String(ref s) => format!("\"{}\"", s),
+            Self::String(ref s) => format_string(s),
         })
     }
+}
+
+pub fn format_string(s: &str) -> String {
+    format!("\"{}\"", s)
 }
 
 impl Default for SpecificPart {

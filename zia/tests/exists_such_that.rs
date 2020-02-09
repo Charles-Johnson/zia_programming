@@ -23,3 +23,9 @@ fn some_concept_is_true() {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("_x_ exists_such_that _x_"), "true");
 }
+
+#[test]
+fn some_concepts_precedence_is_below_default() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("_x_ exists_such_that default > prec _x_"), "true")
+}

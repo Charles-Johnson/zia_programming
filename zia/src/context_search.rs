@@ -318,13 +318,19 @@ impl<'a> ContextSearch<'a> {
                     }
                 })
             },
-            EXISTS_SUCH_THAT if is_variable(&left.to_string()) && left == rightright => {
+            EXISTS_SUCH_THAT if is_variable(&left.to_string()) => {
                 let mut might_exist = false;
-                for truth_value in (0..self.snap_shot.concept_len(self.delta)).filter(|i| !self.is_free_variable(*i)).map(|i|
-                    self.recursively_reduce(&self.snap_shot.to_ast(self.delta, i))
-                ) {
+                for truth_value in (0..self.snap_shot.concept_len(self.delta)).filter(|i| !self.is_free_variable(*i)).map(|i| {
+                    let mut context_search = self.clone();
+                    context_search.variable_mask.insert(left.get_concept().unwrap(), self.snap_shot.to_ast(self.delta, i));
+                    let mut truth_value = context_search.substitute(rightright);
+                    while let Some(reduced_rightright) = self.reduce(&truth_value) {
+                        truth_value = reduced_rightright;
+                    }
+                    truth_value
+                }) {
                     match truth_value.get_concept() {
-                        Some(TRUE) => return Some(truth_value),
+                        Some(TRUE) => return Some(truth_value.clone()),
                         Some(FALSE) => (),
                         _ => might_exist = true,
                     };
