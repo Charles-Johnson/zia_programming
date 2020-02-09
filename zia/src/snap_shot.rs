@@ -294,7 +294,7 @@ impl SnapShot {
                 });
                 match assoc? {
                     Some(Associativity::Right) => {
-                        let tail = dbg!(&lp_indices)
+                        let tail = lp_indices
                             .iter()
                             .rev()
                             .try_fold((None, None), |state, lp_index| {
@@ -871,6 +871,17 @@ impl SnapShot {
             || self.get_reduction_of_composition(deltas, concept),
         )
     }
+    fn concept_len(&self, delta: &ContextDelta) -> usize {
+        let mut length = self.concepts.len();
+        for (id, (cd, _, _)) in &delta.concept {
+            if let ConceptDelta::Insert(_) = cd {
+                if length <= *id {
+                    length = *id + 1;
+                }
+            }
+        }
+        length
+    }
 }
 
 impl Apply for SnapShot {
@@ -887,28 +898,27 @@ impl Apply for SnapShot {
             StringDelta::Insert(id) => self.add_string(*id, s),
             StringDelta::Remove(_) => self.remove_string(s),
         });
-        for (id, (cd, v, temporary)) in delta.concept {
+        let concept_len = self.concept_len(&delta);
+        if concept_len > self.concepts.len() {
+            self.concepts
+                .extend(vec![None; concept_len - self.concepts.len()]);
+        }
+        for (id, (cd, v, temporary)) in &delta.concept {
             if !temporary {
                 match cd {
                     ConceptDelta::Insert(c) => {
-                        if self.concepts.len() <= id {
-                            self.concepts
-                                .extend(vec![None; id - self.concepts.len()]);
-                            self.concepts.push(Some(c));
-                        } else {
-                            self.concepts[id] = Some(c);
-                        }
-                        if v {
-                            self.variables.insert(id);
+                        self.concepts[*id] = Some(c.clone());
+                        if *v {
+                            self.variables.insert(*id);
                         }
                     },
                     ConceptDelta::Remove(_) => {
-                        self.blindly_remove_concept(id);
-                        if v {
+                        self.blindly_remove_concept(*id);
+                        if *v {
                             self.variables.remove(&id);
                         }
                     },
-                    ConceptDelta::Update(d) => self.write_concept(id).apply(d),
+                    ConceptDelta::Update(d) => self.write_concept(*id).apply(d.clone()),
                 }
             }
         }
