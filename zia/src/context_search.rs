@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use ast::SyntaxTree;
-use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE};
+use constants::{ASSOC, DEFAULT, FALSE, PRECEDENCE, REDUCTION, RIGHT, TRUE, IMPLICATION};
 use context_delta::ContextDelta;
 use snap_shot::SnapShot;
 use std::{
@@ -34,13 +34,27 @@ impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
         let concept = self.snap_shot.read_concept(self.delta, id);
+        dbg!(concept.get_righthand_of().iter().filter_map(|ro| {
+            let roc = self.snap_shot.read_concept(self.delta, *ro);
+            if let Some((IMPLICATION, _)) = roc.get_definition() {
+                roc.get_righthand_of().iter().filter_map(|roro| self.snap_shot.read_concept(self.delta, *roro).get_definition().and_then(|(condition, _)| {
+                    if let Some(TRUE) = self.reduce(&self.snap_shot.to_ast(self.delta, condition)).and_then(|condition_ast| condition_ast.get_concept()) {
+                        Some(self.snap_shot.to_ast(self.delta, TRUE))
+                    } else {
+                        None
+                    }
+                })).nth(0)
+            } else {
+                None
+            }
+        }).nth(0)).or_else(||
         concept.get_reduction().and_then(|n| {
             if self.is_leaf_variable(n) {
                 self.variable_mask.get(&n).cloned()
             } else {
                 Some(self.snap_shot.to_ast(self.delta, n))
             }
-        })
+        }))
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
