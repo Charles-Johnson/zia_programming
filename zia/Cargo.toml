@@ -8,7 +8,7 @@ readme = "README.md"
 keywords = ["interpreter", "language-programming", "tacit", "symbolic"]
 categories = ["science", "parser-implementations", "internationalization", "compression"]
 license = "GPL-3.0"
-edition="2015"
+edition="2018"
 
 [badges]
 maintenance = {status = "actively-developed"}
