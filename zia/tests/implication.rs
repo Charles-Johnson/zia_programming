@@ -13,9 +13,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-
+#![feature(test)]
+extern crate test;
 extern crate zia;
 
+use test::Bencher;
 use zia::NEW_CONTEXT;
 
 #[test]
@@ -38,4 +40,17 @@ fn partial_order_transitivity() {
     assert_eq!(context.execute("let a > b"), "");
     assert_eq!(context.execute("let b > c"), "");
     assert_eq!(context.execute("a > c"), "true");
+}
+
+#[bench]
+fn partial_order_transitivity_bench(b: &mut Bencher) {
+    b.iter(|| {
+        let mut context = NEW_CONTEXT.clone();
+        context.execute(
+            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_"
+        );
+        context.execute("let a > b");
+        context.execute("let b > c");
+        context.execute("a > c");
+    });
 }

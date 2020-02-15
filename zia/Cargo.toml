@@ -8,6 +8,7 @@ readme = "README.md"
 keywords = ["interpreter", "language-programming", "tacit", "symbolic"]
 categories = ["science", "parser-implementations", "internationalization", "compression"]
 license = "GPL-3.0"
+edition="2018"
 
 [badges]
 maintenance = {status = "actively-developed"}
@@ -31,12 +32,3 @@ slog-term = "2.4.0"
 [dev-dependencies]
 test_zia = {path="../test_zia", version="0.5.0"}
 proptest = "0.9.1"
-criterion = "0.3.0"
-
-[[bench]]
-name = "setup"
-harness = false
-
-[[bench]]
-name = "let_reduction"
-harness = false
