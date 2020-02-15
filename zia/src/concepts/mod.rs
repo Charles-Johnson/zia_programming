@@ -16,8 +16,8 @@
 mod abstract_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
-use delta::{Apply, Change, Delta, SetChange};
-use errors::{ZiaError, ZiaResult};
+use crate::delta::{Apply, Change, Delta, SetChange};
+use crate::errors::{ZiaError, ZiaResult};
 use std::{collections::HashSet, fmt::Debug};
 
 /// Data type for any type of concept.

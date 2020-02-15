@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use ast::SyntaxTree;
-use concepts::{format_string, Concept};
-use constants::{
+use crate::ast::SyntaxTree;
+use crate::concepts::{format_string, Concept};
+use crate::constants::{
     ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
 };
-use context_delta::{ConceptDelta, ContextDelta, StringDelta};
-use context_search::ContextSearch;
-use delta::Apply;
-use errors::{ZiaError, ZiaResult};
+use crate::context_delta::{ConceptDelta, ContextDelta, StringDelta};
+use crate::context_search::ContextSearch;
+use crate::delta::Apply;
+use crate::errors::{ZiaError, ZiaResult};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,

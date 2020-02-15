@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use ast::SyntaxTree;
-use constants::{
+use crate::ast::SyntaxTree;
+use crate::constants::{
     ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
     REDUCTION, RIGHT, TRUE,
 };
-use context::is_variable;
-use context_delta::ContextDelta;
-use snap_shot::SnapShot;
+use crate::context::is_variable;
+use crate::context_delta::ContextDelta;
+use crate::snap_shot::SnapShot;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,

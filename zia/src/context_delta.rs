@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use concepts::{Concept, ConceptDelta as CD};
-use delta::{Apply, Delta};
+use crate::concepts::{Concept, ConceptDelta as CD};
+use crate::delta::{Apply, Delta};
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,

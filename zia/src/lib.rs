@@ -150,9 +150,9 @@ mod errors;
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
-pub use context::Context;
+pub use crate::context::Context;
 
-pub use errors::ZiaError;
+pub use crate::errors::ZiaError;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]

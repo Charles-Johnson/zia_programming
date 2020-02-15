@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use errors::{ZiaError, ZiaResult};
+use crate::errors::{ZiaError, ZiaResult};
 use std::{fmt, rc::Rc, str::FromStr};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
