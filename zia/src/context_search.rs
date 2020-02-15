@@ -30,6 +30,20 @@ use std::{
     rc::Rc,
 };
 
+/// Reduces the syntax by using the reduction rules of associated concepts.
+pub fn reduce(
+    context_search: &ContextSearch,
+    ast: &Rc<SyntaxTree>,
+) -> Option<Rc<SyntaxTree>> {
+    ast.get_concept().and_then(|c| context_search.reduce_concept(c)).or_else(
+        || {
+            ast.get_expansion().and_then(|(ref left, ref right)| {
+                context_search.reduce_pair(left, right)
+            })
+        },
+    )
+}
+
 #[derive(Debug)]
 pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
@@ -54,16 +68,15 @@ impl<'a> ContextSearch<'a> {
                                 .read_concept(self.delta, *roro)
                                 .get_definition()
                                 .and_then(|(condition, _)| {
-                                    if let Some(TRUE) = self
-                                        .reduce(
-                                            &self
-                                                .snap_shot
-                                                .to_ast(self.delta, condition),
-                                        )
-                                        .and_then(|condition_ast| {
-                                            condition_ast.get_concept()
-                                        })
-                                    {
+                                    if let Some(TRUE) = reduce(
+                                        self,
+                                        &self
+                                            .snap_shot
+                                            .to_ast(self.delta, condition),
+                                    )
+                                    .and_then(|condition_ast| {
+                                        condition_ast.get_concept()
+                                    }) {
                                         Some(
                                             self.snap_shot
                                                 .to_ast(self.delta, TRUE),
@@ -90,14 +103,6 @@ impl<'a> ContextSearch<'a> {
             })
     }
 
-    /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
-        ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
-            ast.get_expansion()
-                .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
-        })
-    }
-
     // Reduces a syntax tree based on the properties of the left and right branches
     fn reduce_pair(
         &self,
@@ -118,9 +123,10 @@ impl<'a> ContextSearch<'a> {
                 {
                     Some(self.snap_shot.to_ast(self.delta, DEFAULT))
                 },
-                _ => {
-                    self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
-                },
+                _ => self
+                    .variable_mask
+                    .get(&lc)
+                    .and_then(|ast| reduce(self, ast)),
             })
             .or_else(|| {
                 right
@@ -139,8 +145,8 @@ impl<'a> ContextSearch<'a> {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Option<Rc<SyntaxTree>> {
-        let left_result = self.reduce(left);
-        let right_result = self.reduce(right);
+        let left_result = reduce(self, left);
+        let right_result = reduce(self, right);
         let maybe_subbed_r =
             right.get_concept().and_then(|r| self.variable_mask.get(&r));
         let maybe_subbed_l =
@@ -156,8 +162,7 @@ impl<'a> ContextSearch<'a> {
                     let gen_ast = context_search
                         .snap_shot
                         .to_ast(self.delta, *generalisation);
-                    context_search
-                        .reduce(&gen_ast)
+                    reduce(&context_search, &gen_ast)
                         .map(|ast| context_search.substitute(&ast))
                 })
                 .nth(0)
@@ -327,7 +332,7 @@ impl<'a> ContextSearch<'a> {
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     pub fn recursively_reduce(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
-        match self.reduce(ast) {
+        match reduce(self, ast) {
             Some(ref a) => self.recursively_reduce(a),
             None => ast.clone(),
         }
@@ -365,7 +370,7 @@ impl<'a> ContextSearch<'a> {
                             let mut truth_value =
                                 context_search.substitute(rightright);
                             while let Some(reduced_rightright) =
-                                self.reduce(&truth_value)
+                                reduce(self, &truth_value)
                             {
                                 truth_value = reduced_rightright;
                             }
@@ -408,7 +413,7 @@ impl<'a> ContextSearch<'a> {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> Option<bool> {
-        self.reduce(left).and_then(|reduced_left| {
+        reduce(self, left).and_then(|reduced_left| {
             if &reduced_left == right {
                 Some(true)
             } else {
