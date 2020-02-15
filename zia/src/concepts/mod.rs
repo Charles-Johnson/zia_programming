@@ -16,8 +16,10 @@
 mod abstract_part;
 
 pub use self::abstract_part::{AbstractDelta, AbstractPart};
-use crate::delta::{Apply, Change, Delta, SetChange};
-use crate::errors::{ZiaError, ZiaResult};
+use crate::{
+    delta::{Apply, Change, Delta, SetChange},
+    errors::{ZiaError, ZiaResult},
+};
 use maplit::hashset;
 use std::{collections::HashSet, fmt::Debug};
 

@@ -14,6 +14,7 @@ dependencies = ["fmt_check", "clippy", "test"]
 [tasks.test]
 description = "Run tests. i.e.: 'cargo make test'."
 clear = true
+toolchain = "nightly"
 command = "cargo"
 args = ["test"]
 

@@ -14,14 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::ast::SyntaxTree;
-use crate::constants::{
-    ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
-    REDUCTION, RIGHT, TRUE,
+use crate::{
+    ast::SyntaxTree,
+    constants::{
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
+        REDUCTION, RIGHT, TRUE,
+    },
+    context::is_variable,
+    context_delta::ContextDelta,
+    snap_shot::SnapShot,
 };
-use crate::context::is_variable;
-use crate::context_delta::ContextDelta;
-use crate::snap_shot::SnapShot;
 use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet},

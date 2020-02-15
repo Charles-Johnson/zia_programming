@@ -14,18 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::ast::SyntaxTree;
-use crate::concepts::{AbstractPart, Concept};
-use crate::constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
-use crate::context_delta::{
-    update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
+use crate::{
+    ast::SyntaxTree,
+    concepts::{AbstractPart, Concept},
+    constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
+    context_delta::{
+        update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
+    },
+    context_search::ContextSearch,
+    delta::{Apply, Delta},
+    errors::{map_err_variant, ZiaError, ZiaResult},
+    snap_shot::SnapShot,
 };
-use crate::context_search::ContextSearch;
-use crate::delta::{Apply, Delta};
-use crate::errors::{map_err_variant, ZiaError, ZiaResult};
 #[cfg(not(target_arch = "wasm32"))]
-use slog::{Drain, Logger, info, o};
-use crate::snap_shot::SnapShot;
+use slog::{info, o, Drain, Logger};
 use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 
 #[derive(Clone)]

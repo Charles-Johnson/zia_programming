@@ -47,7 +47,7 @@ fn partial_order_transitivity_bench(b: &mut Bencher) {
     b.iter(|| {
         let mut context = NEW_CONTEXT.clone();
         context.execute(
-            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_"
+            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
         );
         context.execute("let a > b");
         context.execute("let b > c");
