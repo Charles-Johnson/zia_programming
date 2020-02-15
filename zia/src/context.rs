@@ -24,7 +24,7 @@ use crate::context_search::ContextSearch;
 use crate::delta::{Apply, Delta};
 use crate::errors::{map_err_variant, ZiaError, ZiaResult};
 #[cfg(not(target_arch = "wasm32"))]
-use slog::{Drain, Logger};
+use slog::{Drain, Logger, info, o};
 use crate::snap_shot::SnapShot;
 use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
 

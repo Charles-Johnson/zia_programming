@@ -22,6 +22,7 @@ use crate::constants::{
 use crate::context::is_variable;
 use crate::context_delta::ContextDelta;
 use crate::snap_shot::SnapShot;
+use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,

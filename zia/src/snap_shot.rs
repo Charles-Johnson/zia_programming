@@ -23,6 +23,7 @@ use crate::context_delta::{ConceptDelta, ContextDelta, StringDelta};
 use crate::context_search::ContextSearch;
 use crate::delta::Apply;
 use crate::errors::{ZiaError, ZiaResult};
+use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
