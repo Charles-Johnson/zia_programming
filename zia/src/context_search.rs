@@ -35,7 +35,10 @@ pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
+    cache: ContextCache<'a>,
 }
+
+type ContextCache<'a> = HashMap<String, Option<Rc<SyntaxTree>>>;
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
@@ -92,10 +95,11 @@ impl<'a> ContextSearch<'a> {
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
+        self.clone().cache.entry(ast.to_string()).or_insert_with(||
         ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
             ast.get_expansion()
                 .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
-        })
+        })).clone()
     }
 
     // Reduces a syntax tree based on the properties of the left and right branches
@@ -424,6 +428,7 @@ impl<'a> From<(&'a SnapShot, &'a ContextDelta)> for ContextSearch<'a> {
             snap_shot: context.0,
             variable_mask: hashmap! {},
             delta: context.1,
+            cache: ContextCache::default(),
         }
     }
 }
@@ -434,6 +439,7 @@ impl<'a> Clone for ContextSearch<'a> {
             snap_shot: self.snap_shot,
             variable_mask: self.variable_mask.clone(),
             delta: self.delta,
+            cache: self.cache.clone(),
         }
     }
 }
