@@ -21,7 +21,7 @@ use crate::{
         ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
     },
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
-    context_search::{reduce, ContextSearch},
+    context_search::ContextSearch,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
 };
@@ -783,7 +783,7 @@ impl SnapShot {
     ) -> Option<Associativity> {
         let assoc_of_ast =
             self.combine(deltas, &self.to_ast(deltas, ASSOC), ast);
-        reduce(&ContextSearch::from((self, deltas)), &assoc_of_ast).and_then(
+        ContextSearch::from((self, deltas)).reduce(&assoc_of_ast).and_then(
             |ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),

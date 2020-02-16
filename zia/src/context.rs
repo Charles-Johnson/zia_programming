@@ -21,7 +21,7 @@ use crate::{
     context_delta::{
         update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
     },
-    context_search::{reduce, ContextSearch},
+    context_search::ContextSearch,
     delta::{Apply, Delta},
     errors::{map_err_variant, ZiaError, ZiaResult},
     snap_shot::SnapShot,
@@ -131,9 +131,9 @@ impl Context {
         right: &Rc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let reduced_left =
-            reduce(&ContextSearch::from((&self.snap_shot, &self.delta)), left);
+            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(left);
         let reduced_right =
-            reduce(&ContextSearch::from((&self.snap_shot, &self.delta)), right);
+            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
