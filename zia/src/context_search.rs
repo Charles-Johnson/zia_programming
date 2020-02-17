@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use dashmap::DashMap;
 use crate::{
     ast::SyntaxTree,
     constants::{
@@ -35,10 +36,10 @@ pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
-    cache: ContextCache<'a>,
+    cache: ContextCache,
 }
 
-type ContextCache<'a> = HashMap<String, Option<Rc<SyntaxTree>>>;
+type ContextCache = DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>;
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
@@ -95,11 +96,17 @@ impl<'a> ContextSearch<'a> {
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
-        self.clone().cache.entry(ast.to_string()).or_insert_with(||
-        ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
-            ast.get_expansion()
-                .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
-        })).clone()
+        self.cache.get(ast).map(|r| r.as_ref().cloned()).unwrap_or_else(|| {
+            let result = ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
+                ast.get_expansion()
+                    .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
+            });
+            if !ast.is_variable() && !(&result).as_ref().map_or(false, |r| r == ast) {
+
+                self.cache.insert(ast.clone(), result.clone());
+            }
+            result
+        })
     }
 
     // Reduces a syntax tree based on the properties of the left and right branches

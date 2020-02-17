@@ -13,8 +13,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use crate::errors::{ZiaError, ZiaResult};
-use std::{fmt, rc::Rc, str::FromStr};
+use crate::{
+    context::is_variable,
+    errors::{ZiaError, ZiaResult}
+};
+use std::{fmt, rc::Rc, str::FromStr, hash::{Hash, Hasher}};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone, Debug)]
@@ -37,7 +40,7 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
 impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Rc<Self>) -> bool {
-        self.to_string() == other.to_string()
+        self.to_string() == other.to_string() && self.concept == other.concept && self.expansion == other.expansion
     }
 }
 
@@ -57,6 +60,19 @@ impl FromStr for SyntaxTree {
             concept: None,
             expansion: None,
         })
+    }
+}
+
+impl Eq for SyntaxTree {}
+
+impl Hash for SyntaxTree {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.syntax.hash(state);
+        self.concept.hash(state);
+        self.expansion.as_ref().map(|(l, r)| {
+            l.hash(state);
+            r.hash(state);
+        });
     }
 }
 
@@ -93,5 +109,17 @@ impl SyntaxTree {
 
     pub const fn get_concept(&self) -> Option<usize> {
         self.concept
+    }
+
+    pub fn is_variable(&self) -> bool {
+        if is_variable(&self.syntax) {
+            true
+        } else {
+            if let Some((l, r)) = self.get_expansion() {
+                is_variable(&l.syntax) || is_variable(&r.syntax)
+            } else {
+                false
+            }
+        }
     }
 }
