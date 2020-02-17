@@ -101,7 +101,7 @@ impl<'a> ContextSearch<'a> {
                 ast.get_expansion()
                     .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
             });
-            if !ast.is_variable() && !(&result).as_ref().map_or(false, |r| r == ast) {
+            if !(&result).as_ref().map_or(false, |r| r == ast) {
 
                 self.cache.insert(ast.clone(), result.clone());
             }
