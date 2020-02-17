@@ -40,7 +40,7 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
 impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Rc<Self>) -> bool {
-        self.to_string() == other.to_string() && self.concept == other.concept && self.expansion == other.expansion
+        self.to_string() == other.to_string() && self.concept == other.concept
     }
 }
 
@@ -69,10 +69,6 @@ impl Hash for SyntaxTree {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.syntax.hash(state);
         self.concept.hash(state);
-        self.expansion.as_ref().map(|(l, r)| {
-            l.hash(state);
-            r.hash(state);
-        });
     }
 }
 
