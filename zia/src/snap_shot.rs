@@ -203,14 +203,13 @@ impl SnapShot {
         self.read_concept(deltas, concept)
             .get_righthand_of()
             .iter()
-            .filter(|candidate| {
+            .find(|candidate| {
                 self.read_concept(deltas, **candidate)
                     .get_definition()
                     .expect("Candidate should have a definition!")
                     .0
                     == LABEL
             })
-            .nth(0)
             .cloned()
     }
 
@@ -238,12 +237,11 @@ impl SnapShot {
         self.read_concept(deltas, con)
             .get_righthand_of()
             .iter()
-            .filter_map(|concept| {
+            .find_map(|concept| {
                 self.read_concept(deltas, *concept)
                     .get_definition()
                     .filter(|(left, _)| *left != LABEL)
             })
-            .nth(0)
             .is_none()
     }
 

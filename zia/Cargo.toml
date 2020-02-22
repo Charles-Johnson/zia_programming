@@ -20,7 +20,7 @@ crate-type = ["lib"]
 path = "src/lib.rs"
 
 [dependencies]
-dashmap = "3.4.4"
+dashmap = "3.5.0"
 lazy_static = "1.2.0"
 maplit = "1.0.2"
 snafu = "0.5.0"

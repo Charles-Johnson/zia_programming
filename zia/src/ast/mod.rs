@@ -15,9 +15,14 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 use crate::{
     context::is_variable,
-    errors::{ZiaError, ZiaResult}
+    errors::{ZiaError, ZiaResult},
 };
-use std::{fmt, rc::Rc, str::FromStr, hash::{Hash, Hasher}};
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+    rc::Rc,
+    str::FromStr,
+};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone, Debug)]
@@ -110,12 +115,10 @@ impl SyntaxTree {
     pub fn is_variable(&self) -> bool {
         if is_variable(&self.syntax) {
             true
+        } else if let Some((l, r)) = self.get_expansion() {
+            is_variable(&l.syntax) || is_variable(&r.syntax)
         } else {
-            if let Some((l, r)) = self.get_expansion() {
-                is_variable(&l.syntax) || is_variable(&r.syntax)
-            } else {
-                false
-            }
+            false
         }
     }
 }

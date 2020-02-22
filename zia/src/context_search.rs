@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use dashmap::DashMap;
 use crate::{
     ast::SyntaxTree,
     constants::{
@@ -25,6 +24,7 @@ use crate::{
     context_delta::ContextDelta,
     snap_shot::SnapShot,
 };
+use dashmap::DashMap;
 use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet},
@@ -39,7 +39,7 @@ pub struct ContextSearch<'a> {
     cache: ContextCache,
 }
 
-type ContextCache = DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>;
+type ContextCache = Rc<DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>>;
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
@@ -48,41 +48,36 @@ impl<'a> ContextSearch<'a> {
         concept
             .get_righthand_of()
             .iter()
-            .filter_map(|ro| {
+            .find_map(|ro| {
                 let roc = self.snap_shot.read_concept(self.delta, *ro);
                 if let Some((IMPLICATION, _)) = roc.get_definition() {
-                    roc.get_righthand_of()
-                        .iter()
-                        .filter_map(|roro| {
-                            self.snap_shot
-                                .read_concept(self.delta, *roro)
-                                .get_definition()
-                                .and_then(|(condition, _)| {
-                                    if let Some(TRUE) = self
-                                        .reduce(
-                                            &self
-                                                .snap_shot
-                                                .to_ast(self.delta, condition),
-                                        )
-                                        .and_then(|condition_ast| {
-                                            condition_ast.get_concept()
-                                        })
-                                    {
-                                        Some(
-                                            self.snap_shot
-                                                .to_ast(self.delta, TRUE),
-                                        )
-                                    } else {
-                                        None
-                                    }
-                                })
-                        })
-                        .nth(0)
+                    roc.get_righthand_of().iter().find_map(|roro| {
+                        self.snap_shot
+                            .read_concept(self.delta, *roro)
+                            .get_definition()
+                            .and_then(|(condition, _)| {
+                                if let Some(TRUE) = self
+                                    .reduce(
+                                        &self
+                                            .snap_shot
+                                            .to_ast(self.delta, condition),
+                                    )
+                                    .and_then(|condition_ast| {
+                                        condition_ast.get_concept()
+                                    })
+                                {
+                                    Some(
+                                        self.snap_shot.to_ast(self.delta, TRUE),
+                                    )
+                                } else {
+                                    None
+                                }
+                            })
+                    })
                 } else {
                     None
                 }
             })
-            .nth(0)
             .or_else(|| {
                 concept.get_reduction().and_then(|n| {
                     if self.is_leaf_variable(n) {
@@ -96,16 +91,25 @@ impl<'a> ContextSearch<'a> {
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
-        self.cache.get(ast).map(|r| r.as_ref().cloned()).unwrap_or_else(|| {
-            let result = ast.get_concept().and_then(|c| self.reduce_concept(c)).or_else(|| {
-                ast.get_expansion()
-                    .and_then(|(ref left, ref right)| self.reduce_pair(left, right))
-            });
-            if (&result).as_ref().map_or(true, |r| r != ast) {
-                self.cache.insert(ast.clone(), result.clone());
-            }
-            result
-        })
+        self.cache.get(ast).map_or_else(
+            || {
+                let result = ast
+                    .get_concept()
+                    .and_then(|c| self.reduce_concept(c))
+                    .or_else(|| {
+                        ast.get_expansion().and_then(|(ref left, ref right)| {
+                            self.reduce_pair(left, right)
+                        })
+                    });
+                if !ast.is_variable()
+                    && (&result).as_ref().map_or(true, |r| r != ast)
+                {
+                    self.cache.insert(ast.clone(), result.clone());
+                }
+                result
+            },
+            |r| r.as_ref().cloned(),
+        )
     }
 
     // Reduces a syntax tree based on the properties of the left and right branches
@@ -156,9 +160,8 @@ impl<'a> ContextSearch<'a> {
         let maybe_subbed_l =
             left.get_concept().and_then(|l| self.variable_mask.get(&l));
         if let (None, None) = (&left_result, &right_result) {
-            self.filter_generalisations_for_pair(left, right)
-                .iter()
-                .filter_map(|(generalisation, variable_to_syntax)| {
+            self.filter_generalisations_for_pair(left, right).iter().find_map(
+                |(generalisation, variable_to_syntax)| {
                     let mut context_search = self.clone();
                     context_search
                         .variable_mask
@@ -169,8 +172,8 @@ impl<'a> ContextSearch<'a> {
                     context_search
                         .reduce(&gen_ast)
                         .map(|ast| context_search.substitute(&ast))
-                })
-                .nth(0)
+                },
+            )
         } else {
             let l = left_result
                 .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());

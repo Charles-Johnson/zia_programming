@@ -147,7 +147,7 @@ fn main() {
         for line in code_block.split("//! ") {
             block += line;
             line.split("context.execute(\"").nth(1).map(|s| {
-                s.split("\")").nth(0).map(|s| commands.push(s.to_string()))
+                s.split("\")").next().map(|s| commands.push(s.to_string()))
             });
         }
         block += "```\n";

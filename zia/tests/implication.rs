@@ -18,7 +18,7 @@ extern crate test;
 extern crate zia;
 
 use test::Bencher;
-use zia::NEW_CONTEXT;
+use zia::{Context, NEW_CONTEXT};
 
 #[test]
 fn simple_condition() {
@@ -28,8 +28,7 @@ fn simple_condition() {
     assert_eq!(context.execute("b"), "true");
 }
 
-#[test]
-fn partial_order_transitivity() {
+fn partial_order_transitivity() -> Context {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(
         context.execute(
@@ -40,17 +39,17 @@ fn partial_order_transitivity() {
     assert_eq!(context.execute("let a > b"), "");
     assert_eq!(context.execute("let b > c"), "");
     assert_eq!(context.execute("a > c"), "true");
+    context
+}
+#[test]
+fn partial_order_transitivity_test() {
+    partial_order_transitivity();
 }
 
 #[bench]
 fn partial_order_transitivity_bench(b: &mut Bencher) {
+    let mut context = partial_order_transitivity();
     b.iter(|| {
-        let mut context = NEW_CONTEXT.clone();
-        context.execute(
-            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
-        );
-        context.execute("let a > b");
-        context.execute("let b > c");
         context.execute("a > c");
     });
 }
