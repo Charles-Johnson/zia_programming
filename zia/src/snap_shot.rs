@@ -21,7 +21,7 @@ use crate::{
         ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
     },
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
-    context_search::ContextSearch,
+    context_search::{ContextCache, ContextSearch},
     delta::Apply,
     errors::{ZiaError, ZiaResult},
 };
@@ -420,6 +420,7 @@ impl SnapShot {
         delta: &ContextDelta,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
+        let cache = ContextCache::default();
         let precedence_syntax = self.to_ast(delta, PRECEDENCE);
         let greater_than_syntax = self.to_ast(delta, GREATER_THAN);
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
@@ -445,7 +446,7 @@ impl SnapShot {
                             &precedence_of_token,
                         ),
                     );
-                    match ContextSearch::from((self, delta))
+                    match ContextSearch::from((self, delta, &cache))
                         .recursively_reduce(&comparing_between_tokens)
                         .get_concept()
                     {
@@ -478,7 +479,7 @@ impl SnapShot {
                                         &precedence_of_syntax,
                                     ),
                                 );
-                            match ContextSearch::from((self, delta))
+                            match ContextSearch::from((self, delta, &cache))
                                 .recursively_reduce(
                                     &comparing_between_tokens_reversed,
                                 )
@@ -781,13 +782,14 @@ impl SnapShot {
     ) -> Option<Associativity> {
         let assoc_of_ast =
             self.combine(deltas, &self.to_ast(deltas, ASSOC), ast);
-        ContextSearch::from((self, deltas)).reduce(&assoc_of_ast).and_then(
-            |ast| match ast.get_concept() {
+        let cache = ContextCache::default();
+        ContextSearch::from((self, deltas, &cache))
+            .reduce(&assoc_of_ast)
+            .and_then(|ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),
                 _ => None,
-            },
-        )
+            })
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.

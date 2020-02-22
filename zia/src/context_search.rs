@@ -36,10 +36,10 @@ pub struct ContextSearch<'a> {
     snap_shot: &'a SnapShot,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
-    cache: ContextCache,
+    cache: &'a ContextCache,
 }
 
-type ContextCache = Rc<DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>>;
+pub type ContextCache = DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>;
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
@@ -431,16 +431,20 @@ impl<'a> ContextSearch<'a> {
     }
 }
 
-impl<'a> From<(&'a SnapShot, &'a ContextDelta)> for ContextSearch<'a> {
-    fn from(context: (&'a SnapShot, &'a ContextDelta)) -> ContextSearch<'a> {
+impl<'a> From<ContextReferences<'a>> for ContextSearch<'a> {
+    fn from(
+        (snap_shot, delta, cache): ContextReferences<'a>,
+    ) -> ContextSearch<'a> {
         ContextSearch::<'a> {
-            snap_shot: context.0,
+            snap_shot,
             variable_mask: hashmap! {},
-            delta: context.1,
-            cache: ContextCache::default(),
+            delta,
+            cache,
         }
     }
 }
+
+type ContextReferences<'a> = (&'a SnapShot, &'a ContextDelta, &'a ContextCache);
 
 impl<'a> Clone for ContextSearch<'a> {
     fn clone(&self) -> ContextSearch<'a> {
@@ -448,7 +452,7 @@ impl<'a> Clone for ContextSearch<'a> {
             snap_shot: self.snap_shot,
             variable_mask: self.variable_mask.clone(),
             delta: self.delta,
-            cache: self.cache.clone(),
+            cache: self.cache,
         }
     }
 }

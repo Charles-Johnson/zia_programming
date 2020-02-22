@@ -21,7 +21,7 @@ use crate::{
     context_delta::{
         update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
     },
-    context_search::ContextSearch,
+    context_search::{ContextCache, ContextSearch},
     delta::{Apply, Delta},
     errors::{map_err_variant, ZiaError, ZiaResult},
     snap_shot::SnapShot,
@@ -130,10 +130,13 @@ impl Context {
         left: &Rc<SyntaxTree>,
         right: &Rc<SyntaxTree>,
     ) -> ZiaResult<String> {
+        let cache = ContextCache::default();
         let reduced_left =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(left);
+            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+                .reduce(left);
         let reduced_right =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(right);
+            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+                .reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
@@ -160,8 +163,10 @@ impl Context {
         &mut self,
         ast: &Rc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let normal_form = &ContextSearch::from((&self.snap_shot, &self.delta))
-            .recursively_reduce(ast);
+        let cache = ContextCache::default();
+        let normal_form =
+            &ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+                .recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
         } else {
