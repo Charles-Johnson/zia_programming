@@ -20,8 +20,8 @@ use crate::{
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    rc::Rc,
     str::FromStr,
+    sync::Arc,
 };
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
@@ -32,7 +32,7 @@ pub struct SyntaxTree {
     /// Index of the concept that the syntax may represent.
     concept: Option<usize>,
     /// This syntax tree may expand to two syntax trees or not expand further.
-    expansion: Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)>,
+    expansion: Option<(Arc<SyntaxTree>, Arc<SyntaxTree>)>,
 }
 
 impl PartialEq<SyntaxTree> for SyntaxTree {
@@ -42,9 +42,9 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
     }
 }
 
-impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
+impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &Rc<Self>) -> bool {
+    fn eq(&self, other: &Arc<Self>) -> bool {
         self.to_string() == other.to_string() && self.concept == other.concept
     }
 }
@@ -95,14 +95,14 @@ impl SyntaxTree {
     }
 
     /// An expression does have an expansion while a symbol does not.
-    pub fn get_expansion(&self) -> Option<(Rc<Self>, Rc<Self>)> {
+    pub fn get_expansion(&self) -> Option<(Arc<Self>, Arc<Self>)> {
         self.expansion.clone()
     }
 
     pub fn bind_pair(
         mut self,
-        lefthand: &Rc<Self>,
-        righthand: &Rc<Self>,
+        lefthand: &Arc<Self>,
+        righthand: &Arc<Self>,
     ) -> Self {
         self.expansion = Some((lefthand.clone(), righthand.clone()));
         self

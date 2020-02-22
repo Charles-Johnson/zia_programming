@@ -26,9 +26,10 @@ use crate::{
 };
 use dashmap::DashMap;
 use maplit::hashmap;
+use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
-    rc::Rc,
+    sync::Arc,
 };
 
 #[derive(Debug)]
@@ -39,11 +40,11 @@ pub struct ContextSearch<'a> {
     cache: &'a ContextCache,
 }
 
-pub type ContextCache = DashMap<Rc<SyntaxTree>, Option<Rc<SyntaxTree>>>;
+pub type ContextCache = DashMap<Arc<SyntaxTree>, Option<Arc<SyntaxTree>>>;
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(&self, id: usize) -> Option<Rc<SyntaxTree>> {
+    fn reduce_concept(&self, id: usize) -> Option<Arc<SyntaxTree>> {
         let concept = self.snap_shot.read_concept(self.delta, id);
         concept
             .get_righthand_of()
@@ -90,7 +91,7 @@ impl<'a> ContextSearch<'a> {
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(&self, ast: &Rc<SyntaxTree>) -> Option<Rc<SyntaxTree>> {
+    pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
         self.cache.get(ast).map_or_else(
             || {
                 let result = ast
@@ -115,9 +116,9 @@ impl<'a> ContextSearch<'a> {
     // Reduces a syntax tree based on the properties of the left and right branches
     fn reduce_pair(
         &self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+    ) -> Option<Arc<SyntaxTree>> {
         left.get_concept()
             .and_then(|lc| match lc {
                 ASSOC => Some(self.snap_shot.to_ast(self.delta, RIGHT)),
@@ -150,9 +151,9 @@ impl<'a> ContextSearch<'a> {
 
     fn recursively_reduce_pair(
         &self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+    ) -> Option<Arc<SyntaxTree>> {
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
         let maybe_subbed_r =
@@ -183,7 +184,7 @@ impl<'a> ContextSearch<'a> {
         }
     }
 
-    fn substitute(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
+    fn substitute(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
         ast.get_concept()
             .and_then(|c| self.variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
@@ -202,8 +203,8 @@ impl<'a> ContextSearch<'a> {
 
     fn filter_generalisations_for_pair(
         &self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
         let generalisation_candidates = self.find_generalisations(
             &self.snap_shot.contract_pair(self.delta, left, right),
@@ -228,7 +229,7 @@ impl<'a> ContextSearch<'a> {
 
     fn check_generalisation(
         &self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
         generalisation: usize,
     ) -> Option<VariableMask> {
         if self.is_free_variable(generalisation) {
@@ -288,7 +289,7 @@ impl<'a> ContextSearch<'a> {
         }
     }
 
-    fn find_generalisations(&self, ast: &Rc<SyntaxTree>) -> HashSet<usize> {
+    fn find_generalisations(&self, ast: &Arc<SyntaxTree>) -> HashSet<usize> {
         let mut generalisations = HashSet::new();
         if let Some((l, r)) = ast.get_expansion() {
             if let Some(c) = l.get_concept() {
@@ -339,7 +340,7 @@ impl<'a> ContextSearch<'a> {
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
-    pub fn recursively_reduce(&self, ast: &Rc<SyntaxTree>) -> Rc<SyntaxTree> {
+    pub fn recursively_reduce(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
         match self.reduce(ast) {
             Some(ref a) => self.recursively_reduce(a),
             None => ast.clone(),
@@ -349,10 +350,10 @@ impl<'a> ContextSearch<'a> {
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
     fn reduce_by_expanded_right_branch(
         &self,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
-    ) -> Option<Rc<SyntaxTree>> {
+        left: &Arc<SyntaxTree>,
+        rightleft: &Arc<SyntaxTree>,
+        rightright: &Arc<SyntaxTree>,
+    ) -> Option<Arc<SyntaxTree>> {
         rightleft.get_concept().and_then(|rlc| match rlc {
             REDUCTION => {
                 self.determine_reduction_truth(left, rightright).map(|x| {
@@ -365,30 +366,41 @@ impl<'a> ContextSearch<'a> {
             },
             EXISTS_SUCH_THAT if is_variable(&left.to_string()) => {
                 let mut might_exist = false;
-                for truth_value in (0..self.snap_shot.concept_len(self.delta))
-                    .filter_map(|i| {
-                        if self.is_free_variable(i) {
-                            None
-                        } else {
-                            let mut context_search = self.clone();
-                            context_search.variable_mask.insert(
-                                left.get_concept().unwrap(),
-                                self.snap_shot.to_ast(self.delta, i),
-                            );
-                            let mut truth_value =
-                                context_search.substitute(rightright);
-                            while let Some(reduced_rightright) =
-                                self.reduce(&truth_value)
-                            {
-                                truth_value = reduced_rightright;
+                let results: Vec<Option<bool>> =
+                    (0..self.snap_shot.concept_len(self.delta))
+                        .into_par_iter()
+                        .map(|i| {
+                            if self.is_free_variable(i) {
+                                None
+                            } else {
+                                let mut context_search = self.clone();
+                                context_search.variable_mask.insert(
+                                    left.get_concept().unwrap(),
+                                    self.snap_shot.to_ast(self.delta, i),
+                                );
+                                let mut truth_value =
+                                    context_search.substitute(rightright);
+                                while let Some(reduced_rightright) =
+                                    self.reduce(&truth_value)
+                                {
+                                    truth_value = reduced_rightright;
+                                }
+                                match truth_value.get_concept() {
+                                    Some(TRUE) => Some(true),
+                                    Some(FALSE) => Some(false),
+                                    _ => None,
+                                }
                             }
-                            Some(truth_value)
-                        }
-                    })
-                {
-                    match truth_value.get_concept() {
-                        Some(TRUE) => return Some(truth_value.clone()),
-                        Some(FALSE) => (),
+                        })
+                        .collect();
+                for result in results {
+                    match result {
+                        Some(true) => {
+                            return Some(
+                                self.snap_shot.to_ast(self.delta, TRUE),
+                            )
+                        },
+                        Some(false) => (),
                         _ => might_exist = true,
                     };
                 }
@@ -404,8 +416,8 @@ impl<'a> ContextSearch<'a> {
 
     fn determine_reduction_truth(
         &self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Option<bool> {
         if left == right {
             Some(false)
@@ -418,8 +430,8 @@ impl<'a> ContextSearch<'a> {
 
     fn determine_evidence_of_reduction(
         &self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Option<bool> {
         self.reduce(left).and_then(|reduced_left| {
             if &reduced_left == right {
@@ -457,4 +469,4 @@ impl<'a> Clone for ContextSearch<'a> {
     }
 }
 
-type VariableMask = HashMap<usize, Rc<SyntaxTree>>;
+type VariableMask = HashMap<usize, Arc<SyntaxTree>>;

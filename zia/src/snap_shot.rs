@@ -28,7 +28,7 @@ use crate::{
 use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    rc::Rc,
+    sync::Arc,
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
@@ -258,7 +258,7 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         s: &str,
-    ) -> ZiaResult<Rc<SyntaxTree>> {
+    ) -> ZiaResult<Arc<SyntaxTree>> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(deltas, &tokens)
     }
@@ -267,7 +267,7 @@ impl SnapShot {
         &self,
         delta: &ContextDelta,
         tokens: &[String],
-    ) -> ZiaResult<Rc<SyntaxTree>> {
+    ) -> ZiaResult<Arc<SyntaxTree>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(delta, &tokens[0]),
@@ -342,10 +342,10 @@ impl SnapShot {
         &self,
         delta: &ContextDelta,
         tokens: &[String],
-        state: (Option<Rc<SyntaxTree>>, Option<usize>),
+        state: (Option<Arc<SyntaxTree>>, Option<usize>),
         lp_index: usize,
         assoc: &Associativity,
-    ) -> ZiaResult<(Option<Rc<SyntaxTree>>, Option<usize>)> {
+    ) -> ZiaResult<(Option<Arc<SyntaxTree>>, Option<usize>)> {
         let prev_lp_index = state.1;
         let slice = match assoc {
             Associativity::Left => match prev_lp_index {
@@ -425,7 +425,7 @@ impl SnapShot {
         let greater_than_syntax = self.to_ast(delta, GREATER_THAN);
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
-            (Vec::<Rc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
+            (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
             |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
              token| {
                 // Increment index
@@ -527,7 +527,7 @@ impl SnapShot {
         deltas: &ContextDelta,
         left: &str,
         right: &str,
-    ) -> ZiaResult<Rc<SyntaxTree>> {
+    ) -> ZiaResult<Arc<SyntaxTree>> {
         let lefthand = self.ast_from_token(deltas, left)?;
         let righthand = self.ast_from_token(deltas, right)?;
         Ok(self.combine(deltas, &lefthand, &righthand))
@@ -537,11 +537,11 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         t: &str,
-    ) -> ZiaResult<Rc<SyntaxTree>> {
+    ) -> ZiaResult<Arc<SyntaxTree>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(deltas, t)
         } else {
-            Ok(Rc::new(self.ast_from_symbol(deltas, t)))
+            Ok(Arc::new(self.ast_from_symbol(deltas, t)))
         }
     }
 
@@ -660,8 +660,8 @@ impl SnapShot {
     pub fn expand(
         &self,
         deltas: &ContextDelta,
-        ast: &Rc<SyntaxTree>,
-    ) -> Rc<SyntaxTree> {
+        ast: &Arc<SyntaxTree>,
+    ) -> Arc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) =
                 self.read_concept(deltas, con).get_definition()
@@ -690,13 +690,13 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         concept_id: usize,
-    ) -> Rc<SyntaxTree> {
+    ) -> Arc<SyntaxTree> {
         let concept = self.read_concept(deltas, concept_id);
         if let Some(s) = concept.get_string().map_or_else(
             || self.get_label(deltas, concept_id),
             |s| Some(format_string(&s)),
         ) {
-            Rc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
+            Arc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
         } else {
             let (left, right) = concept.get_definition().unwrap_or_else(|| {
                 panic!("Unlabelled concept ({:#?}) with no definition", concept)
@@ -712,9 +712,9 @@ impl SnapShot {
     pub fn combine(
         &self,
         deltas: &ContextDelta,
-        ast: &Rc<SyntaxTree>,
-        other: &Rc<SyntaxTree>,
-    ) -> Rc<SyntaxTree> {
+        ast: &Arc<SyntaxTree>,
+        other: &Arc<SyntaxTree>,
+    ) -> Arc<SyntaxTree> {
         let syntax = ast
             .get_concept()
             .and_then(|l| {
@@ -725,14 +725,14 @@ impl SnapShot {
                 })
             })
             .unwrap_or_else(|| self.join(deltas, ast, other));
-        Rc::new(syntax)
+        Arc::new(syntax)
     }
 
     fn join(
         &self,
         deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> SyntaxTree {
         self.display_joint(deltas, left, right)
             .parse::<SyntaxTree>()
@@ -743,8 +743,8 @@ impl SnapShot {
     fn display_joint(
         &self,
         deltas: &ContextDelta,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> String {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
@@ -778,7 +778,7 @@ impl SnapShot {
     fn get_associativity(
         &self,
         deltas: &ContextDelta,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> Option<Associativity> {
         let assoc_of_ast =
             self.combine(deltas, &self.to_ast(deltas, ASSOC), ast);
@@ -796,10 +796,10 @@ impl SnapShot {
     pub fn contract_pair(
         &self,
         deltas: &ContextDelta,
-        lefthand: &Rc<SyntaxTree>,
-        righthand: &Rc<SyntaxTree>,
-    ) -> Rc<SyntaxTree> {
-        Rc::new(
+        lefthand: &Arc<SyntaxTree>,
+        righthand: &Arc<SyntaxTree>,
+    ) -> Arc<SyntaxTree> {
+        Arc::new(
             lefthand
                 .get_concept()
                 .and_then(|lc| {
@@ -1008,6 +1008,6 @@ fn push_token(
 }
 
 struct TokenSubsequence {
-    syntax: Vec<Rc<SyntaxTree>>,
+    syntax: Vec<Arc<SyntaxTree>>,
     positions: Vec<usize>,
 }

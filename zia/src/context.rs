@@ -28,7 +28,7 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
-use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
+use std::{default::Default, iter::from_fn, mem::swap, sync::Arc};
 
 #[derive(Clone)]
 pub struct Context {
@@ -127,8 +127,8 @@ impl Context {
 
     fn reduce_and_call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let cache = ContextCache::default();
         let reduced_left =
@@ -148,7 +148,7 @@ impl Context {
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let expansion = &self.snap_shot.expand(&self.delta, ast);
         if expansion == ast {
@@ -161,7 +161,7 @@ impl Context {
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let cache = ContextCache::default();
         let normal_form =
@@ -175,7 +175,7 @@ impl Context {
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
+    fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
         match ast.get_concept().and_then(|c| {
             self.snap_shot.read_concept(&self.delta, c).get_string()
         }) {
@@ -215,8 +215,8 @@ impl Context {
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
@@ -254,8 +254,8 @@ impl Context {
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn execute_let(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Option<ZiaResult<()>> {
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
@@ -267,9 +267,9 @@ impl Context {
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        rightleft: &Arc<SyntaxTree>,
+        rightright: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         match rightleft.get_concept() {
             Some(c) => match c {
@@ -295,8 +295,8 @@ impl Context {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
@@ -308,8 +308,8 @@ impl Context {
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
@@ -441,8 +441,8 @@ impl Context {
     fn redefine(
         &mut self,
         concept: usize,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.snap_shot.read_concept(&self.delta, concept).get_definition()
@@ -473,8 +473,8 @@ impl Context {
     fn define_new_syntax(
         &mut self,
         syntax: &str,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
