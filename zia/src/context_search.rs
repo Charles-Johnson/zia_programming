@@ -210,7 +210,7 @@ impl<'a> ContextSearch<'a> {
             &self.snap_shot.contract_pair(self.delta, left, right),
         );
         generalisation_candidates
-            .iter()
+            .par_iter()
             .filter_map(|gc| {
                 self.check_generalisation(
                     &self.snap_shot.contract_pair(self.delta, left, right),
