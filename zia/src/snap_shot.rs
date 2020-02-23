@@ -258,20 +258,22 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         s: &str,
+        cache: &ContextCache,
     ) -> ZiaResult<Arc<SyntaxTree>> {
         let tokens: Vec<String> = parse_line(s)?;
-        self.ast_from_tokens(deltas, &tokens)
+        self.ast_from_tokens(deltas, &tokens, cache)
     }
 
     fn ast_from_tokens(
         &self,
         delta: &ContextDelta,
         tokens: &[String],
+        cache: &ContextCache,
     ) -> ZiaResult<Arc<SyntaxTree>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token(delta, &tokens[0]),
-            2 => self.ast_from_pair(delta, &tokens[0], &tokens[1]),
+            1 => self.ast_from_token(delta, &tokens[0], cache),
+            2 => self.ast_from_pair(delta, &tokens[0], &tokens[1], cache),
             _ => {
                 let TokenSubsequence {
                     syntax: lp_syntax,
@@ -281,7 +283,8 @@ impl SnapShot {
                     return Err(ZiaError::AmbiguousExpression);
                 }
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (self.get_associativity(delta, syntax), assoc) {
+                    match (self.get_associativity(delta, syntax, cache), assoc)
+                    {
                         (Some(x), Some(y)) => {
                             if x == y {
                                 Ok(Some(x))
@@ -305,6 +308,7 @@ impl SnapShot {
                                     state,
                                     *lp_index,
                                     &Associativity::Right,
+                                    cache,
                                 )
                             })?
                             .0
@@ -315,8 +319,9 @@ impl SnapShot {
                             let head = self.ast_from_tokens(
                                 delta,
                                 &tokens[..lp_indices[0]],
+                                cache,
                             )?;
-                            Ok(self.combine(delta, &head, &tail))
+                            Ok(self.combine(delta, &head, &tail, cache))
                         }
                     },
                     Some(Associativity::Left) => lp_indices
@@ -328,6 +333,7 @@ impl SnapShot {
                                 state,
                                 *lp_index,
                                 &Associativity::Left,
+                                cache,
                             )
                         })?
                         .0
@@ -345,6 +351,7 @@ impl SnapShot {
         state: (Option<Arc<SyntaxTree>>, Option<usize>),
         lp_index: usize,
         assoc: &Associativity,
+        cache: &ContextCache,
     ) -> ZiaResult<(Option<Arc<SyntaxTree>>, Option<usize>)> {
         let prev_lp_index = state.1;
         let slice = match assoc {
@@ -366,7 +373,8 @@ impl SnapShot {
             Associativity::Right => 0,
         };
         let lp_with_the_rest = if lp_index == edge_index {
-            let edge_syntax = self.ast_from_token(delta, &slice[edge_index])?;
+            let edge_syntax =
+                self.ast_from_token(delta, &slice[edge_index], cache)?;
             if slice.len() == 1 {
                 edge_syntax
             } else {
@@ -374,28 +382,35 @@ impl SnapShot {
                     Associativity::Left => self.combine(
                         delta,
                         &if slice.len() < 3 {
-                            self.ast_from_token(delta, &slice[slice.len() - 1])?
+                            self.ast_from_token(
+                                delta,
+                                &slice[slice.len() - 1],
+                                cache,
+                            )?
                         } else {
                             self.ast_from_tokens(
                                 delta,
                                 &slice[..slice.len() - 1],
+                                cache,
                             )?
                         },
                         &edge_syntax,
+                        cache,
                     ),
                     Associativity::Right => self.combine(
                         delta,
                         &edge_syntax,
                         &if slice.len() < 3 {
-                            self.ast_from_token(delta, &slice[1])?
+                            self.ast_from_token(delta, &slice[1], cache)?
                         } else {
-                            self.ast_from_tokens(delta, &slice[1..])?
+                            self.ast_from_tokens(delta, &slice[1..], cache)?
                         },
+                        cache,
                     ),
                 }
             }
         } else {
-            self.ast_from_tokens(delta, slice)?
+            self.ast_from_tokens(delta, slice, cache)?
         };
         let edge = state.0;
         Ok((
@@ -403,10 +418,10 @@ impl SnapShot {
                 None => lp_with_the_rest,
                 Some(e) => match assoc {
                     Associativity::Left => {
-                        self.combine(delta, &e, &lp_with_the_rest)
+                        self.combine(delta, &e, &lp_with_the_rest, cache)
                     },
                     Associativity::Right => {
-                        self.combine(delta, &lp_with_the_rest, &e)
+                        self.combine(delta, &lp_with_the_rest, &e, cache)
                     },
                 },
             }),
@@ -421,8 +436,8 @@ impl SnapShot {
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
         let cache = ContextCache::default();
-        let precedence_syntax = self.to_ast(delta, PRECEDENCE);
-        let greater_than_syntax = self.to_ast(delta, GREATER_THAN);
+        let precedence_syntax = self.to_ast(delta, PRECEDENCE, &cache);
+        let greater_than_syntax = self.to_ast(delta, GREATER_THAN, &cache);
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
             (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
@@ -430,13 +445,22 @@ impl SnapShot {
              token| {
                 // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                let syntax_of_token = self.ast_from_token(delta, token)?;
-                let precedence_of_token =
-                    self.combine(delta, &precedence_syntax, &syntax_of_token);
+                let syntax_of_token =
+                    self.ast_from_token(delta, token, &cache)?;
+                let precedence_of_token = self.combine(
+                    delta,
+                    &precedence_syntax,
+                    &syntax_of_token,
+                    &cache,
+                );
                 // Compare current token's precedence with each currently assumed lowest syntax
                 for syntax in lowest_precedence_syntax.clone() {
-                    let precedence_of_syntax =
-                        self.combine(delta, &precedence_syntax, &syntax);
+                    let precedence_of_syntax = self.combine(
+                        delta,
+                        &precedence_syntax,
+                        &syntax,
+                        &cache,
+                    );
                     let comparing_between_tokens = self.combine(
                         delta,
                         &precedence_of_syntax,
@@ -444,7 +468,9 @@ impl SnapShot {
                             delta,
                             &greater_than_syntax,
                             &precedence_of_token,
+                            &cache,
                         ),
+                        &cache,
                     );
                     match ContextSearch::from((self, delta, &cache))
                         .recursively_reduce(&comparing_between_tokens)
@@ -477,7 +503,9 @@ impl SnapShot {
                                         delta,
                                         &greater_than_syntax,
                                         &precedence_of_syntax,
+                                        &cache,
                                     ),
+                                    &cache,
                                 );
                             match ContextSearch::from((self, delta, &cache))
                                 .recursively_reduce(
@@ -527,19 +555,21 @@ impl SnapShot {
         deltas: &ContextDelta,
         left: &str,
         right: &str,
+        cache: &ContextCache,
     ) -> ZiaResult<Arc<SyntaxTree>> {
-        let lefthand = self.ast_from_token(deltas, left)?;
-        let righthand = self.ast_from_token(deltas, right)?;
-        Ok(self.combine(deltas, &lefthand, &righthand))
+        let lefthand = self.ast_from_token(deltas, left, cache)?;
+        let righthand = self.ast_from_token(deltas, right, cache)?;
+        Ok(self.combine(deltas, &lefthand, &righthand, cache))
     }
 
     fn ast_from_token(
         &self,
         deltas: &ContextDelta,
         t: &str,
+        cache: &ContextCache,
     ) -> ZiaResult<Arc<SyntaxTree>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression(deltas, t)
+            self.ast_from_expression(deltas, t, cache)
         } else {
             Ok(Arc::new(self.ast_from_symbol(deltas, t)))
         }
@@ -661,6 +691,7 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         ast: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) =
@@ -668,17 +699,27 @@ impl SnapShot {
             {
                 self.combine(
                     deltas,
-                    &self.expand(deltas, &self.to_ast(deltas, left)),
-                    &self.expand(deltas, &self.to_ast(deltas, right)),
+                    &self.expand(
+                        deltas,
+                        &self.to_ast(deltas, left, cache),
+                        cache,
+                    ),
+                    &self.expand(
+                        deltas,
+                        &self.to_ast(deltas, right, cache),
+                        cache,
+                    ),
+                    cache,
                 )
             } else {
-                self.to_ast(deltas, con)
+                self.to_ast(deltas, con, cache)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
             self.combine(
                 deltas,
-                &self.expand(deltas, left),
-                &self.expand(deltas, right),
+                &self.expand(deltas, left, cache),
+                &self.expand(deltas, right, cache),
+                cache,
             )
         } else {
             ast.clone()
@@ -690,6 +731,7 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         concept_id: usize,
+        cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
         let concept = self.read_concept(deltas, concept_id);
         if let Some(s) = concept.get_string().map_or_else(
@@ -703,8 +745,9 @@ impl SnapShot {
             });
             self.combine(
                 deltas,
-                &self.to_ast(deltas, left),
-                &self.to_ast(deltas, right),
+                &self.to_ast(deltas, left, cache),
+                &self.to_ast(deltas, right, cache),
+                cache,
             )
         }
     }
@@ -714,17 +757,19 @@ impl SnapShot {
         deltas: &ContextDelta,
         ast: &Arc<SyntaxTree>,
         other: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
         let syntax = ast
             .get_concept()
             .and_then(|l| {
                 other.get_concept().and_then(|r| {
                     self.find_definition(deltas, l, r).map(|concept| {
-                        self.join(deltas, ast, other).bind_concept(concept)
+                        self.join(deltas, ast, other, cache)
+                            .bind_concept(concept)
                     })
                 })
             })
-            .unwrap_or_else(|| self.join(deltas, ast, other));
+            .unwrap_or_else(|| self.join(deltas, ast, other, cache));
         Arc::new(syntax)
     }
 
@@ -733,8 +778,9 @@ impl SnapShot {
         deltas: &ContextDelta,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> SyntaxTree {
-        self.display_joint(deltas, left, right)
+        self.display_joint(deltas, left, right, cache)
             .parse::<SyntaxTree>()
             .unwrap()
             .bind_pair(left, right)
@@ -745,10 +791,11 @@ impl SnapShot {
         deltas: &ContextDelta,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> String {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
-            |(l, r)| match self.get_associativity(deltas, &r).unwrap() {
+            |(l, r)| match self.get_associativity(deltas, &r, cache).unwrap() {
                 Associativity::Left => l.to_string() + " " + &r.to_string(),
                 Associativity::Right => {
                     "(".to_string()
@@ -761,7 +808,7 @@ impl SnapShot {
         );
         let right_string = right.get_expansion().map_or_else(
             || right.to_string(),
-            |(l, r)| match self.get_associativity(deltas, &l).unwrap() {
+            |(l, r)| match self.get_associativity(deltas, &l, cache).unwrap() {
                 Associativity::Left => {
                     "(".to_string()
                         + &l.to_string()
@@ -779,11 +826,15 @@ impl SnapShot {
         &self,
         deltas: &ContextDelta,
         ast: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> Option<Associativity> {
-        let assoc_of_ast =
-            self.combine(deltas, &self.to_ast(deltas, ASSOC), ast);
-        let cache = ContextCache::default();
-        ContextSearch::from((self, deltas, &cache))
+        let assoc_of_ast = self.combine(
+            deltas,
+            &self.to_ast(deltas, ASSOC, cache),
+            ast,
+            cache,
+        );
+        ContextSearch::from((self, deltas, cache))
             .reduce(&assoc_of_ast)
             .and_then(|ast| match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
@@ -798,6 +849,7 @@ impl SnapShot {
         deltas: &ContextDelta,
         lefthand: &Arc<SyntaxTree>,
         righthand: &Arc<SyntaxTree>,
+        cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
         Arc::new(
             lefthand
@@ -809,7 +861,7 @@ impl SnapShot {
                                 .map_or_else(
                                     || {
                                         self.display_joint(
-                                            deltas, lefthand, righthand,
+                                            deltas, lefthand, righthand, cache,
                                         )
                                     },
                                     |label| label,
@@ -821,7 +873,7 @@ impl SnapShot {
                     })
                 })
                 .unwrap_or_else(|| {
-                    self.display_joint(deltas, lefthand, righthand)
+                    self.display_joint(deltas, lefthand, righthand, cache)
                         .parse::<SyntaxTree>()
                         .unwrap()
                 })

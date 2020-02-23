@@ -52,9 +52,10 @@ impl Context {
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
+        let cache = ContextCache::default();
         let string = self
             .snap_shot
-            .ast_from_expression(&self.delta, command)
+            .ast_from_expression(&self.delta, command, &cache)
             .and_then(|a| {
                 #[cfg(not(target_arch = "wasm32"))]
                 info!(
@@ -150,7 +151,8 @@ impl Context {
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let expansion = &self.snap_shot.expand(&self.delta, ast);
+        let cache = ContextCache::default();
+        let expansion = &self.snap_shot.expand(&self.delta, ast, &cache);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
         } else {
@@ -189,9 +191,15 @@ impl Context {
                             self.try_reducing_then_call(ast),
                             &ZiaError::CannotReduceFurther,
                             || {
+                                let cache = ContextCache::default();
                                 Ok(self
                                     .snap_shot
-                                    .contract_pair(&self.delta, left, right)
+                                    .contract_pair(
+                                        &self.delta,
+                                        left,
+                                        right,
+                                        &cache,
+                                    )
                                     .to_string())
                             },
                         )
@@ -230,9 +238,13 @@ impl Context {
                         })
                     })
                     .or_else(|| {
+                        let cache = ContextCache::default();
                         Some({
-                            let true_syntax =
-                                self.snap_shot.to_ast(&self.delta, TRUE);
+                            let true_syntax = self.snap_shot.to_ast(
+                                &self.delta,
+                                TRUE,
+                                &cache,
+                            );
                             self.execute_reduction(right, &true_syntax)
                         })
                     })
@@ -281,7 +293,8 @@ impl Context {
                         .read_concept(&self.delta, c)
                         .get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.snap_shot.to_ast(&self.delta, r);
+                        let cache = ContextCache::default();
+                        let ast = self.snap_shot.to_ast(&self.delta, r, &cache);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)

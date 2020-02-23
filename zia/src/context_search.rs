@@ -58,17 +58,17 @@ impl<'a> ContextSearch<'a> {
                             .get_definition()
                             .and_then(|(condition, _)| {
                                 if let Some(TRUE) = self
-                                    .reduce(
-                                        &self
-                                            .snap_shot
-                                            .to_ast(self.delta, condition),
-                                    )
+                                    .reduce(&self.snap_shot.to_ast(
+                                        self.delta, condition, self.cache,
+                                    ))
                                     .and_then(|condition_ast| {
                                         condition_ast.get_concept()
                                     })
                                 {
                                     Some(
-                                        self.snap_shot.to_ast(self.delta, TRUE),
+                                        self.snap_shot.to_ast(
+                                            self.delta, TRUE, self.cache,
+                                        ),
                                     )
                                 } else {
                                     None
@@ -84,7 +84,7 @@ impl<'a> ContextSearch<'a> {
                     if self.is_leaf_variable(n) {
                         self.variable_mask.get(&n).cloned()
                     } else {
-                        Some(self.snap_shot.to_ast(self.delta, n))
+                        Some(self.snap_shot.to_ast(self.delta, n, self.cache))
                     }
                 })
             })
@@ -121,7 +121,9 @@ impl<'a> ContextSearch<'a> {
     ) -> Option<Arc<SyntaxTree>> {
         left.get_concept()
             .and_then(|lc| match lc {
-                ASSOC => Some(self.snap_shot.to_ast(self.delta, RIGHT)),
+                ASSOC => {
+                    Some(self.snap_shot.to_ast(self.delta, RIGHT, self.cache))
+                },
                 PRECEDENCE
                     if right
                         .get_concept()
@@ -131,7 +133,7 @@ impl<'a> ContextSearch<'a> {
                         })
                         .is_none() =>
                 {
-                    Some(self.snap_shot.to_ast(self.delta, DEFAULT))
+                    Some(self.snap_shot.to_ast(self.delta, DEFAULT, self.cache))
                 },
                 _ => {
                     self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
@@ -167,9 +169,11 @@ impl<'a> ContextSearch<'a> {
                     context_search
                         .variable_mask
                         .extend(variable_to_syntax.clone());
-                    let gen_ast = context_search
-                        .snap_shot
-                        .to_ast(self.delta, *generalisation);
+                    let gen_ast = context_search.snap_shot.to_ast(
+                        self.delta,
+                        *generalisation,
+                        self.cache,
+                    );
                     context_search
                         .reduce(&gen_ast)
                         .map(|ast| context_search.substitute(&ast))
@@ -180,7 +184,7 @@ impl<'a> ContextSearch<'a> {
                 .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
             let r = right_result
                 .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
-            Some(self.snap_shot.contract_pair(self.delta, &l, &r))
+            Some(self.snap_shot.contract_pair(self.delta, &l, &r, self.cache))
         }
     }
 
@@ -195,6 +199,7 @@ impl<'a> ContextSearch<'a> {
                             self.delta,
                             &self.substitute(&l),
                             &self.substitute(&r),
+                            self.cache,
                         )
                     },
                 )
@@ -207,13 +212,15 @@ impl<'a> ContextSearch<'a> {
         right: &Arc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
         let generalisation_candidates = self.find_generalisations(
-            &self.snap_shot.contract_pair(self.delta, left, right),
+            &self.snap_shot.contract_pair(self.delta, left, right, self.cache),
         );
         generalisation_candidates
             .par_iter()
             .filter_map(|gc| {
                 self.check_generalisation(
-                    &self.snap_shot.contract_pair(self.delta, left, right),
+                    &self
+                        .snap_shot
+                        .contract_pair(self.delta, left, right, self.cache),
                     *gc,
                 )
                 .and_then(|vm| {
@@ -358,9 +365,9 @@ impl<'a> ContextSearch<'a> {
             REDUCTION => {
                 self.determine_reduction_truth(left, rightright).map(|x| {
                     if x {
-                        self.snap_shot.to_ast(self.delta, TRUE)
+                        self.snap_shot.to_ast(self.delta, TRUE, self.cache)
                     } else {
-                        self.snap_shot.to_ast(self.delta, FALSE)
+                        self.snap_shot.to_ast(self.delta, FALSE, self.cache)
                     }
                 })
             },
@@ -376,7 +383,8 @@ impl<'a> ContextSearch<'a> {
                                 let mut context_search = self.clone();
                                 context_search.variable_mask.insert(
                                     left.get_concept().unwrap(),
-                                    self.snap_shot.to_ast(self.delta, i),
+                                    self.snap_shot
+                                        .to_ast(self.delta, i, self.cache),
                                 );
                                 let mut truth_value =
                                     context_search.substitute(rightright);
@@ -397,7 +405,8 @@ impl<'a> ContextSearch<'a> {
                     match result {
                         Some(true) => {
                             return Some(
-                                self.snap_shot.to_ast(self.delta, TRUE),
+                                self.snap_shot
+                                    .to_ast(self.delta, TRUE, self.cache),
                             )
                         },
                         Some(false) => (),
@@ -407,7 +416,7 @@ impl<'a> ContextSearch<'a> {
                 if might_exist {
                     None
                 } else {
-                    Some(self.snap_shot.to_ast(self.delta, FALSE))
+                    Some(self.snap_shot.to_ast(self.delta, FALSE, self.cache))
                 }
             },
             _ => None,
