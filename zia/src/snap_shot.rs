@@ -667,35 +667,6 @@ impl SnapShot {
         }
     }
 
-    /// Expands syntax by definition of its associated concept.
-    pub fn expand(
-        &self,
-        deltas: &ContextDelta,
-        ast: &Arc<SyntaxTree>,
-        cache: &ContextCache,
-    ) -> Arc<SyntaxTree> {
-        let context_search = ContextSearch::from((self, deltas, cache));
-        if let Some(con) = ast.get_concept() {
-            if let Some((left, right)) =
-                self.read_concept(deltas, con).get_definition()
-            {
-                context_search.combine(
-                    &self.expand(deltas, &context_search.to_ast(left), cache),
-                    &self.expand(deltas, &context_search.to_ast(right), cache),
-                )
-            } else {
-                context_search.to_ast(con)
-            }
-        } else if let Some((ref left, ref right)) = ast.get_expansion() {
-            context_search.combine(
-                &self.expand(deltas, left, cache),
-                &self.expand(deltas, right, cache),
-            )
-        } else {
-            ast.clone()
-        }
-    }
-
     pub fn check_reductions(
         &self,
         deltas: &ContextDelta,

@@ -555,6 +555,26 @@ impl<'a> ContextSearch<'a> {
             _ => None,
         })
     }
+
+    /// Expands syntax by definition of its associated concept.
+    pub fn expand(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
+        if let Some(con) = ast.get_concept() {
+            if let Some((left, right)) =
+                self.snap_shot.read_concept(self.delta, con).get_definition()
+            {
+                self.combine(
+                    &self.expand(&self.to_ast(left)),
+                    &self.expand(&self.to_ast(right)),
+                )
+            } else {
+                self.to_ast(con)
+            }
+        } else if let Some((ref left, ref right)) = ast.get_expansion() {
+            self.combine(&self.expand(left), &self.expand(right))
+        } else {
+            ast.clone()
+        }
+    }
 }
 
 impl<'a> From<ContextReferences<'a>> for ContextSearch<'a> {

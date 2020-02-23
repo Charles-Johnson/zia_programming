@@ -152,7 +152,9 @@ impl Context {
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let cache = ContextCache::default();
-        let expansion = &self.snap_shot.expand(&self.delta, ast, &cache);
+        let expansion =
+            &ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+                .expand(ast);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
         } else {
