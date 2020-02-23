@@ -18,11 +18,9 @@ use crate::{
     ast::SyntaxTree,
     concepts::{AbstractPart, Concept},
     constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
-    context_delta::{
-        update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
-    },
+    context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{ContextCache, ContextSearch},
-    delta::{Apply, Delta},
+    delta::Apply,
     errors::{map_err_variant, ZiaError, ZiaResult},
     snap_shot::SnapShot,
 };
@@ -36,6 +34,7 @@ pub struct Context {
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta,
+    cache: ContextCache,
 }
 
 impl Context {
@@ -52,9 +51,8 @@ impl Context {
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
-        let cache = ContextCache::default();
         let string =
-            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
                 .ast_from_expression(command)
                 .and_then(|a| {
                     #[cfg(not(target_arch = "wasm32"))]
@@ -84,7 +82,7 @@ impl Context {
                 Concept::default(),
                 false,
             );
-            self.delta.combine(delta);
+            self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
             index
         };
         let labels = vec![
@@ -131,12 +129,11 @@ impl Context {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let cache = ContextCache::default();
         let reduced_left =
-            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
                 .reduce(left);
         let reduced_right =
-            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
                 .reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
@@ -151,9 +148,8 @@ impl Context {
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let cache = ContextCache::default();
         let expansion =
-            &ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
                 .expand(ast);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
@@ -167,9 +163,8 @@ impl Context {
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let cache = ContextCache::default();
         let normal_form =
-            &ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
                 .recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
@@ -193,11 +188,10 @@ impl Context {
                             self.try_reducing_then_call(ast),
                             &ZiaError::CannotReduceFurther,
                             || {
-                                let cache = ContextCache::default();
                                 Ok(ContextSearch::from((
                                     &self.snap_shot,
                                     &self.delta,
-                                    &cache,
+                                    &self.cache,
                                 ))
                                 .contract_pair(left, right)
                                 .to_string())
@@ -238,12 +232,11 @@ impl Context {
                         })
                     })
                     .or_else(|| {
-                        let cache = ContextCache::default();
                         Some({
                             let true_syntax = ContextSearch::from((
                                 &self.snap_shot,
                                 &self.delta,
-                                &cache,
+                                &self.cache,
                             ))
                             .to_ast(TRUE);
                             self.execute_reduction(right, &true_syntax)
@@ -294,11 +287,10 @@ impl Context {
                         .read_concept(&self.delta, c)
                         .get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let cache = ContextCache::default();
                         let ast = ContextSearch::from((
                             &self.snap_shot,
                             &self.delta,
-                            &cache,
+                            &self.cache,
                         ))
                         .to_ast(r);
                         self.match_righthand_pair(left, &ast, rightright)
@@ -382,10 +374,11 @@ impl Context {
                     .delete_definition(concept);
                 let concept_id_array = [concept, left, right];
                 (0..3).for_each(|index| {
-                    update_concept_delta(
-                        self.delta.concept.entry(concept_id_array[index]),
+                    self.delta.update_concept_delta(
+                        concept_id_array[index],
                         &concept_delta_array[index],
                         false,
+                        &mut self.cache,
                     )
                 });
                 self.try_delete_concept(concept)?;
@@ -415,7 +408,7 @@ impl Context {
     fn remove_string(&mut self, string: &str) {
         let index = *(self
             .delta
-            .string
+            .string()
             .get(string)
             .and_then(|sd| match sd {
                 StringDelta::Update {
@@ -426,15 +419,17 @@ impl Context {
                 StringDelta::Remove(_) => None,
             })
             .expect("string already removed or doesn't exist"));
-        self.delta
-            .string
-            .insert(string.to_string(), StringDelta::Remove(index));
+        self.delta.insert_string(
+            string.to_string(),
+            StringDelta::Remove(index),
+            &mut self.cache,
+        );
     }
 
     fn blindly_remove_concept(&mut self, id: usize) {
         let concept = self
             .delta
-            .concept
+            .concept()
             .get(&id)
             .and_then(|(cd, _, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c),
@@ -447,13 +442,14 @@ impl Context {
                     .expect("Concept will be already removed!")
             })
             .clone();
-        self.delta.concept.insert(
+        self.delta.insert_concept(
             id,
             (
                 ConceptDelta::Remove(concept),
                 self.snap_shot.has_variable(&self.delta, id),
                 false,
             ),
+            &mut self.cache,
         );
     }
 
@@ -545,10 +541,11 @@ impl Context {
             .remove_reduction(concept_id)
             .map(|z| {
                 z.iter().for_each(|(id, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(*id),
+                    self.delta.update_concept_delta(
+                        *id,
                         concept_delta,
                         false,
+                        &mut self.cache,
                     )
                 })
             })
@@ -606,9 +603,9 @@ impl Context {
             string_concept,
             false,
         );
-        self.delta.combine(delta);
+        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         let string_delta = SnapShot::add_string_delta(index, string);
-        self.delta.combine(string_delta);
+        self.delta.combine_and_invalidate_cache(string_delta, &mut self.cache);
         index
     }
 
@@ -640,7 +637,7 @@ impl Context {
         let concept: Concept = V::default().into();
         let (delta, index) =
             self.snap_shot.add_concept_delta(&self.delta, concept, variable);
-        self.delta.combine(delta);
+        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         index
     }
 
@@ -673,10 +670,11 @@ impl Context {
                 .set_definition(definition, lefthand, righthand)?;
             concept_delta_array.iter().enumerate().for_each(
                 |(i, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(id_array[i]),
+                    self.delta.update_concept_delta(
+                        id_array[i],
                         concept_delta,
                         temporary,
+                        &mut self.cache,
                     )
                 },
             );
@@ -723,15 +721,17 @@ impl Context {
                                 .snap_shot
                                 .read_concept(&self.delta, concept)
                                 .reduce_to(concept, reduction)?;
-                            update_concept_delta(
-                                self.delta.concept.entry(concept),
+                            self.delta.update_concept_delta(
+                                concept,
                                 &concept_deltas[0],
                                 temporary,
+                                &mut self.cache,
                             );
-                            update_concept_delta(
-                                self.delta.concept.entry(reduction),
+                            self.delta.update_concept_delta(
+                                reduction,
                                 &concept_deltas[1],
                                 temporary,
+                                &mut self.cache,
                             );
                             Ok(())
                         }
@@ -754,6 +754,7 @@ impl Default for Context {
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),
+            cache: ContextCache::default(),
         }
     }
 }

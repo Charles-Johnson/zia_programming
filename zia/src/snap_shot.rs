@@ -48,7 +48,7 @@ pub enum Associativity {
 impl SnapShot {
     pub fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
         let in_previous_variables = self.variables.contains(&concept);
-        delta.concept.get(&concept).map_or(
+        delta.concept().get(&concept).map_or(
             in_previous_variables,
             |(cd, v, _)| match cd {
                 ConceptDelta::Insert(_) => *v,
@@ -74,8 +74,7 @@ impl SnapShot {
 
     pub fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
-            .concept
-            .get(&id)
+            .concept().get(&id)
             .and_then(|(cd, _, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c.clone()),
                 ConceptDelta::Remove(_) => None,
@@ -104,14 +103,14 @@ impl SnapShot {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _, _)) in &delta.concept {
+        for (id, (cd, _, _)) in delta.concept() {
             if let ConceptDelta::Insert(_) = cd {
                 if *id >= new_concept_length {
                     new_concept_length = *id + 1
                 }
             }
         }
-        for (id, (cd, _, _)) in &delta.concept {
+        for (id, (cd, _, _)) in delta.concept() {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
@@ -160,19 +159,19 @@ impl SnapShot {
             };
         }
         (
-            ContextDelta {
-                concept: hashmap! {index => (ConceptDelta::Insert(concept), variable, false)},
-                string: hashmap! {},
-            },
+            ContextDelta::new(
+                hashmap! {},
+                hashmap! {index => (ConceptDelta::Insert(concept), variable, false)},
+            ),
             index,
         )
     }
 
     pub fn add_string_delta(string_id: usize, string: &str) -> ContextDelta {
-        ContextDelta {
-            string: hashmap! {string.to_string() => StringDelta::Insert(string_id)},
-            concept: HashMap::default(),
-        }
+        ContextDelta::new(
+            hashmap! {string.to_string() => StringDelta::Insert(string_id)},
+            HashMap::default(),
+        )
     }
 
     fn add_string(&mut self, string_id: usize, string: &str) {
@@ -270,7 +269,7 @@ impl SnapShot {
         s: &str,
     ) -> Option<usize> {
         delta
-            .string
+            .string()
             .get(s)
             .map_or_else(
                 || self.string_map.get(s),
@@ -408,7 +407,7 @@ impl SnapShot {
 
     pub fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
-        for (id, (cd, _, _)) in &delta.concept {
+        for (id, (cd, _, _)) in delta.concept() {
             if let ConceptDelta::Insert(_) = cd {
                 if length <= *id {
                     length = *id + 1;
@@ -423,7 +422,7 @@ impl Apply for SnapShot {
     type Delta = ContextDelta;
 
     fn apply(&mut self, delta: ContextDelta) {
-        delta.string.iter().for_each(|(s, sd)| match sd {
+        delta.string().iter().for_each(|(s, sd)| match sd {
             StringDelta::Update {
                 after,
                 ..
@@ -437,7 +436,7 @@ impl Apply for SnapShot {
         if concept_len > self.concepts.len() {
             self.concepts.extend(vec![None; concept_len - self.concepts.len()]);
         }
-        for (id, (cd, v, temporary)) in &delta.concept {
+        for (id, (cd, v, temporary)) in delta.concept() {
             if !temporary {
                 match cd {
                     ConceptDelta::Insert(c) => {
@@ -461,10 +460,7 @@ impl Apply for SnapShot {
     }
 
     fn diff(&self, _other: Self) -> ContextDelta {
-        ContextDelta {
-            string: hashmap! {},
-            concept: hashmap! {},
-        }
+        ContextDelta::default()
     }
 }
 
