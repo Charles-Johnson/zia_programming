@@ -16,6 +16,7 @@
 
 use crate::{
     ast::SyntaxTree,
+    concepts::format_string,
     constants::{
         ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
         REDUCTION, RIGHT, TRUE,
@@ -58,18 +59,12 @@ impl<'a> ContextSearch<'a> {
                             .get_definition()
                             .and_then(|(condition, _)| {
                                 if let Some(TRUE) = self
-                                    .reduce(&self.snap_shot.to_ast(
-                                        self.delta, condition, self.cache,
-                                    ))
+                                    .reduce(&self.to_ast(condition))
                                     .and_then(|condition_ast| {
                                         condition_ast.get_concept()
                                     })
                                 {
-                                    Some(
-                                        self.snap_shot.to_ast(
-                                            self.delta, TRUE, self.cache,
-                                        ),
-                                    )
+                                    Some(self.to_ast(TRUE))
                                 } else {
                                     None
                                 }
@@ -84,7 +79,7 @@ impl<'a> ContextSearch<'a> {
                     if self.is_leaf_variable(n) {
                         self.variable_mask.get(&n).cloned()
                     } else {
-                        Some(self.snap_shot.to_ast(self.delta, n, self.cache))
+                        Some(self.to_ast(n))
                     }
                 })
             })
@@ -121,9 +116,7 @@ impl<'a> ContextSearch<'a> {
     ) -> Option<Arc<SyntaxTree>> {
         left.get_concept()
             .and_then(|lc| match lc {
-                ASSOC => {
-                    Some(self.snap_shot.to_ast(self.delta, RIGHT, self.cache))
-                },
+                ASSOC => Some(self.to_ast(RIGHT)),
                 PRECEDENCE
                     if right
                         .get_concept()
@@ -133,7 +126,7 @@ impl<'a> ContextSearch<'a> {
                         })
                         .is_none() =>
                 {
-                    Some(self.snap_shot.to_ast(self.delta, DEFAULT, self.cache))
+                    Some(self.to_ast(DEFAULT))
                 },
                 _ => {
                     self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
@@ -169,11 +162,7 @@ impl<'a> ContextSearch<'a> {
                     context_search
                         .variable_mask
                         .extend(variable_to_syntax.clone());
-                    let gen_ast = context_search.snap_shot.to_ast(
-                        self.delta,
-                        *generalisation,
-                        self.cache,
-                    );
+                    let gen_ast = context_search.to_ast(*generalisation);
                     context_search
                         .reduce(&gen_ast)
                         .map(|ast| context_search.substitute(&ast))
@@ -365,9 +354,9 @@ impl<'a> ContextSearch<'a> {
             REDUCTION => {
                 self.determine_reduction_truth(left, rightright).map(|x| {
                     if x {
-                        self.snap_shot.to_ast(self.delta, TRUE, self.cache)
+                        self.to_ast(TRUE)
                     } else {
-                        self.snap_shot.to_ast(self.delta, FALSE, self.cache)
+                        self.to_ast(FALSE)
                     }
                 })
             },
@@ -383,8 +372,7 @@ impl<'a> ContextSearch<'a> {
                                 let mut context_search = self.clone();
                                 context_search.variable_mask.insert(
                                     left.get_concept().unwrap(),
-                                    self.snap_shot
-                                        .to_ast(self.delta, i, self.cache),
+                                    self.to_ast(i),
                                 );
                                 let mut truth_value =
                                     context_search.substitute(rightright);
@@ -403,12 +391,7 @@ impl<'a> ContextSearch<'a> {
                         .collect();
                 for result in results {
                     match result {
-                        Some(true) => {
-                            return Some(
-                                self.snap_shot
-                                    .to_ast(self.delta, TRUE, self.cache),
-                            )
-                        },
+                        Some(true) => return Some(self.to_ast(TRUE)),
                         Some(false) => (),
                         _ => might_exist = true,
                     };
@@ -416,7 +399,7 @@ impl<'a> ContextSearch<'a> {
                 if might_exist {
                     None
                 } else {
-                    Some(self.snap_shot.to_ast(self.delta, FALSE, self.cache))
+                    Some(self.to_ast(FALSE))
                 }
             },
             _ => None,
@@ -449,6 +432,27 @@ impl<'a> ContextSearch<'a> {
                 self.determine_evidence_of_reduction(&reduced_left, right)
             }
         })
+    }
+
+    /// Returns the syntax for a concept.
+    pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
+        let concept = self.snap_shot.read_concept(self.delta, concept_id);
+        if let Some(s) = concept.get_string().map_or_else(
+            || self.snap_shot.get_label(self.delta, concept_id),
+            |s| Some(format_string(&s)),
+        ) {
+            Arc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
+        } else {
+            let (left, right) = concept.get_definition().unwrap_or_else(|| {
+                panic!("Unlabelled concept ({:#?}) with no definition", concept)
+            });
+            self.snap_shot.combine(
+                self.delta,
+                &self.to_ast(left),
+                &self.to_ast(right),
+                self.cache,
+            )
+        }
     }
 }
 

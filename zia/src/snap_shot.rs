@@ -16,7 +16,7 @@
 
 use crate::{
     ast::SyntaxTree,
-    concepts::{format_string, Concept},
+    concepts::Concept,
     constants::{
         ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
     },
@@ -436,8 +436,9 @@ impl SnapShot {
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
         let cache = ContextCache::default();
-        let precedence_syntax = self.to_ast(delta, PRECEDENCE, &cache);
-        let greater_than_syntax = self.to_ast(delta, GREATER_THAN, &cache);
+        let context_search = ContextSearch::from((self, delta, &cache));
+        let precedence_syntax = context_search.to_ast(PRECEDENCE);
+        let greater_than_syntax = context_search.to_ast(GREATER_THAN);
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
             (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
@@ -694,25 +695,18 @@ impl SnapShot {
         cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
+            let context_search = ContextSearch::from((self, deltas, cache));
             if let Some((left, right)) =
                 self.read_concept(deltas, con).get_definition()
             {
                 self.combine(
                     deltas,
-                    &self.expand(
-                        deltas,
-                        &self.to_ast(deltas, left, cache),
-                        cache,
-                    ),
-                    &self.expand(
-                        deltas,
-                        &self.to_ast(deltas, right, cache),
-                        cache,
-                    ),
+                    &self.expand(deltas, &context_search.to_ast(left), cache),
+                    &self.expand(deltas, &context_search.to_ast(right), cache),
                     cache,
                 )
             } else {
-                self.to_ast(deltas, con, cache)
+                context_search.to_ast(con)
             }
         } else if let Some((ref left, ref right)) = ast.get_expansion() {
             self.combine(
@@ -723,32 +717,6 @@ impl SnapShot {
             )
         } else {
             ast.clone()
-        }
-    }
-
-    /// Returns the syntax for a concept.
-    pub fn to_ast(
-        &self,
-        deltas: &ContextDelta,
-        concept_id: usize,
-        cache: &ContextCache,
-    ) -> Arc<SyntaxTree> {
-        let concept = self.read_concept(deltas, concept_id);
-        if let Some(s) = concept.get_string().map_or_else(
-            || self.get_label(deltas, concept_id),
-            |s| Some(format_string(&s)),
-        ) {
-            Arc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
-        } else {
-            let (left, right) = concept.get_definition().unwrap_or_else(|| {
-                panic!("Unlabelled concept ({:#?}) with no definition", concept)
-            });
-            self.combine(
-                deltas,
-                &self.to_ast(deltas, left, cache),
-                &self.to_ast(deltas, right, cache),
-                cache,
-            )
         }
     }
 
@@ -828,19 +796,16 @@ impl SnapShot {
         ast: &Arc<SyntaxTree>,
         cache: &ContextCache,
     ) -> Option<Associativity> {
-        let assoc_of_ast = self.combine(
-            deltas,
-            &self.to_ast(deltas, ASSOC, cache),
-            ast,
-            cache,
-        );
-        ContextSearch::from((self, deltas, cache))
-            .reduce(&assoc_of_ast)
-            .and_then(|ast| match ast.get_concept() {
+        let context_search = ContextSearch::from((self, deltas, cache));
+        let assoc_of_ast =
+            self.combine(deltas, &context_search.to_ast(ASSOC), ast, cache);
+        context_search.reduce(&assoc_of_ast).and_then(|ast| {
+            match ast.get_concept() {
                 Some(LEFT) => Some(Associativity::Left),
                 Some(RIGHT) => Some(Associativity::Right),
                 _ => None,
-            })
+            }
+        })
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.

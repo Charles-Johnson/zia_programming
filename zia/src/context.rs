@@ -240,11 +240,12 @@ impl Context {
                     .or_else(|| {
                         let cache = ContextCache::default();
                         Some({
-                            let true_syntax = self.snap_shot.to_ast(
+                            let true_syntax = ContextSearch::from((
+                                &self.snap_shot,
                                 &self.delta,
-                                TRUE,
                                 &cache,
-                            );
+                            ))
+                            .to_ast(TRUE);
                             self.execute_reduction(right, &true_syntax)
                         })
                     })
@@ -294,7 +295,12 @@ impl Context {
                         .get_reduction();
                     if let Some(r) = rightleft_reduction {
                         let cache = ContextCache::default();
-                        let ast = self.snap_shot.to_ast(&self.delta, r, &cache);
+                        let ast = ContextSearch::from((
+                            &self.snap_shot,
+                            &self.delta,
+                            &cache,
+                        ))
+                        .to_ast(r);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)
