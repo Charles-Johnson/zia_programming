@@ -23,7 +23,7 @@ use crate::{
     },
     context::is_variable,
     context_delta::ContextDelta,
-    snap_shot::SnapShot,
+    snap_shot::{Associativity, SnapShot},
 };
 use dashmap::DashMap;
 use maplit::hashmap;
@@ -473,11 +473,52 @@ impl<'a> ContextSearch<'a> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> SyntaxTree {
-        self.snap_shot
-            .display_joint(self.delta, left, right, self.cache)
+        self.display_joint(left, right)
             .parse::<SyntaxTree>()
             .unwrap()
             .bind_pair(left, right)
+    }
+
+    pub fn display_joint(
+        &self,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+    ) -> String {
+        let left_string = left.get_expansion().map_or_else(
+            || left.to_string(),
+            |(l, r)| match self
+                .snap_shot
+                .get_associativity(self.delta, &r, self.cache)
+                .unwrap()
+            {
+                Associativity::Left => l.to_string() + " " + &r.to_string(),
+                Associativity::Right => {
+                    "(".to_string()
+                        + &l.to_string()
+                        + " "
+                        + &r.to_string()
+                        + ")"
+                },
+            },
+        );
+        let right_string = right.get_expansion().map_or_else(
+            || right.to_string(),
+            |(l, r)| match self
+                .snap_shot
+                .get_associativity(self.delta, &l, self.cache)
+                .unwrap()
+            {
+                Associativity::Left => {
+                    "(".to_string()
+                        + &l.to_string()
+                        + " "
+                        + &r.to_string()
+                        + ")"
+                },
+                Associativity::Right => l.to_string() + " " + &r.to_string(),
+            },
+        );
+        left_string + " " + &right_string
     }
 }
 

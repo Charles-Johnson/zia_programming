@@ -46,7 +46,7 @@ pub struct SnapShot {
 }
 
 #[derive(Debug, PartialEq)]
-enum Associativity {
+pub enum Associativity {
     Left,
     Right,
 }
@@ -700,43 +700,7 @@ impl SnapShot {
         }
     }
 
-    pub fn display_joint(
-        &self,
-        deltas: &ContextDelta,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-        cache: &ContextCache,
-    ) -> String {
-        let left_string = left.get_expansion().map_or_else(
-            || left.to_string(),
-            |(l, r)| match self.get_associativity(deltas, &r, cache).unwrap() {
-                Associativity::Left => l.to_string() + " " + &r.to_string(),
-                Associativity::Right => {
-                    "(".to_string()
-                        + &l.to_string()
-                        + " "
-                        + &r.to_string()
-                        + ")"
-                },
-            },
-        );
-        let right_string = right.get_expansion().map_or_else(
-            || right.to_string(),
-            |(l, r)| match self.get_associativity(deltas, &l, cache).unwrap() {
-                Associativity::Left => {
-                    "(".to_string()
-                        + &l.to_string()
-                        + " "
-                        + &r.to_string()
-                        + ")"
-                },
-                Associativity::Right => l.to_string() + " " + &r.to_string(),
-            },
-        );
-        left_string + " " + &right_string
-    }
-
-    fn get_associativity(
+    pub fn get_associativity(
         &self,
         deltas: &ContextDelta,
         ast: &Arc<SyntaxTree>,
@@ -762,6 +726,7 @@ impl SnapShot {
         righthand: &Arc<SyntaxTree>,
         cache: &ContextCache,
     ) -> Arc<SyntaxTree> {
+        let context_search = ContextSearch::from((self, deltas, cache));
         Arc::new(
             lefthand
                 .get_concept()
@@ -771,9 +736,8 @@ impl SnapShot {
                             self.get_label(deltas, def)
                                 .map_or_else(
                                     || {
-                                        self.display_joint(
-                                            deltas, lefthand, righthand, cache,
-                                        )
+                                        context_search
+                                            .display_joint(lefthand, righthand)
                                     },
                                     |label| label,
                                 )
@@ -784,7 +748,8 @@ impl SnapShot {
                     })
                 })
                 .unwrap_or_else(|| {
-                    self.display_joint(deltas, lefthand, righthand, cache)
+                    context_search
+                        .display_joint(lefthand, righthand)
                         .parse::<SyntaxTree>()
                         .unwrap()
                 })
