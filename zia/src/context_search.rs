@@ -460,18 +460,24 @@ impl<'a> ContextSearch<'a> {
             .and_then(|l| {
                 other.get_concept().and_then(|r| {
                     self.snap_shot.find_definition(self.delta, l, r).map(
-                        |concept| {
-                            self.snap_shot
-                                .join(self.delta, ast, other, self.cache)
-                                .bind_concept(concept)
-                        },
+                        |concept| self.join(ast, other).bind_concept(concept),
                     )
                 })
             })
-            .unwrap_or_else(|| {
-                self.snap_shot.join(self.delta, ast, other, self.cache)
-            });
+            .unwrap_or_else(|| self.join(ast, other));
         Arc::new(syntax)
+    }
+
+    fn join(
+        &self,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+    ) -> SyntaxTree {
+        self.snap_shot
+            .display_joint(self.delta, left, right, self.cache)
+            .parse::<SyntaxTree>()
+            .unwrap()
+            .bind_pair(left, right)
     }
 }
 

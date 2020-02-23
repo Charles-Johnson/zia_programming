@@ -700,20 +700,7 @@ impl SnapShot {
         }
     }
 
-    pub fn join(
-        &self,
-        deltas: &ContextDelta,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-        cache: &ContextCache,
-    ) -> SyntaxTree {
-        self.display_joint(deltas, left, right, cache)
-            .parse::<SyntaxTree>()
-            .unwrap()
-            .bind_pair(left, right)
-    }
-
-    fn display_joint(
+    pub fn display_joint(
         &self,
         deltas: &ContextDelta,
         left: &Arc<SyntaxTree>,
