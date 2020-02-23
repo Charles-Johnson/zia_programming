@@ -48,8 +48,7 @@ fn partial_order_transitivity_test() {
 
 #[bench]
 fn partial_order_transitivity_bench(b: &mut Bencher) {
-    let mut context = partial_order_transitivity();
     b.iter(|| {
-        context.execute("a > c");
+        partial_order_transitivity();
     });
 }

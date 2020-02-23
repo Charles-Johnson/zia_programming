@@ -42,7 +42,11 @@ pub struct ContextSearch<'a> {
     cache: &'a ContextCache,
 }
 
-pub type ContextCache = DashMap<Arc<SyntaxTree>, Option<Arc<SyntaxTree>>>;
+#[derive(Debug, Default, Clone)]
+pub struct ContextCache {
+    reductions: DashMap<Arc<SyntaxTree>, Option<Arc<SyntaxTree>>>,
+    syntax_trees: DashMap<usize, Arc<SyntaxTree>>,
+}
 
 impl<'a> ContextSearch<'a> {
     /// Returns the syntax for the reduction of a concept.
@@ -88,7 +92,7 @@ impl<'a> ContextSearch<'a> {
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
-        self.cache.get(ast).map_or_else(
+        self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
                     .get_concept()
@@ -101,7 +105,7 @@ impl<'a> ContextSearch<'a> {
                 if !ast.is_variable()
                     && (&result).as_ref().map_or(true, |r| r != ast)
                 {
-                    self.cache.insert(ast.clone(), result.clone());
+                    self.cache.reductions.insert(ast.clone(), result.clone());
                 }
                 result
             },
@@ -468,18 +472,34 @@ impl<'a> ContextSearch<'a> {
 
     /// Returns the syntax for a concept.
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
-        let concept = self.snap_shot.read_concept(self.delta, concept_id);
-        if let Some(s) = concept.get_string().map_or_else(
-            || self.snap_shot.get_label(self.delta, concept_id),
-            |s| Some(format_string(&s)),
-        ) {
-            Arc::new(s.parse::<SyntaxTree>().unwrap().bind_concept(concept_id))
-        } else {
-            let (left, right) = concept.get_definition().unwrap_or_else(|| {
-                panic!("Unlabelled concept ({:#?}) with no definition", concept)
-            });
-            self.combine(&self.to_ast(left), &self.to_ast(right))
-        }
+        self.cache.syntax_trees.get(&concept_id).map_or_else(
+            || {
+                let concept =
+                    self.snap_shot.read_concept(self.delta, concept_id);
+                let syntax = if let Some(s) = concept.get_string().map_or_else(
+                    || self.snap_shot.get_label(self.delta, concept_id),
+                    |s| Some(format_string(&s)),
+                ) {
+                    Arc::new(
+                        s.parse::<SyntaxTree>()
+                            .unwrap()
+                            .bind_concept(concept_id),
+                    )
+                } else {
+                    let (left, right) =
+                        concept.get_definition().unwrap_or_else(|| {
+                            panic!(
+                                "Unlabelled concept ({:#?}) with no definition",
+                                concept
+                            )
+                        });
+                    self.combine(&self.to_ast(left), &self.to_ast(right))
+                };
+                self.cache.syntax_trees.insert(concept_id, syntax.clone());
+                syntax
+            },
+            |r| r.value().clone(),
+        )
     }
 
     pub fn combine(
