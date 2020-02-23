@@ -446,13 +446,32 @@ impl<'a> ContextSearch<'a> {
             let (left, right) = concept.get_definition().unwrap_or_else(|| {
                 panic!("Unlabelled concept ({:#?}) with no definition", concept)
             });
-            self.snap_shot.combine(
-                self.delta,
-                &self.to_ast(left),
-                &self.to_ast(right),
-                self.cache,
-            )
+            self.combine(&self.to_ast(left), &self.to_ast(right))
         }
+    }
+
+    pub fn combine(
+        &self,
+        ast: &Arc<SyntaxTree>,
+        other: &Arc<SyntaxTree>,
+    ) -> Arc<SyntaxTree> {
+        let syntax = ast
+            .get_concept()
+            .and_then(|l| {
+                other.get_concept().and_then(|r| {
+                    self.snap_shot.find_definition(self.delta, l, r).map(
+                        |concept| {
+                            self.snap_shot
+                                .join(self.delta, ast, other, self.cache)
+                                .bind_concept(concept)
+                        },
+                    )
+                })
+            })
+            .unwrap_or_else(|| {
+                self.snap_shot.join(self.delta, ast, other, self.cache)
+            });
+        Arc::new(syntax)
     }
 }
 
