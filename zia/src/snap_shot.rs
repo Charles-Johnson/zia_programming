@@ -17,9 +17,7 @@
 use crate::{
     ast::SyntaxTree,
     concepts::Concept,
-    constants::{
-        ASSOC, FALSE, GREATER_THAN, LABEL, LEFT, PRECEDENCE, RIGHT, TRUE,
-    },
+    constants::{FALSE, GREATER_THAN, LABEL, PRECEDENCE, TRUE},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{ContextCache, ContextSearch},
     delta::Apply,
@@ -282,9 +280,9 @@ impl SnapShot {
                 if lp_indices.is_empty() {
                     return Err(ZiaError::AmbiguousExpression);
                 }
+                let context_search = ContextSearch::from((self, delta, cache));
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (self.get_associativity(delta, syntax, cache), assoc)
-                    {
+                    match (context_search.get_associativity(syntax), assoc) {
                         (Some(x), Some(y)) => {
                             if x == y {
                                 Ok(Some(x))
@@ -316,8 +314,6 @@ impl SnapShot {
                         if lp_indices[0] == 0 {
                             Ok(tail)
                         } else {
-                            let context_search =
-                                ContextSearch::from((self, delta, cache));
                             let head = self.ast_from_tokens(
                                 delta,
                                 &tokens[..lp_indices[0]],
@@ -698,24 +694,6 @@ impl SnapShot {
         } else {
             ast.clone()
         }
-    }
-
-    pub fn get_associativity(
-        &self,
-        deltas: &ContextDelta,
-        ast: &Arc<SyntaxTree>,
-        cache: &ContextCache,
-    ) -> Option<Associativity> {
-        let context_search = ContextSearch::from((self, deltas, cache));
-        let assoc_of_ast =
-            context_search.combine(&context_search.to_ast(ASSOC), ast);
-        context_search.reduce(&assoc_of_ast).and_then(|ast| {
-            match ast.get_concept() {
-                Some(LEFT) => Some(Associativity::Left),
-                Some(RIGHT) => Some(Associativity::Right),
-                _ => None,
-            }
-        })
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.

@@ -18,7 +18,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::format_string,
     constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, PRECEDENCE,
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, LEFT, PRECEDENCE,
         REDUCTION, RIGHT, TRUE,
     },
     context::is_variable,
@@ -486,11 +486,7 @@ impl<'a> ContextSearch<'a> {
     ) -> String {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
-            |(l, r)| match self
-                .snap_shot
-                .get_associativity(self.delta, &r, self.cache)
-                .unwrap()
-            {
+            |(l, r)| match self.get_associativity(&r).unwrap() {
                 Associativity::Left => l.to_string() + " " + &r.to_string(),
                 Associativity::Right => {
                     "(".to_string()
@@ -503,11 +499,7 @@ impl<'a> ContextSearch<'a> {
         );
         let right_string = right.get_expansion().map_or_else(
             || right.to_string(),
-            |(l, r)| match self
-                .snap_shot
-                .get_associativity(self.delta, &l, self.cache)
-                .unwrap()
-            {
+            |(l, r)| match self.get_associativity(&l).unwrap() {
                 Associativity::Left => {
                     "(".to_string()
                         + &l.to_string()
@@ -519,6 +511,18 @@ impl<'a> ContextSearch<'a> {
             },
         );
         left_string + " " + &right_string
+    }
+
+    pub fn get_associativity(
+        &self,
+        ast: &Arc<SyntaxTree>,
+    ) -> Option<Associativity> {
+        let assoc_of_ast = self.combine(&self.to_ast(ASSOC), ast);
+        self.reduce(&assoc_of_ast).and_then(|ast| match ast.get_concept() {
+            Some(LEFT) => Some(Associativity::Left),
+            Some(RIGHT) => Some(Associativity::Right),
+            _ => None,
+        })
     }
 }
 
