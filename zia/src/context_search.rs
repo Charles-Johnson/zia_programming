@@ -18,12 +18,13 @@ use crate::{
     ast::SyntaxTree,
     concepts::format_string,
     constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, IMPLICATION, LEFT, PRECEDENCE,
-        REDUCTION, RIGHT, TRUE,
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
+        LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE,
     },
     context::is_variable,
     context_delta::ContextDelta,
-    snap_shot::{Associativity, SnapShot},
+    errors::{ZiaError, ZiaResult},
+    snap_shot::{parse_line, Associativity, SnapShot},
 };
 use dashmap::DashMap;
 use maplit::hashmap;
@@ -575,6 +576,264 @@ impl<'a> ContextSearch<'a> {
             ast.clone()
         }
     }
+
+    pub fn ast_from_expression(&self, s: &str) -> ZiaResult<Arc<SyntaxTree>> {
+        let tokens: Vec<String> = parse_line(s)?;
+        self.ast_from_tokens(&tokens)
+    }
+
+    fn ast_from_tokens(&self, tokens: &[String]) -> ZiaResult<Arc<SyntaxTree>> {
+        match tokens.len() {
+            0 => Err(ZiaError::EmptyParentheses),
+            1 => self.ast_from_token(&tokens[0]),
+            2 => self.ast_from_pair(&tokens[0], &tokens[1]),
+            _ => {
+                let TokenSubsequence {
+                    syntax: lp_syntax,
+                    positions: lp_indices,
+                } = self.lowest_precedence_info(tokens)?;
+                if lp_indices.is_empty() {
+                    return Err(ZiaError::AmbiguousExpression);
+                }
+                let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
+                    match (self.get_associativity(syntax), assoc) {
+                        (Some(x), Some(y)) => {
+                            if x == y {
+                                Ok(Some(x))
+                            } else {
+                                Err(ZiaError::AmbiguousExpression)
+                            }
+                        },
+                        (Some(x), None) => Ok(Some(x)),
+                        (None, _) => Err(ZiaError::AmbiguousExpression),
+                    }
+                });
+                match assoc? {
+                    Some(Associativity::Right) => {
+                        let tail = lp_indices
+                            .iter()
+                            .rev()
+                            .try_fold((None, None), |state, lp_index| {
+                                self.associativity_try_fold_handler(
+                                    tokens,
+                                    state,
+                                    *lp_index,
+                                    &Associativity::Right,
+                                )
+                            })?
+                            .0
+                            .unwrap(); // Already checked that lp_indices is non-empty;
+                        if lp_indices[0] == 0 {
+                            Ok(tail)
+                        } else {
+                            let head =
+                                self.ast_from_tokens(&tokens[..lp_indices[0]])?;
+                            Ok(self.combine(&head, &tail))
+                        }
+                    },
+                    Some(Associativity::Left) => lp_indices
+                        .iter()
+                        .try_fold((None, None), |state, lp_index| {
+                            self.associativity_try_fold_handler(
+                                tokens,
+                                state,
+                                *lp_index,
+                                &Associativity::Left,
+                            )
+                        })?
+                        .0
+                        .ok_or(ZiaError::AmbiguousExpression),
+                    None => Err(ZiaError::AmbiguousExpression),
+                }
+            },
+        }
+    }
+
+    fn associativity_try_fold_handler(
+        &self,
+        tokens: &[String],
+        state: (Option<Arc<SyntaxTree>>, Option<usize>),
+        lp_index: usize,
+        assoc: &Associativity,
+    ) -> ZiaResult<(Option<Arc<SyntaxTree>>, Option<usize>)> {
+        let prev_lp_index = state.1;
+        let slice = match assoc {
+            Associativity::Left => match prev_lp_index {
+                Some(i) => &tokens[i..lp_index],
+                None => &tokens[..lp_index],
+            },
+            Associativity::Right => match prev_lp_index {
+                Some(i) => &tokens[lp_index..i],
+                None => &tokens[lp_index..],
+            },
+        };
+        // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
+        if slice.is_empty() {
+            return Err(ZiaError::AmbiguousExpression);
+        }
+        let edge_index = match assoc {
+            Associativity::Left => slice.len() - 1,
+            Associativity::Right => 0,
+        };
+        let lp_with_the_rest = if lp_index == edge_index {
+            let edge_syntax = self.ast_from_token(&slice[edge_index])?;
+            if slice.len() == 1 {
+                edge_syntax
+            } else {
+                match assoc {
+                    Associativity::Left => self.combine(
+                        &if slice.len() < 3 {
+                            self.ast_from_token(&slice[slice.len() - 1])?
+                        } else {
+                            self.ast_from_tokens(&slice[..slice.len() - 1])?
+                        },
+                        &edge_syntax,
+                    ),
+                    Associativity::Right => self.combine(
+                        &edge_syntax,
+                        &if slice.len() < 3 {
+                            self.ast_from_token(&slice[1])?
+                        } else {
+                            self.ast_from_tokens(&slice[1..])?
+                        },
+                    ),
+                }
+            }
+        } else {
+            self.ast_from_tokens(slice)?
+        };
+        let edge = state.0;
+        Ok((
+            Some(match edge {
+                None => lp_with_the_rest,
+                Some(e) => match assoc {
+                    Associativity::Left => self.combine(&e, &lp_with_the_rest),
+                    Associativity::Right => self.combine(&lp_with_the_rest, &e),
+                },
+            }),
+            Some(lp_index),
+        ))
+    }
+
+    /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
+    fn lowest_precedence_info(
+        &self,
+        tokens: &[String],
+    ) -> ZiaResult<TokenSubsequence> {
+        let precedence_syntax = self.to_ast(PRECEDENCE);
+        let greater_than_syntax = self.to_ast(GREATER_THAN);
+        let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
+            // Initially assume no concepts have the lowest precedence
+            (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
+            |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
+             token| {
+                // Increment index
+                let this_index = prev_index.map(|x| x + 1).or(Some(0));
+                let syntax_of_token = self.ast_from_token(token)?;
+                let precedence_of_token =
+                    self.combine(&precedence_syntax, &syntax_of_token);
+                // Compare current token's precedence with each currently assumed lowest syntax
+                for syntax in lowest_precedence_syntax.clone() {
+                    let precedence_of_syntax =
+                        self.combine(&precedence_syntax, &syntax);
+                    let comparing_between_tokens = self.combine(
+                        &precedence_of_syntax,
+                        &self.combine(
+                            &greater_than_syntax,
+                            &precedence_of_token,
+                        ),
+                    );
+                    match self
+                        .recursively_reduce(&comparing_between_tokens)
+                        .get_concept()
+                    {
+                        // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                        // reset lowest precedence syntax with just this one
+                        Some(TRUE) => {
+                            return Ok((
+                                vec![syntax_of_token],
+                                vec![this_index.unwrap()],
+                                this_index,
+                            ))
+                        },
+                        // syntax of token has a higher precedence than some previous lowest precendence syntax
+                        // keep existing lowest precedence syntax as-is
+                        Some(FALSE) => {
+                            return Ok((
+                                lowest_precedence_syntax,
+                                lp_indices,
+                                this_index,
+                            ))
+                        },
+                        _ => {
+                            let comparing_between_tokens_reversed = self
+                                .combine(
+                                    &precedence_of_token,
+                                    &self.combine(
+                                        &greater_than_syntax,
+                                        &precedence_of_syntax,
+                                    ),
+                                );
+                            match self
+                                .recursively_reduce(
+                                    &comparing_between_tokens_reversed,
+                                )
+                                .get_concept()
+                            {
+                                // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                                // reset lowest precedence syntax with just this one
+                                Some(FALSE) => {
+                                    return Ok((
+                                        vec![syntax_of_token],
+                                        vec![this_index.unwrap()],
+                                        this_index,
+                                    ))
+                                },
+                                // syntax of token has a higher precedence than some previous lowest precendence syntax
+                                // keep existing lowest precedence syntax as-is
+                                Some(TRUE) => {
+                                    return Ok((
+                                        lowest_precedence_syntax,
+                                        lp_indices,
+                                        this_index,
+                                    ))
+                                },
+                                // Cannot determine if token has higher or lower precedence than this syntax
+                                // Check other syntax with lowest precedence
+                                _ => (),
+                            };
+                        },
+                    };
+                }
+                // syntax of token has neither higher or lower precedence than the lowest precedence syntax
+                lowest_precedence_syntax.push(syntax_of_token);
+                lp_indices.push(this_index.unwrap());
+                Ok((lowest_precedence_syntax, lp_indices, this_index))
+            },
+        )?;
+        Ok(TokenSubsequence {
+            syntax,
+            positions,
+        })
+    }
+
+    fn ast_from_pair(
+        &self,
+        left: &str,
+        right: &str,
+    ) -> ZiaResult<Arc<SyntaxTree>> {
+        let lefthand = self.ast_from_token(left)?;
+        let righthand = self.ast_from_token(right)?;
+        Ok(self.combine(&lefthand, &righthand))
+    }
+
+    fn ast_from_token(&self, t: &str) -> ZiaResult<Arc<SyntaxTree>> {
+        if t.contains(' ') || t.contains('(') || t.contains(')') {
+            self.ast_from_expression(t)
+        } else {
+            Ok(Arc::new(self.snap_shot.ast_from_symbol(self.delta, t)))
+        }
+    }
 }
 
 impl<'a> From<ContextReferences<'a>> for ContextSearch<'a> {
@@ -604,3 +863,8 @@ impl<'a> Clone for ContextSearch<'a> {
 }
 
 type VariableMask = HashMap<usize, Arc<SyntaxTree>>;
+
+struct TokenSubsequence {
+    syntax: Vec<Arc<SyntaxTree>>,
+    positions: Vec<usize>,
+}

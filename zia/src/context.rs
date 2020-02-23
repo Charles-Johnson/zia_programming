@@ -53,18 +53,18 @@ impl Context {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
         let cache = ContextCache::default();
-        let string = self
-            .snap_shot
-            .ast_from_expression(&self.delta, command, &cache)
-            .and_then(|a| {
-                #[cfg(not(target_arch = "wasm32"))]
-                info!(
-                    self.logger,
-                    "ast_from_expression({}) -> {:#?}", command, a
-                );
-                self.call(&a)
-            })
-            .unwrap_or_else(|e| e.to_string());
+        let string =
+            ContextSearch::from((&self.snap_shot, &self.delta, &cache))
+                .ast_from_expression(command)
+                .and_then(|a| {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    info!(
+                        self.logger,
+                        "ast_from_expression({}) -> {:#?}", command, a
+                    );
+                    self.call(&a)
+                })
+                .unwrap_or_else(|e| e.to_string());
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
