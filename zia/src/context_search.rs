@@ -173,7 +173,7 @@ impl<'a> ContextSearch<'a> {
                 .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
             let r = right_result
                 .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
-            Some(self.snap_shot.contract_pair(self.delta, &l, &r, self.cache))
+            Some(self.contract_pair(&l, &r))
         }
     }
 
@@ -184,11 +184,9 @@ impl<'a> ContextSearch<'a> {
                 ast.get_expansion().map_or_else(
                     || ast.clone(),
                     |(l, r)| {
-                        self.snap_shot.contract_pair(
-                            self.delta,
+                        self.contract_pair(
                             &self.substitute(&l),
                             &self.substitute(&r),
-                            self.cache,
                         )
                     },
                 )
@@ -200,27 +198,60 @@ impl<'a> ContextSearch<'a> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let generalisation_candidates = self.find_generalisations(
-            &self.snap_shot.contract_pair(self.delta, left, right, self.cache),
-        );
+        let generalisation_candidates =
+            self.find_generalisations(&self.contract_pair(left, right));
         generalisation_candidates
             .par_iter()
             .filter_map(|gc| {
-                self.check_generalisation(
-                    &self
-                        .snap_shot
-                        .contract_pair(self.delta, left, right, self.cache),
-                    *gc,
-                )
-                .and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
+                self.check_generalisation(&self.contract_pair(left, right), *gc)
+                    .and_then(|vm| {
+                        if vm.is_empty() {
+                            None
+                        } else {
+                            Some((*gc, vm))
+                        }
+                    })
             })
             .collect()
+    }
+
+    /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
+    pub fn contract_pair(
+        &self,
+        lefthand: &Arc<SyntaxTree>,
+        righthand: &Arc<SyntaxTree>,
+    ) -> Arc<SyntaxTree> {
+        Arc::new(
+            lefthand
+                .get_concept()
+                .and_then(|lc| {
+                    righthand.get_concept().and_then(|rc| {
+                        self.snap_shot.find_definition(self.delta, lc, rc).map(
+                            |def| {
+                                self.snap_shot
+                                    .get_label(self.delta, def)
+                                    .map_or_else(
+                                        || {
+                                            self.display_joint(
+                                                lefthand, righthand,
+                                            )
+                                        },
+                                        |label| label,
+                                    )
+                                    .parse::<SyntaxTree>()
+                                    .unwrap()
+                                    .bind_concept(def)
+                            },
+                        )
+                    })
+                })
+                .unwrap_or_else(|| {
+                    self.display_joint(lefthand, righthand)
+                        .parse::<SyntaxTree>()
+                        .unwrap()
+                })
+                .bind_pair(lefthand, righthand),
+        )
     }
 
     fn check_generalisation(

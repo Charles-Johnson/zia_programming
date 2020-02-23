@@ -696,45 +696,6 @@ impl SnapShot {
         }
     }
 
-    /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
-    pub fn contract_pair(
-        &self,
-        deltas: &ContextDelta,
-        lefthand: &Arc<SyntaxTree>,
-        righthand: &Arc<SyntaxTree>,
-        cache: &ContextCache,
-    ) -> Arc<SyntaxTree> {
-        let context_search = ContextSearch::from((self, deltas, cache));
-        Arc::new(
-            lefthand
-                .get_concept()
-                .and_then(|lc| {
-                    righthand.get_concept().and_then(|rc| {
-                        self.find_definition(deltas, lc, rc).map(|def| {
-                            self.get_label(deltas, def)
-                                .map_or_else(
-                                    || {
-                                        context_search
-                                            .display_joint(lefthand, righthand)
-                                    },
-                                    |label| label,
-                                )
-                                .parse::<SyntaxTree>()
-                                .unwrap()
-                                .bind_concept(def)
-                        })
-                    })
-                })
-                .unwrap_or_else(|| {
-                    context_search
-                        .display_joint(lefthand, righthand)
-                        .parse::<SyntaxTree>()
-                        .unwrap()
-                })
-                .bind_pair(lefthand, righthand),
-        )
-    }
-
     pub fn check_reductions(
         &self,
         deltas: &ContextDelta,

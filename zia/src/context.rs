@@ -192,15 +192,13 @@ impl Context {
                             &ZiaError::CannotReduceFurther,
                             || {
                                 let cache = ContextCache::default();
-                                Ok(self
-                                    .snap_shot
-                                    .contract_pair(
-                                        &self.delta,
-                                        left,
-                                        right,
-                                        &cache,
-                                    )
-                                    .to_string())
+                                Ok(ContextSearch::from((
+                                    &self.snap_shot,
+                                    &self.delta,
+                                    &cache,
+                                ))
+                                .contract_pair(left, right)
+                                .to_string())
                             },
                         )
                     },
