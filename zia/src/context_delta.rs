@@ -14,17 +14,100 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use concepts::{Concept, ConceptDelta as CD};
-use delta::{Apply, Delta};
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    fmt::Debug,
+use crate::{
+    concepts::{Concept, ConceptDelta as CD},
+    context_search::ContextCache,
+    delta::{Apply, Delta},
 };
+use std::{collections::HashMap, fmt::Debug, mem::swap};
 
 #[derive(Clone, Default)]
 pub struct ContextDelta {
-    pub string: HashMap<String, StringDelta>,
-    pub concept: HashMap<usize, (ConceptDelta, bool, bool)>,
+    string: HashMap<String, StringDelta>,
+    concept: HashMap<usize, (ConceptDelta, bool, bool)>,
+}
+
+impl ContextDelta {
+    pub const fn new(
+        string: HashMap<String, StringDelta>,
+        concept: HashMap<usize, (ConceptDelta, bool, bool)>,
+    ) -> Self {
+        Self {
+            string,
+            concept,
+        }
+    }
+
+    pub fn update_concept_delta(
+        &mut self,
+        concept_id: usize,
+        concept_delta: &CD,
+        temporary: bool,
+        cache_to_invalidate: &mut ContextCache,
+    ) {
+        self.concept
+            .entry(concept_id)
+            .and_modify(|(cd, _, _)| match cd {
+                ConceptDelta::Update(d) => {
+                    d.combine(concept_delta.clone());
+                    *cd = ConceptDelta::Update(d.clone());
+                },
+                ConceptDelta::Insert(c) => {
+                    c.apply(concept_delta.clone());
+                    *cd = ConceptDelta::Insert(c.clone());
+                },
+                ConceptDelta::Remove(_) => {
+                    panic!("Concept will already be removed")
+                },
+            })
+            .or_insert((
+                ConceptDelta::Update(concept_delta.clone()),
+                false,
+                temporary,
+            ));
+        let mut empty_cache = ContextCache::default();
+        swap(cache_to_invalidate, &mut empty_cache);
+    }
+
+    pub fn insert_string(
+        &mut self,
+        string: String,
+        string_delta: StringDelta,
+        cache_to_invalidate: &mut ContextCache,
+    ) {
+        self.string.insert(string, string_delta);
+        let mut empty_cache = ContextCache::default();
+        swap(cache_to_invalidate, &mut empty_cache);
+    }
+
+    pub const fn string(&self) -> &HashMap<String, StringDelta> {
+        &self.string
+    }
+
+    pub fn insert_concept(
+        &mut self,
+        concept_id: usize,
+        concept_delta: (ConceptDelta, bool, bool),
+        cache_to_invalidate: &mut ContextCache,
+    ) {
+        self.concept.insert(concept_id, concept_delta);
+        let mut empty_cache = ContextCache::default();
+        swap(cache_to_invalidate, &mut empty_cache);
+    }
+
+    pub const fn concept(&self) -> &HashMap<usize, (ConceptDelta, bool, bool)> {
+        &self.concept
+    }
+
+    pub fn combine_and_invalidate_cache(
+        &mut self,
+        other: Self,
+        cache_to_invalidate: &mut ContextCache,
+    ) {
+        self.combine(other);
+        let mut empty_cache = ContextCache::default();
+        swap(cache_to_invalidate, &mut empty_cache);
+    }
 }
 
 impl Debug for ContextDelta {
@@ -106,32 +189,6 @@ impl Debug for ConceptDelta {
             Self::Update(ref cd) => format!("{:#?}", cd),
         })
     }
-}
-
-pub fn update_concept_delta(
-    entry: Entry<usize, (ConceptDelta, bool, bool)>,
-    concept_delta: &CD,
-    temporary: bool,
-) {
-    entry
-        .and_modify(|(cd, _, _)| match cd {
-            ConceptDelta::Update(d) => {
-                d.combine(concept_delta.clone());
-                *cd = ConceptDelta::Update(d.clone());
-            },
-            ConceptDelta::Insert(c) => {
-                c.apply(concept_delta.clone());
-                *cd = ConceptDelta::Insert(c.clone());
-            },
-            ConceptDelta::Remove(_) => {
-                panic!("Concept will already be removed")
-            },
-        })
-        .or_insert((
-            ConceptDelta::Update(concept_delta.clone()),
-            false,
-            temporary,
-        ));
 }
 
 impl Delta for ContextDelta {

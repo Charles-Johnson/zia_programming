@@ -114,17 +114,6 @@
 //! assert_eq!(context.execute("false or true"), "true");
 //! ```
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate maplit;
-#[cfg(not(target_arch = "wasm32"))]
-#[macro_use]
-extern crate slog;
-#[cfg(not(target_arch = "wasm32"))]
-extern crate slog_term;
-extern crate snafu;
-
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 
@@ -150,9 +139,11 @@ mod errors;
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
-pub use context::Context;
+pub use crate::context::Context;
 
-pub use errors::ZiaError;
+pub use crate::errors::ZiaError;
+
+use lazy_static::lazy_static;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]

@@ -14,19 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use ast::SyntaxTree;
-use concepts::{AbstractPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
-use context_delta::{
-    update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
+use crate::{
+    ast::SyntaxTree,
+    concepts::{AbstractPart, Concept},
+    constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
+    context_delta::{ConceptDelta, ContextDelta, StringDelta},
+    context_search::{ContextCache, ContextSearch},
+    delta::Apply,
+    errors::{map_err_variant, ZiaError, ZiaResult},
+    snap_shot::SnapShot,
 };
-use context_search::ContextSearch;
-use delta::{Apply, Delta};
-use errors::{map_err_variant, ZiaError, ZiaResult};
 #[cfg(not(target_arch = "wasm32"))]
-use slog::{Drain, Logger};
-use snap_shot::SnapShot;
-use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
+use slog::{info, o, Drain, Logger};
+use std::{default::Default, iter::from_fn, mem::swap, sync::Arc};
 
 #[derive(Clone)]
 pub struct Context {
@@ -34,6 +34,7 @@ pub struct Context {
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta,
+    cache: ContextCache,
 }
 
 impl Context {
@@ -50,18 +51,18 @@ impl Context {
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
-        let string = self
-            .snap_shot
-            .ast_from_expression(&self.delta, command)
-            .and_then(|a| {
-                #[cfg(not(target_arch = "wasm32"))]
-                info!(
-                    self.logger,
-                    "ast_from_expression({}) -> {:#?}", command, a
-                );
-                self.call(&a)
-            })
-            .unwrap_or_else(|e| e.to_string());
+        let string =
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+                .ast_from_expression(command)
+                .and_then(|a| {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    info!(
+                        self.logger,
+                        "ast_from_expression({}) -> {:#?}", command, a
+                    );
+                    self.call(&a)
+                })
+                .unwrap_or_else(|e| e.to_string());
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
@@ -81,7 +82,7 @@ impl Context {
                 Concept::default(),
                 false,
             );
-            self.delta.combine(delta);
+            self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
             index
         };
         let labels = vec![
@@ -125,13 +126,15 @@ impl Context {
 
     fn reduce_and_call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         let reduced_left =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(left);
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+                .reduce(left);
         let reduced_right =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(right);
+            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+                .reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
@@ -143,9 +146,11 @@ impl Context {
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let expansion = &self.snap_shot.expand(&self.delta, ast);
+        let expansion =
+            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+                .expand(ast);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
         } else {
@@ -156,10 +161,11 @@ impl Context {
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let normal_form = &ContextSearch::from((&self.snap_shot, &self.delta))
-            .recursively_reduce(ast);
+        let normal_form =
+            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+                .recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
         } else {
@@ -168,7 +174,7 @@ impl Context {
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
+    fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
         match ast.get_concept().and_then(|c| {
             self.snap_shot.read_concept(&self.delta, c).get_string()
         }) {
@@ -182,10 +188,13 @@ impl Context {
                             self.try_reducing_then_call(ast),
                             &ZiaError::CannotReduceFurther,
                             || {
-                                Ok(self
-                                    .snap_shot
-                                    .contract_pair(&self.delta, left, right)
-                                    .to_string())
+                                Ok(ContextSearch::from((
+                                    &self.snap_shot,
+                                    &self.delta,
+                                    &self.cache,
+                                ))
+                                .contract_pair(left, right)
+                                .to_string())
                             },
                         )
                     },
@@ -208,8 +217,8 @@ impl Context {
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         left.get_concept()
             .and_then(|lc| match lc {
@@ -224,8 +233,12 @@ impl Context {
                     })
                     .or_else(|| {
                         Some({
-                            let true_syntax =
-                                self.snap_shot.to_ast(&self.delta, TRUE);
+                            let true_syntax = ContextSearch::from((
+                                &self.snap_shot,
+                                &self.delta,
+                                &self.cache,
+                            ))
+                            .to_ast(TRUE);
                             self.execute_reduction(right, &true_syntax)
                         })
                     })
@@ -247,8 +260,8 @@ impl Context {
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn execute_let(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Option<ZiaResult<()>> {
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
@@ -260,9 +273,9 @@ impl Context {
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        rightleft: &Arc<SyntaxTree>,
+        rightright: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         match rightleft.get_concept() {
             Some(c) => match c {
@@ -274,7 +287,12 @@ impl Context {
                         .read_concept(&self.delta, c)
                         .get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = self.snap_shot.to_ast(&self.delta, r);
+                        let ast = ContextSearch::from((
+                            &self.snap_shot,
+                            &self.delta,
+                            &self.cache,
+                        ))
+                        .to_ast(r);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)
@@ -288,8 +306,8 @@ impl Context {
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
     fn execute_definition(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteDefinition)
@@ -301,8 +319,8 @@ impl Context {
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadDefinition)
@@ -356,10 +374,11 @@ impl Context {
                     .delete_definition(concept);
                 let concept_id_array = [concept, left, right];
                 (0..3).for_each(|index| {
-                    update_concept_delta(
-                        self.delta.concept.entry(concept_id_array[index]),
+                    self.delta.update_concept_delta(
+                        concept_id_array[index],
                         &concept_delta_array[index],
                         false,
+                        &mut self.cache,
                     )
                 });
                 self.try_delete_concept(concept)?;
@@ -389,7 +408,7 @@ impl Context {
     fn remove_string(&mut self, string: &str) {
         let index = *(self
             .delta
-            .string
+            .string()
             .get(string)
             .and_then(|sd| match sd {
                 StringDelta::Update {
@@ -400,15 +419,17 @@ impl Context {
                 StringDelta::Remove(_) => None,
             })
             .expect("string already removed or doesn't exist"));
-        self.delta
-            .string
-            .insert(string.to_string(), StringDelta::Remove(index));
+        self.delta.insert_string(
+            string.to_string(),
+            StringDelta::Remove(index),
+            &mut self.cache,
+        );
     }
 
     fn blindly_remove_concept(&mut self, id: usize) {
         let concept = self
             .delta
-            .concept
+            .concept()
             .get(&id)
             .and_then(|(cd, _, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c),
@@ -421,21 +442,22 @@ impl Context {
                     .expect("Concept will be already removed!")
             })
             .clone();
-        self.delta.concept.insert(
+        self.delta.insert_concept(
             id,
             (
                 ConceptDelta::Remove(concept),
                 self.snap_shot.has_variable(&self.delta, id),
                 false,
             ),
+            &mut self.cache,
         );
     }
 
     fn redefine(
         &mut self,
         concept: usize,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.snap_shot.read_concept(&self.delta, concept).get_definition()
@@ -466,8 +488,8 @@ impl Context {
     fn define_new_syntax(
         &mut self,
         syntax: &str,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
@@ -519,10 +541,11 @@ impl Context {
             .remove_reduction(concept_id)
             .map(|z| {
                 z.iter().for_each(|(id, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(*id),
+                    self.delta.update_concept_delta(
+                        *id,
                         concept_delta,
                         false,
+                        &mut self.cache,
                     )
                 })
             })
@@ -580,9 +603,9 @@ impl Context {
             string_concept,
             false,
         );
-        self.delta.combine(delta);
+        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         let string_delta = SnapShot::add_string_delta(index, string);
-        self.delta.combine(string_delta);
+        self.delta.combine_and_invalidate_cache(string_delta, &mut self.cache);
         index
     }
 
@@ -614,7 +637,7 @@ impl Context {
         let concept: Concept = V::default().into();
         let (delta, index) =
             self.snap_shot.add_concept_delta(&self.delta, concept, variable);
-        self.delta.combine(delta);
+        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         index
     }
 
@@ -647,10 +670,11 @@ impl Context {
                 .set_definition(definition, lefthand, righthand)?;
             concept_delta_array.iter().enumerate().for_each(
                 |(i, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(id_array[i]),
+                    self.delta.update_concept_delta(
+                        id_array[i],
                         concept_delta,
                         temporary,
+                        &mut self.cache,
                     )
                 },
             );
@@ -697,15 +721,17 @@ impl Context {
                                 .snap_shot
                                 .read_concept(&self.delta, concept)
                                 .reduce_to(concept, reduction)?;
-                            update_concept_delta(
-                                self.delta.concept.entry(concept),
+                            self.delta.update_concept_delta(
+                                concept,
                                 &concept_deltas[0],
                                 temporary,
+                                &mut self.cache,
                             );
-                            update_concept_delta(
-                                self.delta.concept.entry(reduction),
+                            self.delta.update_concept_delta(
+                                reduction,
                                 &concept_deltas[1],
                                 temporary,
+                                &mut self.cache,
                             );
                             Ok(())
                         }
@@ -728,6 +754,7 @@ impl Default for Context {
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),
+            cache: ContextCache::default(),
         }
     }
 }

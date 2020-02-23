@@ -13,10 +13,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-
+#![feature(test)]
+extern crate test;
 extern crate zia;
 
-use zia::NEW_CONTEXT;
+use test::Bencher;
+use zia::{Context, NEW_CONTEXT};
 
 #[test]
 fn simple_condition() {
@@ -26,8 +28,7 @@ fn simple_condition() {
     assert_eq!(context.execute("b"), "true");
 }
 
-#[test]
-fn partial_order_transitivity() {
+fn partial_order_transitivity() -> Context {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(
         context.execute(
@@ -38,4 +39,16 @@ fn partial_order_transitivity() {
     assert_eq!(context.execute("let a > b"), "");
     assert_eq!(context.execute("let b > c"), "");
     assert_eq!(context.execute("a > c"), "true");
+    context
+}
+#[test]
+fn partial_order_transitivity_test() {
+    partial_order_transitivity();
+}
+
+#[bench]
+fn partial_order_transitivity_bench(b: &mut Bencher) {
+    b.iter(|| {
+        partial_order_transitivity();
+    });
 }

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use delta::{Apply, Change, Delta};
+use crate::delta::{Apply, Change, Delta};
 use std::fmt::Debug;
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.

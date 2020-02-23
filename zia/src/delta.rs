@@ -18,8 +18,8 @@ use std::collections::HashSet;
 
 pub trait Apply {
     type Delta;
-    fn apply(&mut self, Self::Delta);
-    fn diff(&self, Self) -> Self::Delta;
+    fn apply(&mut self, _: Self::Delta);
+    fn diff(&self, _: Self) -> Self::Delta;
 }
 
 impl<T> Apply for Option<T>
@@ -50,7 +50,7 @@ where
     }
 }
 pub trait Delta {
-    fn combine(&mut self, Self);
+    fn combine(&mut self, _: Self);
 }
 
 #[derive(Clone, Debug)]

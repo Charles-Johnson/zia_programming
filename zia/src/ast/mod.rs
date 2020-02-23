@@ -13,8 +13,16 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use errors::{ZiaError, ZiaResult};
-use std::{fmt, rc::Rc, str::FromStr};
+use crate::{
+    context::is_variable,
+    errors::{ZiaError, ZiaResult},
+};
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+    sync::Arc,
+};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone, Debug)]
@@ -24,7 +32,7 @@ pub struct SyntaxTree {
     /// Index of the concept that the syntax may represent.
     concept: Option<usize>,
     /// This syntax tree may expand to two syntax trees or not expand further.
-    expansion: Option<(Rc<SyntaxTree>, Rc<SyntaxTree>)>,
+    expansion: Option<(Arc<SyntaxTree>, Arc<SyntaxTree>)>,
 }
 
 impl PartialEq<SyntaxTree> for SyntaxTree {
@@ -34,10 +42,10 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
     }
 }
 
-impl PartialEq<Rc<SyntaxTree>> for SyntaxTree {
+impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &Rc<Self>) -> bool {
-        self.to_string() == other.to_string()
+    fn eq(&self, other: &Arc<Self>) -> bool {
+        self.to_string() == other.to_string() && self.concept == other.concept
     }
 }
 
@@ -60,6 +68,15 @@ impl FromStr for SyntaxTree {
     }
 }
 
+impl Eq for SyntaxTree {}
+
+impl Hash for SyntaxTree {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.syntax.hash(state);
+        self.concept.hash(state);
+    }
+}
+
 impl SyntaxTree {
     pub fn bind_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
@@ -78,14 +95,14 @@ impl SyntaxTree {
     }
 
     /// An expression does have an expansion while a symbol does not.
-    pub fn get_expansion(&self) -> Option<(Rc<Self>, Rc<Self>)> {
+    pub fn get_expansion(&self) -> Option<(Arc<Self>, Arc<Self>)> {
         self.expansion.clone()
     }
 
     pub fn bind_pair(
         mut self,
-        lefthand: &Rc<Self>,
-        righthand: &Rc<Self>,
+        lefthand: &Arc<Self>,
+        righthand: &Arc<Self>,
     ) -> Self {
         self.expansion = Some((lefthand.clone(), righthand.clone()));
         self
@@ -93,5 +110,15 @@ impl SyntaxTree {
 
     pub const fn get_concept(&self) -> Option<usize> {
         self.concept
+    }
+
+    pub fn is_variable(&self) -> bool {
+        if is_variable(&self.syntax) {
+            true
+        } else if let Some((l, r)) = self.get_expansion() {
+            is_variable(&l.syntax) || is_variable(&r.syntax)
+        } else {
+            false
+        }
     }
 }
