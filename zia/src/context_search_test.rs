@@ -5,19 +5,29 @@ use crate::{
     context_search::{ContextSearch, ContextCache},
     snap_shot::SnapShotReader,
 };
+use lazy_static::lazy_static;
 use std::{str::FromStr, sync::Arc};
 
 #[derive(Default)]
 struct BasicReductionSnapShot;
 
+lazy_static! {
+    static ref CONCEPTS: (Concept, Concept) = {
+        let mut concrete_concept = (SpecificPart::Concrete, 0).into();
+        let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
+        abstract_concept.make_reduce_to(&mut concrete_concept);
+        (concrete_concept, abstract_concept)
+    };
+    static ref CONCRETE_SYNTAX: SyntaxTree = SyntaxTree::from_str("concrete").unwrap().bind_concept(0);
+    static ref ABSTRACT_SYNTAX: SyntaxTree = SyntaxTree::from_str("abstract").unwrap().bind_concept(1);
+}
+
 impl SnapShotReader for BasicReductionSnapShot {
     fn read_concept(&self, _delta: &ContextDelta, concept_id: usize) -> Concept {
-        let mut concrete = (SpecificPart::Concrete, 0).into();
-        let mut abstrct: Concept = (SpecificPart::default(), 1).into();
-        abstrct.make_reduce_to(&mut concrete);
+        let (concrete_concept, abstract_concept) = CONCEPTS.clone();
         match concept_id {
-            0 => concrete,
-            1 => abstrct,
+            0 => concrete_concept,
+            1 => abstract_concept,
             _ => panic!("No concepts with id: {}", concept_id)
         }
     }
@@ -38,11 +48,10 @@ impl SnapShotReader for BasicReductionSnapShot {
         }
     }
     fn ast_from_symbol(&self, _delta: &ContextDelta, symbol: &str) -> SyntaxTree {
-        let syntax = SyntaxTree::from_str(symbol).unwrap();
         match symbol {
-            "concrete" => syntax.bind_concept(0),
-            "abstract" => syntax.bind_concept(1),
-            _ => syntax,
+            "concrete" => CONCRETE_SYNTAX.clone(),
+            "abstract" => ABSTRACT_SYNTAX.clone(),
+            _ => SyntaxTree::from_str(symbol).unwrap(),
         }
     }
 }
@@ -53,7 +62,21 @@ fn basic_reduction() {
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search = ContextSearch::<BasicReductionSnapShot>::from((&snapshot, &delta, &cache));
-    let abstract_syntax = Arc::new(SyntaxTree::from_str("abstract").unwrap().bind_concept(1));
-    let concrete_syntax = Arc::new(SyntaxTree::from_str("concrete").unwrap().bind_concept(0));
+    let abstract_syntax = Arc::new(ABSTRACT_SYNTAX.clone());
+    let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
+
     assert_eq!(context_search.recursively_reduce(&abstract_syntax), concrete_syntax);
+    assert_eq!(context_search.recursively_reduce(&concrete_syntax), concrete_syntax);
+    
+    assert_eq!(context_search.reduce(&abstract_syntax), Some(concrete_syntax.clone()));
+    assert_eq!(context_search.reduce(&concrete_syntax), None);
+
+    assert_eq!(context_search.ast_from_expression("abstract"), Ok(abstract_syntax.clone()));
+    assert_eq!(context_search.ast_from_expression("concrete"), Ok(concrete_syntax.clone()));
+
+    assert_eq!(context_search.expand(&abstract_syntax), abstract_syntax);
+    assert_eq!(context_search.expand(&concrete_syntax), concrete_syntax);
+
+    assert_eq!(context_search.to_ast(0), concrete_syntax);
+    assert_eq!(context_search.to_ast(1), abstract_syntax);
 }
