@@ -499,15 +499,12 @@ impl Context {
                 right.get_concept().and_then(|r| {
                     self.snap_shot.find_definition(&self.delta, l, r).map(
                         |concept| {
-                            syntax
-                                .parse::<SyntaxTree>()
-                                .unwrap()
-                                .bind_concept(concept)
+                            SyntaxTree::from(syntax).bind_concept(concept)
                         },
                     )
                 })
             })
-            .unwrap_or_else(|| syntax.parse::<SyntaxTree>().unwrap())
+            .unwrap_or_else(|| syntax.into())
             .bind_pair(left, right);
         self.concept_from_ast(&new_syntax_tree)?;
         Ok(())

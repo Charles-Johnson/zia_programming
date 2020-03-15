@@ -295,27 +295,25 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     righthand.get_concept().and_then(|rc| {
                         self.snap_shot.find_definition(self.delta, lc, rc).map(
                             |def| {
-                                self.snap_shot
-                                    .get_label(self.delta, def)
-                                    .map_or_else(
-                                        || {
-                                            self.display_joint(
-                                                lefthand, righthand,
-                                            )
-                                        },
-                                        |label| label,
-                                    )
-                                    .parse::<SyntaxTree>()
-                                    .unwrap()
-                                    .bind_concept(def)
+                                SyntaxTree::from(
+                                    self.snap_shot
+                                        .get_label(self.delta, def)
+                                        .map_or_else(
+                                            || {
+                                                self.display_joint(
+                                                    lefthand, righthand,
+                                                )
+                                            },
+                                            |label| label,
+                                        ),
+                                )
+                                .bind_concept(def)
                             },
                         )
                     })
                 })
                 .unwrap_or_else(|| {
-                    self.display_joint(lefthand, righthand)
-                        .parse::<SyntaxTree>()
-                        .unwrap()
+                    self.display_joint(lefthand, righthand).into()
                 })
                 .bind_pair(lefthand, righthand),
         )
@@ -552,11 +550,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     || self.snap_shot.get_label(self.delta, concept_id),
                     |s| Some(format_string(&s)),
                 ) {
-                    Arc::new(
-                        s.parse::<SyntaxTree>()
-                            .unwrap()
-                            .bind_concept(concept_id),
-                    )
+                    Arc::new(SyntaxTree::from(s).bind_concept(concept_id))
                 } else {
                     let (left, right) =
                         concept.get_definition().unwrap_or_else(|| {
@@ -597,10 +591,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> SyntaxTree {
-        self.display_joint(left, right)
-            .parse::<SyntaxTree>()
-            .unwrap()
-            .bind_pair(left, right)
+        SyntaxTree::from(self.display_joint(left, right)).bind_pair(left, right)
     }
 
     fn display_joint(

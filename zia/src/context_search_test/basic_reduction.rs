@@ -6,7 +6,7 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicReductionSnapShot;
@@ -19,9 +19,9 @@ lazy_static! {
         (concrete_concept, abstract_concept)
     };
     static ref CONCRETE_SYNTAX: SyntaxTree =
-        SyntaxTree::from_str("concrete").unwrap().bind_concept(0);
+        SyntaxTree::from("concrete").bind_concept(0);
     static ref ABSTRACT_SYNTAX: SyntaxTree =
-        SyntaxTree::from_str("abstract").unwrap().bind_concept(1);
+        SyntaxTree::from("abstract").bind_concept(1);
 }
 
 impl SnapShotReader for BasicReductionSnapShot {
@@ -75,7 +75,7 @@ impl SnapShotReader for BasicReductionSnapShot {
         match symbol {
             "concrete" => CONCRETE_SYNTAX.clone(),
             "abstract" => ABSTRACT_SYNTAX.clone(),
-            _ => SyntaxTree::from_str(symbol).unwrap(),
+            _ => symbol.into(),
         }
     }
 }

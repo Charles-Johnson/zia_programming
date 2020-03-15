@@ -261,8 +261,8 @@ pub enum SpecificPart {
 }
 
 impl Default for SpecificPart {
-    fn default() -> SpecificPart {
-        SpecificPart::Abstract(AbstractPart::default())
+    fn default() -> Self {
+        Self::Abstract(AbstractPart::default())
     }
 }
 

@@ -6,7 +6,7 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicCompositionSnapShot;
@@ -22,13 +22,12 @@ lazy_static! {
         (composite_concept, left_concept, right_concept)
     };
     static ref SYNTAX: (SyntaxTree, SyntaxTree, SyntaxTree) = {
-        let left_syntax = SyntaxTree::from_str("b").unwrap().bind_concept(1);
-        let right_syntax = SyntaxTree::from_str("c").unwrap().bind_concept(2);
-        let composite_syntax =
-            SyntaxTree::from_str("a").unwrap().bind_concept(0).bind_pair(
-                &Arc::new(left_syntax.clone()),
-                &Arc::new(right_syntax.clone()),
-            );
+        let left_syntax = SyntaxTree::from("b").bind_concept(1);
+        let right_syntax = SyntaxTree::from("c").bind_concept(2);
+        let composite_syntax = SyntaxTree::from("a").bind_concept(0).bind_pair(
+            &Arc::new(left_syntax.clone()),
+            &Arc::new(right_syntax.clone()),
+        );
         (composite_syntax, left_syntax, right_syntax)
     };
 }
@@ -92,7 +91,7 @@ impl SnapShotReader for BasicCompositionSnapShot {
             "a" => composite_syntax.clone(),
             "b" => left_syntax.clone(),
             "c" => right_syntax.clone(),
-            _ => SyntaxTree::from_str(symbol).unwrap(),
+            _ => symbol.into(),
         }
     }
 }
@@ -112,7 +111,11 @@ fn basic_composition() {
 
     assert_eq!(
         context_search.ast_from_expression("b c"),
-        Ok(composite_syntax.clone())
+        Ok(Arc::new(
+            SyntaxTree::from("b c")
+                .bind_concept(0)
+                .bind_pair(&left_syntax, &right_syntax)
+        ))
     );
     assert_eq!(
         context_search.ast_from_expression("a"),
@@ -127,10 +130,7 @@ fn basic_composition() {
         Ok(right_syntax.clone())
     );
 
-    assert_eq!(
-        context_search.expand(&Arc::new(SyntaxTree::from_str("a").unwrap())),
-        composite_syntax
-    );
+    assert_eq!(context_search.expand(&Arc::new("a".into())), composite_syntax);
 
     assert_eq!(context_search.to_ast(0), composite_syntax);
     assert_eq!(context_search.to_ast(1), left_syntax);

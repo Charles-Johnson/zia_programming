@@ -13,14 +13,10 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use crate::{
-    context::is_variable,
-    errors::{ZiaError, ZiaResult},
-};
+use crate::context::is_variable;
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    str::FromStr,
     sync::Arc,
 };
 
@@ -56,15 +52,16 @@ impl fmt::Display for SyntaxTree {
     }
 }
 
-impl FromStr for SyntaxTree {
-    type Err = ZiaError;
-
-    fn from_str(syntax: &str) -> ZiaResult<Self> {
-        Ok(Self {
-            syntax: syntax.to_string(),
+impl<S> From<S> for SyntaxTree
+where
+    S: Into<String>,
+{
+    fn from(syntax: S) -> Self {
+        Self {
+            syntax: syntax.into(),
             concept: None,
             expansion: None,
-        })
+        }
     }
 }
 

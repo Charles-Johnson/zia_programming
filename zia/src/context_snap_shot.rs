@@ -381,8 +381,8 @@ impl SnapShotReader for ContextSnapShot {
 
     fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
         self.concept_from_label(delta, s).map_or_else(
-            || s.parse().unwrap(),
-            |concept| s.parse::<SyntaxTree>().unwrap().bind_concept(concept),
+            || s.into(),
+            |concept| SyntaxTree::from(s).bind_concept(concept),
         )
     }
 
