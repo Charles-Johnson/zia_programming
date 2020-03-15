@@ -1,5 +1,5 @@
 //  Library for the Zia programming language.
-// Copyright (C) 2018 to 2019 Charles Johnson
+// Copyright (C) 2018 to 2020 Charles Johnson
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,9 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-mod abstract_part;
 
-pub use self::abstract_part::{AbstractDelta, AbstractPart};
 use crate::{
     delta::{Apply, Change, Delta, SetChange},
     errors::{ZiaError, ZiaResult},
@@ -24,14 +22,10 @@ use maplit::hashset;
 use std::{collections::HashSet, fmt::Debug};
 
 /// Data type for any type of concept.
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Concept {
-    /// Set of all indices of the concepts which have this concept as the lefthand of their definition
-    lefthand_of: HashSet<usize>,
-    /// Set of all indices of the concepts which have this concept as the righthand of their definition
-    righthand_of: HashSet<usize>,
-    /// Set of all indices of the concepts which reduce to this concept.
-    reduces_from: HashSet<usize>,
+    id: usize,
+    concrete_part: ConcreteConcept,
     specific_part: SpecificPart,
 }
 
@@ -41,30 +35,30 @@ impl Debug for Concept {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         let mut string = "{".to_string();
-        if !self.lefthand_of.is_empty() {
+        if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             let mut unorder_keys: Vec<&usize> =
-                self.lefthand_of.iter().collect();
+                self.concrete_part.lefthand_of.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
             }
             string += "},";
         }
-        if !self.righthand_of.is_empty() {
+        if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
             let mut unorder_keys: Vec<&usize> =
-                self.righthand_of.iter().collect();
+                self.concrete_part.righthand_of.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
             }
             string += "},";
         }
-        if !self.reduces_from.is_empty() {
+        if !self.concrete_part.reduces_from.is_empty() {
             string += " reduces_from: {";
             let mut unorder_keys: Vec<&usize> =
-                self.reduces_from.iter().collect();
+                self.concrete_part.reduces_from.iter().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -140,7 +134,7 @@ impl Concept {
     pub fn find_what_reduces_to_it(
         &self,
     ) -> std::collections::hash_set::Iter<usize> {
-        self.reduces_from.iter()
+        self.concrete_part.reduces_from.iter()
     }
 
     /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
@@ -152,11 +146,11 @@ impl Concept {
     }
 
     pub const fn get_lefthand_of(&self) -> &HashSet<usize> {
-        &self.lefthand_of
+        &self.concrete_part.lefthand_of
     }
 
     pub const fn get_righthand_of(&self) -> &HashSet<usize> {
-        &self.righthand_of
+        &self.concrete_part.righthand_of
     }
 
     /// Gets the index of the concept that `self` may reduce to.
@@ -228,10 +222,19 @@ impl Concept {
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
+    #[cfg(test)]
+    pub fn make_reduce_to(&mut self, other: &mut Concept) {
+        if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
+            ap.reduces_to = Some(other.id);
+            other.concrete_part.reduces_from.insert(self.id);
+        } else {
+            panic!("Cannot reduce a concrete concept")
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
-enum SpecificPart {
+pub enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete,
     /// An abstract concept can reduce to any other concept (whose normal form isn't the former
@@ -239,6 +242,12 @@ enum SpecificPart {
     Abstract(AbstractPart),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
+}
+
+impl Default for SpecificPart {
+    fn default() -> SpecificPart {
+        SpecificPart::Abstract(AbstractPart::default())
+    }
 }
 
 impl Debug for SpecificPart {
@@ -256,12 +265,6 @@ impl Debug for SpecificPart {
 
 pub fn format_string(s: &str) -> String {
     format!("\"{}\"", s)
-}
-
-impl Default for SpecificPart {
-    fn default() -> Self {
-        Self::Concrete
-    }
 }
 
 #[derive(Clone, Default)]
@@ -324,18 +327,18 @@ impl Apply for Concept {
             reduces_from,
             specific_part,
         } = delta;
-        self.lefthand_of.apply(lefthand_of);
-        self.righthand_of.apply(righthand_of);
-        self.reduces_from.apply(reduces_from);
+        self.concrete_part.lefthand_of.apply(lefthand_of);
+        self.concrete_part.righthand_of.apply(righthand_of);
+        self.concrete_part.reduces_from.apply(reduces_from);
         if let SpecificPart::Abstract(ref mut ap) = self.specific_part {
             ap.apply(specific_part);
         };
     }
 
     fn diff(&self, next: Self) -> ConceptDelta {
-        let lefthand_of = self.lefthand_of.diff(next.lefthand_of);
-        let righthand_of = self.righthand_of.diff(next.righthand_of);
-        let reduces_from = self.reduces_from.diff(next.reduces_from);
+        let lefthand_of = self.concrete_part.lefthand_of.diff(next.concrete_part.lefthand_of);
+        let righthand_of = self.concrete_part.righthand_of.diff(next.concrete_part.righthand_of);
+        let reduces_from = self.concrete_part.reduces_from.diff(next.concrete_part.reduces_from);
         ConceptDelta {
             lefthand_of,
             righthand_of,
@@ -357,18 +360,17 @@ impl Apply for Concept {
     }
 }
 
-impl From<AbstractPart> for Concept {
-    fn from(ap: AbstractPart) -> Self {
-        SpecificPart::Abstract(ap).into()
+impl From<(AbstractPart, usize)> for Concept {
+    fn from((ap, id): (AbstractPart, usize)) -> Self {
+        (SpecificPart::Abstract(ap), id).into()
     }
 }
 
-impl From<SpecificPart> for Concept {
-    fn from(sp: SpecificPart) -> Self {
+impl From<(SpecificPart, usize)> for Concept {
+    fn from((sp, id): (SpecificPart, usize)) -> Self {
         Self {
-            lefthand_of: HashSet::default(),
-            righthand_of: HashSet::default(),
-            reduces_from: HashSet::default(),
+            id,
+            concrete_part: ConcreteConcept::default(),
             specific_part: sp,
         }
     }
@@ -385,8 +387,102 @@ impl From<AbstractDelta> for ConceptDelta {
     }
 }
 
-impl From<String> for Concept {
-    fn from(string: String) -> Self {
-        SpecificPart::String(string).into()
+impl From<(String, usize)> for Concept {
+    fn from((string, id): (String, usize)) -> Self {
+        (SpecificPart::String(string), id).into()
     }
+}
+
+/// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
+#[derive(Clone, PartialEq)]
+pub struct AbstractPart {
+    /// The concept may be defined as a composition of two other concepts.
+    pub definition: Option<(usize, usize)>,
+    /// The concept may reduce to another concept.
+    pub reduces_to: Option<usize>,
+}
+
+impl Debug for AbstractPart {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
+        formatter.write_str("{")?;
+        self.definition.iter().try_for_each(|(l, r)| {
+            formatter.write_str(&format!("definition: {}, {},", l, r))
+        })?;
+        self.reduces_to.iter().try_for_each(|r| {
+            formatter.write_str(&format!("reduces_to: {},", r))
+        })?;
+        formatter.write_str("}")
+    }
+}
+
+impl Apply for AbstractPart {
+    type Delta = AbstractDelta;
+
+    fn apply(&mut self, delta: AbstractDelta) {
+        self.definition.apply(delta.definition);
+        self.reduces_to.apply(delta.reduction);
+    }
+
+    fn diff(&self, next: Self) -> AbstractDelta {
+        AbstractDelta {
+            definition: self.definition.diff(next.definition),
+            reduction: self.reduces_to.diff(next.reduces_to),
+        }
+    }
+}
+
+impl Delta for AbstractDelta {
+    fn combine(&mut self, other: Self) {
+        self.definition = self.definition.clone().combine(other.definition);
+        self.reduction = self.reduction.clone().combine(other.reduction);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct AbstractDelta {
+    definition: Change<Option<(usize, usize)>>,
+    reduction: Change<Option<usize>>,
+}
+
+impl Default for AbstractPart {
+    /// The default concept doesn't have a definition and doesn't further reduce.
+    fn default() -> Self {
+        Self {
+            definition: None,
+            reduces_to: None,
+        }
+    }
+}
+
+impl AbstractPart {
+    pub fn set_definition_delta(
+        &self,
+        lefthand: usize,
+        righthand: usize,
+    ) -> AbstractDelta {
+        AbstractDelta {
+            definition: self.definition.diff(Some((lefthand, righthand))),
+            reduction: Change::Same,
+        }
+    }
+
+    pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
+        AbstractDelta {
+            definition: Change::Same,
+            reduction: self.reduces_to.diff(Some(concept)),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default)]
+pub struct ConcreteConcept {
+    /// Set of all indices of the concepts which have this concept as the lefthand of their definition
+    lefthand_of: HashSet<usize>,
+    /// Set of all indices of the concepts which have this concept as the righthand of their definition
+    righthand_of: HashSet<usize>,
+    /// Set of all indices of the concepts which reduce to this concept.
+    reduces_from: HashSet<usize>,
 }

@@ -16,7 +16,7 @@
 
 use crate::{
     ast::SyntaxTree,
-    concepts::format_string,
+    concepts::{format_string, Concept},
     constants::{
         ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
         LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE,
@@ -24,10 +24,12 @@ use crate::{
     context::is_variable,
     context_delta::ContextDelta,
     errors::{ZiaError, ZiaResult},
-    snap_shot::{parse_line, Associativity, SnapShot},
+    context_snap_shot::{parse_line, Associativity},
+    snap_shot::SnapShotReader
 };
 use dashmap::DashMap;
-use maplit::hashmap;
+use log::debug;
+use maplit::{hashmap, hashset};
 use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -35,11 +37,12 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<'a> {
-    snap_shot: &'a SnapShot,
+pub struct ContextSearch<'a, S> {
+    snap_shot: &'a S,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
     cache: &'a ContextCache,
+    syntax_evaluating: HashSet<Arc<SyntaxTree>>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -48,50 +51,50 @@ pub struct ContextCache {
     syntax_trees: DashMap<usize, Arc<SyntaxTree>>,
 }
 
-impl<'a> ContextSearch<'a> {
+impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
+    fn infer_reduction(&self, concept: &Concept) -> Option<Arc<SyntaxTree>> {
+        concept.get_righthand_of().iter().find_map(|ro| {
+            let roc = self.snap_shot.read_concept(self.delta, *ro);
+            if let Some((IMPLICATION, _)) = roc.get_definition() {
+                roc.get_righthand_of().iter().find_map(|roro| {
+                    self.snap_shot
+                        .read_concept(self.delta, *roro)
+                        .get_definition()
+                        .and_then(|(condition, _)| {
+                            if let Some(TRUE) =
+                                self.reduce(&self.to_ast(condition)).and_then(
+                                    |condition_ast| condition_ast.get_concept(),
+                                )
+                            {
+                                Some(self.to_ast(TRUE))
+                            } else {
+                                None
+                            }
+                        })
+                })
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Arc<SyntaxTree>> {
         let concept = self.snap_shot.read_concept(self.delta, id);
-        concept
-            .get_righthand_of()
-            .iter()
-            .find_map(|ro| {
-                let roc = self.snap_shot.read_concept(self.delta, *ro);
-                if let Some((IMPLICATION, _)) = roc.get_definition() {
-                    roc.get_righthand_of().iter().find_map(|roro| {
-                        self.snap_shot
-                            .read_concept(self.delta, *roro)
-                            .get_definition()
-                            .and_then(|(condition, _)| {
-                                if let Some(TRUE) = self
-                                    .reduce(&self.to_ast(condition))
-                                    .and_then(|condition_ast| {
-                                        condition_ast.get_concept()
-                                    })
-                                {
-                                    Some(self.to_ast(TRUE))
-                                } else {
-                                    None
-                                }
-                            })
-                    })
+        self.infer_reduction(&concept).or_else(|| {
+            concept.get_reduction().and_then(|n| {
+                if self.is_leaf_variable(n) {
+                    self.variable_mask.get(&n).cloned()
                 } else {
-                    None
+                    Some(self.to_ast(n))
                 }
             })
-            .or_else(|| {
-                concept.get_reduction().and_then(|n| {
-                    if self.is_leaf_variable(n) {
-                        self.variable_mask.get(&n).cloned()
-                    } else {
-                        Some(self.to_ast(n))
-                    }
-                })
-            })
+        })
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
+        debug!("reduce({})", ast.to_string());
         self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
@@ -99,7 +102,52 @@ impl<'a> ContextSearch<'a> {
                     .and_then(|c| self.reduce_concept(c))
                     .or_else(|| {
                         ast.get_expansion().and_then(|(ref left, ref right)| {
-                            self.reduce_pair(left, right)
+                            left.get_concept().and_then(|lc| match lc {
+                                ASSOC => {
+                                    if self.syntax_evaluating.get(ast).is_some() {
+                                        Some(self.to_ast(RIGHT))
+                                    } else {
+                                        let mut context_search = self.clone();
+                                        context_search
+                                            .syntax_evaluating
+                                            .insert(ast.clone());
+                                        context_search.reduce_pair(left, right).or_else(|| if right
+                                            .get_concept()
+                                            .and_then(|c| {
+                                                self.snap_shot
+                                                    .find_definition(self.delta, ASSOC, c)
+                                            })
+                                            .is_none() {
+                                                Some(self.to_ast(RIGHT))
+                                            } else {
+                                                None
+                                            })
+                                    }
+                                },
+                                PRECEDENCE => {
+                                    if self.syntax_evaluating.get(ast).is_some() {
+                                        Some(self.to_ast(DEFAULT))
+                                    } else {
+                                        let mut context_search = self.clone();
+                                        context_search
+                                            .syntax_evaluating
+                                            .insert(ast.clone());
+                                        context_search.reduce_pair(left, right).or_else(|| if right
+                                            .get_concept()
+                                            .and_then(|c| {
+                                                self.snap_shot
+                                                    .find_definition(self.delta, PRECEDENCE, c)
+                                            })
+                                            .is_none() {
+                                                Some(self.to_ast(DEFAULT))
+                                            } else {
+                                                None
+                                            }
+                                        )
+                                    }
+                                },
+                                _ => None,
+                            }).or_else(|| self.reduce_pair(left, right))
                         })
                     });
                 if !ast.is_variable()
@@ -119,34 +167,15 @@ impl<'a> ContextSearch<'a> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> Option<Arc<SyntaxTree>> {
-        left.get_concept()
-            .and_then(|lc| match lc {
-                ASSOC => Some(self.to_ast(RIGHT)),
-                PRECEDENCE
-                    if right
-                        .get_concept()
-                        .and_then(|c| {
-                            self.snap_shot
-                                .find_definition(self.delta, PRECEDENCE, c)
-                        })
-                        .is_none() =>
-                {
-                    Some(self.to_ast(DEFAULT))
-                },
-                _ => {
-                    self.variable_mask.get(&lc).and_then(|ast| self.reduce(ast))
-                },
+        debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
+        right
+            .get_expansion()
+            .and_then(|(ref rightleft, ref rightright)| {
+                self.reduce_by_expanded_right_branch(
+                    left, rightleft, rightright,
+                )
             })
-            .or_else(|| {
-                right
-                    .get_expansion()
-                    .and_then(|(ref rightleft, ref rightright)| {
-                        self.reduce_by_expanded_right_branch(
-                            left, rightleft, rightright,
-                        )
-                    })
-                    .or_else(|| self.recursively_reduce_pair(left, right))
-            })
+            .or_else(|| self.recursively_reduce_pair(left, right))
     }
 
     fn recursively_reduce_pair(
@@ -205,7 +234,8 @@ impl<'a> ContextSearch<'a> {
     ) -> Vec<(usize, VariableMask)> {
         let generalisation_candidates =
             self.find_generalisations(&self.contract_pair(left, right));
-        generalisation_candidates
+        debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
+        let result = generalisation_candidates
             .par_iter()
             .filter_map(|gc| {
                 self.check_generalisation(&self.contract_pair(left, right), *gc)
@@ -217,7 +247,9 @@ impl<'a> ContextSearch<'a> {
                         }
                     })
             })
-            .collect()
+            .collect();
+        debug!("filter_generalisations_for_pair({}, {}) -> {:#?}", left.to_string(), right.to_string(), result);
+        result
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
@@ -412,9 +444,18 @@ impl<'a> ContextSearch<'a> {
                                 );
                                 let mut truth_value =
                                     context_search.substitute(rightright);
+                                debug!(
+                                    "Reducing expression: {}",
+                                    truth_value.to_string()
+                                );
                                 while let Some(reduced_rightright) =
                                     self.reduce(&truth_value)
                                 {
+                                    debug!(
+                                        "{} reduces to {}",
+                                        truth_value.to_string(),
+                                        reduced_rightright.to_string()
+                                    );
                                     truth_value = reduced_rightright;
                                 }
                                 match truth_value.get_concept() {
@@ -470,7 +511,8 @@ impl<'a> ContextSearch<'a> {
         })
     }
 
-    /// Returns the syntax for a concept.
+    /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
+    /// or the concept or a concept its composed of has no label and no definition (concept can't be expressed)
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
         self.cache.syntax_trees.get(&concept_id).map_or_else(
             || {
@@ -502,7 +544,7 @@ impl<'a> ContextSearch<'a> {
         )
     }
 
-    pub fn combine(
+    fn combine(
         &self,
         ast: &Arc<SyntaxTree>,
         other: &Arc<SyntaxTree>,
@@ -531,14 +573,14 @@ impl<'a> ContextSearch<'a> {
             .bind_pair(left, right)
     }
 
-    pub fn display_joint(
+    fn display_joint(
         &self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> String {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
-            |(l, r)| match self.get_associativity(&r).unwrap() {
+            |(l, r)| match self.get_associativity(&r) {
                 Associativity::Left => l.to_string() + " " + &r.to_string(),
                 Associativity::Right => {
                     "(".to_string()
@@ -551,7 +593,7 @@ impl<'a> ContextSearch<'a> {
         );
         let right_string = right.get_expansion().map_or_else(
             || right.to_string(),
-            |(l, r)| match self.get_associativity(&l).unwrap() {
+            |(l, r)| match self.get_associativity(&l) {
                 Associativity::Left => {
                     "(".to_string()
                         + &l.to_string()
@@ -565,16 +607,17 @@ impl<'a> ContextSearch<'a> {
         left_string + " " + &right_string
     }
 
-    pub fn get_associativity(
-        &self,
-        ast: &Arc<SyntaxTree>,
-    ) -> Option<Associativity> {
+    fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
         let assoc_of_ast = self.combine(&self.to_ast(ASSOC), ast);
-        self.reduce(&assoc_of_ast).and_then(|ast| match ast.get_concept() {
-            Some(LEFT) => Some(Associativity::Left),
-            Some(RIGHT) => Some(Associativity::Right),
-            _ => None,
-        })
+        self.reduce(&assoc_of_ast)
+            .and_then(|ast| {
+                if let Some(LEFT) = ast.get_concept() {
+                    Some(Associativity::Left)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(Associativity::Right)
     }
 
     /// Expands syntax by definition of its associated concept.
@@ -617,15 +660,14 @@ impl<'a> ContextSearch<'a> {
                 }
                 let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
                     match (self.get_associativity(syntax), assoc) {
-                        (Some(x), Some(y)) => {
+                        (x, Some(y)) => {
                             if x == y {
                                 Ok(Some(x))
                             } else {
                                 Err(ZiaError::AmbiguousExpression)
                             }
                         },
-                        (Some(x), None) => Ok(Some(x)),
-                        (None, _) => Err(ZiaError::AmbiguousExpression),
+                        (x, None) => Ok(Some(x)),
                     }
                 });
                 match assoc? {
@@ -856,28 +898,30 @@ impl<'a> ContextSearch<'a> {
     }
 }
 
-impl<'a> From<ContextReferences<'a>> for ContextSearch<'a> {
+impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
     fn from(
-        (snap_shot, delta, cache): ContextReferences<'a>,
-    ) -> ContextSearch<'a> {
+        (snap_shot, delta, cache): ContextReferences<'a, S>,
+    ) -> ContextSearch<'a, S> {
         ContextSearch::<'a> {
             snap_shot,
             variable_mask: hashmap! {},
             delta,
             cache,
+            syntax_evaluating: hashset! {},
         }
     }
 }
 
-type ContextReferences<'a> = (&'a SnapShot, &'a ContextDelta, &'a ContextCache);
+type ContextReferences<'a, S> = (&'a S, &'a ContextDelta, &'a ContextCache);
 
-impl<'a> Clone for ContextSearch<'a> {
-    fn clone(&self) -> ContextSearch<'a> {
+impl<'a, S> Clone for ContextSearch<'a, S> {
+    fn clone(&self) -> ContextSearch<'a, S> {
         ContextSearch {
             snap_shot: self.snap_shot,
             variable_mask: self.variable_mask.clone(),
             delta: self.delta,
             cache: self.cache,
+            syntax_evaluating: self.syntax_evaluating.clone(),
         }
     }
 }

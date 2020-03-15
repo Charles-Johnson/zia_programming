@@ -19,6 +19,7 @@ use crate::{
     context_search::ContextCache,
     delta::{Apply, Delta},
 };
+use log::debug;
 use std::{collections::HashMap, fmt::Debug, mem::swap};
 
 #[derive(Clone, Default)]
@@ -67,6 +68,7 @@ impl ContextDelta {
             ));
         let mut empty_cache = ContextCache::default();
         swap(cache_to_invalidate, &mut empty_cache);
+        debug!("Cache invalidated");
     }
 
     pub fn insert_string(
@@ -78,6 +80,7 @@ impl ContextDelta {
         self.string.insert(string, string_delta);
         let mut empty_cache = ContextCache::default();
         swap(cache_to_invalidate, &mut empty_cache);
+        debug!("Cache invalidated");
     }
 
     pub const fn string(&self) -> &HashMap<String, StringDelta> {
@@ -93,6 +96,7 @@ impl ContextDelta {
         self.concept.insert(concept_id, concept_delta);
         let mut empty_cache = ContextCache::default();
         swap(cache_to_invalidate, &mut empty_cache);
+        debug!("Cache invalidated");
     }
 
     pub const fn concept(&self) -> &HashMap<usize, (ConceptDelta, bool, bool)> {
@@ -107,6 +111,7 @@ impl ContextDelta {
         self.combine(other);
         let mut empty_cache = ContextCache::default();
         swap(cache_to_invalidate, &mut empty_cache);
+        debug!("Cache invalidated");
     }
 }
 

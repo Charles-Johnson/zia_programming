@@ -16,13 +16,14 @@
 
 use crate::{
     ast::SyntaxTree,
-    concepts::{AbstractPart, Concept},
+    concepts::SpecificPart,
     constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{ContextCache, ContextSearch},
     delta::Apply,
     errors::{map_err_variant, ZiaError, ZiaResult},
-    snap_shot::SnapShot,
+    context_snap_shot::ContextSnapShot,
+    snap_shot::SnapShotReader
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
@@ -30,7 +31,7 @@ use std::{default::Default, iter::from_fn, mem::swap, sync::Arc};
 
 #[derive(Clone)]
 pub struct Context {
-    snap_shot: SnapShot,
+    snap_shot: ContextSnapShot,
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta,
@@ -79,7 +80,7 @@ impl Context {
         let mut concrete_constructor = || {
             let (delta, index) = self.snap_shot.add_concept_delta(
                 &self.delta,
-                Concept::default(),
+                SpecificPart::Concrete,
                 false,
             );
             self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
@@ -116,12 +117,13 @@ impl Context {
             .zip(&labels)
             .try_for_each(|(concept, string)| self.label(*concept, string))
             .unwrap();
+        self.execute("let (true and true) -> true");
+        self.execute("let (_x_ and _y_) -> false");
+        self.execute(
+            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
+        );
         self.execute("let default > prec ->");
         self.execute("let (prec ->) > prec let");
-        // Cannot yet infer partial order. Requires implication to express transitive property
-        self.execute("let default > prec let");
-        self.execute("let true and true -> true");
-        self.execute("let _x_ and _y_ -> false");
     }
 
     fn reduce_and_call_pair(
@@ -583,7 +585,7 @@ impl Context {
     }
 
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default = self.new_default::<AbstractPart>(is_variable(string));
+        let new_default = self.new_default(SpecificPart::default(), is_variable(string));
         self.label(new_default, string)?;
         Ok(new_default)
     }
@@ -597,14 +599,13 @@ impl Context {
     }
 
     fn new_string(&mut self, string: &str) -> usize {
-        let string_concept = string.to_string().into();
         let (delta, index) = self.snap_shot.add_concept_delta(
             &self.delta,
-            string_concept,
+            SpecificPart::String(string.to_string()),
             false,
         );
         self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
-        let string_delta = SnapShot::add_string_delta(index, string);
+        let string_delta = ContextSnapShot::add_string_delta(index, string);
         self.delta.combine_and_invalidate_cache(string_delta, &mut self.cache);
         index
     }
@@ -620,7 +621,7 @@ impl Context {
             self.snap_shot.find_definition(&self.delta, lefthand, righthand);
         match pair {
             None => {
-                let definition = self.new_default::<AbstractPart>(variable);
+                let definition = self.new_default(SpecificPart::default(), variable);
                 self.insert_definition(
                     definition, lefthand, righthand, temporary,
                 )?;
@@ -630,13 +631,14 @@ impl Context {
         }
     }
 
-    fn new_default<V: Default + Into<Concept>>(
+    fn new_default(
         &mut self,
+        concept_type: SpecificPart,
         variable: bool,
-    ) -> usize {
-        let concept: Concept = V::default().into();
+    ) -> usize
+    {
         let (delta, index) =
-            self.snap_shot.add_concept_delta(&self.delta, concept, variable);
+            self.snap_shot.add_concept_delta(&self.delta, concept_type, variable);
         self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         index
     }
@@ -750,7 +752,7 @@ impl Default for Context {
             Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
         };
         Self {
-            snap_shot: SnapShot::default(),
+            snap_shot: ContextSnapShot::default(),
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),

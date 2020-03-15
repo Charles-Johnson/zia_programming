@@ -130,6 +130,11 @@ mod context_delta;
 
 mod context_search;
 
+#[cfg(test)]
+mod context_search_test;
+
+mod context_snap_shot;
+
 /// The trait for describing incremental changes in state.
 mod delta;
 

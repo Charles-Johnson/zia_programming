@@ -28,6 +28,7 @@ proptest! {
     #[test]
     fn ambiguous_expression(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
         let mut cont = NEW_CONTEXT.clone();
+        prop_assume!(a != b || b != c || c != a);
         assert_eq!(cont.execute(&format!("let assoc {} -> left", c)), "");
         assert_eq!(
             cont.execute(&format!("{} {} {}", a, b, c)),

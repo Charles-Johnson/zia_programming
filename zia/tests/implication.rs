@@ -13,12 +13,14 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 #![feature(test)]
+extern crate simple_logger;
 extern crate test;
 extern crate zia;
 
 use test::Bencher;
-use zia::{Context, NEW_CONTEXT};
+use zia::NEW_CONTEXT;
 
 #[test]
 fn simple_condition() {
@@ -28,21 +30,13 @@ fn simple_condition() {
     assert_eq!(context.execute("b"), "true");
 }
 
-fn partial_order_transitivity() -> Context {
+fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(
-        context.execute(
-            "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_"
-        ),
-        ""
-    );
-    assert_eq!(context.execute("let a > b"), "");
-    assert_eq!(context.execute("let b > c"), "");
-    assert_eq!(context.execute("a > c"), "true");
-    context
+    assert_eq!(context.execute("default > (prec let)"), "true");
 }
 #[test]
 fn partial_order_transitivity_test() {
+    simple_logger::init().unwrap();
     partial_order_transitivity();
 }
 
