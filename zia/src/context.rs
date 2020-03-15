@@ -20,10 +20,10 @@ use crate::{
     constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{ContextCache, ContextSearch},
+    context_snap_shot::ContextSnapShot,
     delta::Apply,
     errors::{map_err_variant, ZiaError, ZiaResult},
-    context_snap_shot::ContextSnapShot,
-    snap_shot::SnapShotReader
+    snap_shot::Reader as SnapShotReader,
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
@@ -585,7 +585,8 @@ impl Context {
     }
 
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default = self.new_default(SpecificPart::default(), is_variable(string));
+        let new_default =
+            self.new_default(SpecificPart::default(), is_variable(string));
         self.label(new_default, string)?;
         Ok(new_default)
     }
@@ -621,7 +622,8 @@ impl Context {
             self.snap_shot.find_definition(&self.delta, lefthand, righthand);
         match pair {
             None => {
-                let definition = self.new_default(SpecificPart::default(), variable);
+                let definition =
+                    self.new_default(SpecificPart::default(), variable);
                 self.insert_definition(
                     definition, lefthand, righthand, temporary,
                 )?;
@@ -635,10 +637,12 @@ impl Context {
         &mut self,
         concept_type: SpecificPart,
         variable: bool,
-    ) -> usize
-    {
-        let (delta, index) =
-            self.snap_shot.add_concept_delta(&self.delta, concept_type, variable);
+    ) -> usize {
+        let (delta, index) = self.snap_shot.add_concept_delta(
+            &self.delta,
+            concept_type,
+            variable,
+        );
         self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         index
     }

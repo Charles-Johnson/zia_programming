@@ -23,9 +23,9 @@ use crate::{
     },
     context::is_variable,
     context_delta::ContextDelta,
-    errors::{ZiaError, ZiaResult},
     context_snap_shot::{parse_line, Associativity},
-    snap_shot::SnapShotReader
+    errors::{ZiaError, ZiaResult},
+    snap_shot::Reader as SnapShotReader,
 };
 use dashmap::DashMap;
 use log::debug;
@@ -95,6 +95,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
         debug!("reduce({})", ast.to_string());
+        let find_precedence =
+            |c| self.snap_shot.find_definition(self.delta, PRECEDENCE, c);
+        let find_assoc =
+            |c| self.snap_shot.find_definition(self.delta, ASSOC, c);
         self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
@@ -102,52 +106,73 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     .and_then(|c| self.reduce_concept(c))
                     .or_else(|| {
                         ast.get_expansion().and_then(|(ref left, ref right)| {
-                            left.get_concept().and_then(|lc| match lc {
-                                ASSOC => {
-                                    if self.syntax_evaluating.get(ast).is_some() {
-                                        Some(self.to_ast(RIGHT))
-                                    } else {
-                                        let mut context_search = self.clone();
-                                        context_search
+                            left.get_concept()
+                                .and_then(|lc| match lc {
+                                    ASSOC => {
+                                        if self
                                             .syntax_evaluating
-                                            .insert(ast.clone());
-                                        context_search.reduce_pair(left, right).or_else(|| if right
-                                            .get_concept()
-                                            .and_then(|c| {
-                                                self.snap_shot
-                                                    .find_definition(self.delta, ASSOC, c)
-                                            })
-                                            .is_none() {
-                                                Some(self.to_ast(RIGHT))
-                                            } else {
-                                                None
-                                            })
-                                    }
-                                },
-                                PRECEDENCE => {
-                                    if self.syntax_evaluating.get(ast).is_some() {
-                                        Some(self.to_ast(DEFAULT))
-                                    } else {
-                                        let mut context_search = self.clone();
-                                        context_search
+                                            .get(ast)
+                                            .is_some()
+                                        {
+                                            Some(self.to_ast(RIGHT))
+                                        } else {
+                                            let mut context_search =
+                                                self.clone();
+                                            context_search
+                                                .syntax_evaluating
+                                                .insert(ast.clone());
+                                            context_search
+                                                .reduce_pair(left, right)
+                                                .or_else(|| {
+                                                    if right
+                                                        .get_concept()
+                                                        .and_then(find_assoc)
+                                                        .is_none()
+                                                    {
+                                                        Some(self.to_ast(RIGHT))
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                        }
+                                    },
+                                    PRECEDENCE => {
+                                        if self
                                             .syntax_evaluating
-                                            .insert(ast.clone());
-                                        context_search.reduce_pair(left, right).or_else(|| if right
-                                            .get_concept()
-                                            .and_then(|c| {
-                                                self.snap_shot
-                                                    .find_definition(self.delta, PRECEDENCE, c)
-                                            })
-                                            .is_none() {
-                                                Some(self.to_ast(DEFAULT))
-                                            } else {
-                                                None
-                                            }
-                                        )
-                                    }
-                                },
-                                _ => None,
-                            }).or_else(|| self.reduce_pair(left, right))
+                                            .get(ast)
+                                            .is_some()
+                                        {
+                                            Some(self.to_ast(DEFAULT))
+                                        } else {
+                                            let mut context_search =
+                                                self.clone();
+                                            context_search
+                                                .syntax_evaluating
+                                                .insert(ast.clone());
+                                            context_search
+                                                .reduce_pair(left, right)
+                                                .or_else(|| {
+                                                    if right
+                                                        .get_concept()
+                                                        .and_then(
+                                                            find_precedence,
+                                                        )
+                                                        .is_none()
+                                                    {
+                                                        Some(
+                                                            self.to_ast(
+                                                                DEFAULT,
+                                                            ),
+                                                        )
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                        }
+                                    },
+                                    _ => None,
+                                })
+                                .or_else(|| self.reduce_pair(left, right))
                         })
                     });
                 if !ast.is_variable()
@@ -248,7 +273,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     })
             })
             .collect();
-        debug!("filter_generalisations_for_pair({}, {}) -> {:#?}", left.to_string(), right.to_string(), result);
+        debug!(
+            "filter_generalisations_for_pair({}, {}) -> {:#?}",
+            left.to_string(),
+            right.to_string(),
+            result
+        );
         result
     }
 

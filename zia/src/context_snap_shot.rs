@@ -19,9 +19,9 @@ use crate::{
     concepts::{Concept, SpecificPart},
     constants::LABEL,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
-    snap_shot::SnapShotReader,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
+    snap_shot::Reader as SnapShotReader,
 };
 use maplit::hashmap;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -66,8 +66,7 @@ impl ContextSnapShot {
         delta: &ContextDelta,
         concept_type: SpecificPart,
         variable: bool,
-    ) -> (ContextDelta, usize)
-    {
+    ) -> (ContextDelta, usize) {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
@@ -345,6 +344,7 @@ impl SnapShotReader for ContextSnapShot {
         }
         length
     }
+
     fn get_label(
         &self,
         delta: &ContextDelta,
@@ -360,6 +360,7 @@ impl SnapShotReader for ContextSnapShot {
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
     }
+
     fn find_definition(
         &self,
         delta: &ContextDelta,
@@ -377,12 +378,14 @@ impl SnapShotReader for ContextSnapShot {
             })
         })
     }
+
     fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
         self.concept_from_label(delta, s).map_or_else(
             || s.parse().unwrap(),
             |concept| s.parse::<SyntaxTree>().unwrap().bind_concept(concept),
         )
     }
+
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
             .concept().get(&id)
@@ -404,6 +407,7 @@ impl SnapShotReader for ContextSnapShot {
                     .clone()
             })
     }
+
     fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
         let in_previous_variables = self.variables.contains(&concept);
         delta.concept().get(&concept).map_or(

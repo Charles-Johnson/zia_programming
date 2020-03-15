@@ -222,6 +222,7 @@ impl Concept {
             _ => Err(ZiaError::SettingDefinitionOfConcrete),
         }
     }
+
     #[cfg(test)]
     pub fn make_reduce_to(&mut self, other: &mut Concept) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
@@ -229,6 +230,21 @@ impl Concept {
             other.concrete_part.reduces_from.insert(self.id);
         } else {
             panic!("Cannot reduce a concrete concept")
+        }
+    }
+
+    #[cfg(test)]
+    pub fn make_composition_of(
+        &mut self,
+        left: &mut Concept,
+        right: &mut Concept,
+    ) {
+        if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
+            ap.definition = Some((left.id, right.id));
+            left.concrete_part.lefthand_of.insert(self.id);
+            right.concrete_part.righthand_of.insert(self.id);
+        } else {
+            panic!("Cannot define composition for concrete concept");
         }
     }
 }
@@ -336,9 +352,16 @@ impl Apply for Concept {
     }
 
     fn diff(&self, next: Self) -> ConceptDelta {
-        let lefthand_of = self.concrete_part.lefthand_of.diff(next.concrete_part.lefthand_of);
-        let righthand_of = self.concrete_part.righthand_of.diff(next.concrete_part.righthand_of);
-        let reduces_from = self.concrete_part.reduces_from.diff(next.concrete_part.reduces_from);
+        let lefthand_of =
+            self.concrete_part.lefthand_of.diff(next.concrete_part.lefthand_of);
+        let righthand_of = self
+            .concrete_part
+            .righthand_of
+            .diff(next.concrete_part.righthand_of);
+        let reduces_from = self
+            .concrete_part
+            .reduces_from
+            .diff(next.concrete_part.reduces_from);
         ConceptDelta {
             lefthand_of,
             righthand_of,
