@@ -223,6 +223,18 @@ impl Concept {
         }
     }
 
+    pub fn find_definition(&self, right: &Self) -> Option<usize> {
+        let mut candidates = self
+            .concrete_part
+            .lefthand_of
+            .intersection(&right.concrete_part.righthand_of);
+        candidates.next().map(|index| {
+            candidates.next().map_or(*index, |_| {
+                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
+            })
+        })
+    }
+
     #[cfg(test)]
     pub fn make_reduce_to(&mut self, other: &mut Concept) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {

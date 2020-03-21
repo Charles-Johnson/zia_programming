@@ -15,11 +15,12 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept},
     constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
-        LEFT, PRECEDENCE, REDUCTION, RIGHT,
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, LEFT,
+        PRECEDENCE, REDUCTION, RIGHT,
     },
     context::is_variable,
     context_delta::ContextDelta,
@@ -55,23 +56,29 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     fn infer_reduction(&self, concept: &Concept) -> Option<Arc<SyntaxTree>> {
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
-            roc.get_definition().and_then(|(l, _)| if l == S::implication_id() {
-                roc.get_righthand_of().iter().find_map(|roro| {
-                    self.snap_shot
-                        .read_concept(self.delta, *roro)
-                        .get_definition()
-                        .and_then(|(condition, _)| {
-                            self.reduce(&self.to_ast(condition)).and_then(
-                                |condition_ast| condition_ast.get_concept(),
-                            ).and_then(|x| if x == S::true_id() {
-                                Some(self.to_ast(x))
-                            } else {
-                                None
+            roc.get_definition().and_then(|(l, _)| {
+                if l == S::implication_id() {
+                    roc.get_righthand_of().iter().find_map(|roro| {
+                        self.snap_shot
+                            .read_concept(self.delta, *roro)
+                            .get_definition()
+                            .and_then(|(condition, _)| {
+                                self.reduce(&self.to_ast(condition))
+                                    .and_then(|condition_ast| {
+                                        condition_ast.get_concept()
+                                    })
+                                    .and_then(|x| {
+                                        if x == S::true_id() {
+                                            Some(self.to_ast(x))
+                                        } else {
+                                            None
+                                        }
+                                    })
                             })
-                        })
-                })
-            } else {
-                None
+                    })
+                } else {
+                    None
+                }
             })
         })
     }
@@ -93,10 +100,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
         debug!("reduce({})", ast.to_string());
-        let find_precedence =
-            |c| self.snap_shot.find_definition(self.delta, PRECEDENCE, c);
-        let find_assoc =
-            |c| self.snap_shot.find_definition(self.delta, ASSOC, c);
+        let find_precedence = |c| self.find_definition(PRECEDENCE, c);
+        let find_assoc = |c| self.find_definition(ASSOC, c);
         self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
@@ -288,25 +293,18 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         Arc::new(
             lefthand
                 .get_concept()
-                .and_then(|lc| {
-                    righthand.get_concept().and_then(|rc| {
-                        self.snap_shot.find_definition(self.delta, lc, rc).map(
-                            |def| {
-                                SyntaxTree::from(
-                                    self.snap_shot
-                                        .get_label(self.delta, def)
-                                        .map_or_else(
-                                            || {
-                                                self.display_joint(
-                                                    lefthand, righthand,
-                                                )
-                                            },
-                                            |label| label,
-                                        ),
-                                )
-                                .bind_concept(def)
-                            },
+                .and_also(&righthand.get_concept())
+                .and_then(|(lc, rc)| {
+                    self.find_definition(*lc, *rc).map(|def| {
+                        SyntaxTree::from(
+                            self.snap_shot
+                                .get_label(self.delta, def)
+                                .map_or_else(
+                                    || self.display_joint(lefthand, righthand),
+                                    |label| label,
+                                ),
                         )
+                        .bind_concept(def)
                     })
                 })
                 .unwrap_or_else(|| {
@@ -574,12 +572,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     ) -> Arc<SyntaxTree> {
         let syntax = ast
             .get_concept()
-            .and_then(|l| {
-                other.get_concept().and_then(|r| {
-                    self.snap_shot.find_definition(self.delta, l, r).map(
-                        |concept| self.join(ast, other).bind_concept(concept),
-                    )
-                })
+            .and_also(&other.get_concept())
+            .and_then(|(l, r)| {
+                self.find_definition(*l, *r)
+                    .map(|concept| self.join(ast, other).bind_concept(concept))
             })
             .unwrap_or_else(|| self.join(ast, other));
         Arc::new(syntax)
@@ -915,6 +911,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         } else {
             Ok(Arc::new(self.snap_shot.ast_from_symbol(self.delta, t)))
         }
+    }
+
+    pub fn find_definition(&self, left: usize, right: usize) -> Option<usize> {
+        let left_concept = self.snap_shot.read_concept(self.delta, left);
+        let right_concept = self.snap_shot.read_concept(self.delta, right);
+        left_concept.find_definition(&right_concept)
     }
 }
 

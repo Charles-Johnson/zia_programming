@@ -47,26 +47,12 @@ impl SnapShotReader for BasicCompositionSnapShot {
         }
     }
 
-
     fn true_id() -> usize {
         unimplemented!()
     }
 
     fn implication_id() -> usize {
         unimplemented!()
-    }
-
-    fn find_definition(
-        &self,
-        _delta: &ContextDelta,
-        left_id: usize,
-        right_id: usize,
-    ) -> Option<usize> {
-        if let (1, 2) = (left_id, right_id) {
-            Some(0)
-        } else {
-            None
-        }
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {

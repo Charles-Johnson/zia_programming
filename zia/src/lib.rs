@@ -114,6 +114,8 @@
 //! assert_eq!(context.execute("false or true"), "true");
 //! ```
 
+mod and_also;
+
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 

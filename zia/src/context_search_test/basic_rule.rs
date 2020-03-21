@@ -30,8 +30,10 @@ lazy_static! {
             right_concept_variable,
         )
     };
-    static ref CONCRETE_SYNTAX: SyntaxTree = SyntaxTree::from("concrete").bind_concept(0);
-    static ref LEFT_SYNTAX: SyntaxTree = SyntaxTree::from("left").bind_concept(2);
+    static ref CONCRETE_SYNTAX: SyntaxTree =
+        SyntaxTree::from("concrete").bind_concept(0);
+    static ref LEFT_SYNTAX: SyntaxTree =
+        SyntaxTree::from("left").bind_concept(2);
 }
 
 impl SnapShotReader for BasicReductionSnapShot {
@@ -40,26 +42,18 @@ impl SnapShotReader for BasicReductionSnapShot {
         _delta: &ContextDelta,
         concept_id: usize,
     ) -> Concept {
-        let (concrete_concept, composite_concept, left_concept, right_concept_variable) = CONCEPTS.clone();
+        let (
+            concrete_concept,
+            composite_concept,
+            left_concept,
+            right_concept_variable,
+        ) = CONCEPTS.clone();
         match concept_id {
             0 => concrete_concept,
             1 => composite_concept,
             2 => left_concept,
             3 => right_concept_variable,
             _ => panic!("No concepts with id: {}", concept_id),
-        }
-    }
-
-    fn find_definition(
-        &self,
-        _delta: &ContextDelta,
-        left_id: usize,
-        right_id: usize,
-    ) -> Option<usize> {
-        if (2, 3) == (left_id, right_id) {
-            Some(1)
-        } else {
-            None
         }
     }
 
@@ -97,7 +91,6 @@ impl SnapShotReader for BasicReductionSnapShot {
         }
     }
 
-
     fn true_id() -> usize {
         unimplemented!()
     }
@@ -106,8 +99,6 @@ impl SnapShotReader for BasicReductionSnapShot {
         unimplemented!()
     }
 }
-
-
 
 #[test]
 fn basic_rule() {
@@ -120,7 +111,9 @@ fn basic_rule() {
     let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
     let left_syntax = Arc::new(LEFT_SYNTAX.clone());
     let random_syntax = Arc::new(SyntaxTree::from("random"));
-    let left_and_random_syntax = Arc::new(SyntaxTree::from("left random").bind_pair(&left_syntax, &random_syntax));
+    let left_and_random_syntax = Arc::new(
+        SyntaxTree::from("left random").bind_pair(&left_syntax, &random_syntax),
+    );
 
     assert_eq!(
         context_search.ast_from_expression("left"),

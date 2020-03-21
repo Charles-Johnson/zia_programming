@@ -15,18 +15,20 @@ lazy_static! {
     static ref CONCEPTS: [Concept; 6] = {
         let mut implication_concept = (SpecificPart::Concrete, 0).into();
         let mut true_concept = (SpecificPart::Concrete, 1).into();
-        let mut condition_concept: Concept = 
+        let mut condition_concept: Concept =
             (SpecificPart::default(), 2).into();
         let mut result_concept = (SpecificPart::default(), 3).into();
         condition_concept.make_reduce_to(&mut true_concept);
-        let mut implies_result_concept: Concept = 
+        let mut implies_result_concept: Concept =
             (SpecificPart::default(), 4).into();
-        implies_result_concept.make_composition_of(
-            &mut implication_concept,
-            &mut result_concept,
+        implies_result_concept
+            .make_composition_of(&mut implication_concept, &mut result_concept);
+        let mut condition_implies_result_concept: Concept =
+            (SpecificPart::default(), 5).into();
+        condition_implies_result_concept.make_composition_of(
+            &mut condition_concept,
+            &mut implies_result_concept,
         );
-        let mut condition_implies_result_concept: Concept = (SpecificPart::default(), 5).into();
-        condition_implies_result_concept.make_composition_of(&mut condition_concept, &mut implies_result_concept);
         condition_implies_result_concept.make_reduce_to(&mut true_concept);
         [
             implication_concept,
@@ -42,15 +44,23 @@ lazy_static! {
         let true_syntax = SyntaxTree::from("true").bind_concept(1);
         let condition_syntax = SyntaxTree::from("a").bind_concept(2);
         let result_syntax = SyntaxTree::from("b").bind_concept(3);
-        let implies_result_syntax = SyntaxTree::from("=> b").bind_concept(4).bind_pair(&Arc::new(implication_syntax.clone()), &Arc::new(result_syntax.clone()));
-        let condition_implies_result_syntax = SyntaxTree::from("a (=> b)").bind_concept(5).bind_pair(&Arc::new(condition_syntax.clone()), &Arc::new(implies_result_syntax.clone()));
+        let implies_result_syntax =
+            SyntaxTree::from("=> b").bind_concept(4).bind_pair(
+                &Arc::new(implication_syntax.clone()),
+                &Arc::new(result_syntax.clone()),
+            );
+        let condition_implies_result_syntax =
+            SyntaxTree::from("a (=> b)").bind_concept(5).bind_pair(
+                &Arc::new(condition_syntax.clone()),
+                &Arc::new(implies_result_syntax.clone()),
+            );
         [
             implication_syntax,
             true_syntax,
             condition_syntax,
             result_syntax,
             implies_result_syntax,
-            condition_implies_result_syntax
+            condition_implies_result_syntax,
         ]
     };
 }
@@ -59,28 +69,17 @@ impl SnapShotReader for BasicReductionSnapShot {
     fn implication_id() -> usize {
         0
     }
+
     fn true_id() -> usize {
         1
     }
+
     fn read_concept(
         &self,
         _delta: &ContextDelta,
         concept_id: usize,
     ) -> Concept {
         CONCEPTS[concept_id].clone()
-    }
-
-    fn find_definition(
-        &self,
-        _delta: &ContextDelta,
-        left_id: usize,
-        right_id: usize,
-    ) -> Option<usize> {
-        match (left_id, right_id) {
-            (0, 3) => Some(4),
-            (2, 4) => Some(5),
-            _ => None
-        }
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -110,7 +109,8 @@ impl SnapShotReader for BasicReductionSnapShot {
         _delta: &ContextDelta,
         symbol: &str,
     ) -> SyntaxTree {
-        let [implication_syntax, true_syntax, condition_syntax, result_syntax, ..] = SYNTAX.clone();
+        let [implication_syntax, true_syntax, condition_syntax, result_syntax, ..] =
+            SYNTAX.clone();
         match symbol {
             "implication" => implication_syntax,
             "true" => true_syntax,
@@ -120,8 +120,6 @@ impl SnapShotReader for BasicReductionSnapShot {
         }
     }
 }
-
-
 
 #[test]
 fn basic_inference() {
@@ -140,8 +138,5 @@ fn basic_inference() {
         Some(true_syntax.clone())
     );
 
-    assert_eq!(
-        context_search.recursively_reduce(&result_syntax),
-        true_syntax
-    );
+    assert_eq!(context_search.recursively_reduce(&result_syntax), true_syntax);
 }

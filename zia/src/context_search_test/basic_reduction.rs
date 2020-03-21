@@ -46,15 +46,6 @@ impl SnapShotReader for BasicReductionSnapShot {
         unimplemented!()
     }
 
-    fn find_definition(
-        &self,
-        _delta: &ContextDelta,
-        _left_id: usize,
-        _right_id: usize,
-    ) -> Option<usize> {
-        None
-    }
-
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
         false
     }

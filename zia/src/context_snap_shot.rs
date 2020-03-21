@@ -310,13 +310,12 @@ impl ContextSnapShot {
         self.read_concept(delta, concept)
             .get_definition()
             .and_then(|(left, right)| {
-                self.find_definition(
-                    delta,
-                    self.get_reduction_or_reduction_of_composition(delta, left),
-                    self.get_reduction_or_reduction_of_composition(
-                        delta, right,
-                    ),
-                )
+                self.get_reduction_or_reduction_of_composition(delta, left)
+                    .find_definition(
+                        &self.get_reduction_or_reduction_of_composition(
+                            delta, right,
+                        ),
+                    )
             })
             .unwrap_or(concept)
     }
@@ -325,10 +324,13 @@ impl ContextSnapShot {
         &self,
         delta: &ContextDelta,
         concept: usize,
-    ) -> usize {
-        self.read_concept(delta, concept).get_reduction().unwrap_or_else(|| {
-            self.get_reduction_of_composition(delta, concept)
-        })
+    ) -> Concept {
+        self.read_concept(
+            delta,
+            self.read_concept(delta, concept).get_reduction().unwrap_or_else(
+                || self.get_reduction_of_composition(delta, concept),
+            ),
+        )
     }
 }
 
@@ -336,9 +338,11 @@ impl SnapShotReader for ContextSnapShot {
     fn true_id() -> usize {
         TRUE
     }
+
     fn implication_id() -> usize {
         IMPLICATION
     }
+
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, (cd, _, _)) in delta.concept() {
@@ -365,24 +369,6 @@ impl SnapShotReader for ContextSnapShot {
                 .get_normal_form(delta, d)
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
-    }
-
-    fn find_definition(
-        &self,
-        delta: &ContextDelta,
-        lefthand: usize,
-        righthand: usize,
-    ) -> Option<usize> {
-        let lc = self.read_concept(delta, lefthand);
-        let rc = self.read_concept(delta, righthand);
-        let has_lefthand = lc.get_lefthand_of();
-        let has_righthand = rc.get_righthand_of();
-        let mut candidates = has_lefthand.intersection(has_righthand);
-        candidates.next().map(|index| {
-            candidates.next().map_or(*index, |_| {
-                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
-            })
-        })
     }
 
     fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {

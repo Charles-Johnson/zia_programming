@@ -15,6 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    and_also::AndAlso,
     ast::SyntaxTree,
     concepts::SpecificPart,
     constants::{DEFINE, LABEL, LET, REDUCTION},
@@ -52,18 +53,18 @@ impl Context {
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
-        let string =
-            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
-                .ast_from_expression(command)
-                .and_then(|a| {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    info!(
-                        self.logger,
-                        "ast_from_expression({}) -> {:#?}", command, a
-                    );
-                    self.call(&a)
-                })
-                .unwrap_or_else(|e| e.to_string());
+        let string = self
+            .context_search()
+            .ast_from_expression(command)
+            .and_then(|a| {
+                #[cfg(not(target_arch = "wasm32"))]
+                info!(
+                    self.logger,
+                    "ast_from_expression({}) -> {:#?}", command, a
+                );
+                self.call(&a)
+            })
+            .unwrap_or_else(|e| e.to_string());
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
@@ -131,12 +132,8 @@ impl Context {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let reduced_left =
-            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
-                .reduce(left);
-        let reduced_right =
-            ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
-                .reduce(right);
+        let reduced_left = self.context_search().reduce(left);
+        let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
             (Some(rl), None) => self.call_pair(&rl, right),
@@ -150,9 +147,7 @@ impl Context {
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let expansion =
-            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
-                .expand(ast);
+        let expansion = &self.context_search().expand(ast);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
         } else {
@@ -165,9 +160,7 @@ impl Context {
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let normal_form =
-            &ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
-                .recursively_reduce(ast);
+        let normal_form = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
         } else {
@@ -190,13 +183,10 @@ impl Context {
                             self.try_reducing_then_call(ast),
                             &ZiaError::CannotReduceFurther,
                             || {
-                                Ok(ContextSearch::from((
-                                    &self.snap_shot,
-                                    &self.delta,
-                                    &self.cache,
-                                ))
-                                .contract_pair(left, right)
-                                .to_string())
+                                Ok(self
+                                    .context_search()
+                                    .contract_pair(left, right)
+                                    .to_string())
                             },
                         )
                     },
@@ -235,12 +225,9 @@ impl Context {
                     })
                     .or_else(|| {
                         Some({
-                            let true_syntax = ContextSearch::from((
-                                &self.snap_shot,
-                                &self.delta,
-                                &self.cache,
-                            ))
-                            .to_ast(ContextSnapShot::true_id());
+                            let true_syntax = self
+                                .context_search()
+                                .to_ast(ContextSnapShot::true_id());
                             self.execute_reduction(right, &true_syntax)
                         })
                     })
@@ -289,12 +276,7 @@ impl Context {
                         .read_concept(&self.delta, c)
                         .get_reduction();
                     if let Some(r) = rightleft_reduction {
-                        let ast = ContextSearch::from((
-                            &self.snap_shot,
-                            &self.delta,
-                            &self.cache,
-                        ))
-                        .to_ast(r);
+                        let ast = self.context_search().to_ast(r);
                         self.match_righthand_pair(left, &ast, rightright)
                     } else {
                         Err(ZiaError::CannotReduceFurther)
@@ -495,13 +477,10 @@ impl Context {
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
-            .and_then(|l| {
-                right.get_concept().and_then(|r| {
-                    self.snap_shot.find_definition(&self.delta, l, r).map(
-                        |concept| {
-                            SyntaxTree::from(syntax).bind_concept(concept)
-                        },
-                    )
+            .and_also(&right.get_concept())
+            .and_then(|(l, r)| {
+                self.context_search().find_definition(*l, *r).map(|concept| {
+                    SyntaxTree::from(syntax).bind_concept(concept)
                 })
             })
             .unwrap_or_else(|| syntax.into())
@@ -608,6 +587,10 @@ impl Context {
         index
     }
 
+    fn context_search(&self) -> ContextSearch<ContextSnapShot> {
+        ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+    }
+
     fn find_or_insert_definition(
         &mut self,
         lefthand: usize,
@@ -615,8 +598,7 @@ impl Context {
         variable: bool,
         temporary: bool,
     ) -> ZiaResult<usize> {
-        let pair =
-            self.snap_shot.find_definition(&self.delta, lefthand, righthand);
+        let pair = self.context_search().find_definition(lefthand, righthand);
         match pair {
             None => {
                 let definition =
