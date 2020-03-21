@@ -18,8 +18,8 @@ use crate::{
     ast::SyntaxTree,
     concepts::{format_string, Concept},
     constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
-        LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE,
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
+        LEFT, PRECEDENCE, REDUCTION, RIGHT,
     },
     context::is_variable,
     context_delta::ContextDelta,
@@ -55,26 +55,24 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     fn infer_reduction(&self, concept: &Concept) -> Option<Arc<SyntaxTree>> {
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
-            if let Some((IMPLICATION, _)) = roc.get_definition() {
+            roc.get_definition().and_then(|(l, _)| if l == S::implication_id() {
                 roc.get_righthand_of().iter().find_map(|roro| {
                     self.snap_shot
                         .read_concept(self.delta, *roro)
                         .get_definition()
                         .and_then(|(condition, _)| {
-                            if let Some(TRUE) =
-                                self.reduce(&self.to_ast(condition)).and_then(
-                                    |condition_ast| condition_ast.get_concept(),
-                                )
-                            {
-                                Some(self.to_ast(TRUE))
+                            self.reduce(&self.to_ast(condition)).and_then(
+                                |condition_ast| condition_ast.get_concept(),
+                            ).and_then(|x| if x == S::true_id() {
+                                Some(self.to_ast(x))
                             } else {
                                 None
-                            }
+                            })
                         })
                 })
             } else {
                 None
-            }
+            })
         })
     }
 
@@ -221,9 +219,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     context_search
                         .variable_mask
                         .extend(variable_to_syntax.clone());
-                    let gen_ast = context_search.to_ast(*generalisation);
                     context_search
-                        .reduce(&gen_ast)
+                        .reduce_concept(*generalisation)
                         .map(|ast| context_search.substitute(&ast))
                 },
             )
@@ -450,7 +447,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             REDUCTION => {
                 self.determine_reduction_truth(left, rightright).map(|x| {
                     if x {
-                        self.to_ast(TRUE)
+                        self.to_ast(S::true_id())
                     } else {
                         self.to_ast(FALSE)
                     }
@@ -487,7 +484,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                     truth_value = reduced_rightright;
                                 }
                                 match truth_value.get_concept() {
-                                    Some(TRUE) => Some(true),
+                                    Some(x) if x == S::true_id() => Some(true),
                                     Some(FALSE) => Some(false),
                                     _ => None,
                                 }
@@ -496,7 +493,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         .collect();
                 for result in results {
                     match result {
-                        Some(true) => return Some(self.to_ast(TRUE)),
+                        Some(true) => return Some(self.to_ast(S::true_id())),
                         Some(false) => (),
                         _ => might_exist = true,
                     };
@@ -542,30 +539,32 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
     /// or the concept or a concept its composed of has no label and no definition (concept can't be expressed)
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
-        self.cache.syntax_trees.get(&concept_id).map_or_else(
-            || {
-                let concept =
-                    self.snap_shot.read_concept(self.delta, concept_id);
-                let syntax = if let Some(s) = concept.get_string().map_or_else(
-                    || self.snap_shot.get_label(self.delta, concept_id),
-                    |s| Some(format_string(&s)),
-                ) {
-                    Arc::new(SyntaxTree::from(s).bind_concept(concept_id))
-                } else {
-                    let (left, right) =
-                        concept.get_definition().unwrap_or_else(|| {
-                            panic!(
-                                "Unlabelled concept ({:#?}) with no definition",
-                                concept
-                            )
-                        });
-                    self.combine(&self.to_ast(left), &self.to_ast(right))
-                };
-                self.cache.syntax_trees.insert(concept_id, syntax.clone());
-                syntax
-            },
-            |r| r.value().clone(),
-        )
+        self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
+            self.cache.syntax_trees.get(&concept_id).map_or_else(
+                || {
+                    let concept =
+                        self.snap_shot.read_concept(self.delta, concept_id);
+                    let syntax = if let Some(s) = concept.get_string().map_or_else(
+                        || self.snap_shot.get_label(self.delta, concept_id),
+                        |s| Some(format_string(&s)),
+                    ) {
+                        Arc::new(SyntaxTree::from(s).bind_concept(concept_id))
+                    } else {
+                        let (left, right) =
+                            concept.get_definition().unwrap_or_else(|| {
+                                panic!(
+                                    "Unlabelled concept ({:#?}) with no definition",
+                                    concept
+                                )
+                            });
+                        self.combine(&self.to_ast(left), &self.to_ast(right))
+                    };
+                    self.cache.syntax_trees.insert(concept_id, syntax.clone());
+                    syntax
+                },
+                |r| r.value().clone(),
+            )
+        })
     }
 
     fn combine(
@@ -832,7 +831,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     {
                         // syntax of token has an even lower precedence than some previous lowest precendence syntax
                         // reset lowest precedence syntax with just this one
-                        Some(TRUE) => {
+                        Some(x) if x == S::true_id() => {
                             return Ok((
                                 vec![syntax_of_token],
                                 vec![this_index.unwrap()],
@@ -874,7 +873,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 },
                                 // syntax of token has a higher precedence than some previous lowest precendence syntax
                                 // keep existing lowest precedence syntax as-is
-                                Some(TRUE) => {
+                                Some(x) if x == S::true_id() => {
                                     return Ok((
                                         lowest_precedence_syntax,
                                         lp_indices,

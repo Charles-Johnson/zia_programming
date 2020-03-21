@@ -17,4 +17,6 @@ pub trait Reader {
     ) -> Option<String>;
     fn ast_from_symbol(&self, delta: &ContextDelta, symbol: &str)
         -> SyntaxTree;
+    fn true_id() -> usize;
+    fn implication_id() -> usize;
 }

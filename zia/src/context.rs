@@ -17,7 +17,7 @@
 use crate::{
     ast::SyntaxTree,
     concepts::SpecificPart,
-    constants::{DEFINE, LABEL, LET, REDUCTION, TRUE},
+    constants::{DEFINE, LABEL, LET, REDUCTION},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{ContextCache, ContextSearch},
     context_snap_shot::ContextSnapShot,
@@ -240,7 +240,7 @@ impl Context {
                                 &self.delta,
                                 &self.cache,
                             ))
-                            .to_ast(TRUE);
+                            .to_ast(ContextSnapShot::true_id());
                             self.execute_reduction(right, &true_syntax)
                         })
                     })

@@ -17,7 +17,7 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    constants::LABEL,
+    constants::{IMPLICATION, LABEL, TRUE},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -333,6 +333,12 @@ impl ContextSnapShot {
 }
 
 impl SnapShotReader for ContextSnapShot {
+    fn true_id() -> usize {
+        TRUE
+    }
+    fn implication_id() -> usize {
+        IMPLICATION
+    }
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, (cd, _, _)) in delta.concept() {

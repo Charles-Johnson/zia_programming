@@ -47,6 +47,15 @@ impl SnapShotReader for BasicCompositionSnapShot {
         }
     }
 
+
+    fn true_id() -> usize {
+        unimplemented!()
+    }
+
+    fn implication_id() -> usize {
+        unimplemented!()
+    }
+
     fn find_definition(
         &self,
         _delta: &ContextDelta,
@@ -129,8 +138,11 @@ fn basic_composition() {
         context_search.ast_from_expression("c"),
         Ok(right_syntax.clone())
     );
-    
-    assert_eq!(context_search.contract_pair(&left_syntax, &right_syntax), composite_syntax);
+
+    assert_eq!(
+        context_search.contract_pair(&left_syntax, &right_syntax),
+        composite_syntax
+    );
 
     assert_eq!(context_search.expand(&Arc::new("a".into())), composite_syntax);
 

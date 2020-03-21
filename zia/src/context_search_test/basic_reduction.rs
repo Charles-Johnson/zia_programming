@@ -38,6 +38,14 @@ impl SnapShotReader for BasicReductionSnapShot {
         }
     }
 
+    fn true_id() -> usize {
+        unimplemented!()
+    }
+
+    fn implication_id() -> usize {
+        unimplemented!()
+    }
+
     fn find_definition(
         &self,
         _delta: &ContextDelta,
