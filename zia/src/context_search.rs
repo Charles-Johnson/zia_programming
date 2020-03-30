@@ -101,19 +101,18 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         left_concept_id: usize,
         default_concept_id: usize,
     ) -> Option<Arc<SyntaxTree>> {
-        let find = |c| self.find_definition(left_concept_id, c);
-        if self.syntax_evaluating.get(ast).is_some() {
-            Some(self.to_ast(default_concept_id))
-        } else {
+        let mut reduced_pair: Option<Arc<SyntaxTree>> = None;
+        if self.syntax_evaluating.get(ast).is_some() || {
             let mut context_search = self.clone();
             context_search.syntax_evaluating.insert(ast.clone());
-            context_search.reduce_pair(left, right).or_else(|| {
-                if right.get_concept().and_then(find).is_none() {
-                    Some(self.to_ast(default_concept_id))
-                } else {
-                    None
-                }
-            })
+            reduced_pair = context_search.reduce_pair(left, right);
+            let find = |c| self.find_definition(left_concept_id, c);
+            reduced_pair.is_none()
+                && right.get_concept().and_then(find).is_none()
+        } {
+            Some(self.to_ast(default_concept_id))
+        } else {
+            reduced_pair
         }
     }
 
