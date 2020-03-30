@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use std::sync::Arc;
 
 #[derive(Default)]
-struct BasicReductionSnapShot;
+struct BasicInferenceSnapShot;
 
 lazy_static! {
     static ref CONCEPTS: [Concept; 6] = {
@@ -65,13 +65,57 @@ lazy_static! {
     };
 }
 
-impl SnapShotReader for BasicReductionSnapShot {
+impl SnapShotReader for BasicInferenceSnapShot {
     fn implication_id() -> usize {
         0
     }
 
     fn true_id() -> usize {
         1
+    }
+
+    fn false_id() -> usize {
+        unimplemented!()
+    }
+
+    fn reduction_id() -> usize {
+        unimplemented!()
+    }
+
+    fn assoc_id() -> usize {
+        unimplemented!()
+    }
+
+    fn right_id() -> usize {
+        unimplemented!()
+    }
+
+    fn left_id() -> usize {
+        unimplemented!()
+    }
+
+    fn exists_such_that_id() -> usize {
+        unimplemented!()
+    }
+
+    fn precedence_id() -> usize {
+        unimplemented!()
+    }
+
+    fn greater_than_id() -> usize {
+        unimplemented!()
+    }
+
+    fn default_id() -> usize {
+        unimplemented!()
+    }
+
+    fn concept_from_label(
+        &self,
+        _: &ContextDelta,
+        _label: &str,
+    ) -> Option<usize> {
+        unimplemented!()
     }
 
     fn read_concept(
@@ -123,10 +167,10 @@ impl SnapShotReader for BasicReductionSnapShot {
 
 #[test]
 fn basic_inference() {
-    let snapshot = BasicReductionSnapShot::default();
+    let snapshot = BasicInferenceSnapShot::default();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search = ContextSearch::<BasicReductionSnapShot>::from((
+    let context_search = ContextSearch::<BasicInferenceSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
     let [_, true_syntax, _, result_syntax, ..] = SYNTAX.clone();

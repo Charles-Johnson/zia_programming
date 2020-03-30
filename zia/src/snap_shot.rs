@@ -13,4 +13,18 @@ pub trait Reader {
         -> SyntaxTree;
     fn true_id() -> usize;
     fn implication_id() -> usize;
+    fn precedence_id() -> usize;
+    fn greater_than_id() -> usize;
+    fn default_id() -> usize;
+    fn reduction_id() -> usize;
+    fn false_id() -> usize;
+    fn assoc_id() -> usize;
+    fn right_id() -> usize;
+    fn left_id() -> usize;
+    fn exists_such_that_id() -> usize;
+    fn concept_from_label(
+        &self,
+        delta: &ContextDelta,
+        s: &str,
+    ) -> Option<usize>;
 }

@@ -24,7 +24,7 @@ use std::{
 #[derive(Clone, Debug)]
 pub struct SyntaxTree {
     /// The root of this syntax tree, represented as a `String`.
-    syntax: String,
+    syntax: Option<String>,
     /// Index of the concept that the syntax may represent.
     concept: Option<usize>,
     /// This syntax tree may expand to two syntax trees or not expand further.
@@ -48,7 +48,17 @@ impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
 impl fmt::Display for SyntaxTree {
     /// Displays the same as the inside of an `SyntaxTree` variant.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.syntax)
+        write!(
+            f,
+            "{}",
+            self.syntax.clone().unwrap_or_else(|| self
+                .expansion
+                .as_ref()
+                .map_or_else(
+                    || "".into(),
+                    |(l, r)| l.to_string() + " " + &r.to_string()
+                ))
+        )
     }
 }
 
@@ -58,7 +68,7 @@ where
 {
     fn from(syntax: S) -> Self {
         Self {
-            syntax: syntax.into(),
+            syntax: Some(syntax.into()),
             concept: None,
             expansion: None,
         }
@@ -75,6 +85,14 @@ impl Hash for SyntaxTree {
 }
 
 impl SyntaxTree {
+    pub fn new_concept(concept_id: usize) -> Self {
+        Self {
+            syntax: None,
+            concept: Some(concept_id),
+            expansion: None,
+        }
+    }
+
     pub fn bind_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self
@@ -110,10 +128,11 @@ impl SyntaxTree {
     }
 
     pub fn is_variable(&self) -> bool {
-        if is_variable(&self.syntax) {
+        if self.syntax.as_ref().map_or(false, |s| is_variable(s)) {
             true
         } else if let Some((l, r)) = self.get_expansion() {
-            is_variable(&l.syntax) || is_variable(&r.syntax)
+            l.syntax.as_ref().map_or(false, |s| is_variable(s))
+                || r.syntax.as_ref().map_or(false, |s| is_variable(s))
         } else {
             false
         }

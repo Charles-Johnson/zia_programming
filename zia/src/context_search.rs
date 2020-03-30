@@ -18,10 +18,6 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept},
-    constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, LEFT,
-        PRECEDENCE, REDUCTION, RIGHT,
-    },
     context::is_variable,
     context_delta::ContextDelta,
     context_snap_shot::{parse_line, Associativity},
@@ -100,8 +96,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
         debug!("reduce({})", ast.to_string());
-        let find_precedence = |c| self.find_definition(PRECEDENCE, c);
-        let find_assoc = |c| self.find_definition(ASSOC, c);
+        let find_precedence = |c| self.find_definition(S::precedence_id(), c);
+        let find_assoc = |c| self.find_definition(S::assoc_id(), c);
         self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
@@ -111,41 +107,13 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         ast.get_expansion().and_then(|(ref left, ref right)| {
                             left.get_concept()
                                 .and_then(|lc| match lc {
-                                    ASSOC => {
+                                    x if x == S::precedence_id() => {
                                         if self
                                             .syntax_evaluating
                                             .get(ast)
                                             .is_some()
                                         {
-                                            Some(self.to_ast(RIGHT))
-                                        } else {
-                                            let mut context_search =
-                                                self.clone();
-                                            context_search
-                                                .syntax_evaluating
-                                                .insert(ast.clone());
-                                            context_search
-                                                .reduce_pair(left, right)
-                                                .or_else(|| {
-                                                    if right
-                                                        .get_concept()
-                                                        .and_then(find_assoc)
-                                                        .is_none()
-                                                    {
-                                                        Some(self.to_ast(RIGHT))
-                                                    } else {
-                                                        None
-                                                    }
-                                                })
-                                        }
-                                    },
-                                    PRECEDENCE => {
-                                        if self
-                                            .syntax_evaluating
-                                            .get(ast)
-                                            .is_some()
-                                        {
-                                            Some(self.to_ast(DEFAULT))
+                                            Some(self.to_ast(S::default_id()))
                                         } else {
                                             let mut context_search =
                                                 self.clone();
@@ -162,11 +130,39 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                                         )
                                                         .is_none()
                                                     {
-                                                        Some(
-                                                            self.to_ast(
-                                                                DEFAULT,
-                                                            ),
-                                                        )
+                                                        Some(self.to_ast(
+                                                            S::default_id(),
+                                                        ))
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                        }
+                                    },
+                                    x if x == S::assoc_id() => {
+                                        if self
+                                            .syntax_evaluating
+                                            .get(ast)
+                                            .is_some()
+                                        {
+                                            Some(self.to_ast(S::right_id()))
+                                        } else {
+                                            let mut context_search =
+                                                self.clone();
+                                            context_search
+                                                .syntax_evaluating
+                                                .insert(ast.clone());
+                                            context_search
+                                                .reduce_pair(left, right)
+                                                .or_else(|| {
+                                                    if right
+                                                        .get_concept()
+                                                        .and_then(find_assoc)
+                                                        .is_none()
+                                                    {
+                                                        Some(self.to_ast(
+                                                            S::right_id(),
+                                                        ))
                                                     } else {
                                                         None
                                                     }
@@ -442,53 +438,56 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         rightright: &Arc<SyntaxTree>,
     ) -> Option<Arc<SyntaxTree>> {
         rightleft.get_concept().and_then(|rlc| match rlc {
-            REDUCTION => {
+            x if x == S::reduction_id() => {
                 self.determine_reduction_truth(left, rightright).map(|x| {
                     if x {
                         self.to_ast(S::true_id())
                     } else {
-                        self.to_ast(FALSE)
+                        self.to_ast(S::false_id())
                     }
                 })
             },
-            EXISTS_SUCH_THAT if is_variable(&left.to_string()) => {
+            x if x == S::exists_such_that_id()
+                && is_variable(&left.to_string()) =>
+            {
                 let mut might_exist = false;
-                let results: Vec<Option<bool>> =
-                    (0..self.snap_shot.concept_len(self.delta))
-                        .into_par_iter()
-                        .map(|i| {
-                            if self.is_free_variable(i) {
-                                None
-                            } else {
-                                let mut context_search = self.clone();
-                                context_search.variable_mask.insert(
-                                    left.get_concept().unwrap(),
-                                    self.to_ast(i),
-                                );
-                                let mut truth_value =
-                                    context_search.substitute(rightright);
+                let results: Vec<Option<bool>> = (0..self
+                    .snap_shot
+                    .concept_len(self.delta))
+                    .into_par_iter()
+                    .map(|i| {
+                        if self.is_free_variable(i) {
+                            None
+                        } else {
+                            let mut context_search = self.clone();
+                            context_search.variable_mask.insert(
+                                left.get_concept().unwrap(),
+                                self.to_ast(i),
+                            );
+                            let mut truth_value =
+                                context_search.substitute(rightright);
+                            debug!(
+                                "Reducing expression: {}",
+                                truth_value.to_string()
+                            );
+                            while let Some(reduced_rightright) =
+                                self.reduce(&truth_value)
+                            {
                                 debug!(
-                                    "Reducing expression: {}",
-                                    truth_value.to_string()
+                                    "{} reduces to {}",
+                                    truth_value.to_string(),
+                                    reduced_rightright.to_string()
                                 );
-                                while let Some(reduced_rightright) =
-                                    self.reduce(&truth_value)
-                                {
-                                    debug!(
-                                        "{} reduces to {}",
-                                        truth_value.to_string(),
-                                        reduced_rightright.to_string()
-                                    );
-                                    truth_value = reduced_rightright;
-                                }
-                                match truth_value.get_concept() {
-                                    Some(x) if x == S::true_id() => Some(true),
-                                    Some(FALSE) => Some(false),
-                                    _ => None,
-                                }
+                                truth_value = reduced_rightright;
                             }
-                        })
-                        .collect();
+                            match truth_value.get_concept() {
+                                Some(x) if x == S::true_id() => Some(true),
+                                Some(x) if x == S::false_id() => Some(false),
+                                _ => None,
+                            }
+                        }
+                    })
+                    .collect();
                 for result in results {
                     match result {
                         Some(true) => return Some(self.to_ast(S::true_id())),
@@ -499,9 +498,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 if might_exist {
                     None
                 } else {
-                    Some(self.to_ast(FALSE))
+                    Some(self.to_ast(S::false_id()))
                 }
-            },
+            }
             _ => None,
         })
     }
@@ -535,27 +534,23 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
-    /// or the concept or a concept its composed of has no label and no definition (concept can't be expressed)
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
         self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
             self.cache.syntax_trees.get(&concept_id).map_or_else(
                 || {
                     let concept =
                         self.snap_shot.read_concept(self.delta, concept_id);
-                    let syntax = if let Some(s) = concept.get_string().map_or_else(
-                        || self.snap_shot.get_label(self.delta, concept_id),
-                        |s| Some(format_string(&s)),
-                    ) {
+                    let syntax = if let Some(s) =
+                        concept.get_string().map_or_else(
+                            || self.snap_shot.get_label(self.delta, concept_id),
+                            |s| Some(format_string(&s)),
+                        ) {
                         Arc::new(SyntaxTree::from(s).bind_concept(concept_id))
-                    } else {
-                        let (left, right) =
-                            concept.get_definition().unwrap_or_else(|| {
-                                panic!(
-                                    "Unlabelled concept ({:#?}) with no definition",
-                                    concept
-                                )
-                            });
+                    } else if let Some((left, right)) = concept.get_definition()
+                    {
                         self.combine(&self.to_ast(left), &self.to_ast(right))
+                    } else {
+                        Arc::new(SyntaxTree::new_concept(concept_id))
                     };
                     self.cache.syntax_trees.insert(concept_id, syntax.clone());
                     syntax
@@ -624,16 +619,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
-        let assoc_of_ast = self.combine(&self.to_ast(ASSOC), ast);
-        self.reduce(&assoc_of_ast)
-            .and_then(|ast| {
-                if let Some(LEFT) = ast.get_concept() {
-                    Some(Associativity::Left)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(Associativity::Right)
+        let assoc_of_ast = self.combine(&self.to_ast(S::assoc_id()), ast);
+        if Some(S::left_id())
+            == self.reduce(&assoc_of_ast).and_then(|ast| ast.get_concept())
+        {
+            Associativity::Left
+        } else {
+            Associativity::Right
+        }
     }
 
     /// Expands syntax by definition of its associated concept.
@@ -798,8 +791,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
-        let precedence_syntax = self.to_ast(PRECEDENCE);
-        let greater_than_syntax = self.to_ast(GREATER_THAN);
+        let precedence_syntax =
+            Arc::new(SyntaxTree::new_concept(S::precedence_id()));
+        let greater_than_syntax =
+            Arc::new(SyntaxTree::new_concept(S::greater_than_id()));
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
             (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
@@ -807,13 +802,30 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
              token| {
                 // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                let syntax_of_token = self.ast_from_token(token)?;
-                let precedence_of_token =
-                    self.combine(&precedence_syntax, &syntax_of_token);
+                let raw_syntax_of_token = SyntaxTree::from(token);
+                let (precedence_of_token, syntax_of_token) = if let Some(c) =
+                    self.snap_shot.concept_from_label(self.delta, token)
+                {
+                    let syntax_of_token =
+                        Arc::new(raw_syntax_of_token.bind_concept(c));
+                    (
+                        self.combine(&precedence_syntax, &syntax_of_token),
+                        syntax_of_token,
+                    )
+                } else {
+                    (
+                        Arc::new(SyntaxTree::new_concept(S::default_id())),
+                        Arc::new(raw_syntax_of_token),
+                    )
+                };
                 // Compare current token's precedence with each currently assumed lowest syntax
                 for syntax in lowest_precedence_syntax.clone() {
-                    let precedence_of_syntax =
-                        self.combine(&precedence_syntax, &syntax);
+                    let precedence_of_syntax = if syntax.get_concept().is_some()
+                    {
+                        self.combine(&precedence_syntax, &syntax)
+                    } else {
+                        Arc::new(SyntaxTree::new_concept(S::default_id()))
+                    };
                     let comparing_between_tokens = self.combine(
                         &precedence_of_syntax,
                         &self.combine(
@@ -836,7 +848,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         },
                         // syntax of token has a higher precedence than some previous lowest precendence syntax
                         // keep existing lowest precedence syntax as-is
-                        Some(FALSE) => {
+                        Some(x) if x == S::false_id() => {
                             return Ok((
                                 lowest_precedence_syntax,
                                 lp_indices,
@@ -860,7 +872,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                             {
                                 // syntax of token has an even lower precedence than some previous lowest precendence syntax
                                 // reset lowest precedence syntax with just this one
-                                Some(FALSE) => {
+                                Some(x) if x == S::false_id() => {
                                     return Ok((
                                         vec![syntax_of_token],
                                         vec![this_index.unwrap()],

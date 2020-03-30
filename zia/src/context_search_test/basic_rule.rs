@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use std::sync::Arc;
 
 #[derive(Default)]
-struct BasicReductionSnapShot;
+struct BasicRuleSnapShot;
 
 lazy_static! {
     static ref CONCEPTS: (Concept, Concept, Concept, Concept) = {
@@ -36,7 +36,7 @@ lazy_static! {
         SyntaxTree::from("left").bind_concept(2);
 }
 
-impl SnapShotReader for BasicReductionSnapShot {
+impl SnapShotReader for BasicRuleSnapShot {
     fn read_concept(
         &self,
         _delta: &ContextDelta,
@@ -91,6 +91,38 @@ impl SnapShotReader for BasicReductionSnapShot {
         }
     }
 
+    fn concept_from_label(
+        &self,
+        _: &ContextDelta,
+        _label: &str,
+    ) -> Option<usize> {
+        unimplemented!()
+    }
+
+    fn false_id() -> usize {
+        unimplemented!()
+    }
+
+    fn reduction_id() -> usize {
+        unimplemented!()
+    }
+
+    fn assoc_id() -> usize {
+        5
+    }
+
+    fn right_id() -> usize {
+        unimplemented!()
+    }
+
+    fn left_id() -> usize {
+        unimplemented!()
+    }
+
+    fn exists_such_that_id() -> usize {
+        unimplemented!()
+    }
+
     fn true_id() -> usize {
         unimplemented!()
     }
@@ -98,16 +130,27 @@ impl SnapShotReader for BasicReductionSnapShot {
     fn implication_id() -> usize {
         unimplemented!()
     }
+
+    fn precedence_id() -> usize {
+        4
+    }
+
+    fn greater_than_id() -> usize {
+        unimplemented!()
+    }
+
+    fn default_id() -> usize {
+        unimplemented!()
+    }
 }
 
 #[test]
 fn basic_rule() {
-    let snapshot = BasicReductionSnapShot::default();
+    let snapshot = BasicRuleSnapShot::default();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search = ContextSearch::<BasicReductionSnapShot>::from((
-        &snapshot, &delta, &cache,
-    ));
+    let context_search =
+        ContextSearch::<BasicRuleSnapShot>::from((&snapshot, &delta, &cache));
     let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
     let left_syntax = Arc::new(LEFT_SYNTAX.clone());
     let random_syntax = Arc::new(SyntaxTree::from("random"));

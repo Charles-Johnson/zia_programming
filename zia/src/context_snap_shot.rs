@@ -17,7 +17,10 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    constants::{IMPLICATION, LABEL, TRUE},
+    constants::{
+        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
+        LABEL, LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE,
+    },
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -214,15 +217,6 @@ impl ContextSnapShot {
         self.string_map.remove(string).expect("No string to remove!");
     }
 
-    pub fn concept_from_label(
-        &self,
-        delta: &ContextDelta,
-        s: &str,
-    ) -> Option<usize> {
-        self.get_string_concept(delta, s)
-            .and_then(|c| self.get_labellee(delta, c))
-    }
-
     fn get_string_concept(
         &self,
         delta: &ContextDelta,
@@ -341,6 +335,51 @@ impl SnapShotReader for ContextSnapShot {
 
     fn implication_id() -> usize {
         IMPLICATION
+    }
+
+    fn precedence_id() -> usize {
+        PRECEDENCE
+    }
+
+    fn default_id() -> usize {
+        DEFAULT
+    }
+
+    fn greater_than_id() -> usize {
+        GREATER_THAN
+    }
+
+    fn reduction_id() -> usize {
+        REDUCTION
+    }
+
+    fn false_id() -> usize {
+        FALSE
+    }
+
+    fn assoc_id() -> usize {
+        ASSOC
+    }
+
+    fn right_id() -> usize {
+        RIGHT
+    }
+
+    fn left_id() -> usize {
+        LEFT
+    }
+
+    fn exists_such_that_id() -> usize {
+        EXISTS_SUCH_THAT
+    }
+
+    fn concept_from_label(
+        &self,
+        delta: &ContextDelta,
+        s: &str,
+    ) -> Option<usize> {
+        self.get_string_concept(delta, s)
+            .and_then(|c| self.get_labellee(delta, c))
     }
 
     fn concept_len(&self, delta: &ContextDelta) -> usize {

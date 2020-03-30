@@ -46,6 +46,50 @@ impl SnapShotReader for BasicReductionSnapShot {
         unimplemented!()
     }
 
+    fn precedence_id() -> usize {
+        unimplemented!()
+    }
+
+    fn greater_than_id() -> usize {
+        unimplemented!()
+    }
+
+    fn default_id() -> usize {
+        unimplemented!()
+    }
+
+    fn false_id() -> usize {
+        unimplemented!()
+    }
+
+    fn reduction_id() -> usize {
+        unimplemented!()
+    }
+
+    fn assoc_id() -> usize {
+        unimplemented!()
+    }
+
+    fn right_id() -> usize {
+        unimplemented!()
+    }
+
+    fn left_id() -> usize {
+        unimplemented!()
+    }
+
+    fn exists_such_that_id() -> usize {
+        unimplemented!()
+    }
+
+    fn concept_from_label(
+        &self,
+        _: &ContextDelta,
+        _label: &str,
+    ) -> Option<usize> {
+        unimplemented!()
+    }
+
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
         false
     }
