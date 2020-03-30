@@ -93,11 +93,33 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         })
     }
 
+    fn reduce_otherwise_default(
+        &self,
+        ast: &Arc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+        left_concept_id: usize,
+        default_concept_id: usize,
+    ) -> Option<Arc<SyntaxTree>> {
+        let find = |c| self.find_definition(left_concept_id, c);
+        if self.syntax_evaluating.get(ast).is_some() {
+            Some(self.to_ast(default_concept_id))
+        } else {
+            let mut context_search = self.clone();
+            context_search.syntax_evaluating.insert(ast.clone());
+            context_search.reduce_pair(left, right).or_else(|| {
+                if right.get_concept().and_then(find).is_none() {
+                    Some(self.to_ast(default_concept_id))
+                } else {
+                    None
+                }
+            })
+        }
+    }
+
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
         debug!("reduce({})", ast.to_string());
-        let find_precedence = |c| self.find_definition(S::precedence_id(), c);
-        let find_assoc = |c| self.find_definition(S::assoc_id(), c);
         self.cache.reductions.get(ast).map_or_else(
             || {
                 let result = ast
@@ -106,70 +128,26 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     .or_else(|| {
                         ast.get_expansion().and_then(|(ref left, ref right)| {
                             left.get_concept()
-                                .and_then(|lc| match lc {
-                                    x if x == S::precedence_id() => {
-                                        if self
-                                            .syntax_evaluating
-                                            .get(ast)
-                                            .is_some()
-                                        {
-                                            Some(self.to_ast(S::default_id()))
-                                        } else {
-                                            let mut context_search =
-                                                self.clone();
-                                            context_search
-                                                .syntax_evaluating
-                                                .insert(ast.clone());
-                                            context_search
-                                                .reduce_pair(left, right)
-                                                .or_else(|| {
-                                                    if right
-                                                        .get_concept()
-                                                        .and_then(
-                                                            find_precedence,
-                                                        )
-                                                        .is_none()
-                                                    {
-                                                        Some(self.to_ast(
-                                                            S::default_id(),
-                                                        ))
-                                                    } else {
-                                                        None
-                                                    }
-                                                })
-                                        }
-                                    },
-                                    x if x == S::assoc_id() => {
-                                        if self
-                                            .syntax_evaluating
-                                            .get(ast)
-                                            .is_some()
-                                        {
-                                            Some(self.to_ast(S::right_id()))
-                                        } else {
-                                            let mut context_search =
-                                                self.clone();
-                                            context_search
-                                                .syntax_evaluating
-                                                .insert(ast.clone());
-                                            context_search
-                                                .reduce_pair(left, right)
-                                                .or_else(|| {
-                                                    if right
-                                                        .get_concept()
-                                                        .and_then(find_assoc)
-                                                        .is_none()
-                                                    {
-                                                        Some(self.to_ast(
-                                                            S::right_id(),
-                                                        ))
-                                                    } else {
-                                                        None
-                                                    }
-                                                })
-                                        }
-                                    },
-                                    _ => None,
+                                .and_then(|lc| {
+                                    if lc == S::precedence_id() {
+                                        self.reduce_otherwise_default(
+                                            ast,
+                                            left,
+                                            right,
+                                            lc,
+                                            S::default_id(),
+                                        )
+                                    } else if lc == S::assoc_id() {
+                                        self.reduce_otherwise_default(
+                                            ast,
+                                            left,
+                                            right,
+                                            lc,
+                                            S::right_id(),
+                                        )
+                                    } else {
+                                        None
+                                    }
                                 })
                                 .or_else(|| self.reduce_pair(left, right))
                         })
