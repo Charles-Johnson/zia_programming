@@ -569,27 +569,15 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
             |(l, r)| match self.get_associativity(&r) {
-                Associativity::Left => l.to_string() + " " + &r.to_string(),
-                Associativity::Right => {
-                    "(".to_string()
-                        + &l.to_string()
-                        + " "
-                        + &r.to_string()
-                        + ")"
-                },
+                Associativity::Left => format!("{} {}", l, r),
+                Associativity::Right => format!("({} {})", l, r),
             },
         );
         let right_string = right.get_expansion().map_or_else(
             || right.to_string(),
             |(l, r)| match self.get_associativity(&l) {
-                Associativity::Left => {
-                    "(".to_string()
-                        + &l.to_string()
-                        + " "
-                        + &r.to_string()
-                        + ")"
-                },
-                Associativity::Right => l.to_string() + " " + &r.to_string(),
+                Associativity::Left => format!("({} {})", l, r),
+                Associativity::Right => format!("{} {}", l, r),
             },
         );
         left_string + " " + &right_string
