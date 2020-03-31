@@ -687,16 +687,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         assoc: &Associativity,
     ) -> ZiaResult<(Option<Arc<SyntaxTree>>, Option<usize>)> {
         let prev_lp_index = state.1;
-        let slice = match assoc {
-            Associativity::Left => match prev_lp_index {
-                Some(i) => &tokens[i..lp_index],
-                None => &tokens[..lp_index],
-            },
-            Associativity::Right => match prev_lp_index {
-                Some(i) => &tokens[lp_index..i],
-                None => &tokens[lp_index..],
-            },
-        };
+        let slice = assoc.slice_tokens(tokens, prev_lp_index, lp_index);
         // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
         if slice.is_empty() {
             return Err(ZiaError::AmbiguousExpression);
