@@ -27,7 +27,10 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use maplit::hashmap;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::Display,
+};
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 #[derive(Default, Debug, Clone)]
@@ -47,6 +50,30 @@ pub struct ContextSnapShot {
 pub enum Associativity {
     Left,
     Right,
+}
+
+impl Associativity {
+    pub fn display_joint_left(
+        &self,
+        leftleft: impl Display,
+        leftright: impl Display,
+    ) -> String {
+        match &self {
+            Self::Left => format!("{} {}", leftleft, leftright),
+            Self::Right => format!("({} {})", leftleft, leftright),
+        }
+    }
+
+    pub fn display_joint_right(
+        &self,
+        rightleft: impl Display,
+        rightright: impl Display,
+    ) -> String {
+        match &self {
+            Self::Left => format!("({} {})", rightleft, rightright),
+            Self::Right => format!("{} {}", rightleft, rightright),
+        }
+    }
 }
 
 impl ContextSnapShot {
