@@ -167,7 +167,7 @@ fn basic_precedence() {
     assert_eq!(
         context_search.ast_from_expression("c b a"),
         Ok(Arc::new(SyntaxTree::from("(c b) a").bind_pair(
-            &Arc::new(SyntaxTree::from("c b").bind_pair(
+            &Arc::new(SyntaxTree::new_pair(
                 &Arc::new(SyntaxTree::from("c")),
                 &Arc::new(SyntaxTree::from("b"))
             )),

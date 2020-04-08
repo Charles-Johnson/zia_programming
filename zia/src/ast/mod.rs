@@ -93,6 +93,15 @@ impl SyntaxTree {
         }
     }
 
+    #[cfg(test)]
+    pub fn new_pair(left: &Arc<SyntaxTree>, right: &Arc<SyntaxTree>) -> Self {
+        Self {
+            syntax: None,
+            concept: None,
+            expansion: Some((left.clone(), right.clone())),
+        }
+    }
+
     pub fn bind_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self

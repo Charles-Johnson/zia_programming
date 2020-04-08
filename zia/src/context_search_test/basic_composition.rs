@@ -151,9 +151,7 @@ fn basic_composition() {
     assert_eq!(
         context_search.ast_from_expression("b c"),
         Ok(Arc::new(
-            SyntaxTree::from("b c")
-                .bind_concept(0)
-                .bind_pair(&left_syntax, &right_syntax)
+            SyntaxTree::new_concept(0).bind_pair(&left_syntax, &right_syntax)
         ))
     );
     assert_eq!(
