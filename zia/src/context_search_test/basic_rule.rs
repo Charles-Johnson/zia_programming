@@ -6,7 +6,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicRuleSnapShot;
@@ -151,30 +150,30 @@ fn basic_rule() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<BasicRuleSnapShot>::from((&snapshot, &delta, &cache));
-    let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
-    let random_syntax = SyntaxTree::from("random");
+    let concrete_syntax = || CONCRETE_SYNTAX.clone();
+    let left_syntax = || LEFT_SYNTAX.clone();
     let left_and_random_syntax =
-        SyntaxTree::new_pair(LEFT_SYNTAX.clone(), random_syntax).into();
+        SyntaxTree::new_pair(left_syntax(), SyntaxTree::from("random")).into();
 
     assert_eq!(
         context_search.ast_from_expression("left"),
-        Ok(LEFT_SYNTAX.clone().into())
+        Ok(left_syntax().into())
     );
     assert_eq!(
         context_search.ast_from_expression("concrete"),
-        Ok(concrete_syntax.clone())
+        Ok(concrete_syntax().into())
     );
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax);
-    assert_eq!(context_search.to_ast(2), LEFT_SYNTAX.clone().into());
+    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(2), left_syntax().into());
 
     assert_eq!(
         context_search.reduce(&left_and_random_syntax),
-        Some(concrete_syntax.clone())
+        Some(concrete_syntax().into())
     );
 
     assert_eq!(
         context_search.recursively_reduce(&left_and_random_syntax),
-        concrete_syntax
+        concrete_syntax().into()
     );
 }

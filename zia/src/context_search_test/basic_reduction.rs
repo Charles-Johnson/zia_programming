@@ -6,7 +6,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicReductionSnapShot;
@@ -131,36 +130,42 @@ fn basic_reduction() {
     let context_search = ContextSearch::<BasicReductionSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let abstract_syntax = Arc::new(ABSTRACT_SYNTAX.clone());
-    let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
+    let abstract_syntax = || ABSTRACT_SYNTAX.clone();
+    let concrete_syntax = || CONCRETE_SYNTAX.clone();
 
     assert_eq!(
-        context_search.recursively_reduce(&abstract_syntax),
-        concrete_syntax
+        context_search.recursively_reduce(&abstract_syntax().into()),
+        concrete_syntax().into()
     );
     assert_eq!(
-        context_search.recursively_reduce(&concrete_syntax),
-        concrete_syntax
+        context_search.recursively_reduce(&concrete_syntax().into()),
+        concrete_syntax().into()
     );
 
     assert_eq!(
-        context_search.reduce(&abstract_syntax),
-        Some(concrete_syntax.clone())
+        context_search.reduce(&abstract_syntax().into()),
+        Some(concrete_syntax().into())
     );
-    assert_eq!(context_search.reduce(&concrete_syntax), None);
+    assert_eq!(context_search.reduce(&concrete_syntax().into()), None);
 
     assert_eq!(
         context_search.ast_from_expression("abstract"),
-        Ok(abstract_syntax.clone())
+        Ok(abstract_syntax().into())
     );
     assert_eq!(
         context_search.ast_from_expression("concrete"),
-        Ok(concrete_syntax.clone())
+        Ok(concrete_syntax().into())
     );
 
-    assert_eq!(context_search.expand(&abstract_syntax), abstract_syntax);
-    assert_eq!(context_search.expand(&concrete_syntax), concrete_syntax);
+    assert_eq!(
+        context_search.expand(&abstract_syntax().into()),
+        abstract_syntax().into()
+    );
+    assert_eq!(
+        context_search.expand(&concrete_syntax().into()),
+        concrete_syntax().into()
+    );
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax);
-    assert_eq!(context_search.to_ast(1), abstract_syntax);
+    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(1), abstract_syntax().into());
 }

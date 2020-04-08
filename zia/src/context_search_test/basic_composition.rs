@@ -6,7 +6,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicCompositionSnapShot;
@@ -143,40 +142,41 @@ fn basic_composition() {
         &snapshot, &delta, &cache,
     ));
     let [composite_syntax, left_syntax, right_syntax] = SYNTAX.clone();
-    let composite_syntax = Arc::new(composite_syntax);
-    let left_syntax = Arc::new(left_syntax);
-    let right_syntax = Arc::new(right_syntax);
+    let composite_syntax = || composite_syntax.clone();
+    let left_syntax = || left_syntax.clone();
+    let right_syntax = || right_syntax.clone();
 
     assert_eq!(
         context_search.ast_from_expression("b c"),
         Ok(SyntaxTree::new_concept(0)
-            .bind_pair(left_syntax.clone(), right_syntax.clone())
+            .bind_pair(left_syntax(), right_syntax())
             .into())
     );
     assert_eq!(
         context_search.ast_from_expression("a"),
-        Ok(composite_syntax.clone())
+        Ok(composite_syntax().into())
     );
     assert_eq!(
         context_search.ast_from_expression("b"),
-        Ok(left_syntax.clone())
+        Ok(left_syntax().into())
     );
     assert_eq!(
         context_search.ast_from_expression("c"),
-        Ok(right_syntax.clone())
+        Ok(right_syntax().into())
     );
 
     assert_eq!(
-        context_search.contract_pair(&left_syntax, &right_syntax),
-        composite_syntax
+        context_search
+            .contract_pair(&left_syntax().into(), &right_syntax().into()),
+        composite_syntax().into()
     );
 
     assert_eq!(
         context_search.expand(&SyntaxTree::from("a").into()),
-        composite_syntax
+        composite_syntax().into()
     );
 
-    assert_eq!(context_search.to_ast(0), composite_syntax);
-    assert_eq!(context_search.to_ast(1), left_syntax);
-    assert_eq!(context_search.to_ast(2), right_syntax);
+    assert_eq!(context_search.to_ast(0), composite_syntax().into());
+    assert_eq!(context_search.to_ast(1), left_syntax().into());
+    assert_eq!(context_search.to_ast(2), right_syntax().into());
 }

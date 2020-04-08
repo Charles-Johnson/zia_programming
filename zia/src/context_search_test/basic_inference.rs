@@ -6,7 +6,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicInferenceSnapShot;
@@ -168,13 +167,16 @@ fn basic_inference() {
         &snapshot, &delta, &cache,
     ));
     let [_, true_syntax, _, result_syntax, ..] = SYNTAX.clone();
-    let true_syntax = Arc::new(true_syntax);
-    let result_syntax = Arc::new(result_syntax);
+    let true_syntax = || true_syntax.clone();
+    let result_syntax = || result_syntax.clone();
 
     assert_eq!(
-        context_search.reduce(&result_syntax),
-        Some(true_syntax.clone())
+        context_search.reduce(&result_syntax().into()),
+        Some(true_syntax().into())
     );
 
-    assert_eq!(context_search.recursively_reduce(&result_syntax), true_syntax);
+    assert_eq!(
+        context_search.recursively_reduce(&result_syntax().into()),
+        true_syntax().into()
+    );
 }
