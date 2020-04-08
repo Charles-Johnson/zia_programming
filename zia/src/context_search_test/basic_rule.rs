@@ -152,14 +152,13 @@ fn basic_rule() {
     let context_search =
         ContextSearch::<BasicRuleSnapShot>::from((&snapshot, &delta, &cache));
     let concrete_syntax = Arc::new(CONCRETE_SYNTAX.clone());
-    let left_syntax = Arc::new(LEFT_SYNTAX.clone());
-    let random_syntax = Arc::new(SyntaxTree::from("random"));
+    let random_syntax = SyntaxTree::from("random");
     let left_and_random_syntax =
-        SyntaxTree::new_pair(&left_syntax, &random_syntax).into();
+        SyntaxTree::new_pair(LEFT_SYNTAX.clone(), random_syntax).into();
 
     assert_eq!(
         context_search.ast_from_expression("left"),
-        Ok(left_syntax.clone())
+        Ok(LEFT_SYNTAX.clone().into())
     );
     assert_eq!(
         context_search.ast_from_expression("concrete"),
@@ -167,7 +166,7 @@ fn basic_rule() {
     );
 
     assert_eq!(context_search.to_ast(0), concrete_syntax);
-    assert_eq!(context_search.to_ast(2), left_syntax);
+    assert_eq!(context_search.to_ast(2), LEFT_SYNTAX.clone().into());
 
     assert_eq!(
         context_search.reduce(&left_and_random_syntax),

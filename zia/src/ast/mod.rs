@@ -94,11 +94,14 @@ impl SyntaxTree {
     }
 
     #[cfg(test)]
-    pub fn new_pair(left: &Arc<SyntaxTree>, right: &Arc<SyntaxTree>) -> Self {
+    pub fn new_pair(
+        left: impl Into<Arc<SyntaxTree>>,
+        right: impl Into<Arc<SyntaxTree>>,
+    ) -> Self {
         Self {
             syntax: None,
             concept: None,
-            expansion: Some((left.clone(), right.clone())),
+            expansion: Some((left.into(), right.into())),
         }
     }
 
