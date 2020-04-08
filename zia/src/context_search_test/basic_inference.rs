@@ -45,13 +45,13 @@ lazy_static! {
         let condition_syntax = SyntaxTree::from("a").bind_concept(2);
         let result_syntax = SyntaxTree::from("b").bind_concept(3);
         let implies_result_syntax = SyntaxTree::new_concept(4).bind_pair(
-            &Arc::new(implication_syntax.clone()),
-            &Arc::new(result_syntax.clone()),
+            &implication_syntax.clone().into(),
+            &result_syntax.clone().into(),
         );
         let condition_implies_result_syntax = SyntaxTree::new_concept(5)
             .bind_pair(
-                &Arc::new(condition_syntax.clone()),
-                &Arc::new(implies_result_syntax.clone()),
+                &condition_syntax.clone().into(),
+                &implies_result_syntax.clone().into(),
             );
         [
             implication_syntax,

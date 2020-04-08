@@ -263,28 +263,23 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         lefthand: &Arc<SyntaxTree>,
         righthand: &Arc<SyntaxTree>,
     ) -> Arc<SyntaxTree> {
-        Arc::new(
-            lefthand
-                .get_concept()
-                .and_also(&righthand.get_concept())
-                .and_then(|(lc, rc)| {
-                    self.find_definition(*lc, *rc).map(|def| {
-                        SyntaxTree::from(
-                            self.snap_shot
-                                .get_label(self.delta, def)
-                                .map_or_else(
-                                    || self.display_joint(lefthand, righthand),
-                                    |label| label,
-                                ),
-                        )
-                        .bind_concept(def)
-                    })
+        lefthand
+            .get_concept()
+            .and_also(&righthand.get_concept())
+            .and_then(|(lc, rc)| {
+                self.find_definition(*lc, *rc).map(|def| {
+                    SyntaxTree::from(
+                        self.snap_shot.get_label(self.delta, def).map_or_else(
+                            || self.display_joint(lefthand, righthand),
+                            |label| label,
+                        ),
+                    )
+                    .bind_concept(def)
                 })
-                .unwrap_or_else(|| {
-                    self.display_joint(lefthand, righthand).into()
-                })
-                .bind_pair(lefthand, righthand),
-        )
+            })
+            .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
+            .bind_pair(lefthand, righthand)
+            .into()
     }
 
     fn check_generalisation(
@@ -522,12 +517,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                             || self.snap_shot.get_label(self.delta, concept_id),
                             |s| Some(format_string(&s)),
                         ) {
-                        Arc::new(SyntaxTree::from(s).bind_concept(concept_id))
+                        SyntaxTree::from(s).bind_concept(concept_id).into()
                     } else if let Some((left, right)) = concept.get_definition()
                     {
                         self.combine(&self.to_ast(left), &self.to_ast(right))
                     } else {
-                        Arc::new(SyntaxTree::new_concept(concept_id))
+                        SyntaxTree::new_concept(concept_id).into()
                     };
                     self.cache.syntax_trees.insert(concept_id, syntax.clone());
                     syntax
@@ -550,7 +545,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     .map(|concept| self.join(ast, other).bind_concept(concept))
             })
             .unwrap_or_else(|| self.join(ast, other));
-        Arc::new(syntax)
+        syntax.into()
     }
 
     fn join(
@@ -742,9 +737,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
         let precedence_syntax =
-            Arc::new(SyntaxTree::new_concept(S::precedence_id()));
+            SyntaxTree::new_concept(S::precedence_id()).into();
         let greater_than_syntax =
-            Arc::new(SyntaxTree::new_concept(S::greater_than_id()));
+            SyntaxTree::new_concept(S::greater_than_id()).into();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
             (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
@@ -757,15 +752,15 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     self.snap_shot.concept_from_label(self.delta, token)
                 {
                     let syntax_of_token =
-                        Arc::new(raw_syntax_of_token.bind_concept(c));
+                        raw_syntax_of_token.bind_concept(c).into();
                     (
                         self.combine(&precedence_syntax, &syntax_of_token),
                         syntax_of_token,
                     )
                 } else {
                     (
-                        Arc::new(SyntaxTree::new_concept(S::default_id())),
-                        Arc::new(raw_syntax_of_token),
+                        SyntaxTree::new_concept(S::default_id()).into(),
+                        raw_syntax_of_token.into(),
                     )
                 };
                 // Compare current token's precedence with each currently assumed lowest syntax
@@ -774,7 +769,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     {
                         self.combine(&precedence_syntax, &syntax)
                     } else {
-                        Arc::new(SyntaxTree::new_concept(S::default_id()))
+                        SyntaxTree::new_concept(S::default_id()).into()
                     };
                     let comparing_between_tokens = self.combine(
                         &precedence_of_syntax,
@@ -871,7 +866,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
-            Ok(Arc::new(self.snap_shot.ast_from_symbol(self.delta, t)))
+            Ok(self.snap_shot.ast_from_symbol(self.delta, t).into())
         }
     }
 

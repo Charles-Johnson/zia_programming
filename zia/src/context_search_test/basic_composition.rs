@@ -21,14 +21,14 @@ lazy_static! {
             .make_composition_of(&mut left_concept, &mut right_concept);
         (composite_concept, left_concept, right_concept)
     };
-    static ref SYNTAX: (SyntaxTree, SyntaxTree, SyntaxTree) = {
+    static ref SYNTAX: [SyntaxTree; 3] = {
         let left_syntax = SyntaxTree::from("b").bind_concept(1);
         let right_syntax = SyntaxTree::from("c").bind_concept(2);
         let composite_syntax = SyntaxTree::from("a").bind_concept(0).bind_pair(
-            &Arc::new(left_syntax.clone()),
-            &Arc::new(right_syntax.clone()),
+            &left_syntax.clone().into(),
+            &right_syntax.clone().into(),
         );
-        (composite_syntax, left_syntax, right_syntax)
+        [composite_syntax, left_syntax, right_syntax]
     };
 }
 
@@ -125,7 +125,7 @@ impl SnapShotReader for BasicCompositionSnapShot {
         _delta: &ContextDelta,
         symbol: &str,
     ) -> SyntaxTree {
-        let (composite_syntax, left_syntax, right_syntax) = SYNTAX.clone();
+        let [composite_syntax, left_syntax, right_syntax] = SYNTAX.clone();
         match symbol {
             "a" => composite_syntax.clone(),
             "b" => left_syntax.clone(),
@@ -143,16 +143,16 @@ fn basic_composition() {
     let context_search = ContextSearch::<BasicCompositionSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let (composite_syntax, left_syntax, right_syntax) = SYNTAX.clone();
+    let [composite_syntax, left_syntax, right_syntax] = SYNTAX.clone();
     let composite_syntax = Arc::new(composite_syntax);
     let left_syntax = Arc::new(left_syntax);
     let right_syntax = Arc::new(right_syntax);
 
     assert_eq!(
         context_search.ast_from_expression("b c"),
-        Ok(Arc::new(
-            SyntaxTree::new_concept(0).bind_pair(&left_syntax, &right_syntax)
-        ))
+        Ok(SyntaxTree::new_concept(0)
+            .bind_pair(&left_syntax, &right_syntax)
+            .into())
     );
     assert_eq!(
         context_search.ast_from_expression("a"),
@@ -172,7 +172,10 @@ fn basic_composition() {
         composite_syntax
     );
 
-    assert_eq!(context_search.expand(&Arc::new("a".into())), composite_syntax);
+    assert_eq!(
+        context_search.expand(&SyntaxTree::from("a").into()),
+        composite_syntax
+    );
 
     assert_eq!(context_search.to_ast(0), composite_syntax);
     assert_eq!(context_search.to_ast(1), left_syntax);

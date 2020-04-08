@@ -6,7 +6,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
-use std::sync::Arc;
 
 #[derive(Default)]
 struct BasicPrecedenceSnapShot;
@@ -162,16 +161,18 @@ fn basic_precedence() {
     let context_search = ContextSearch::<BasicPrecedenceSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let abstract_syntax = Arc::new(ABSTRACT_SYNTAX.clone());
 
     assert_eq!(
         context_search.ast_from_expression("c b a"),
-        Ok(Arc::new(SyntaxTree::from("(c b) a").bind_pair(
-            &Arc::new(SyntaxTree::new_pair(
-                &Arc::new(SyntaxTree::from("c")),
-                &Arc::new(SyntaxTree::from("b"))
-            )),
-            &abstract_syntax
-        )))
+        Ok(SyntaxTree::from("(c b) a")
+            .bind_pair(
+                &SyntaxTree::new_pair(
+                    &SyntaxTree::from("c").into(),
+                    &SyntaxTree::from("b").into()
+                )
+                .into(),
+                &ABSTRACT_SYNTAX.clone().into()
+            )
+            .into())
     );
 }

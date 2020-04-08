@@ -155,7 +155,7 @@ fn basic_rule() {
     let left_syntax = Arc::new(LEFT_SYNTAX.clone());
     let random_syntax = Arc::new(SyntaxTree::from("random"));
     let left_and_random_syntax =
-        Arc::new(SyntaxTree::new_pair(&left_syntax, &random_syntax));
+        SyntaxTree::new_pair(&left_syntax, &random_syntax).into();
 
     assert_eq!(
         context_search.ast_from_expression("left"),
