@@ -166,12 +166,11 @@ fn basic_precedence() {
         context_search.ast_from_expression("c b a"),
         Ok(SyntaxTree::from("(c b) a")
             .bind_pair(
-                &SyntaxTree::new_pair(
+                SyntaxTree::new_pair(
                     SyntaxTree::from("c"),
                     SyntaxTree::from("b")
-                )
-                .into(),
-                &ABSTRACT_SYNTAX.clone().into()
+                ),
+                ABSTRACT_SYNTAX.clone()
             )
             .into())
     );

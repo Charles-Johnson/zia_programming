@@ -128,10 +128,10 @@ impl SyntaxTree {
 
     pub fn bind_pair(
         mut self,
-        lefthand: &Arc<Self>,
-        righthand: &Arc<Self>,
+        lefthand: impl Into<Arc<Self>>,
+        righthand: impl Into<Arc<Self>>,
     ) -> Self {
-        self.expansion = Some((lefthand.clone(), righthand.clone()));
+        self.expansion = Some((lefthand.into(), righthand.into()));
         self
     }
 

@@ -484,7 +484,7 @@ impl Context {
                 })
             })
             .unwrap_or_else(|| syntax.into())
-            .bind_pair(left, right);
+            .bind_pair(left.clone(), right.clone());
         self.concept_from_ast(&new_syntax_tree)?;
         Ok(())
     }

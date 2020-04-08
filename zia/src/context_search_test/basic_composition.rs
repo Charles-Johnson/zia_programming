@@ -24,10 +24,9 @@ lazy_static! {
     static ref SYNTAX: [SyntaxTree; 3] = {
         let left_syntax = SyntaxTree::from("b").bind_concept(1);
         let right_syntax = SyntaxTree::from("c").bind_concept(2);
-        let composite_syntax = SyntaxTree::from("a").bind_concept(0).bind_pair(
-            &left_syntax.clone().into(),
-            &right_syntax.clone().into(),
-        );
+        let composite_syntax = SyntaxTree::from("a")
+            .bind_concept(0)
+            .bind_pair(left_syntax.clone(), right_syntax.clone());
         [composite_syntax, left_syntax, right_syntax]
     };
 }
@@ -151,7 +150,7 @@ fn basic_composition() {
     assert_eq!(
         context_search.ast_from_expression("b c"),
         Ok(SyntaxTree::new_concept(0)
-            .bind_pair(&left_syntax, &right_syntax)
+            .bind_pair(left_syntax.clone(), right_syntax.clone())
             .into())
     );
     assert_eq!(

@@ -278,7 +278,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 })
             })
             .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
-            .bind_pair(lefthand, righthand)
+            .bind_pair(lefthand.clone(), righthand.clone())
             .into()
     }
 
@@ -553,7 +553,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> SyntaxTree {
-        SyntaxTree::from(self.display_joint(left, right)).bind_pair(left, right)
+        SyntaxTree::from(self.display_joint(left, right))
+            .bind_pair(left.clone(), right.clone())
     }
 
     fn display_joint(

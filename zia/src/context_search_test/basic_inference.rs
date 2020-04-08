@@ -44,15 +44,10 @@ lazy_static! {
         let true_syntax = SyntaxTree::from("true").bind_concept(1);
         let condition_syntax = SyntaxTree::from("a").bind_concept(2);
         let result_syntax = SyntaxTree::from("b").bind_concept(3);
-        let implies_result_syntax = SyntaxTree::new_concept(4).bind_pair(
-            &implication_syntax.clone().into(),
-            &result_syntax.clone().into(),
-        );
+        let implies_result_syntax = SyntaxTree::new_concept(4)
+            .bind_pair(implication_syntax.clone(), result_syntax.clone());
         let condition_implies_result_syntax = SyntaxTree::new_concept(5)
-            .bind_pair(
-                &condition_syntax.clone().into(),
-                &implies_result_syntax.clone().into(),
-            );
+            .bind_pair(condition_syntax.clone(), implies_result_syntax.clone());
         [
             implication_syntax,
             true_syntax,
