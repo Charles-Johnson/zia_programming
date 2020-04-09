@@ -92,9 +92,14 @@ impl SnapShotReader for BasicCompositionSnapShot {
     fn concept_from_label(
         &self,
         _: &ContextDelta,
-        _label: &str,
+        label: &str,
     ) -> Option<usize> {
-        unimplemented!()
+        match label {
+            "a" => Some(0),
+            "b" => Some(1),
+            "c" => Some(2),
+            _ => None,
+        }
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -115,20 +120,6 @@ impl SnapShotReader for BasicCompositionSnapShot {
             1 => Some("b".into()),
             2 => Some("c".into()),
             _ => None,
-        }
-    }
-
-    fn ast_from_symbol(
-        &self,
-        _delta: &ContextDelta,
-        symbol: &str,
-    ) -> SyntaxTree {
-        let [composite_syntax, left_syntax, right_syntax] = SYNTAX.clone();
-        match symbol {
-            "a" => composite_syntax.clone(),
-            "b" => left_syntax.clone(),
-            "c" => right_syntax.clone(),
-            _ => symbol.into(),
         }
     }
 }

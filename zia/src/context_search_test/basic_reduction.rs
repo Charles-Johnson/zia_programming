@@ -84,9 +84,13 @@ impl SnapShotReader for BasicReductionSnapShot {
     fn concept_from_label(
         &self,
         _: &ContextDelta,
-        _label: &str,
+        label: &str,
     ) -> Option<usize> {
-        unimplemented!()
+        match label {
+            "concrete" => Some(0),
+            "abstract" => Some(1),
+            _ => None,
+        }
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -106,18 +110,6 @@ impl SnapShotReader for BasicReductionSnapShot {
             0 => Some("concrete".into()),
             1 => Some("abstract".into()),
             _ => None,
-        }
-    }
-
-    fn ast_from_symbol(
-        &self,
-        _delta: &ContextDelta,
-        symbol: &str,
-    ) -> SyntaxTree {
-        match symbol {
-            "concrete" => CONCRETE_SYNTAX.clone(),
-            "abstract" => ABSTRACT_SYNTAX.clone(),
-            _ => symbol.into(),
         }
     }
 }

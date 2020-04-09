@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     constants::{
         ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
@@ -453,13 +452,6 @@ impl SnapShotReader for ContextSnapShot {
                 .get_normal_form(delta, d)
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
-    }
-
-    fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
-        self.concept_from_label(delta, s).map_or_else(
-            || s.into(),
-            |concept| SyntaxTree::from(s).bind_concept(concept),
-        )
     }
 
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {

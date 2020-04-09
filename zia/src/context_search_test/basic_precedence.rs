@@ -140,17 +140,6 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
             _ => None,
         }
     }
-
-    fn ast_from_symbol(
-        &self,
-        _delta: &ContextDelta,
-        symbol: &str,
-    ) -> SyntaxTree {
-        match symbol {
-            "a" => ABSTRACT_SYNTAX.clone(),
-            _ => symbol.into(),
-        }
-    }
 }
 
 #[test]

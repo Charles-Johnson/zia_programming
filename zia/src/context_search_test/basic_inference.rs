@@ -106,9 +106,15 @@ impl SnapShotReader for BasicInferenceSnapShot {
     fn concept_from_label(
         &self,
         _: &ContextDelta,
-        _label: &str,
+        label: &str,
     ) -> Option<usize> {
-        unimplemented!()
+        match label {
+            "implication" => Some(0),
+            "true" => Some(1),
+            "a" => Some(2),
+            "b" => Some(3),
+            _ => None,
+        }
     }
 
     fn read_concept(
@@ -138,22 +144,6 @@ impl SnapShotReader for BasicInferenceSnapShot {
             2 => Some("a".into()),
             3 => Some("b".into()),
             _ => None,
-        }
-    }
-
-    fn ast_from_symbol(
-        &self,
-        _delta: &ContextDelta,
-        symbol: &str,
-    ) -> SyntaxTree {
-        let [implication_syntax, true_syntax, condition_syntax, result_syntax, ..] =
-            SYNTAX.clone();
-        match symbol {
-            "implication" => implication_syntax,
-            "true" => true_syntax,
-            "a" => condition_syntax,
-            "b" => result_syntax,
-            _ => symbol.into(),
         }
     }
 }

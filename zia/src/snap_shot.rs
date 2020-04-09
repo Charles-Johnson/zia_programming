@@ -9,8 +9,12 @@ pub trait Reader {
         delta: &ContextDelta,
         concept_id: usize,
     ) -> Option<String>;
-    fn ast_from_symbol(&self, delta: &ContextDelta, symbol: &str)
-        -> SyntaxTree;
+    fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
+        self.concept_from_label(delta, s).map_or_else(
+            || s.into(),
+            |concept| SyntaxTree::from(s).bind_concept(concept),
+        )
+    }
     fn true_id() -> usize;
     fn implication_id() -> usize;
     fn precedence_id() -> usize;

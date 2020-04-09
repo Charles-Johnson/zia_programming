@@ -78,24 +78,16 @@ impl SnapShotReader for BasicRuleSnapShot {
         }
     }
 
-    fn ast_from_symbol(
-        &self,
-        _delta: &ContextDelta,
-        symbol: &str,
-    ) -> SyntaxTree {
-        match symbol {
-            "concrete" => CONCRETE_SYNTAX.clone(),
-            "left" => LEFT_SYNTAX.clone(),
-            _ => symbol.into(),
-        }
-    }
-
     fn concept_from_label(
         &self,
         _: &ContextDelta,
-        _label: &str,
+        label: &str,
     ) -> Option<usize> {
-        unimplemented!()
+        match label {
+            "concrete" => Some(0),
+            "left" => Some(2),
+            _ => None,
+        }
     }
 
     fn false_id() -> usize {
