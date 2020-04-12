@@ -144,7 +144,7 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
 
 #[test]
 fn basic_precedence() {
-    let snapshot = BasicPrecedenceSnapShot::default();
+    let snapshot = BasicPrecedenceSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search = ContextSearch::<BasicPrecedenceSnapShot>::from((

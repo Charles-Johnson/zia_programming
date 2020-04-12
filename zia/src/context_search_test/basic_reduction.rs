@@ -116,7 +116,7 @@ impl SnapShotReader for BasicReductionSnapShot {
 
 #[test]
 fn basic_reduction() {
-    let snapshot = BasicReductionSnapShot::default();
+    let snapshot = BasicReductionSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search = ContextSearch::<BasicReductionSnapShot>::from((

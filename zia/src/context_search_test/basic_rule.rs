@@ -137,7 +137,7 @@ impl SnapShotReader for BasicRuleSnapShot {
 
 #[test]
 fn basic_rule() {
-    let snapshot = BasicRuleSnapShot::default();
+    let snapshot = BasicRuleSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search =

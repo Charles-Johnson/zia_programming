@@ -150,7 +150,7 @@ impl SnapShotReader for BasicInferenceSnapShot {
 
 #[test]
 fn basic_inference() {
-    let snapshot = BasicInferenceSnapShot::default();
+    let snapshot = BasicInferenceSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search = ContextSearch::<BasicInferenceSnapShot>::from((

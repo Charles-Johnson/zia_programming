@@ -1,6 +1,6 @@
 use crate::{ast::SyntaxTree, concepts::Concept, context_delta::ContextDelta};
 
-pub trait Reader {
+pub trait Reader: Default {
     fn read_concept(&self, delta: &ContextDelta, concept_id: usize) -> Concept;
     fn has_variable(&self, delta: &ContextDelta, variable_id: usize) -> bool;
     fn concept_len(&self, delta: &ContextDelta) -> usize;
@@ -31,4 +31,15 @@ pub trait Reader {
         delta: &ContextDelta,
         s: &str,
     ) -> Option<usize>;
+    #[cfg(test)]
+    fn new_test_case() -> Self {
+        let test_case = Self::default();
+        let delta = ContextDelta::default();
+        for id in 0..test_case.concept_len(&delta) {
+            test_case.get_label(&delta, id).map(|s| {
+                assert_eq!(test_case.concept_from_label(&delta, &s), Some(id))
+            });
+        }
+        test_case
+    }
 }

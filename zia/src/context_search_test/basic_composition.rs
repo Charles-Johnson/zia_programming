@@ -126,7 +126,7 @@ impl SnapShotReader for BasicCompositionSnapShot {
 
 #[test]
 fn basic_composition() {
-    let snapshot = BasicCompositionSnapShot::default();
+    let snapshot = BasicCompositionSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let context_search = ContextSearch::<BasicCompositionSnapShot>::from((
