@@ -141,15 +141,6 @@ fn basic_reduction() {
     assert_eq!(context_search.reduce(&concrete_syntax().into()), None);
 
     assert_eq!(
-        context_search.ast_from_expression("abstract"),
-        Ok(abstract_syntax().into())
-    );
-    assert_eq!(
-        context_search.ast_from_expression("concrete"),
-        Ok(concrete_syntax().into())
-    );
-
-    assert_eq!(
         context_search.expand(&abstract_syntax().into()),
         abstract_syntax().into()
     );

@@ -147,15 +147,6 @@ fn basic_rule() {
     let left_and_random_syntax =
         SyntaxTree::new_pair(left_syntax(), SyntaxTree::from("random")).into();
 
-    assert_eq!(
-        context_search.ast_from_expression("left"),
-        Ok(left_syntax().into())
-    );
-    assert_eq!(
-        context_search.ast_from_expression("concrete"),
-        Ok(concrete_syntax().into())
-    );
-
     assert_eq!(context_search.to_ast(0), concrete_syntax().into());
     assert_eq!(context_search.to_ast(2), left_syntax().into());
 

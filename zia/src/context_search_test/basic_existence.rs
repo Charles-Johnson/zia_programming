@@ -16,21 +16,22 @@ lazy_static! {
     static ref CONCEPTS: [Concept; CONCEPTS_LEN] = {
         let exists_such_that_concept = (SpecificPart::Concrete, 0).into();
         let mut true_concept = (SpecificPart::Concrete, 1).into();
-        let mut abstract_concept: Concept =
-            (SpecificPart::default(), 2).into();
+        let mut abstract_concept: Concept = (SpecificPart::default(), 2).into();
         let variable_concept = (SpecificPart::default(), 3).into();
         abstract_concept.make_reduce_to(&mut true_concept);
         [
             exists_such_that_concept,
             true_concept,
             abstract_concept,
-            variable_concept
+            variable_concept,
         ]
     };
     static ref EXISTS_SUCH_THAT_SYNTAX: SyntaxTree =
         SyntaxTree::from("exists_such_that").bind_concept(0);
-    static ref TRUTH_SYNTAX: SyntaxTree = SyntaxTree::from("true").bind_concept(1);
-    static ref VARIABLE_SYNTAX: SyntaxTree = SyntaxTree::from("_x_").bind_concept(3);
+    static ref TRUTH_SYNTAX: SyntaxTree =
+        SyntaxTree::from("true").bind_concept(1);
+    static ref VARIABLE_SYNTAX: SyntaxTree =
+        SyntaxTree::from("_x_").bind_concept(3);
 }
 
 impl SnapShotReader for BasicExistenceSnapShot {
@@ -126,14 +127,20 @@ fn basic_existence() {
     let snapshot = BasicExistenceSnapShot::new_test_case();
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search =
-        ContextSearch::<BasicExistenceSnapShot>::from((&snapshot, &delta, &cache));
+    let context_search = ContextSearch::<BasicExistenceSnapShot>::from((
+        &snapshot, &delta, &cache,
+    ));
     let exists_such_that_syntax = EXISTS_SUCH_THAT_SYNTAX.clone();
     let variable_syntax = || VARIABLE_SYNTAX.clone();
-    let variable_exists_such_that_variable_is_true_syntax = SyntaxTree::new_pair(variable_syntax(), SyntaxTree::new_pair(exists_such_that_syntax, variable_syntax()));
+    let variable_exists_such_that_variable_is_true_syntax =
+        SyntaxTree::new_pair(
+            variable_syntax(),
+            SyntaxTree::new_pair(exists_such_that_syntax, variable_syntax()),
+        );
 
     assert_eq!(
-        context_search.reduce(&variable_exists_such_that_variable_is_true_syntax.into()),
+        context_search
+            .reduce(&variable_exists_such_that_variable_is_true_syntax.into()),
         Some(TRUTH_SYNTAX.clone().into())
     );
 }

@@ -143,6 +143,8 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+mod parser;
+
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.

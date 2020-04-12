@@ -138,25 +138,6 @@ fn basic_composition() {
     let right_syntax = || right_syntax.clone();
 
     assert_eq!(
-        context_search.ast_from_expression("b c"),
-        Ok(SyntaxTree::new_concept(0)
-            .bind_pair(left_syntax(), right_syntax())
-            .into())
-    );
-    assert_eq!(
-        context_search.ast_from_expression("a"),
-        Ok(composite_syntax().into())
-    );
-    assert_eq!(
-        context_search.ast_from_expression("b"),
-        Ok(left_syntax().into())
-    );
-    assert_eq!(
-        context_search.ast_from_expression("c"),
-        Ok(right_syntax().into())
-    );
-
-    assert_eq!(
         context_search
             .contract_pair(&left_syntax().into(), &right_syntax().into()),
         composite_syntax().into()
