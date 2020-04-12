@@ -3,3 +3,4 @@ mod basic_inference;
 mod basic_precedence;
 mod basic_reduction;
 mod basic_rule;
+mod basic_existence;
