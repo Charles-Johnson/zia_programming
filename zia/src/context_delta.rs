@@ -196,13 +196,12 @@ impl Debug for ConceptDelta {
     }
 }
 
-impl Delta for ContextDelta {
+impl Delta for HashMap<usize, (ConceptDelta, bool, bool)> {
     fn combine(&mut self, other: Self) {
-        for (other_key, (other_value, v2, temporary)) in other.concept {
+        for (other_key, (other_value, v2, temporary)) in other {
             let mut remove_key = false;
             let mut update_delta = None;
-            self.concept
-                .entry(other_key)
+            self.entry(other_key)
                 .and_modify(|(cd, v1, _)| match (cd, &other_value) {
                     (ConceptDelta::Insert(c1), ConceptDelta::Remove(c2))
                         if c1 == c2 && *v1 == v2 =>
@@ -230,25 +229,33 @@ impl Delta for ContextDelta {
                 })
                 .or_insert((other_value, v2, temporary));
             if remove_key {
-                self.concept.remove(&other_key);
+                self.remove(&other_key);
             }
             update_delta.map(|cd| {
-                self.concept.insert(
+                self.insert(
                     other_key,
                     (ConceptDelta::Update(cd), v2, temporary),
                 )
             });
         }
-        for (other_key, other_sd) in other.string {
+    }
+}
+
+impl Delta for HashMap<String, StringDelta> {
+    fn combine(&mut self, other: Self) {
+        for (other_key, other_sd) in other {
             let mut remove_string = false;
             let mut sd_to_update = None;
-            self.string
+            self
                 .entry(other_key.clone())
-                .and_modify(|sd| match (sd, &other_sd) {
-                    (StringDelta::Insert(u1), StringDelta::Remove(u2))
-                        if u1 == u2 =>
-                    {
-                        remove_string = true;
+                .and_modify(|sd|
+                    match (sd, &other_sd) {
+                    (StringDelta::Insert(u1), StringDelta::Remove(u2)) => {
+                        if u1 == u2 {
+                            remove_string = true;
+                        } else {
+                            panic!("Tried to remove {} as concept {} when it was going to be inserted as concept {}", other_key, u2, u1);
+                        }
                     }
                     (StringDelta::Remove(u1), StringDelta::Insert(u2)) => {
                         if u1 == u2 {
@@ -266,8 +273,12 @@ impl Delta for ContextDelta {
                             before,
                             after,
                         },
-                    ) if u == before => {
-                        *u = *after;
+                    ) => {
+                        if u == before {
+                            *u = *after;
+                        } else {
+                            panic!("Tried to update {} from being concept {} to {} even though it was going to be inserted as {}", other_key, before, after, u);
+                        }
                     },
                     (
                         StringDelta::Update {
@@ -278,18 +289,29 @@ impl Delta for ContextDelta {
                             before: b2,
                             after: a2,
                         },
-                    ) if a1 == b2 => {
-                        *a1 = *a2;
+                    ) => {
+                        if a1 == b2 {
+                            *a1 = *a2;
+                        } else {
+                            panic!("Tried to update {} from being concept {} to {} even it was going to be updated to concept {}", other_key, b2, a2, a1);
+                        }
                     },
-                    _ => panic!(
-                        "Something went wrong when combining string deltas!"
+                    (sd, other_sd) => panic!(
+                        "Something went wrong when combining string delta {:#?} and {:#?} for {}!", sd, other_sd, other_key
                     ),
                 })
                 .or_insert(other_sd);
             if remove_string {
-                self.string.remove(&other_key);
+                self.remove(&other_key);
             }
-            sd_to_update.map(|sd| self.string.insert(other_key, sd));
+            sd_to_update.map(|sd| self.insert(other_key, sd));
         }
+    }
+}
+
+impl Delta for ContextDelta {
+    fn combine(&mut self, other: Self) {
+        self.concept.combine(other.concept);
+        self.string.combine(other.string);
     }
 }

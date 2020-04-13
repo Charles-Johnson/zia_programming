@@ -78,12 +78,12 @@ impl Context {
         string
     }
 
-    fn ast_from_expression(&self, s: &str) -> ParsingResult {
+    fn ast_from_expression(&mut self, s: &str) -> ParsingResult {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(&tokens)
     }
 
-    fn ast_from_tokens(&self, tokens: &[String]) -> ParsingResult {
+    fn ast_from_tokens(&mut self, tokens: &[String]) -> ParsingResult {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
@@ -153,7 +153,7 @@ impl Context {
     }
 
     fn associativity_try_fold_handler(
-        &self,
+        &mut self,
         tokens: &[String],
         state: (Option<Arc<SyntaxTree>>, Option<usize>),
         lp_index: usize,
@@ -169,29 +169,30 @@ impl Context {
             Associativity::Left => slice.len() - 1,
             Associativity::Right => 0,
         };
-        let context_search = self.context_search();
         let lp_with_the_rest = if lp_index == edge_index {
             let edge_syntax = self.ast_from_token(&slice[edge_index])?;
             if slice.len() == 1 {
                 edge_syntax
             } else {
                 match assoc {
-                    Associativity::Left => context_search.combine(
-                        &if slice.len() < 3 {
+                    Associativity::Left => {
+                        let rest_of_syntax = if slice.len() < 3 {
                             self.ast_from_token(&slice[slice.len() - 1])?
                         } else {
                             self.ast_from_tokens(&slice[..slice.len() - 1])?
-                        },
-                        &edge_syntax,
-                    ),
-                    Associativity::Right => context_search.combine(
-                        &edge_syntax,
-                        &if slice.len() < 3 {
+                        };
+                        self.context_search()
+                            .combine(&rest_of_syntax, &edge_syntax)
+                    },
+                    Associativity::Right => {
+                        let rest_of_syntax = if slice.len() < 3 {
                             self.ast_from_token(&slice[1])?
                         } else {
                             self.ast_from_tokens(&slice[1..])?
-                        },
-                    ),
+                        };
+                        self.context_search()
+                            .combine(&edge_syntax, &rest_of_syntax)
+                    },
                 }
             }
         } else {
@@ -203,10 +204,10 @@ impl Context {
                 None => lp_with_the_rest,
                 Some(e) => match assoc {
                     Associativity::Left => {
-                        context_search.combine(&e, &lp_with_the_rest)
+                        self.context_search().combine(&e, &lp_with_the_rest)
                     },
                     Associativity::Right => {
-                        context_search.combine(&lp_with_the_rest, &e)
+                        self.context_search().combine(&lp_with_the_rest, &e)
                     },
                 },
             }),
@@ -294,17 +295,28 @@ impl Context {
         })
     }
 
-    fn ast_from_pair(&self, left: &str, right: &str) -> ParsingResult {
+    fn ast_from_pair(&mut self, left: &str, right: &str) -> ParsingResult {
         let lefthand = self.ast_from_token(left)?;
         let righthand = self.ast_from_token(right)?;
         Ok(self.context_search().combine(&lefthand, &righthand))
     }
 
-    fn ast_from_token(&self, t: &str) -> ParsingResult {
+    fn ast_from_token(&mut self, t: &str) -> ParsingResult {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
-            Ok(self.snap_shot.ast_from_symbol(&self.delta, t).into())
+            let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
+            if is_variable(t) && ast.get_concept().is_none() {
+                let concept_id =
+                    self.new_default(SpecificPart::default(), true);
+                let definition = self
+                    .find_or_insert_definition(LABEL, concept_id, true, true)?;
+                let string_id = self.new_string(t);
+                self.update_reduction(definition, string_id, true)?;
+                Ok(SyntaxTree::from(t).bind_concept(concept_id).into())
+            } else {
+                Ok(ast.into())
+            }
         }
     }
 
