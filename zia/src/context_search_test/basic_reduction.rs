@@ -11,11 +11,11 @@ use lazy_static::lazy_static;
 struct BasicReductionSnapShot;
 
 lazy_static! {
-    static ref CONCEPTS: (Concept, Concept) = {
+    static ref CONCEPTS: [Concept; 2] = {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
         abstract_concept.make_reduce_to(&mut concrete_concept);
-        (concrete_concept, abstract_concept)
+        [concrete_concept, abstract_concept]
     };
     static ref CONCRETE_SYNTAX: SyntaxTree =
         SyntaxTree::from("concrete").bind_concept(0);
@@ -24,61 +24,8 @@ lazy_static! {
 }
 
 impl SnapShotReader for BasicReductionSnapShot {
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        let (concrete_concept, abstract_concept) = CONCEPTS.clone();
-        match concept_id {
-            0 => concrete_concept,
-            1 => abstract_concept,
-            _ => panic!("No concepts with id: {}", concept_id),
-        }
-    }
-
-    fn true_id() -> usize {
-        unimplemented!()
-    }
-
-    fn implication_id() -> usize {
-        unimplemented!()
-    }
-
-    fn precedence_id() -> usize {
-        unimplemented!()
-    }
-
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-
-    fn default_id() -> usize {
-        unimplemented!()
-    }
-
-    fn false_id() -> usize {
-        unimplemented!()
-    }
-
-    fn reduction_id() -> usize {
-        unimplemented!()
-    }
-
-    fn assoc_id() -> usize {
-        unimplemented!()
-    }
-
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-
-    fn exists_such_that_id() -> usize {
-        unimplemented!()
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn concept_from_label(
@@ -97,7 +44,7 @@ impl SnapShotReader for BasicReductionSnapShot {
         false
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         2
     }
 

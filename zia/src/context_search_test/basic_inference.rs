@@ -67,42 +67,6 @@ impl SnapShotReader for BasicInferenceSnapShot {
         1
     }
 
-    fn false_id() -> usize {
-        unimplemented!()
-    }
-
-    fn reduction_id() -> usize {
-        unimplemented!()
-    }
-
-    fn assoc_id() -> usize {
-        unimplemented!()
-    }
-
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-
-    fn exists_such_that_id() -> usize {
-        unimplemented!()
-    }
-
-    fn precedence_id() -> usize {
-        unimplemented!()
-    }
-
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-
-    fn default_id() -> usize {
-        unimplemented!()
-    }
-
     fn concept_from_label(
         &self,
         _: &ContextDelta,
@@ -117,19 +81,15 @@ impl SnapShotReader for BasicInferenceSnapShot {
         }
     }
 
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        CONCEPTS[concept_id].clone()
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
         false
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         6
     }
 

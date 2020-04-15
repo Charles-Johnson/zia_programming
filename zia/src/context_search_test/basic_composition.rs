@@ -11,14 +11,14 @@ use lazy_static::lazy_static;
 struct BasicCompositionSnapShot;
 
 lazy_static! {
-    static ref CONCEPTS: (Concept, Concept, Concept) = {
+    static ref CONCEPTS: [Concept; 3] = {
         let mut composite_concept: Concept =
             (SpecificPart::default(), 0).into();
         let mut left_concept: Concept = (SpecificPart::default(), 1).into();
         let mut right_concept: Concept = (SpecificPart::default(), 2).into();
         composite_concept
             .make_composition_of(&mut left_concept, &mut right_concept);
-        (composite_concept, left_concept, right_concept)
+        [composite_concept, left_concept, right_concept]
     };
     static ref SYNTAX: [SyntaxTree; 3] = {
         let left_syntax = SyntaxTree::from("b").bind_concept(1);
@@ -31,62 +31,8 @@ lazy_static! {
 }
 
 impl SnapShotReader for BasicCompositionSnapShot {
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        let (composite_concept, left_concept, right_concept) = CONCEPTS.clone();
-        match concept_id {
-            0 => composite_concept,
-            1 => left_concept,
-            2 => right_concept,
-            _ => panic!("No concepts with id: {}", concept_id),
-        }
-    }
-
-    fn true_id() -> usize {
-        unimplemented!()
-    }
-
-    fn implication_id() -> usize {
-        unimplemented!()
-    }
-
-    fn precedence_id() -> usize {
-        unimplemented!()
-    }
-
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-
-    fn default_id() -> usize {
-        unimplemented!()
-    }
-
-    fn false_id() -> usize {
-        unimplemented!()
-    }
-
-    fn reduction_id() -> usize {
-        unimplemented!()
-    }
-
-    fn assoc_id() -> usize {
-        unimplemented!()
-    }
-
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-
-    fn exists_such_that_id() -> usize {
-        unimplemented!()
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn concept_from_label(
@@ -106,7 +52,7 @@ impl SnapShotReader for BasicCompositionSnapShot {
         false
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         3
     }
 

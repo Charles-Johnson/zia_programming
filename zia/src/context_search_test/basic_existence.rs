@@ -35,19 +35,15 @@ lazy_static! {
 }
 
 impl SnapShotReader for BasicExistenceSnapShot {
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        CONCEPTS[concept_id].clone()
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
         false
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         CONCEPTS_LEN
     }
 
@@ -89,14 +85,6 @@ impl SnapShotReader for BasicExistenceSnapShot {
         CONCEPTS_LEN
     }
 
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-
     fn exists_such_that_id() -> usize {
         0
     }
@@ -105,20 +93,8 @@ impl SnapShotReader for BasicExistenceSnapShot {
         1
     }
 
-    fn implication_id() -> usize {
-        unimplemented!()
-    }
-
     fn precedence_id() -> usize {
         CONCEPTS_LEN
-    }
-
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-
-    fn default_id() -> usize {
-        unimplemented!()
     }
 }
 

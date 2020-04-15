@@ -15,17 +15,15 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    concepts::{Concept, SpecificPart},
+    concepts::Concept,
     constants::{
-        ASSOC, DEFAULT, EXISTS_SUCH_THAT, FALSE, GREATER_THAN, IMPLICATION,
-        LABEL, LEFT, PRECEDENCE, REDUCTION, RIGHT, TRUE,
+        ASSOC, DEFAULT, DEFINE, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
+        IMPLICATION, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE,
     },
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     delta::Apply,
-    errors::{ZiaError, ZiaResult},
     snap_shot::Reader as SnapShotReader,
 };
-use maplit::hashmap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Display,
@@ -94,13 +92,6 @@ impl Associativity {
 }
 
 impl ContextSnapShot {
-    pub fn get_concept(&self, id: usize) -> Option<&Concept> {
-        match self.concepts.get(id) {
-            Some(Some(c)) => Some(c),
-            _ => None,
-        }
-    }
-
     fn write_concept(&mut self, id: usize) -> &mut Concept {
         match self.concepts[id] {
             Some(ref mut c) => c,
@@ -108,12 +99,149 @@ impl ContextSnapShot {
         }
     }
 
-    pub fn add_concept_delta(
+    fn concept_len(&self, delta: &ContextDelta) -> usize {
+        let mut length = self.concepts.len();
+        for (id, (cd, _, _)) in delta.concept() {
+            if let ConceptDelta::Insert(_) = cd {
+                if length <= *id {
+                    length = *id + 1;
+                }
+            }
+        }
+        length
+    }
+
+    fn add_string(&mut self, string_id: usize, string: &str) {
+        self.string_map.insert(string.to_string(), string_id);
+    }
+
+    fn blindly_remove_concept(&mut self, id: usize) {
+        self.concepts[id] = None;
+        self.gaps.push(id);
+    }
+
+    fn remove_string(&mut self, string: &str) {
+        self.string_map.remove(string).expect("No string to remove!");
+    }
+
+    fn get_string_concept(
         &self,
         delta: &ContextDelta,
-        concept_type: SpecificPart,
-        variable: bool,
-    ) -> (ContextDelta, usize) {
+        s: &str,
+    ) -> Option<usize> {
+        delta
+            .string()
+            .get(s)
+            .map_or_else(
+                || self.string_map.get(s),
+                |string_delta| match string_delta {
+                    StringDelta::Update {
+                        after,
+                        ..
+                    } => Some(after),
+                    StringDelta::Insert(concept) => Some(concept),
+                    StringDelta::Remove(_) => None,
+                },
+            )
+            .cloned()
+    }
+
+    fn get_labellee(&self, delta: &ContextDelta, c: usize) -> Option<usize> {
+        let concept = self.read_concept(delta, c);
+        let mut candidates: VecDeque<usize> =
+            concept.find_what_reduces_to_it().copied().collect();
+        loop {
+            if let Some(candidate) = candidates.pop_front() {
+                let candidate_concept = self.read_concept(delta, candidate);
+                if let Some((r, x)) = candidate_concept.get_definition() {
+                    if r == LABEL {
+                        return Some(x);
+                    }
+                }
+                let extra_candidates =
+                    candidate_concept.find_what_reduces_to_it().copied();
+                candidates.extend(extra_candidates);
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl SnapShotReader for ContextSnapShot {
+    fn true_id() -> usize {
+        TRUE
+    }
+
+    fn implication_id() -> usize {
+        IMPLICATION
+    }
+
+    fn precedence_id() -> usize {
+        PRECEDENCE
+    }
+
+    fn default_id() -> usize {
+        DEFAULT
+    }
+
+    fn greater_than_id() -> usize {
+        GREATER_THAN
+    }
+
+    fn reduction_id() -> usize {
+        REDUCTION
+    }
+
+    fn false_id() -> usize {
+        FALSE
+    }
+
+    fn assoc_id() -> usize {
+        ASSOC
+    }
+
+    fn right_id() -> usize {
+        RIGHT
+    }
+
+    fn left_id() -> usize {
+        LEFT
+    }
+
+    fn exists_such_that_id() -> usize {
+        EXISTS_SUCH_THAT
+    }
+
+    fn define_id() -> usize {
+        DEFINE
+    }
+
+    fn label_id() -> usize {
+        LABEL
+    }
+
+    fn let_id() -> usize {
+        LET
+    }
+
+    fn concept_from_label(
+        &self,
+        delta: &ContextDelta,
+        s: &str,
+    ) -> Option<usize> {
+        self.get_string_concept(delta, s)
+            .and_then(|c| self.get_labellee(delta, c))
+    }
+
+    fn get_concept(&self, id: usize) -> Option<&Concept> {
+        match self.concepts.get(id) {
+            Some(Some(c)) => Some(c),
+            _ => None,
+        }
+    }
+
+    fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta) -> usize {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
@@ -172,270 +300,7 @@ impl ContextSnapShot {
                 },
             };
         }
-        (
-            ContextDelta::new(
-                hashmap! {},
-                hashmap! {index => (ConceptDelta::Insert((concept_type, index).into()), variable, false)},
-            ),
-            index,
-        )
-    }
-
-    pub fn add_string_delta(string_id: usize, string: &str) -> ContextDelta {
-        ContextDelta::new(
-            hashmap! {string.to_string() => StringDelta::Insert(string_id)},
-            HashMap::default(),
-        )
-    }
-
-    fn add_string(&mut self, string_id: usize, string: &str) {
-        self.string_map.insert(string.to_string(), string_id);
-    }
-
-    pub fn get_normal_form(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Option<usize> {
-        self.read_concept(delta, concept)
-            .get_reduction()
-            .map(|n| self.get_normal_form(delta, n).unwrap_or(n))
-    }
-
-    pub fn get_concept_of_label(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Option<usize> {
-        self.read_concept(delta, concept)
-            .get_righthand_of()
-            .iter()
-            .find(|candidate| {
-                self.read_concept(delta, **candidate)
-                    .get_definition()
-                    .expect("Candidate should have a definition!")
-                    .0
-                    == LABEL
-            })
-            .cloned()
-    }
-
-    pub fn is_disconnected(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> bool {
-        self.read_concept(delta, concept).get_reduction().is_none()
-            && self.read_concept(delta, concept).get_definition().is_none()
-            && self.read_concept(delta, concept).get_lefthand_of().is_empty()
-            && self.righthand_of_without_label_is_empty(delta, concept)
-            && self
-                .read_concept(delta, concept)
-                .find_what_reduces_to_it()
-                .next()
-                .is_none()
-    }
-
-    fn righthand_of_without_label_is_empty(
-        &self,
-        delta: &ContextDelta,
-        con: usize,
-    ) -> bool {
-        self.read_concept(delta, con)
-            .get_righthand_of()
-            .iter()
-            .find_map(|concept| {
-                self.read_concept(delta, *concept)
-                    .get_definition()
-                    .filter(|(left, _)| *left != LABEL)
-            })
-            .is_none()
-    }
-
-    fn blindly_remove_concept(&mut self, id: usize) {
-        self.concepts[id] = None;
-        self.gaps.push(id);
-    }
-
-    fn remove_string(&mut self, string: &str) {
-        self.string_map.remove(string).expect("No string to remove!");
-    }
-
-    fn get_string_concept(
-        &self,
-        delta: &ContextDelta,
-        s: &str,
-    ) -> Option<usize> {
-        delta
-            .string()
-            .get(s)
-            .map_or_else(
-                || self.string_map.get(s),
-                |string_delta| match string_delta {
-                    StringDelta::Update {
-                        after,
-                        ..
-                    } => Some(after),
-                    StringDelta::Insert(concept) => Some(concept),
-                    StringDelta::Remove(_) => None,
-                },
-            )
-            .cloned()
-    }
-
-    pub fn contains(
-        &self,
-        delta: &ContextDelta,
-        outer: usize,
-        inner: usize,
-    ) -> bool {
-        if let Some((left, right)) =
-            self.read_concept(delta, outer).get_definition()
-        {
-            left == inner
-                || right == inner
-                || self.contains(delta, left, inner)
-                || self.contains(delta, right, inner)
-        } else {
-            false
-        }
-    }
-
-    fn get_labellee(&self, delta: &ContextDelta, c: usize) -> Option<usize> {
-        let concept = self.read_concept(delta, c);
-        let mut candidates: VecDeque<usize> =
-            concept.find_what_reduces_to_it().copied().collect();
-        loop {
-            if let Some(candidate) = candidates.pop_front() {
-                let candidate_concept = self.read_concept(delta, candidate);
-                if let Some((r, x)) = candidate_concept.get_definition() {
-                    if r == LABEL {
-                        return Some(x);
-                    }
-                }
-                let extra_candidates =
-                    candidate_concept.find_what_reduces_to_it().copied();
-                candidates.extend(extra_candidates);
-            } else {
-                return None;
-            }
-        }
-    }
-
-    pub fn check_reductions(
-        &self,
-        delta: &ContextDelta,
-        outer_concept: usize,
-        inner_concept: usize,
-    ) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(delta, inner_concept).get_reduction()
-        {
-            if r == outer_concept || self.contains(delta, r, outer_concept) {
-                Err(ZiaError::InfiniteDefinition)
-            } else {
-                self.check_reductions(delta, outer_concept, r)
-            }
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn get_reduction_of_composition(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> usize {
-        self.read_concept(delta, concept)
-            .get_definition()
-            .and_then(|(left, right)| {
-                self.get_reduction_or_reduction_of_composition(delta, left)
-                    .find_definition(
-                        &self.get_reduction_or_reduction_of_composition(
-                            delta, right,
-                        ),
-                    )
-            })
-            .unwrap_or(concept)
-    }
-
-    fn get_reduction_or_reduction_of_composition(
-        &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Concept {
-        self.read_concept(
-            delta,
-            self.read_concept(delta, concept).get_reduction().unwrap_or_else(
-                || self.get_reduction_of_composition(delta, concept),
-            ),
-        )
-    }
-}
-
-impl SnapShotReader for ContextSnapShot {
-    fn true_id() -> usize {
-        TRUE
-    }
-
-    fn implication_id() -> usize {
-        IMPLICATION
-    }
-
-    fn precedence_id() -> usize {
-        PRECEDENCE
-    }
-
-    fn default_id() -> usize {
-        DEFAULT
-    }
-
-    fn greater_than_id() -> usize {
-        GREATER_THAN
-    }
-
-    fn reduction_id() -> usize {
-        REDUCTION
-    }
-
-    fn false_id() -> usize {
-        FALSE
-    }
-
-    fn assoc_id() -> usize {
-        ASSOC
-    }
-
-    fn right_id() -> usize {
-        RIGHT
-    }
-
-    fn left_id() -> usize {
-        LEFT
-    }
-
-    fn exists_such_that_id() -> usize {
-        EXISTS_SUCH_THAT
-    }
-
-    fn concept_from_label(
-        &self,
-        delta: &ContextDelta,
-        s: &str,
-    ) -> Option<usize> {
-        self.get_string_concept(delta, s)
-            .and_then(|c| self.get_labellee(delta, c))
-    }
-
-    fn concept_len(&self, delta: &ContextDelta) -> usize {
-        let mut length = self.concepts.len();
-        for (id, (cd, _, _)) in delta.concept() {
-            if let ConceptDelta::Insert(_) = cd {
-                if length <= *id {
-                    length = *id + 1;
-                }
-            }
-        }
-        length
+        index
     }
 
     fn get_label(
@@ -452,28 +317,6 @@ impl SnapShotReader for ContextSnapShot {
                 .get_normal_form(delta, d)
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
-    }
-
-    fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
-        delta
-            .concept().get(&id)
-            .and_then(|(cd, _, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c.clone()),
-                ConceptDelta::Remove(_) => None,
-                ConceptDelta::Update(d) => {
-                    let mut concept = self
-                        .get_concept(id)
-                        .expect("Deltas imply that a concept that doesn't exist will be updated!")
-                        .clone();
-                    concept.apply(d.clone());
-                    Some(concept)
-                }
-            })
-            .unwrap_or_else(|| {
-                self.get_concept(id)
-                    .unwrap_or_else(|| panic!("No concept with id = {}", id))
-                    .clone()
-            })
     }
 
     fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {

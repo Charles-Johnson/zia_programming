@@ -424,7 +424,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 let mut might_exist = false;
                 let results: Vec<Option<bool>> = (0..self
                     .snap_shot
-                    .concept_len(self.delta))
+                    .lowest_unoccupied_concept_id(self.delta))
                     .into_par_iter()
                     .map(|i| {
                         if self.is_free_variable(i) {

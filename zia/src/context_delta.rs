@@ -73,11 +73,11 @@ impl ContextDelta {
 
     pub fn insert_string(
         &mut self,
-        string: String,
+        string: impl Into<String>,
         string_delta: StringDelta,
         cache_to_invalidate: &mut ContextCache,
     ) {
-        self.string.insert(string, string_delta);
+        self.string.insert(string.into(), string_delta);
         let mut empty_cache = ContextCache::default();
         swap(cache_to_invalidate, &mut empty_cache);
         debug!("Cache invalidated");

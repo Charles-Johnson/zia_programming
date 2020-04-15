@@ -1,8 +1,9 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
+    context::Context,
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
 use lazy_static::lazy_static;
@@ -114,19 +115,15 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
         }
     }
 
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        CONCEPTS[concept_id].clone()
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
         false
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         9
     }
 
@@ -142,17 +139,24 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
     }
 }
 
+impl Apply for BasicPrecedenceSnapShot {
+    type Delta = ContextDelta;
+
+    fn apply(&mut self, _: Self::Delta) {
+        unimplemented!()
+    }
+
+    fn diff(&self, _: Self) -> Self::Delta {
+        unimplemented!()
+    }
+}
+
 #[test]
 fn basic_precedence() {
-    let snapshot = BasicPrecedenceSnapShot::new_test_case();
-    let delta = ContextDelta::default();
-    let cache = ContextCache::default();
-    let context_search = ContextSearch::<BasicPrecedenceSnapShot>::from((
-        &snapshot, &delta, &cache,
-    ));
+    let mut context = Context::<BasicPrecedenceSnapShot>::new_test_case();
 
     assert_eq!(
-        context_search.ast_from_expression("c b a"),
+        context.ast_from_expression("c b a"),
         Ok(SyntaxTree::from("(c b) a")
             .bind_pair(
                 SyntaxTree::new_pair(

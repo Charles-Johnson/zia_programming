@@ -18,10 +18,9 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::SpecificPart,
-    constants::{DEFINE, LABEL, LET, REDUCTION},
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{Comparison, ContextCache, ContextSearch},
-    context_snap_shot::{Associativity, ContextSnapShot},
+    context_snap_shot::Associativity,
     delta::Apply,
     errors::{map_err_variant, ZiaError, ZiaResult},
     parser::parse_line,
@@ -32,8 +31,8 @@ use slog::{info, o, Drain, Logger};
 use std::{default::Default, iter::from_fn, mem::swap, sync::Arc};
 
 #[derive(Clone)]
-pub struct Context {
-    snap_shot: ContextSnapShot,
+pub struct Context<S> {
+    snap_shot: S,
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta,
@@ -47,7 +46,10 @@ struct TokenSubsequence {
     positions: Vec<usize>,
 }
 
-impl Context {
+impl<S> Context<S>
+where
+    S: SnapShotReader + Default + Sync + Apply<Delta = ContextDelta>,
+{
     #[must_use]
     pub fn new() -> Self {
         let mut cont = Self::default();
@@ -56,6 +58,23 @@ impl Context {
         info!(cont.logger, "Setup a new context: {:#?}", &cont.delta);
         cont.commit();
         cont
+    }
+
+    #[cfg(test)]
+    pub fn new_test_case() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let logger = {
+            let plain =
+                slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
+        };
+        Self {
+            snap_shot: S::new_test_case(),
+            #[cfg(not(target_arch = "wasm32"))]
+            logger,
+            delta: ContextDelta::default(),
+            cache: ContextCache::default(),
+        }
     }
 
     pub fn execute(&mut self, command: &str) -> String {
@@ -78,7 +97,7 @@ impl Context {
         string
     }
 
-    fn ast_from_expression(&mut self, s: &str) -> ParsingResult {
+    pub fn ast_from_expression(&mut self, s: &str) -> ParsingResult {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(&tokens)
     }
@@ -221,7 +240,7 @@ impl Context {
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
         let precedence_syntax =
-            SyntaxTree::new_concept(ContextSnapShot::precedence_id()).into();
+            SyntaxTree::new_concept(S::precedence_id()).into();
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
@@ -243,8 +262,7 @@ impl Context {
                     )
                 } else {
                     (
-                        SyntaxTree::new_concept(ContextSnapShot::default_id())
-                            .into(),
+                        SyntaxTree::new_concept(S::default_id()).into(),
                         raw_syntax_of_token.into(),
                     )
                 };
@@ -254,8 +272,7 @@ impl Context {
                     {
                         context_search.combine(&precedence_syntax, &syntax)
                     } else {
-                        SyntaxTree::new_concept(ContextSnapShot::default_id())
-                            .into()
+                        SyntaxTree::new_concept(S::default_id()).into()
                     };
                     match context_search
                         .compare(&precedence_of_syntax, &precedence_of_token)
@@ -309,8 +326,12 @@ impl Context {
             if is_variable(t) && ast.get_concept().is_none() {
                 let concept_id =
                     self.new_default(SpecificPart::default(), true);
-                let definition = self
-                    .find_or_insert_definition(LABEL, concept_id, true, true)?;
+                let definition = self.find_or_insert_definition(
+                    S::label_id(),
+                    concept_id,
+                    true,
+                    true,
+                )?;
                 let string_id = self.new_string(t);
                 self.update_reduction(definition, string_id, true)?;
                 Ok(SyntaxTree::from(t).bind_concept(concept_id).into())
@@ -328,12 +349,19 @@ impl Context {
 
     fn setup(&mut self) {
         let mut concrete_constructor = || {
-            let (delta, index) = self.snap_shot.add_concept_delta(
-                &self.delta,
-                SpecificPart::Concrete,
-                false,
+            let index =
+                self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+            self.delta.insert_concept(
+                index,
+                (
+                    ConceptDelta::Insert(
+                        (SpecificPart::Concrete, index).into(),
+                    ),
+                    false,
+                    false,
+                ),
+                &mut self.cache,
             );
-            self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
             index
         };
         let labels = vec![
@@ -462,36 +490,46 @@ impl Context {
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
         left.get_concept()
-            .and_then(|lc| match lc {
-                LET => right
-                    .get_expansion()
-                    .and_then(|(left, right)| {
-                        self.execute_let(&left, &right).and_then(|x| match x {
-                            Err(ZiaError::CannotReduceFurther)
-                            | Err(ZiaError::UnusedSymbol) => None,
-                            _ => Some(x),
+            .and_then(|lc| {
+                if lc == S::let_id() {
+                    right
+                        .get_expansion()
+                        .and_then(|(left, right)| {
+                            self.execute_let(&left, &right).and_then(
+                                |x| match x {
+                                    Err(ZiaError::CannotReduceFurther)
+                                    | Err(ZiaError::UnusedSymbol) => None,
+                                    _ => Some(x),
+                                },
+                            )
                         })
-                    })
-                    .or_else(|| {
-                        Some({
-                            let true_syntax = self
-                                .context_search()
-                                .to_ast(ContextSnapShot::true_id());
-                            self.execute_reduction(right, &true_syntax)
+                        .or_else(|| {
+                            Some({
+                                let true_syntax =
+                                    self.context_search().to_ast(S::true_id());
+                                self.execute_reduction(right, &true_syntax)
+                            })
                         })
-                    })
-                    .map(|r| r.map(|()| "".to_string())),
-                LABEL => Some(Ok("'".to_string()
-                    + &right
-                        .get_concept()
-                        .and_then(|c| self.snap_shot.get_label(&self.delta, c))
-                        .unwrap_or_else(|| right.to_string())
-                    + "'")),
-                _ => None,
+                        .map(|r| r.map(|()| "".to_string()))
+                } else if lc == S::label_id() {
+                    Some(Ok("'".to_string()
+                        + &right
+                            .get_concept()
+                            .and_then(|c| {
+                                self.snap_shot.get_label(&self.delta, c)
+                            })
+                            .unwrap_or_else(|| right.to_string())
+                        + "'"))
+                } else {
+                    None
+                }
             })
-            .unwrap_or_else(|| match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(left),
-                _ => self.reduce_and_call_pair(left, right),
+            .unwrap_or_else(|| {
+                if right.get_concept() == Some(S::reduction_id()) {
+                    self.try_reducing_then_call(left)
+                } else {
+                    self.reduce_and_call_pair(left, right)
+                }
             })
     }
 
@@ -515,25 +553,22 @@ impl Context {
         rightleft: &Arc<SyntaxTree>,
         rightright: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
-        match rightleft.get_concept() {
-            Some(c) => match c {
-                REDUCTION => self.execute_reduction(left, rightright),
-                DEFINE => self.execute_definition(left, rightright),
-                _ => {
-                    let rightleft_reduction = self
-                        .snap_shot
-                        .read_concept(&self.delta, c)
-                        .get_reduction();
-                    if let Some(r) = rightleft_reduction {
-                        let ast = self.context_search().to_ast(r);
-                        self.match_righthand_pair(left, &ast, rightright)
-                    } else {
-                        Err(ZiaError::CannotReduceFurther)
-                    }
-                },
-            },
-            None => Err(ZiaError::UnusedSymbol),
-        }
+        rightleft.get_concept().map_or(Err(ZiaError::UnusedSymbol), |c| {
+            if c == S::reduction_id() {
+                self.execute_reduction(left, rightright)
+            } else if c == S::define_id() {
+                self.execute_definition(left, rightright)
+            } else {
+                let rightleft_reduction =
+                    self.snap_shot.read_concept(&self.delta, c).get_reduction();
+                if let Some(r) = rightleft_reduction {
+                    let ast = self.context_search().to_ast(r);
+                    self.match_righthand_pair(left, &ast, rightright)
+                } else {
+                    Err(ZiaError::CannotReduceFurther)
+                }
+            }
+        })
     }
 
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
@@ -653,7 +688,7 @@ impl Context {
             })
             .expect("string already removed or doesn't exist"));
         self.delta.insert_string(
-            string.to_string(),
+            string,
             StringDelta::Remove(index),
             &mut self.cache,
         );
@@ -818,25 +853,38 @@ impl Context {
 
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
         let variable = is_variable(string);
-        let definition =
-            self.find_or_insert_definition(LABEL, concept, variable, variable)?;
+        let definition = self.find_or_insert_definition(
+            S::label_id(),
+            concept,
+            variable,
+            variable,
+        )?;
         let string_id = self.new_string(string);
         self.update_reduction(definition, string_id, variable)
     }
 
-    fn new_string(&mut self, string: &str) -> usize {
-        let (delta, index) = self.snap_shot.add_concept_delta(
-            &self.delta,
-            SpecificPart::String(string.to_string()),
-            false,
+    fn new_string(&mut self, string: impl Into<String> + Clone) -> usize {
+        let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+        self.delta.insert_string(
+            string.clone(),
+            StringDelta::Insert(index),
+            &mut self.cache,
         );
-        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
-        let string_delta = ContextSnapShot::add_string_delta(index, string);
-        self.delta.combine_and_invalidate_cache(string_delta, &mut self.cache);
+        self.delta.insert_concept(
+            index,
+            (
+                ConceptDelta::Insert(
+                    (SpecificPart::String(string.into()), index).into(),
+                ),
+                false,
+                false,
+            ),
+            &mut self.cache,
+        );
         index
     }
 
-    fn context_search(&self) -> ContextSearch<ContextSnapShot> {
+    fn context_search(&self) -> ContextSearch<S> {
         ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
     }
 
@@ -866,12 +914,16 @@ impl Context {
         concept_type: SpecificPart,
         variable: bool,
     ) -> usize {
-        let (delta, index) = self.snap_shot.add_concept_delta(
-            &self.delta,
-            concept_type,
-            variable,
+        let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+        self.delta.insert_concept(
+            index,
+            (
+                ConceptDelta::Insert((concept_type, index).into()),
+                variable,
+                false,
+            ),
+            &mut self.cache,
         );
-        self.delta.combine_and_invalidate_cache(delta, &mut self.cache);
         index
     }
 
@@ -974,7 +1026,10 @@ impl Context {
     }
 }
 
-impl Default for Context {
+impl<S> Default for Context<S>
+where
+    S: Default,
+{
     #[must_use]
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
@@ -984,7 +1039,7 @@ impl Default for Context {
             Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
         };
         Self {
-            snap_shot: ContextSnapShot::default(),
+            snap_shot: S::default(),
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),

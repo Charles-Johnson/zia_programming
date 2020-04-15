@@ -11,7 +11,7 @@ use lazy_static::lazy_static;
 struct BasicRuleSnapShot;
 
 lazy_static! {
-    static ref CONCEPTS: (Concept, Concept, Concept, Concept) = {
+    static ref CONCEPTS: [Concept; 4] = {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
         let mut composite_concept: Concept =
             (SpecificPart::default(), 1).into();
@@ -22,12 +22,12 @@ lazy_static! {
             &mut left_concept,
             &mut right_concept_variable,
         );
-        (
+        [
             concrete_concept,
             composite_concept,
             left_concept,
             right_concept_variable,
-        )
+        ]
     };
     static ref CONCRETE_SYNTAX: SyntaxTree =
         SyntaxTree::from("concrete").bind_concept(0);
@@ -36,31 +36,15 @@ lazy_static! {
 }
 
 impl SnapShotReader for BasicRuleSnapShot {
-    fn read_concept(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Concept {
-        let (
-            concrete_concept,
-            composite_concept,
-            left_concept,
-            right_concept_variable,
-        ) = CONCEPTS.clone();
-        match concept_id {
-            0 => concrete_concept,
-            1 => composite_concept,
-            2 => left_concept,
-            3 => right_concept_variable,
-            _ => panic!("No concepts with id: {}", concept_id),
-        }
+    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+        CONCEPTS.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, variable_id: usize) -> bool {
         variable_id == 3 || variable_id == 1
     }
 
-    fn concept_len(&self, _delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
         4
     }
 
@@ -90,48 +74,12 @@ impl SnapShotReader for BasicRuleSnapShot {
         }
     }
 
-    fn false_id() -> usize {
-        unimplemented!()
-    }
-
-    fn reduction_id() -> usize {
-        unimplemented!()
-    }
-
     fn assoc_id() -> usize {
         5
     }
 
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-
-    fn exists_such_that_id() -> usize {
-        unimplemented!()
-    }
-
-    fn true_id() -> usize {
-        unimplemented!()
-    }
-
-    fn implication_id() -> usize {
-        unimplemented!()
-    }
-
     fn precedence_id() -> usize {
         4
-    }
-
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-
-    fn default_id() -> usize {
-        unimplemented!()
     }
 }
 

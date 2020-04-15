@@ -133,6 +133,9 @@ mod context_delta;
 mod context_search;
 
 #[cfg(test)]
+mod context_test;
+
+#[cfg(test)]
 mod context_search_test;
 
 mod context_snap_shot;
@@ -148,11 +151,14 @@ mod parser;
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
-pub use crate::context::Context;
+use crate::context::Context as GenericContext;
+use crate::context_snap_shot::ContextSnapShot;
 
 pub use crate::errors::ZiaError;
 
 use lazy_static::lazy_static;
+
+pub type Context = GenericContext<ContextSnapShot>;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]
