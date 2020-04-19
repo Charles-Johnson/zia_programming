@@ -49,6 +49,7 @@ pub struct ContextCache {
 
 impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     fn infer_reduction(&self, concept: &Concept) -> Option<Arc<SyntaxTree>> {
+        debug!("infer_reduction({:#?})", concept);
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
             roc.get_definition().and_then(|(l, _)| {
@@ -80,6 +81,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
 
     /// Returns the syntax for the reduction of a concept.
     fn reduce_concept(&self, id: usize) -> Option<Arc<SyntaxTree>> {
+        debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
             concept.get_reduction().and_then(|n| {
