@@ -5,38 +5,35 @@ use crate::{
     context_search::{ContextCache, ContextSearch},
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicExistenceSnapShot;
+struct BasicExistenceSnapShot {
+    concepts: Vec<Concept>
+}
 
 const CONCEPTS_LEN: usize = 4;
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; CONCEPTS_LEN] = {
+impl Default for BasicExistenceSnapShot {
+    fn default() -> Self {
         let exists_such_that_concept = (SpecificPart::Concrete, 0).into();
         let mut true_concept = (SpecificPart::Concrete, 1).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 2).into();
         let variable_concept = (SpecificPart::default(), 3).into();
         abstract_concept.make_reduce_to(&mut true_concept);
-        [
+        let concepts: [_; CONCEPTS_LEN] = [
             exists_such_that_concept,
             true_concept,
             abstract_concept,
             variable_concept,
-        ]
-    };
-    static ref EXISTS_SUCH_THAT_SYNTAX: SyntaxTree =
-        SyntaxTree::from("exists_such_that").bind_concept(0);
-    static ref TRUTH_SYNTAX: SyntaxTree =
-        SyntaxTree::from("true").bind_concept(1);
-    static ref VARIABLE_SYNTAX: SyntaxTree =
-        SyntaxTree::from("_x_").bind_concept(3);
+        ];
+        Self {
+            concepts: Vec::from(concepts.as_ref())
+        }
+    }
 }
 
 impl SnapShotReader for BasicExistenceSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -44,7 +41,7 @@ impl SnapShotReader for BasicExistenceSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        CONCEPTS_LEN
+        self.concepts.len()
     }
 
     fn get_label(
@@ -106,8 +103,8 @@ fn basic_existence() {
     let context_search = ContextSearch::<BasicExistenceSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let exists_such_that_syntax = EXISTS_SUCH_THAT_SYNTAX.clone();
-    let variable_syntax = || VARIABLE_SYNTAX.clone();
+    let exists_such_that_syntax = SyntaxTree::from("exists_such_that").bind_concept(0);
+    let variable_syntax = || SyntaxTree::from("_x_").bind_concept(3);
     let variable_exists_such_that_variable_is_true_syntax =
         SyntaxTree::new_pair(
             variable_syntax(),
@@ -117,6 +114,6 @@ fn basic_existence() {
     assert_eq!(
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax.into()),
-        Some(TRUTH_SYNTAX.clone().into())
+        Some(SyntaxTree::from("true").bind_concept(1).into())
     );
 }

@@ -5,27 +5,25 @@ use crate::{
     context_search::{ContextCache, ContextSearch},
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicReductionSnapShot;
+struct BasicReductionSnapShot {
+    concepts: Vec<Concept>
+}
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; 2] = {
+impl Default for BasicReductionSnapShot {
+    fn default() -> Self {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
         abstract_concept.make_reduce_to(&mut concrete_concept);
-        [concrete_concept, abstract_concept]
-    };
-    static ref CONCRETE_SYNTAX: SyntaxTree =
-        SyntaxTree::from("concrete").bind_concept(0);
-    static ref ABSTRACT_SYNTAX: SyntaxTree =
-        SyntaxTree::from("abstract").bind_concept(1);
+        Self {
+            concepts: vec![concrete_concept, abstract_concept]
+        }
+    }
 }
 
 impl SnapShotReader for BasicReductionSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn concept_from_label(
@@ -45,7 +43,7 @@ impl SnapShotReader for BasicReductionSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        2
+        self.concepts.len()
     }
 
     fn get_label(
@@ -69,8 +67,8 @@ fn basic_reduction() {
     let context_search = ContextSearch::<BasicReductionSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let abstract_syntax = || ABSTRACT_SYNTAX.clone();
-    let concrete_syntax = || CONCRETE_SYNTAX.clone();
+    let abstract_syntax = || SyntaxTree::from("abstract").bind_concept(1);
+    let concrete_syntax = || SyntaxTree::from("concrete").bind_concept(0);
 
     assert_eq!(
         context_search.recursively_reduce(&abstract_syntax().into()),

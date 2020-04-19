@@ -5,34 +5,28 @@ use crate::{
     context_search::{ContextCache, ContextSearch},
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicCompositionSnapShot;
+struct BasicCompositionSnapShot {
+    concepts: Vec<Concept>
+}
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; 3] = {
+impl Default for BasicCompositionSnapShot {
+    fn default() -> Self {
         let mut composite_concept: Concept =
             (SpecificPart::default(), 0).into();
         let mut left_concept: Concept = (SpecificPart::default(), 1).into();
         let mut right_concept: Concept = (SpecificPart::default(), 2).into();
         composite_concept
             .make_composition_of(&mut left_concept, &mut right_concept);
-        [composite_concept, left_concept, right_concept]
-    };
-    static ref SYNTAX: [SyntaxTree; 3] = {
-        let left_syntax = SyntaxTree::from("b").bind_concept(1);
-        let right_syntax = SyntaxTree::from("c").bind_concept(2);
-        let composite_syntax = SyntaxTree::from("a")
-            .bind_concept(0)
-            .bind_pair(left_syntax.clone(), right_syntax.clone());
-        [composite_syntax, left_syntax, right_syntax]
-    };
+        Self {
+            concepts: vec![composite_concept, left_concept, right_concept]
+        }
+    }
 }
 
 impl SnapShotReader for BasicCompositionSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn concept_from_label(
@@ -53,7 +47,7 @@ impl SnapShotReader for BasicCompositionSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        3
+        self.concepts.len()
     }
 
     fn get_label(
@@ -78,7 +72,11 @@ fn basic_composition() {
     let context_search = ContextSearch::<BasicCompositionSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let [composite_syntax, left_syntax, right_syntax] = SYNTAX.clone();
+    let left_syntax = SyntaxTree::from("b").bind_concept(1);
+    let right_syntax = SyntaxTree::from("c").bind_concept(2);
+    let composite_syntax = SyntaxTree::from("a")
+            .bind_concept(0)
+            .bind_pair(left_syntax.clone(), right_syntax.clone());
     let composite_syntax = || composite_syntax.clone();
     let left_syntax = || left_syntax.clone();
     let right_syntax = || right_syntax.clone();

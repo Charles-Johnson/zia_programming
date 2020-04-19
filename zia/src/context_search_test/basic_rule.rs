@@ -5,13 +5,13 @@ use crate::{
     context_search::{ContextCache, ContextSearch},
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicRuleSnapShot;
+struct BasicRuleSnapShot{
+    concepts: Vec<Concept>
+}
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; 4] = {
+impl Default for BasicRuleSnapShot {
+    fn default() -> Self {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
         let mut composite_concept: Concept =
             (SpecificPart::default(), 1).into();
@@ -22,22 +22,20 @@ lazy_static! {
             &mut left_concept,
             &mut right_concept_variable,
         );
-        [
-            concrete_concept,
-            composite_concept,
-            left_concept,
-            right_concept_variable,
-        ]
-    };
-    static ref CONCRETE_SYNTAX: SyntaxTree =
-        SyntaxTree::from("concrete").bind_concept(0);
-    static ref LEFT_SYNTAX: SyntaxTree =
-        SyntaxTree::from("left").bind_concept(2);
+        Self {
+            concepts: vec![
+                concrete_concept,
+                composite_concept,
+                left_concept,
+                right_concept_variable,
+            ]
+        }
+    }
 }
 
 impl SnapShotReader for BasicRuleSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, variable_id: usize) -> bool {
@@ -45,7 +43,7 @@ impl SnapShotReader for BasicRuleSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        4
+        self.concepts.len()
     }
 
     fn get_label(
@@ -90,8 +88,8 @@ fn basic_rule() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<BasicRuleSnapShot>::from((&snapshot, &delta, &cache));
-    let concrete_syntax = || CONCRETE_SYNTAX.clone();
-    let left_syntax = || LEFT_SYNTAX.clone();
+    let concrete_syntax = || SyntaxTree::from("concrete").bind_concept(0);
+    let left_syntax = || SyntaxTree::from("left").bind_concept(2);
     let left_and_random_syntax =
         SyntaxTree::new_pair(left_syntax(), SyntaxTree::from("random")).into();
 

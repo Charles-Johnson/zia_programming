@@ -5,13 +5,13 @@ use crate::{
     context_search::{ContextCache, ContextSearch},
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicInferenceSnapShot;
+struct BasicInferenceSnapShot {
+    concepts: Vec<Concept>
+}
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; 6] = {
+impl Default for BasicInferenceSnapShot {
+    fn default() -> Self {
         let mut implication_concept = (SpecificPart::Concrete, 0).into();
         let mut true_concept = (SpecificPart::Concrete, 1).into();
         let mut condition_concept: Concept =
@@ -29,33 +29,17 @@ lazy_static! {
             &mut implies_result_concept,
         );
         condition_implies_result_concept.make_reduce_to(&mut true_concept);
-        [
-            implication_concept,
-            true_concept,
-            condition_concept,
-            result_concept,
-            implies_result_concept,
-            condition_implies_result_concept,
-        ]
-    };
-    static ref SYNTAX: [SyntaxTree; 6] = {
-        let implication_syntax = SyntaxTree::from("=>").bind_concept(0);
-        let true_syntax = SyntaxTree::from("true").bind_concept(1);
-        let condition_syntax = SyntaxTree::from("a").bind_concept(2);
-        let result_syntax = SyntaxTree::from("b").bind_concept(3);
-        let implies_result_syntax = SyntaxTree::new_concept(4)
-            .bind_pair(implication_syntax.clone(), result_syntax.clone());
-        let condition_implies_result_syntax = SyntaxTree::new_concept(5)
-            .bind_pair(condition_syntax.clone(), implies_result_syntax.clone());
-        [
-            implication_syntax,
-            true_syntax,
-            condition_syntax,
-            result_syntax,
-            implies_result_syntax,
-            condition_implies_result_syntax,
-        ]
-    };
+        Self {
+            concepts: vec![
+                implication_concept,
+                true_concept,
+                condition_concept,
+                result_concept,
+                implies_result_concept,
+                condition_implies_result_concept,
+            ]
+        }
+    }
 }
 
 impl SnapShotReader for BasicInferenceSnapShot {
@@ -82,7 +66,7 @@ impl SnapShotReader for BasicInferenceSnapShot {
     }
 
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -90,7 +74,7 @@ impl SnapShotReader for BasicInferenceSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        6
+        self.concepts.len()
     }
 
     fn get_label(
@@ -116,9 +100,8 @@ fn basic_inference() {
     let context_search = ContextSearch::<BasicInferenceSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let [_, true_syntax, _, result_syntax, ..] = SYNTAX.clone();
-    let true_syntax = || true_syntax.clone();
-    let result_syntax = || result_syntax.clone();
+    let true_syntax = || SyntaxTree::from("true").bind_concept(1);
+    let result_syntax = || SyntaxTree::from("b").bind_concept(3);
 
     assert_eq!(
         context_search.reduce(&result_syntax().into()),
