@@ -7,7 +7,7 @@ use crate::{
 };
 
 struct BasicInferenceSnapShot {
-    concepts: Vec<Concept>
+    concepts: Vec<Concept>,
 }
 
 impl Default for BasicInferenceSnapShot {
@@ -18,8 +18,16 @@ impl Default for BasicInferenceSnapShot {
             (SpecificPart::default(), 2).into();
         let mut result_concept = (SpecificPart::default(), 3).into();
         condition_concept.make_reduce_to(&mut true_concept);
-        let mut implies_result_concept = Concept::composition_of(4, &mut implication_concept, &mut result_concept);
-        let mut condition_implies_result_concept = Concept::composition_of(5, &mut condition_concept, &mut implies_result_concept);
+        let mut implies_result_concept = Concept::composition_of(
+            4,
+            &mut implication_concept,
+            &mut result_concept,
+        );
+        let mut condition_implies_result_concept = Concept::composition_of(
+            5,
+            &mut condition_concept,
+            &mut implies_result_concept,
+        );
         condition_implies_result_concept.make_reduce_to(&mut true_concept);
         Self {
             concepts: vec![
@@ -29,7 +37,7 @@ impl Default for BasicInferenceSnapShot {
                 result_concept,
                 implies_result_concept,
                 condition_implies_result_concept,
-            ]
+            ],
         }
     }
 }
@@ -59,10 +67,6 @@ impl SnapShotReader for BasicInferenceSnapShot {
 
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
         self.concepts.get(concept_id)
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
-        false
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {

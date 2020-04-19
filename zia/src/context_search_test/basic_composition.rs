@@ -7,16 +7,17 @@ use crate::{
 };
 
 struct BasicCompositionSnapShot {
-    concepts: Vec<Concept>
+    concepts: Vec<Concept>,
 }
 
 impl Default for BasicCompositionSnapShot {
     fn default() -> Self {
         let mut left_concept = (SpecificPart::default(), 1).into();
         let mut right_concept = (SpecificPart::default(), 2).into();
-        let composite_concept = Concept::composition_of(0, &mut left_concept, &mut right_concept);
+        let composite_concept =
+            Concept::composition_of(0, &mut left_concept, &mut right_concept);
         Self {
-            concepts: vec![composite_concept, left_concept, right_concept]
+            concepts: vec![composite_concept, left_concept, right_concept],
         }
     }
 }
@@ -37,10 +38,6 @@ impl SnapShotReader for BasicCompositionSnapShot {
             "c" => Some(2),
             _ => None,
         }
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
-        false
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
@@ -72,8 +69,8 @@ fn basic_composition() {
     let left_syntax = SyntaxTree::from("b").bind_concept(1);
     let right_syntax = SyntaxTree::from("c").bind_concept(2);
     let composite_syntax = SyntaxTree::from("a")
-            .bind_concept(0)
-            .bind_pair(left_syntax.clone(), right_syntax.clone());
+        .bind_concept(0)
+        .bind_pair(left_syntax.clone(), right_syntax.clone());
     let composite_syntax = || composite_syntax.clone();
     let left_syntax = || left_syntax.clone();
     let right_syntax = || right_syntax.clone();

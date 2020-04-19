@@ -12,7 +12,7 @@ pub trait Reader: Default {
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
             .concept().get(&id)
-            .and_then(|(cd, _, _)| match cd {
+            .and_then(|(cd, _)| match cd {
                 ConceptDelta::Insert(c) => Some(c.clone()),
                 ConceptDelta::Remove(_) => None,
                 ConceptDelta::Update(d) => {
@@ -30,7 +30,6 @@ pub trait Reader: Default {
                     .clone()
             })
     }
-    fn has_variable(&self, delta: &ContextDelta, variable_id: usize) -> bool;
     fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta) -> usize;
     fn get_label(
         &self,

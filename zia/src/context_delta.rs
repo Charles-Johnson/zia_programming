@@ -25,13 +25,13 @@ use std::{collections::HashMap, fmt::Debug, mem::swap};
 #[derive(Clone, Default)]
 pub struct ContextDelta {
     string: HashMap<String, StringDelta>,
-    concept: HashMap<usize, (ConceptDelta, bool, bool)>,
+    concept: HashMap<usize, (ConceptDelta, bool)>,
 }
 
 impl ContextDelta {
     pub const fn new(
         string: HashMap<String, StringDelta>,
-        concept: HashMap<usize, (ConceptDelta, bool, bool)>,
+        concept: HashMap<usize, (ConceptDelta, bool)>,
     ) -> Self {
         Self {
             string,
@@ -48,7 +48,7 @@ impl ContextDelta {
     ) {
         self.concept
             .entry(concept_id)
-            .and_modify(|(cd, _, _)| match cd {
+            .and_modify(|(cd, _)| match cd {
                 ConceptDelta::Update(d) => {
                     d.combine(concept_delta.clone());
                     *cd = ConceptDelta::Update(d.clone());
@@ -63,7 +63,6 @@ impl ContextDelta {
             })
             .or_insert((
                 ConceptDelta::Update(concept_delta.clone()),
-                false,
                 temporary,
             ));
         let mut empty_cache = ContextCache::default();
@@ -90,7 +89,7 @@ impl ContextDelta {
     pub fn insert_concept(
         &mut self,
         concept_id: usize,
-        concept_delta: (ConceptDelta, bool, bool),
+        concept_delta: (ConceptDelta, bool),
         cache_to_invalidate: &mut ContextCache,
     ) {
         self.concept.insert(concept_id, concept_delta);
@@ -99,7 +98,7 @@ impl ContextDelta {
         debug!("Cache invalidated");
     }
 
-    pub const fn concept(&self) -> &HashMap<usize, (ConceptDelta, bool, bool)> {
+    pub const fn concept(&self) -> &HashMap<usize, (ConceptDelta, bool)> {
         &self.concept
     }
 
@@ -136,11 +135,8 @@ impl Debug for ContextDelta {
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();
             for key in unsorted_keys {
-                let (cd, variable, _) = self.concept.get(key).unwrap();
+                let (cd, _) = self.concept.get(key).unwrap();
                 string += &format!("\t{}: {:#?}", key, cd);
-                if *variable {
-                    string += " (variable)";
-                }
                 string += ",\n";
             }
             string += "    },\n";
@@ -196,15 +192,15 @@ impl Debug for ConceptDelta {
     }
 }
 
-impl Delta for HashMap<usize, (ConceptDelta, bool, bool)> {
+impl Delta for HashMap<usize, (ConceptDelta, bool)> {
     fn combine(&mut self, other: Self) {
-        for (other_key, (other_value, v2, temporary)) in other {
+        for (other_key, (other_value, temporary)) in other {
             let mut remove_key = false;
             let mut update_delta = None;
             self.entry(other_key)
-                .and_modify(|(cd, v1, _)| match (cd, &other_value) {
+                .and_modify(|(cd, _)| match (cd, &other_value) {
                     (ConceptDelta::Insert(c1), ConceptDelta::Remove(c2))
-                        if c1 == c2 && *v1 == v2 =>
+                        if c1 == c2 =>
                     {
                         remove_key = true;
                     }
@@ -217,25 +213,20 @@ impl Delta for HashMap<usize, (ConceptDelta, bool, bool)> {
                     },
                     (ConceptDelta::Insert(c), ConceptDelta::Update(cd)) => {
                         c.apply(cd.clone());
-                        *v1 = v2;
                     },
                     (ConceptDelta::Update(cd1), ConceptDelta::Update(cd2)) => {
                         cd1.combine(cd2.clone());
-                        *v1 = v2;
                     },
                     _ => panic!(
                         "Something went wrong when combining concept deltas!"
                     ),
                 })
-                .or_insert((other_value, v2, temporary));
+                .or_insert((other_value, temporary));
             if remove_key {
                 self.remove(&other_key);
             }
             update_delta.map(|cd| {
-                self.insert(
-                    other_key,
-                    (ConceptDelta::Update(cd), v2, temporary),
-                )
+                self.insert(other_key, (ConceptDelta::Update(cd), temporary))
             });
         }
     }

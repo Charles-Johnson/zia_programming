@@ -387,7 +387,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     fn is_free_variable(&self, v: usize) -> bool {
-        self.snap_shot.has_variable(self.delta, v)
+        self.snap_shot.read_concept(self.delta, v).variable()
             && self.variable_mask.get(&v).is_none()
     }
 

@@ -40,7 +40,6 @@ pub struct ContextSnapShot {
     concepts: Vec<Option<Concept>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
-    variables: HashSet<usize>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -101,7 +100,7 @@ impl ContextSnapShot {
 
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
-        for (id, (cd, _, _)) in delta.concept() {
+        for (id, (cd, _)) in delta.concept() {
             if let ConceptDelta::Insert(_) = cd {
                 if length <= *id {
                     length = *id + 1;
@@ -245,14 +244,14 @@ impl SnapShotReader for ContextSnapShot {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _, _)) in delta.concept() {
+        for (id, (cd, _)) in delta.concept() {
             if let ConceptDelta::Insert(_) = cd {
                 if *id >= new_concept_length {
                     new_concept_length = *id + 1
                 }
             }
         }
-        for (id, (cd, _, _)) in delta.concept() {
+        for (id, (cd, _)) in delta.concept() {
             match cd {
                 ConceptDelta::Insert(_) => {
                     removed_gaps.insert(*id);
@@ -318,18 +317,6 @@ impl SnapShotReader for ContextSnapShot {
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
     }
-
-    fn has_variable(&self, delta: &ContextDelta, concept: usize) -> bool {
-        let in_previous_variables = self.variables.contains(&concept);
-        delta.concept().get(&concept).map_or(
-            in_previous_variables,
-            |(cd, v, _)| match cd {
-                ConceptDelta::Insert(_) => *v,
-                ConceptDelta::Remove(_) => false,
-                ConceptDelta::Update(_) => in_previous_variables,
-            },
-        )
-    }
 }
 
 impl Apply for ContextSnapShot {
@@ -350,20 +337,14 @@ impl Apply for ContextSnapShot {
         if concept_len > self.concepts.len() {
             self.concepts.extend(vec![None; concept_len - self.concepts.len()]);
         }
-        for (id, (cd, v, temporary)) in delta.concept() {
+        for (id, (cd, temporary)) in delta.concept() {
             if !temporary {
                 match cd {
                     ConceptDelta::Insert(c) => {
                         self.concepts[*id] = Some(c.clone());
-                        if *v {
-                            self.variables.insert(*id);
-                        }
                     },
                     ConceptDelta::Remove(_) => {
                         self.blindly_remove_concept(*id);
-                        if *v {
-                            self.variables.remove(id);
-                        }
                     },
                     ConceptDelta::Update(d) => {
                         self.write_concept(*id).apply(d.clone())

@@ -7,7 +7,7 @@ use crate::{
 };
 
 struct BasicReductionSnapShot {
-    concepts: Vec<Concept>
+    concepts: Vec<Concept>,
 }
 
 impl Default for BasicReductionSnapShot {
@@ -16,7 +16,7 @@ impl Default for BasicReductionSnapShot {
         let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
         abstract_concept.make_reduce_to(&mut concrete_concept);
         Self {
-            concepts: vec![concrete_concept, abstract_concept]
+            concepts: vec![concrete_concept, abstract_concept],
         }
     }
 }
@@ -36,10 +36,6 @@ impl SnapShotReader for BasicReductionSnapShot {
             "abstract" => Some(1),
             _ => None,
         }
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
-        false
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {

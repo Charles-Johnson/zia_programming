@@ -7,7 +7,7 @@ use crate::{
 };
 
 struct BasicExistenceSnapShot {
-    concepts: Vec<Concept>
+    concepts: Vec<Concept>,
 }
 
 const CONCEPTS_LEN: usize = 4;
@@ -17,7 +17,7 @@ impl Default for BasicExistenceSnapShot {
         let exists_such_that_concept = (SpecificPart::Concrete, 0).into();
         let mut true_concept = (SpecificPart::Concrete, 1).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 2).into();
-        let variable_concept = (SpecificPart::default(), 3).into();
+        let variable_concept = (SpecificPart::variable(), 3).into();
         abstract_concept.make_reduce_to(&mut true_concept);
         let concepts: [_; CONCEPTS_LEN] = [
             exists_such_that_concept,
@@ -26,7 +26,7 @@ impl Default for BasicExistenceSnapShot {
             variable_concept,
         ];
         Self {
-            concepts: Vec::from(concepts.as_ref())
+            concepts: Vec::from(concepts.as_ref()),
         }
     }
 }
@@ -34,10 +34,6 @@ impl Default for BasicExistenceSnapShot {
 impl SnapShotReader for BasicExistenceSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
         self.concepts.get(concept_id)
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
-        false
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
@@ -103,7 +99,8 @@ fn basic_existence() {
     let context_search = ContextSearch::<BasicExistenceSnapShot>::from((
         &snapshot, &delta, &cache,
     ));
-    let exists_such_that_syntax = SyntaxTree::from("exists_such_that").bind_concept(0);
+    let exists_such_that_syntax =
+        SyntaxTree::from("exists_such_that").bind_concept(0);
     let variable_syntax = || SyntaxTree::from("_x_").bind_concept(3);
     let variable_exists_such_that_variable_is_true_syntax =
         SyntaxTree::new_pair(

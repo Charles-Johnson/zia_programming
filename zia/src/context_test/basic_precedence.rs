@@ -8,7 +8,7 @@ use crate::{
 };
 
 struct BasicPrecedenceSnapShot {
-    concepts: Vec<Concept>
+    concepts: Vec<Concept>,
 }
 
 impl Default for BasicPrecedenceSnapShot {
@@ -18,9 +18,23 @@ impl Default for BasicPrecedenceSnapShot {
         let mut default_concept = (SpecificPart::Concrete, 2).into();
         let mut true_concept = (SpecificPart::Concrete, 3).into();
         let mut abstract_concept = (SpecificPart::default(), 4).into();
-        let mut precedence_of_abstract_concept = Concept::composition_of(5, &mut precedence_concept, &mut abstract_concept);
-        let mut greater_than_precedence_of_abstract_concept = Concept::composition_of(6, &mut greater_than_concept, &mut precedence_of_abstract_concept);
-        let mut precedence_of_abstract_concept_is_below_default = Concept::composition_of(7, &mut default_concept, &mut greater_than_precedence_of_abstract_concept);
+        let mut precedence_of_abstract_concept = Concept::composition_of(
+            5,
+            &mut precedence_concept,
+            &mut abstract_concept,
+        );
+        let mut greater_than_precedence_of_abstract_concept =
+            Concept::composition_of(
+                6,
+                &mut greater_than_concept,
+                &mut precedence_of_abstract_concept,
+            );
+        let mut precedence_of_abstract_concept_is_below_default =
+            Concept::composition_of(
+                7,
+                &mut default_concept,
+                &mut greater_than_precedence_of_abstract_concept,
+            );
         precedence_of_abstract_concept_is_below_default
             .make_reduce_to(&mut true_concept);
         let assoc_concept: Concept = (SpecificPart::Concrete, 8).into();
@@ -39,7 +53,7 @@ impl Default for BasicPrecedenceSnapShot {
                 assoc_concept,
                 left_concept,
                 right_concept,
-            ]
+            ],
         }
     }
 }
@@ -102,10 +116,6 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
 
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
         self.concepts.get(concept_id)
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
-        false
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {

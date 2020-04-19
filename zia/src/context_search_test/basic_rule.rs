@@ -6,16 +6,20 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 
-struct BasicRuleSnapShot{
-    concepts: Vec<Concept>
+struct BasicRuleSnapShot {
+    concepts: Vec<Concept>,
 }
 
 impl Default for BasicRuleSnapShot {
     fn default() -> Self {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
         let mut left_concept = (SpecificPart::default(), 2).into();
-        let mut right_concept_variable = (SpecificPart::default(), 3).into();
-        let mut composite_concept = Concept::composition_of(1, &mut left_concept, &mut right_concept_variable);
+        let mut right_concept_variable = (SpecificPart::variable(), 3).into();
+        let mut composite_concept = Concept::composition_of(
+            1,
+            &mut left_concept,
+            &mut right_concept_variable,
+        );
         composite_concept.make_reduce_to(&mut concrete_concept);
         Self {
             concepts: vec![
@@ -23,7 +27,7 @@ impl Default for BasicRuleSnapShot {
                 composite_concept,
                 left_concept,
                 right_concept_variable,
-            ]
+            ],
         }
     }
 }
@@ -31,10 +35,6 @@ impl Default for BasicRuleSnapShot {
 impl SnapShotReader for BasicRuleSnapShot {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
         self.concepts.get(concept_id)
-    }
-
-    fn has_variable(&self, _delta: &ContextDelta, variable_id: usize) -> bool {
-        variable_id == 3 || variable_id == 1
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {

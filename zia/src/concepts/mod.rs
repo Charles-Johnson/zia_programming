@@ -71,6 +71,18 @@ impl Debug for Concept {
 }
 
 impl Concept {
+    pub fn variable(&self) -> bool {
+        if let SpecificPart::Abstract(AbstractPart {
+            variable,
+            ..
+        }) = self.specific_part
+        {
+            variable
+        } else {
+            false
+        }
+    }
+
     pub fn delete_definition(&self, id: usize) -> [ConceptDelta; 3] {
         [
             AbstractDelta {
@@ -255,8 +267,20 @@ impl Concept {
         right.concrete_part.righthand_of.insert(id);
         Self {
             id,
-            specific_part: SpecificPart::Abstract(AbstractPart{definition: Some((left.id, right.id)), ..Default::default()}),
-            concrete_part: ConcreteConcept::default()
+            specific_part: SpecificPart::Abstract(AbstractPart {
+                definition: Some((left.id, right.id)),
+                variable: match (&left.specific_part, &right.specific_part) {
+                    (SpecificPart::Abstract(a), _)
+                    | (_, SpecificPart::Abstract(a))
+                        if a.variable =>
+                    {
+                        true
+                    },
+                    _ => false,
+                },
+                ..Default::default()
+            }),
+            concrete_part: ConcreteConcept::default(),
         }
     }
 }
@@ -270,6 +294,16 @@ pub enum SpecificPart {
     Abstract(AbstractPart),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
+}
+
+impl SpecificPart {
+    pub const fn variable() -> Self {
+        Self::Abstract(AbstractPart {
+            definition: None,
+            reduces_to: None,
+            variable: true,
+        })
+    }
 }
 
 impl Default for SpecificPart {
@@ -432,9 +466,11 @@ impl From<(String, usize)> for Concept {
 #[derive(Clone, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
-    pub definition: Option<(usize, usize)>,
+    definition: Option<(usize, usize)>,
     /// The concept may reduce to another concept.
-    pub reduces_to: Option<usize>,
+    reduces_to: Option<usize>,
+    /// The concept might be a variable
+    variable: bool,
 }
 
 impl Debug for AbstractPart {
@@ -488,6 +524,7 @@ impl Default for AbstractPart {
         Self {
             definition: None,
             reduces_to: None,
+            variable: false,
         }
     }
 }

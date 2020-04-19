@@ -324,8 +324,7 @@ where
         } else {
             let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
             if is_variable(t) && ast.get_concept().is_none() {
-                let concept_id =
-                    self.new_default(SpecificPart::default(), true);
+                let concept_id = self.new_default(SpecificPart::variable());
                 let definition = self.find_or_insert_definition(
                     S::label_id(),
                     concept_id,
@@ -357,7 +356,6 @@ where
                     ConceptDelta::Insert(
                         (SpecificPart::Concrete, index).into(),
                     ),
-                    false,
                     false,
                 ),
                 &mut self.cache,
@@ -695,28 +693,10 @@ where
     }
 
     fn blindly_remove_concept(&mut self, id: usize) {
-        let concept = self
-            .delta
-            .concept()
-            .get(&id)
-            .and_then(|(cd, _, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c),
-                ConceptDelta::Remove(_) => None,
-                ConceptDelta::Update(_) => self.snap_shot.get_concept(id),
-            })
-            .unwrap_or_else(|| {
-                self.snap_shot
-                    .get_concept(id)
-                    .expect("Concept will be already removed!")
-            })
-            .clone();
+        let concept = self.snap_shot.read_concept(&self.delta, id);
         self.delta.insert_concept(
             id,
-            (
-                ConceptDelta::Remove(concept),
-                self.snap_shot.has_variable(&self.delta, id),
-                false,
-            ),
+            (ConceptDelta::Remove(concept), false),
             &mut self.cache,
         );
     }
@@ -845,8 +825,11 @@ where
     }
 
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.new_default(SpecificPart::default(), is_variable(string));
+        let new_default = self.new_default(if is_variable(string) {
+            SpecificPart::variable()
+        } else {
+            SpecificPart::default()
+        });
         self.label(new_default, string)?;
         Ok(new_default)
     }
@@ -877,7 +860,6 @@ where
                     (SpecificPart::String(string.into()), index).into(),
                 ),
                 false,
-                false,
             ),
             &mut self.cache,
         );
@@ -898,8 +880,11 @@ where
         let pair = self.context_search().find_definition(lefthand, righthand);
         match pair {
             None => {
-                let definition =
-                    self.new_default(SpecificPart::default(), variable);
+                let definition = self.new_default(if variable {
+                    SpecificPart::variable()
+                } else {
+                    SpecificPart::default()
+                });
                 self.insert_definition(
                     definition, lefthand, righthand, temporary,
                 )?;
@@ -909,19 +894,11 @@ where
         }
     }
 
-    fn new_default(
-        &mut self,
-        concept_type: SpecificPart,
-        variable: bool,
-    ) -> usize {
+    fn new_default(&mut self, concept_type: SpecificPart) -> usize {
         let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         self.delta.insert_concept(
             index,
-            (
-                ConceptDelta::Insert((concept_type, index).into()),
-                variable,
-                false,
-            ),
+            (ConceptDelta::Insert((concept_type, index).into()), false),
             &mut self.cache,
         );
         index
