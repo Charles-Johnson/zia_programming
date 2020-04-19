@@ -6,13 +6,13 @@ use crate::{
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
-use lazy_static::lazy_static;
 
-#[derive(Default)]
-struct BasicPrecedenceSnapShot;
+struct BasicPrecedenceSnapShot {
+    concepts: Vec<Concept>
+}
 
-lazy_static! {
-    static ref CONCEPTS: [Concept; 11] = {
+impl Default for BasicPrecedenceSnapShot {
+    fn default() -> Self {
         let mut precedence_concept = (SpecificPart::Concrete, 0).into();
         let mut greater_than_concept = (SpecificPart::Concrete, 1).into();
         let mut default_concept = (SpecificPart::Concrete, 2).into();
@@ -26,22 +26,22 @@ lazy_static! {
         let assoc_concept: Concept = (SpecificPart::Concrete, 8).into();
         let left_concept: Concept = (SpecificPart::Concrete, 9).into();
         let right_concept: Concept = (SpecificPart::Concrete, 10).into();
-        [
-            precedence_concept,
-            greater_than_concept,
-            default_concept,
-            true_concept,
-            abstract_concept,
-            precedence_of_abstract_concept,
-            greater_than_precedence_of_abstract_concept,
-            precedence_of_abstract_concept_is_below_default,
-            assoc_concept,
-            left_concept,
-            right_concept,
-        ]
-    };
-    static ref ABSTRACT_SYNTAX: SyntaxTree =
-        SyntaxTree::from("a").bind_concept(4);
+        Self {
+            concepts: vec![
+                precedence_concept,
+                greater_than_concept,
+                default_concept,
+                true_concept,
+                abstract_concept,
+                precedence_of_abstract_concept,
+                greater_than_precedence_of_abstract_concept,
+                precedence_of_abstract_concept_is_below_default,
+                assoc_concept,
+                left_concept,
+                right_concept,
+            ]
+        }
+    }
 }
 
 impl SnapShotReader for BasicPrecedenceSnapShot {
@@ -101,7 +101,7 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
     }
 
     fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        CONCEPTS.get(concept_id)
+        self.concepts.get(concept_id)
     }
 
     fn has_variable(&self, _delta: &ContextDelta, _variable_id: usize) -> bool {
@@ -109,7 +109,7 @@ impl SnapShotReader for BasicPrecedenceSnapShot {
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        9
+        self.concepts.len()
     }
 
     fn get_label(
@@ -148,7 +148,7 @@ fn basic_precedence() {
                     SyntaxTree::from("c"),
                     SyntaxTree::from("b")
                 ),
-                ABSTRACT_SYNTAX.clone()
+                SyntaxTree::from("a").bind_concept(4)
             )
             .into())
     );
