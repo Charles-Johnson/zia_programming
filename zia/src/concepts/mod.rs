@@ -246,17 +246,17 @@ impl Concept {
     }
 
     #[cfg(test)]
-    pub fn make_composition_of(
-        &mut self,
+    pub fn composition_of(
+        id: usize,
         left: &mut Concept,
         right: &mut Concept,
-    ) {
-        if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
-            ap.definition = Some((left.id, right.id));
-            left.concrete_part.lefthand_of.insert(self.id);
-            right.concrete_part.righthand_of.insert(self.id);
-        } else {
-            panic!("Cannot define composition for concrete concept");
+    ) -> Self {
+        left.concrete_part.lefthand_of.insert(id);
+        right.concrete_part.righthand_of.insert(id);
+        Self {
+            id,
+            specific_part: SpecificPart::Abstract(AbstractPart{definition: Some((left.id, right.id)), ..Default::default()}),
+            concrete_part: ConcreteConcept::default()
         }
     }
 }

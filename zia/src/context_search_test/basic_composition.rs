@@ -12,12 +12,9 @@ struct BasicCompositionSnapShot {
 
 impl Default for BasicCompositionSnapShot {
     fn default() -> Self {
-        let mut composite_concept: Concept =
-            (SpecificPart::default(), 0).into();
-        let mut left_concept: Concept = (SpecificPart::default(), 1).into();
-        let mut right_concept: Concept = (SpecificPart::default(), 2).into();
-        composite_concept
-            .make_composition_of(&mut left_concept, &mut right_concept);
+        let mut left_concept = (SpecificPart::default(), 1).into();
+        let mut right_concept = (SpecificPart::default(), 2).into();
+        let composite_concept = Concept::composition_of(0, &mut left_concept, &mut right_concept);
         Self {
             concepts: vec![composite_concept, left_concept, right_concept]
         }

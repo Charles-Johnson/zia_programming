@@ -18,16 +18,8 @@ impl Default for BasicInferenceSnapShot {
             (SpecificPart::default(), 2).into();
         let mut result_concept = (SpecificPart::default(), 3).into();
         condition_concept.make_reduce_to(&mut true_concept);
-        let mut implies_result_concept: Concept =
-            (SpecificPart::default(), 4).into();
-        implies_result_concept
-            .make_composition_of(&mut implication_concept, &mut result_concept);
-        let mut condition_implies_result_concept: Concept =
-            (SpecificPart::default(), 5).into();
-        condition_implies_result_concept.make_composition_of(
-            &mut condition_concept,
-            &mut implies_result_concept,
-        );
+        let mut implies_result_concept = Concept::composition_of(4, &mut implication_concept, &mut result_concept);
+        let mut condition_implies_result_concept = Concept::composition_of(5, &mut condition_concept, &mut implies_result_concept);
         condition_implies_result_concept.make_reduce_to(&mut true_concept);
         Self {
             concepts: vec![

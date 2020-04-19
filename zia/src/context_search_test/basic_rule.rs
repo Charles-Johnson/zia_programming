@@ -13,15 +13,10 @@ struct BasicRuleSnapShot{
 impl Default for BasicRuleSnapShot {
     fn default() -> Self {
         let mut concrete_concept = (SpecificPart::Concrete, 0).into();
-        let mut composite_concept: Concept =
-            (SpecificPart::default(), 1).into();
-        composite_concept.make_reduce_to(&mut concrete_concept);
         let mut left_concept = (SpecificPart::default(), 2).into();
         let mut right_concept_variable = (SpecificPart::default(), 3).into();
-        composite_concept.make_composition_of(
-            &mut left_concept,
-            &mut right_concept_variable,
-        );
+        let mut composite_concept = Concept::composition_of(1, &mut left_concept, &mut right_concept_variable);
+        composite_concept.make_reduce_to(&mut concrete_concept);
         Self {
             concepts: vec![
                 concrete_concept,

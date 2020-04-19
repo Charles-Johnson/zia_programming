@@ -18,24 +18,9 @@ lazy_static! {
         let mut default_concept = (SpecificPart::Concrete, 2).into();
         let mut true_concept = (SpecificPart::Concrete, 3).into();
         let mut abstract_concept = (SpecificPart::default(), 4).into();
-        let mut precedence_of_abstract_concept: Concept =
-            (SpecificPart::default(), 5).into();
-        precedence_of_abstract_concept.make_composition_of(
-            &mut precedence_concept,
-            &mut abstract_concept,
-        );
-        let mut greater_than_precedence_of_abstract_concept: Concept =
-            (SpecificPart::default(), 6).into();
-        greater_than_precedence_of_abstract_concept.make_composition_of(
-            &mut greater_than_concept,
-            &mut precedence_of_abstract_concept,
-        );
-        let mut precedence_of_abstract_concept_is_below_default: Concept =
-            (SpecificPart::default(), 7).into();
-        precedence_of_abstract_concept_is_below_default.make_composition_of(
-            &mut default_concept,
-            &mut greater_than_precedence_of_abstract_concept,
-        );
+        let mut precedence_of_abstract_concept = Concept::composition_of(5, &mut precedence_concept, &mut abstract_concept);
+        let mut greater_than_precedence_of_abstract_concept = Concept::composition_of(6, &mut greater_than_concept, &mut precedence_of_abstract_concept);
+        let mut precedence_of_abstract_concept_is_below_default = Concept::composition_of(7, &mut default_concept, &mut greater_than_precedence_of_abstract_concept);
         precedence_of_abstract_concept_is_below_default
             .make_reduce_to(&mut true_concept);
         let assoc_concept: Concept = (SpecificPart::Concrete, 8).into();
