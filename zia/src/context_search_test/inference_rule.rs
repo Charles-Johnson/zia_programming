@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{ContextCache, ContextSearch},
+    context_search_test::check_order,
     snap_shot::Reader,
 };
 
@@ -37,7 +38,7 @@ impl Default for InferenceRuleSnapShot {
             Concept::composition_of(8, &mut concept_a, &mut example_concept);
         example_composition.make_reduce_to(&mut true_concept);
         Self {
-            concepts: vec![
+            concepts: check_order(&[
                 implication_concept,
                 true_concept,
                 result_concept,
@@ -49,7 +50,7 @@ impl Default for InferenceRuleSnapShot {
                 example_composition,
                 variable_concept,
                 concept_b,
-            ],
+            ]),
         }
     }
 }
@@ -88,17 +89,16 @@ impl Reader for InferenceRuleSnapShot {
     }
 
     fn precedence_id() -> usize {
-        10
+        11
     }
 
     fn assoc_id() -> usize {
-        10
+        11
     }
 }
 
 #[test]
 fn inference_rule() {
-    simple_logger::init().unwrap();
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = InferenceRuleSnapShot::new_test_case();

@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{ContextCache, ContextSearch},
+    context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
 
@@ -16,7 +17,7 @@ impl Default for BasicReductionSnapShot {
         let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
         abstract_concept.make_reduce_to(&mut concrete_concept);
         Self {
-            concepts: vec![concrete_concept, abstract_concept],
+            concepts: check_order(&[concrete_concept, abstract_concept]),
         }
     }
 }

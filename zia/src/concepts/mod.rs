@@ -71,6 +71,10 @@ impl Debug for Concept {
 }
 
 impl Concept {
+    #[cfg(test)]
+    pub fn id(&self) -> usize {
+        self.id
+    }
     pub fn variable(&self) -> bool {
         if let SpecificPart::Abstract(AbstractPart {
             variable,

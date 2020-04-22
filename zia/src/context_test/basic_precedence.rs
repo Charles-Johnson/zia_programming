@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context::Context,
     context_delta::ContextDelta,
+    context_search_test::check_order,
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
@@ -41,7 +42,7 @@ impl Default for BasicPrecedenceSnapShot {
         let left_concept: Concept = (SpecificPart::Concrete, 9).into();
         let right_concept: Concept = (SpecificPart::Concrete, 10).into();
         Self {
-            concepts: vec![
+            concepts: check_order(&[
                 precedence_concept,
                 greater_than_concept,
                 default_concept,
@@ -53,7 +54,7 @@ impl Default for BasicPrecedenceSnapShot {
                 assoc_concept,
                 left_concept,
                 right_concept,
-            ],
+            ]),
         }
     }
 }

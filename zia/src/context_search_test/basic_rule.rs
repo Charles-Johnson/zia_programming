@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{ContextCache, ContextSearch},
+    context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
 
@@ -22,12 +23,12 @@ impl Default for BasicRuleSnapShot {
         );
         composite_concept.make_reduce_to(&mut concrete_concept);
         Self {
-            concepts: vec![
+            concepts: check_order(&[
                 concrete_concept,
                 composite_concept,
                 left_concept,
                 right_concept_variable,
-            ],
+            ]),
         }
     }
 }

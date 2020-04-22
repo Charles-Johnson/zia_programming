@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{ContextCache, ContextSearch},
+    context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
 
@@ -26,7 +27,7 @@ impl Default for BasicExistenceSnapShot {
             variable_concept,
         ];
         Self {
-            concepts: Vec::from(concepts.as_ref()),
+            concepts: check_order(&concepts),
         }
     }
 }

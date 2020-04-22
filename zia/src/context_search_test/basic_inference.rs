@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{ContextCache, ContextSearch},
+    context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
 
@@ -30,14 +31,14 @@ impl Default for BasicInferenceSnapShot {
         );
         condition_implies_result_concept.make_reduce_to(&mut true_concept);
         Self {
-            concepts: vec![
+            concepts: check_order(&[
                 implication_concept,
                 true_concept,
                 condition_concept,
                 result_concept,
                 implies_result_concept,
                 condition_implies_result_concept,
-            ],
+            ]),
         }
     }
 }
