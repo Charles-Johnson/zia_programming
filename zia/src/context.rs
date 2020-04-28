@@ -295,9 +295,22 @@ where
                                 this_index,
                             ))
                         },
+                        // syntax of token has at least an equal precedence as the previous lowest precedence syntax
+                        // include syntax is lowest precedence syntax list
+                        Comparison::EqualTo
+                        | Comparison::GreaterThanOrEqualTo => {
+                            lowest_precedence_syntax.push(syntax_of_token);
+                            lp_indices.push(this_index.unwrap());
+                            return Ok((
+                                lowest_precedence_syntax,
+                                lp_indices,
+                                this_index,
+                            ));
+                        },
                         // Cannot determine if token has higher or lower precedence than this syntax
                         // Check other syntax with lowest precedence
-                        Comparison::Incomparable => (),
+                        Comparison::Incomparable
+                        | Comparison::LessThanOrEqualTo => (),
                     };
                 }
                 // syntax of token has neither higher or lower precedence than the lowest precedence syntax

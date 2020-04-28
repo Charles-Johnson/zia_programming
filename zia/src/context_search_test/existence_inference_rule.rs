@@ -23,12 +23,28 @@ impl Default for ExistenceInferenceRuleSnapShot {
         let mut concept_b = (SpecificPart::default(), 10).into();
         let mut bound_variable = (SpecificPart::variable(), 11).into();
         let mut exists_such_that_concept = (SpecificPart::Concrete, 14).into();
-        let mut bound_variable_composed_with_free_variable = Concept::composition_of(13, &mut bound_variable, &mut free_variable_concept);
-        let mut exists_such_that_bound_variable_composed_with_free_variable = Concept::composition_of(12, &mut exists_such_that_concept, &mut bound_variable_composed_with_free_variable);
-        let mut cause_concept =
-            Concept::composition_of(4, &mut bound_variable, &mut exists_such_that_bound_variable_composed_with_free_variable);
-        let mut result_concept =
-            Concept::composition_of(2, &mut free_variable_concept, &mut concept_b);
+        let mut bound_variable_composed_with_free_variable =
+            Concept::composition_of(
+                13,
+                &mut bound_variable,
+                &mut free_variable_concept,
+            );
+        let mut exists_such_that_bound_variable_composed_with_free_variable =
+            Concept::composition_of(
+                12,
+                &mut exists_such_that_concept,
+                &mut bound_variable_composed_with_free_variable,
+            );
+        let mut cause_concept = Concept::composition_of(
+            4,
+            &mut bound_variable,
+            &mut exists_such_that_bound_variable_composed_with_free_variable,
+        );
+        let mut result_concept = Concept::composition_of(
+            2,
+            &mut free_variable_concept,
+            &mut concept_b,
+        );
         let mut implies_result_concept = Concept::composition_of(
             5,
             &mut implication_concept,
@@ -62,7 +78,7 @@ impl Default for ExistenceInferenceRuleSnapShot {
             bound_variable_composed_with_free_variable,
             exists_such_that_concept,
             assoc_concept,
-            right_concept
+            right_concept,
         ];
         Self {
             concepts: check_order(&concepts),
@@ -93,7 +109,7 @@ impl Reader for ExistenceInferenceRuleSnapShot {
             10 => Some("b".into()),
             11 => Some("_x_".into()),
             14 => Some("exists_such_that".into()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -111,7 +127,7 @@ impl Reader for ExistenceInferenceRuleSnapShot {
             "b" => Some(10),
             "_x_" => Some(11),
             "exists_such_that" => Some(14),
-            _ => None
+            _ => None,
         }
     }
 

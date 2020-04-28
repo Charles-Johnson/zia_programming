@@ -34,14 +34,22 @@ pub struct SyntaxTree {
 impl PartialEq<SyntaxTree> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
+        if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
+            ss == os
+        } else {
+            self.concept == other.concept
+        }
     }
 }
 
 impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Arc<Self>) -> bool {
-        self.to_string() == other.to_string() && self.concept == other.concept
+        if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
+            ss == os
+        } else {
+            self.concept == other.concept
+        }
     }
 }
 

@@ -616,37 +616,45 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         some_syntax: &Arc<SyntaxTree>,
         another_syntax: &Arc<SyntaxTree>,
     ) -> Comparison {
+        if some_syntax == another_syntax {
+            return Comparison::EqualTo;
+        }
         let greater_than_syntax =
             SyntaxTree::new_concept(S::greater_than_id()).into();
         let comparing_syntax = self.combine(
             some_syntax,
             &self.combine(&greater_than_syntax, another_syntax),
         );
-        match self.recursively_reduce(&comparing_syntax).get_concept() {
-            Some(x) if x == S::true_id() => Comparison::GreaterThan,
-            Some(x) if x == S::false_id() => Comparison::LessThan,
-            _ => {
-                let reversed_comparison = self.combine(
-                    another_syntax,
-                    &self.combine(&greater_than_syntax, some_syntax),
-                );
-                match self
-                    .recursively_reduce(&reversed_comparison)
-                    .get_concept()
-                {
-                    Some(x) if x == S::true_id() => Comparison::LessThan,
-                    Some(x) if x == S::false_id() => Comparison::GreaterThan,
-                    _ => Comparison::Incomparable,
-                }
+        let reversed_comparison = self.combine(
+            another_syntax,
+            &self.combine(&greater_than_syntax, some_syntax),
+        );
+        match (
+            self.recursively_reduce(&comparing_syntax).get_concept(),
+            self.recursively_reduce(&reversed_comparison).get_concept(),
+        ) {
+            (Some(x), Some(y)) if x == S::false_id() && y == S::false_id() => {
+                Comparison::EqualTo
             },
+            (Some(x), _) if x == S::true_id() => Comparison::GreaterThan,
+            (_, Some(x)) if x == S::true_id() => Comparison::LessThan,
+            (Some(x), _) if x == S::false_id() => Comparison::LessThanOrEqualTo,
+            (_, Some(x)) if x == S::false_id() => {
+                Comparison::GreaterThanOrEqualTo
+            },
+            _ => Comparison::Incomparable,
         }
     }
 }
 
+#[derive(PartialEq, Debug)]
 pub enum Comparison {
     GreaterThan,
     LessThan,
     Incomparable,
+    EqualTo,
+    GreaterThanOrEqualTo,
+    LessThanOrEqualTo,
 }
 
 impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {

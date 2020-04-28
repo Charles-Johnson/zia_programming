@@ -18,7 +18,11 @@ impl Default for BasicCompositionSnapShot {
         let composite_concept =
             Concept::composition_of(0, &mut left_concept, &mut right_concept);
         Self {
-            concepts: check_order(&[composite_concept, left_concept, right_concept]),
+            concepts: check_order(&[
+                composite_concept,
+                left_concept,
+                right_concept,
+            ]),
         }
     }
 }
