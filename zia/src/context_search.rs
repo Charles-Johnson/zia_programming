@@ -18,7 +18,6 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept},
-    context::is_variable,
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
     snap_shot::Reader as SnapShotReader,
@@ -421,7 +420,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 })
             },
             x if x == S::exists_such_that_id()
-                && is_variable(&left.to_string()) =>
+                && left.get_concept().map_or(false, |c| self.is_free_variable(c)) =>
             {
                 let mut might_exist = false;
                 let results: Vec<Option<bool>> = (0..self
@@ -635,6 +634,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         ) {
             (Some(x), Some(y)) if x == S::false_id() && y == S::false_id() => {
                 Comparison::EqualTo
+            },
+            (Some(x), Some(y)) if x == S::true_id() && y == S::true_id() => {
+                panic!("{:#?} is both greater than and less than {:#?}!", some_syntax, another_syntax)
             },
             (Some(x), _) if x == S::true_id() => Comparison::GreaterThan,
             (_, Some(x)) if x == S::true_id() => Comparison::LessThan,

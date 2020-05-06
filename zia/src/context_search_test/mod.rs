@@ -4,6 +4,7 @@ mod basic_existence;
 mod basic_inference;
 mod basic_reduction;
 mod basic_rule;
+mod comparison_existence_implication_rule;
 mod existence_inference_rule;
 mod inference_rule;
 
