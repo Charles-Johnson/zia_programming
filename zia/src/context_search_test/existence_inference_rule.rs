@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    context_search::{ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader,
 };
@@ -184,8 +184,20 @@ fn existence_inference_rule() {
         SyntaxTree::from("b").bind_concept(10),
     );
     let true_syntax = SyntaxTree::from("true").bind_concept(1);
+    let cause_syntax = context_search.to_ast(4);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
-        Some(true_syntax.into())
+        Some((true_syntax.into(), ReductionReason::Rule{
+                pattern: 2,
+                reason: ReductionReason::Inference{
+                    implication: 6,
+                    condition: 4,
+                    reason: ReductionReason::Existence{
+                        example: 3,
+                        reason: ReductionReason::Explicit.into(),
+                        assumption: cause_syntax
+                }.into()
+            }.into()
+        }))
     );
 }

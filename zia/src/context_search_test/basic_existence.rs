@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    context_search::{ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
@@ -107,11 +107,15 @@ fn basic_existence() {
         SyntaxTree::new_pair(
             variable_syntax(),
             SyntaxTree::new_pair(exists_such_that_syntax, variable_syntax()),
-        );
+        ).into();
 
     assert_eq!(
         context_search
-            .reduce(&variable_exists_such_that_variable_is_true_syntax.into()),
-        Some(SyntaxTree::from("true").bind_concept(1).into())
+            .reduce(&variable_exists_such_that_variable_is_true_syntax),
+        Some((SyntaxTree::from("true").bind_concept(1).into(), ReductionReason::Existence{
+            example: 2,
+            reason: ReductionReason::Explicit.into(),
+            assumption: variable_exists_such_that_variable_is_true_syntax
+        }))
     );
 }

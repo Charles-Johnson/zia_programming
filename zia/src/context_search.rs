@@ -42,12 +42,30 @@ pub struct ContextSearch<'a, S> {
 
 #[derive(Debug, Default, Clone)]
 pub struct ContextCache {
-    reductions: DashMap<Arc<SyntaxTree>, Option<Arc<SyntaxTree>>>,
+    reductions: DashMap<Arc<SyntaxTree>, ReductionResult>,
     syntax_trees: DashMap<usize, Arc<SyntaxTree>>,
 }
 
+type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReductionReason {
+    Explicit,
+    Rule{pattern: usize, reason: Arc<ReductionReason>},
+    Inference{implication: usize, condition: usize, reason: Arc<ReductionReason>},
+    Default{operator: usize},
+    Composition{left: Option<Arc<ReductionReason>>, right: Option<Arc<ReductionReason>>},
+    Existence{example: usize, reason: Arc<ReductionReason>, assumption: Arc<SyntaxTree>},
+    NonExistence{example: usize, reason: Arc<ReductionReason>, assumption: Arc<SyntaxTree>},
+    Absence,
+    Recursive{syntax: Arc<SyntaxTree>, reason: Arc<ReductionReason>, from: Arc<ReductionReason>},
+    SyntaxCannotReduceToItself,
+    LeftReducesToRight{reason: Arc<ReductionReason>, left: Arc<SyntaxTree>, right: Arc<SyntaxTree>},
+    RightReducesToLeft{reason: Arc<ReductionReason>, left: Arc<SyntaxTree>, right: Arc<SyntaxTree>}
+}
+
 impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
-    fn infer_reduction(&self, concept: &Concept) -> Option<Arc<SyntaxTree>> {
+    fn infer_reduction(&self, concept: &Concept) -> ReductionResult {
         debug!("infer_reduction({:#?})", concept);
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
@@ -59,15 +77,18 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                             .get_definition()
                             .and_then(|(condition, _)| {
                                 self.reduce(&self.to_ast(condition))
-                                    .and_then(|condition_ast| {
-                                        condition_ast.get_concept()
-                                    })
-                                    .and_then(|x| {
-                                        if x == S::true_id() {
-                                            Some(self.to_ast(x))
-                                        } else {
-                                            None
-                                        }
+                                    .and_then(|(condition_ast, reason)| {
+                                        condition_ast.get_concept().and_then(|x| {
+                                            if x == S::true_id() {
+                                                Some((self.to_ast(x), ReductionReason::Inference{
+                                                    condition,
+                                                    implication: *roro,
+                                                    reason: reason.into()
+                                                }))
+                                            } else {
+                                                None
+                                            }
+                                        })
                                     })
                             })
                     })
@@ -79,7 +100,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(&self, id: usize) -> Option<Arc<SyntaxTree>> {
+    fn reduce_concept(&self, id: usize) -> ReductionResult {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
@@ -89,7 +110,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 } else {
                     Some(self.to_ast(n))
                 }
-            })
+            }).map(|r| (r, ReductionReason::Explicit))
         })
     }
 
@@ -98,26 +119,26 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         ast: &Arc<SyntaxTree>,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
-        left_concept_id: usize,
+        operator: usize,
         default_concept_id: usize,
-    ) -> Option<Arc<SyntaxTree>> {
-        let mut reduced_pair: Option<Arc<SyntaxTree>> = None;
+    ) -> ReductionResult {
+        let mut reduced_pair: ReductionResult = None;
         if self.syntax_evaluating.get(ast).is_some() || {
             let mut context_search = self.clone();
             context_search.syntax_evaluating.insert(ast.clone());
-            reduced_pair = context_search.reduce_pair(left, right);
-            let find = |c| self.find_definition(left_concept_id, c);
+            reduced_pair = context_search.reduce_pair(left, right, ast);
+            let find = |c| self.find_definition(operator, c);
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
         } {
-            Some(self.to_ast(default_concept_id))
+            Some((self.to_ast(default_concept_id), ReductionReason::Default{operator}))
         } else {
             reduced_pair
         }
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> Option<Arc<SyntaxTree>> {
+    pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> ReductionResult {
         debug!("reduce({})", ast.to_string());
         self.cache.reductions.get(ast).map_or_else(
             || {
@@ -148,11 +169,11 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                         None
                                     }
                                 })
-                                .or_else(|| self.reduce_pair(left, right))
+                                .or_else(|| self.reduce_pair(left, right, ast))
                         })
                     });
                 if !ast.is_variable()
-                    && (&result).as_ref().map_or(true, |r| r != ast)
+                    && (&result).as_ref().map_or(true, |(r, _)| r != ast)
                 {
                     self.cache.reductions.insert(ast.clone(), result.clone());
                 }
@@ -167,13 +188,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
-    ) -> Option<Arc<SyntaxTree>> {
+        full_syntax: &Arc<SyntaxTree>
+    ) -> ReductionResult {
         debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
         right
             .get_expansion()
             .and_then(|(ref rightleft, ref rightright)| {
                 self.reduce_by_expanded_right_branch(
-                    left, rightleft, rightright,
+                    left, rightleft, rightright, full_syntax
                 )
             })
             .or_else(|| self.recursively_reduce_pair(left, right))
@@ -183,7 +205,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
-    ) -> Option<Arc<SyntaxTree>> {
+    ) -> ReductionResult {
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
         let maybe_subbed_r =
@@ -199,15 +221,15 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         .extend(variable_to_syntax.clone());
                     context_search
                         .reduce_concept(*generalisation)
-                        .map(|ast| context_search.substitute(&ast))
+                        .map(|(ast, reason)| (context_search.substitute(&ast), ReductionReason::Rule{pattern: *generalisation, reason: Arc::new(reason)}))
                 },
             )
         } else {
-            let l = left_result
-                .unwrap_or_else(|| maybe_subbed_l.unwrap_or(left).clone());
-            let r = right_result
-                .unwrap_or_else(|| maybe_subbed_r.unwrap_or(right).clone());
-            Some(self.contract_pair(&l, &r))
+            let (left_ast, left_reason) = left_result
+                .map_or_else(|| (maybe_subbed_l.unwrap_or(left).clone(), None), |(ast, reason)| (ast, Some(Arc::new(reason))));
+            let (right_ast, right_reason) = right_result
+                .map_or_else(|| (maybe_subbed_r.unwrap_or(right).clone(), None), |(ast, reason)| (ast, Some(Arc::new(reason))));
+            Some((self.contract_pair(&left_ast, &right_ast), ReductionReason::Composition{left: left_reason, right: right_reason}))
         }
     }
 
@@ -395,11 +417,17 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
-    pub fn recursively_reduce(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
-        match self.reduce(ast) {
-            Some(ref a) => self.recursively_reduce(a),
-            None => ast.clone(),
+    pub fn recursively_reduce(&self, ast: &Arc<SyntaxTree>) -> (Arc<SyntaxTree>, Option<ReductionReason>) {
+        let mut maybe_reason: Option<ReductionReason> = None;
+        let mut reduced_ast = ast.clone();
+        while let Some((ref a, ref reason)) = self.reduce(&reduced_ast) {
+            maybe_reason = Some(maybe_reason.map_or(
+                reason.clone(),
+                |from| ReductionReason::Recursive{from: from.into(), reason: reason.clone().into(), syntax: reduced_ast}
+            ));
+            reduced_ast = a.clone();
         }
+        (reduced_ast, maybe_reason)
     }
 
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -408,14 +436,15 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         left: &Arc<SyntaxTree>,
         rightleft: &Arc<SyntaxTree>,
         rightright: &Arc<SyntaxTree>,
-    ) -> Option<Arc<SyntaxTree>> {
+        full_syntax: &Arc<SyntaxTree>
+    ) -> ReductionResult {
         rightleft.get_concept().and_then(|rlc| match rlc {
             x if x == S::reduction_id() => {
-                self.determine_reduction_truth(left, rightright).map(|x| {
+                self.determine_reduction_truth(left, rightright).map(|(x, reason)| {
                     if x {
-                        self.to_ast(S::true_id())
+                        (self.to_ast(S::true_id()), reason)
                     } else {
-                        self.to_ast(S::false_id())
+                        (self.to_ast(S::false_id()), reason)
                     }
                 })
             },
@@ -423,7 +452,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 && left.get_concept().map_or(false, |c| self.is_free_variable(c)) =>
             {
                 let mut might_exist = false;
-                let results: Vec<Option<bool>> = (0..self
+                let results: Vec<Option<(bool, ReductionReason)>> = (0..self
                     .snap_shot
                     .lowest_unoccupied_concept_id(self.delta))
                     .into_par_iter()
@@ -436,25 +465,19 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 left.get_concept().unwrap(),
                                 self.to_ast(i),
                             );
-                            let mut truth_value =
-                                context_search.substitute(rightright);
-                            debug!(
-                                "Reducing expression: {}",
-                                truth_value.to_string()
-                            );
-                            while let Some(reduced_rightright) =
-                                self.reduce(&truth_value)
-                            {
-                                debug!(
-                                    "{} reduces to {}",
-                                    truth_value.to_string(),
-                                    reduced_rightright.to_string()
-                                );
-                                truth_value = reduced_rightright;
-                            }
-                            match truth_value.get_concept() {
-                                Some(x) if x == S::true_id() => Some(true),
-                                Some(x) if x == S::false_id() => Some(false),
+                            let (truth_value, maybe_reason) =
+                                self.recursively_reduce(&context_search.substitute(rightright));
+                            match (truth_value.get_concept(), maybe_reason) {
+                                (Some(x), Some(reason)) if x == S::true_id() => Some((true, ReductionReason::Existence{
+                                    example: i,
+                                    reason: reason.into(),
+                                    assumption: full_syntax.clone()
+                                })),
+                                (Some(x), Some(reason)) if x == S::false_id() => Some((false, ReductionReason::NonExistence{
+                                    example: i,
+                                    reason: reason.into(),
+                                    assumption: full_syntax.clone()
+                                })),
                                 _ => None,
                             }
                         }
@@ -462,15 +485,15 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     .collect();
                 for result in results {
                     match result {
-                        Some(true) => return Some(self.to_ast(S::true_id())),
-                        Some(false) => (),
+                        Some((true, reason)) => return Some((self.to_ast(S::true_id()), reason)),
+                        Some((false, _)) => (),
                         _ => might_exist = true,
                     };
                 }
                 if might_exist {
                     None
                 } else {
-                    Some(self.to_ast(S::false_id()))
+                    Some((self.to_ast(S::false_id()), ReductionReason::Absence))
                 }
             }
             _ => None,
@@ -481,13 +504,16 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
-    ) -> Option<bool> {
+    ) -> Option<(bool, ReductionReason)> {
         if left == right {
-            Some(false)
+            Some((false, ReductionReason::SyntaxCannotReduceToItself))
         } else {
-            self.determine_evidence_of_reduction(left, right).or_else(|| {
-                self.determine_evidence_of_reduction(right, left).map(|x| !x)
-            })
+            match (self.determine_evidence_of_reduction(left, right), self.determine_evidence_of_reduction(right, left)) {
+                (Some(_), Some(_)) => panic!("{:#?} and {:#?} reduce to each other?!", left, right),
+                (Some(reason), None) => Some((true, ReductionReason::LeftReducesToRight{reason: reason.into(), left: left.clone(), right: right.clone()})),
+                (None, Some(reason)) => Some((false, ReductionReason::RightReducesToLeft{reason: reason.into(), left: left.clone(), right: right.clone()})),
+                (None, None) => None
+            }
         }
     }
 
@@ -495,12 +521,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
-    ) -> Option<bool> {
-        self.reduce(left).and_then(|reduced_left| {
+    ) -> Option<ReductionReason> {
+        self.reduce(left).and_then(|(reduced_left, reason)| {
             if &reduced_left == right {
-                Some(true)
+                Some(reason)
             } else {
-                self.determine_evidence_of_reduction(&reduced_left, right)
+                self.determine_evidence_of_reduction(&reduced_left, right).map(|new_reason| ReductionReason::Recursive{syntax: left.clone(), reason: new_reason.into(), from: reason.into()})
             }
         })
     }
@@ -576,7 +602,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     pub fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
         let assoc_of_ast = self.combine(&self.to_ast(S::assoc_id()), ast);
         if Some(S::left_id())
-            == self.reduce(&assoc_of_ast).and_then(|ast| ast.get_concept())
+            == self.reduce(&assoc_of_ast).and_then(|(ast, _)| ast.get_concept())
         {
             Associativity::Left
         } else {
@@ -629,8 +655,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             &self.combine(&greater_than_syntax, some_syntax),
         );
         match (
-            self.recursively_reduce(&comparing_syntax).get_concept(),
-            self.recursively_reduce(&reversed_comparison).get_concept(),
+            self.recursively_reduce(&comparing_syntax).0.get_concept(),
+            self.recursively_reduce(&reversed_comparison).0.get_concept(),
         ) {
             (Some(x), Some(y)) if x == S::false_id() && y == S::false_id() => {
                 Comparison::EqualTo

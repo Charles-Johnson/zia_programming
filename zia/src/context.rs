@@ -424,9 +424,9 @@ where
         let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
-            (Some(rl), None) => self.call_pair(&rl, right),
-            (None, Some(rr)) => self.call_pair(left, &rr),
-            (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
+            (Some((rl, _)), None) => self.call_pair(&rl, right),
+            (None, Some((rr, _))) => self.call_pair(left, &rr),
+            (Some((rl, _)), Some((rr, _))) => self.call_pair(&rl, &rr),
         }
     }
 
@@ -448,7 +448,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let normal_form = &self.context_search().recursively_reduce(ast);
+        let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
         } else {

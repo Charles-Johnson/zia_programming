@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    context_search::{ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader,
 };
@@ -114,6 +114,13 @@ fn inference_rule() {
     let true_syntax = SyntaxTree::new_concept(1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
-        Some(true_syntax.into())
+        Some((true_syntax.into(), ReductionReason::Rule{
+            reason: ReductionReason::Inference{
+                condition: 4,
+                implication: 6,
+                reason: ReductionReason::Explicit.into()
+            }.into(),
+            pattern: 2
+        }))
     );
 }

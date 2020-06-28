@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    context_search::{ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
@@ -99,14 +99,18 @@ fn basic_inference() {
     ));
     let true_syntax = || SyntaxTree::from("true").bind_concept(1);
     let result_syntax = || SyntaxTree::from("b").bind_concept(3);
-
+    let reduction_reason = ReductionReason::Inference{
+        implication: 5,
+        condition: 2,
+        reason: ReductionReason::Explicit.into()
+    };
     assert_eq!(
         context_search.reduce(&result_syntax().into()),
-        Some(true_syntax().into())
+        Some((true_syntax().into(), reduction_reason.clone()))
     );
 
     assert_eq!(
         context_search.recursively_reduce(&result_syntax().into()),
-        true_syntax().into()
+        (true_syntax().into(), Some(reduction_reason))
     );
 }

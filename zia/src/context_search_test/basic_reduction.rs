@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch},
+    context_search::{ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
@@ -69,16 +69,16 @@ fn basic_reduction() {
 
     assert_eq!(
         context_search.recursively_reduce(&abstract_syntax().into()),
-        concrete_syntax().into()
+        (concrete_syntax().into(), Some(ReductionReason::Explicit))
     );
     assert_eq!(
         context_search.recursively_reduce(&concrete_syntax().into()),
-        concrete_syntax().into()
+        (concrete_syntax().into(), None)
     );
 
     assert_eq!(
         context_search.reduce(&abstract_syntax().into()),
-        Some(concrete_syntax().into())
+        Some((concrete_syntax().into(), ReductionReason::Explicit))
     );
     assert_eq!(context_search.reduce(&concrete_syntax().into()), None);
 
