@@ -659,7 +659,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     } else {
                         SyntaxTree::new_concept(concept_id).into()
                     };
-                    self.cache.syntax_trees.insert(concept_id, syntax.clone());
+                    if !concept.variable() {
+                        self.cache.syntax_trees.insert(concept_id, syntax.clone());
+                    }
                     syntax
                 },
                 |r| r.value().clone(),
