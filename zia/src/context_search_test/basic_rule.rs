@@ -94,11 +94,23 @@ fn basic_rule() {
 
     assert_eq!(
         context_search.reduce(&left_and_random_syntax),
-        Some((concrete_syntax().into(), ReductionReason::Rule{pattern: 1, reason: ReductionReason::Explicit.into()}))
+        Some((
+            concrete_syntax().into(),
+            ReductionReason::Rule {
+                pattern: 1,
+                reason: ReductionReason::Explicit.into()
+            }
+        ))
     );
 
     assert_eq!(
         context_search.recursively_reduce(&left_and_random_syntax),
-        (concrete_syntax().into(), Some(ReductionReason::Rule{pattern: 1, reason: ReductionReason::Explicit.into()}))
+        (
+            concrete_syntax().into(),
+            Some(ReductionReason::Rule {
+                pattern: 1,
+                reason: ReductionReason::Explicit.into()
+            })
+        )
     );
 }

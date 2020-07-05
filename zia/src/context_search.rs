@@ -52,17 +52,47 @@ type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
 #[derive(Clone, PartialEq, Debug)]
 pub enum ReductionReason {
     Explicit,
-    Rule{pattern: usize, reason: Arc<ReductionReason>},
-    Inference{implication: Arc<SyntaxTree>, condition: Arc<SyntaxTree>, reason: Arc<ReductionReason>},
-    Default{operator: usize},
-    Composition{left: Option<Arc<ReductionReason>>, right: Option<Arc<ReductionReason>>},
-    Existence{example: Arc<SyntaxTree>, reason: Arc<ReductionReason>},
-    NonExistence{example: Arc<SyntaxTree>, reason: Arc<ReductionReason>},
+    Rule {
+        pattern: usize,
+        reason: Arc<ReductionReason>,
+    },
+    Inference {
+        implication: Arc<SyntaxTree>,
+        condition: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason>,
+    },
+    Default {
+        operator: usize,
+    },
+    Composition {
+        left: Option<Arc<ReductionReason>>,
+        right: Option<Arc<ReductionReason>>,
+    },
+    Existence {
+        example: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason>,
+    },
+    NonExistence {
+        example: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason>,
+    },
     Absence,
-    Recursive{syntax: Arc<SyntaxTree>, reason: Arc<ReductionReason>, from: Arc<ReductionReason>},
+    Recursive {
+        syntax: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason>,
+        from: Arc<ReductionReason>,
+    },
     SyntaxCannotReduceToItself,
-    LeftReducesToRight{reason: Arc<ReductionReason>, left: Arc<SyntaxTree>, right: Arc<SyntaxTree>},
-    RightReducesToLeft{reason: Arc<ReductionReason>, left: Arc<SyntaxTree>, right: Arc<SyntaxTree>}
+    LeftReducesToRight {
+        reason: Arc<ReductionReason>,
+        left: Arc<SyntaxTree>,
+        right: Arc<SyntaxTree>,
+    },
+    RightReducesToLeft {
+        reason: Arc<ReductionReason>,
+        left: Arc<SyntaxTree>,
+        right: Arc<SyntaxTree>,
+    },
 }
 
 impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
@@ -106,16 +136,20 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
-            concept.get_reduction().and_then(|n| {
-                if self.is_leaf_variable(n) {
-                    self.variable_mask.get(&n).cloned()
-                } else {
-                    Some(self.to_ast(n))
-                }
-            }).map(|r| (r, ReductionReason::Explicit))
+            concept
+                .get_reduction()
+                .and_then(|n| {
+                    if self.is_leaf_variable(n) {
+                        self.variable_mask.get(&n).cloned()
+                    } else {
+                        Some(self.to_ast(n))
+                    }
+                })
+                .map(|r| (r, ReductionReason::Explicit))
         })
     }
-    // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept 
+
+    // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept
     fn reduce_otherwise_default(
         &self,
         ast: &Arc<SyntaxTree>,
@@ -133,7 +167,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
         } {
-            Some((self.to_ast(default_concept_id), ReductionReason::Default{operator: operator_id}))
+            Some((
+                self.to_ast(default_concept_id),
+                ReductionReason::Default {
+                    operator: operator_id,
+                },
+            ))
         } else {
             reduced_pair
         }
@@ -189,14 +228,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     fn reduce_pair(
         &self,
         left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>
+        right: &Arc<SyntaxTree>,
     ) -> ReductionResult {
         debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
         right
             .get_expansion()
             .and_then(|(ref rightleft, ref rightright)| {
                 self.reduce_by_expanded_right_branch(
-                    left, rightleft, rightright
+                    left, rightleft, rightright,
                 )
             })
             .or_else(|| self.recursively_reduce_pair(left, right))
@@ -220,17 +259,35 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     context_search
                         .variable_mask
                         .extend(variable_to_syntax.clone());
-                    context_search
-                        .reduce_concept(*generalisation)
-                        .map(|(ast, reason)| (context_search.substitute(&ast), ReductionReason::Rule{pattern: *generalisation, reason: Arc::new(reason)}))
+                    context_search.reduce_concept(*generalisation).map(
+                        |(ast, reason)| {
+                            (
+                                context_search.substitute(&ast),
+                                ReductionReason::Rule {
+                                    pattern: *generalisation,
+                                    reason: Arc::new(reason),
+                                },
+                            )
+                        },
+                    )
                 },
             )
         } else {
-            let (left_ast, left_reason) = left_result
-                .map_or_else(|| (maybe_subbed_l.unwrap_or(left).clone(), None), |(ast, reason)| (ast, Some(Arc::new(reason))));
-            let (right_ast, right_reason) = right_result
-                .map_or_else(|| (maybe_subbed_r.unwrap_or(right).clone(), None), |(ast, reason)| (ast, Some(Arc::new(reason))));
-            Some((self.contract_pair(&left_ast, &right_ast), ReductionReason::Composition{left: left_reason, right: right_reason}))
+            let (left_ast, left_reason) = left_result.map_or_else(
+                || (maybe_subbed_l.unwrap_or(left).clone(), None),
+                |(ast, reason)| (ast, Some(Arc::new(reason))),
+            );
+            let (right_ast, right_reason) = right_result.map_or_else(
+                || (maybe_subbed_r.unwrap_or(right).clone(), None),
+                |(ast, reason)| (ast, Some(Arc::new(reason))),
+            );
+            Some((
+                self.contract_pair(&left_ast, &right_ast),
+                ReductionReason::Composition {
+                    left: left_reason,
+                    right: right_reason,
+                },
+            ))
         }
     }
 
@@ -418,14 +475,20 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
-    pub fn recursively_reduce(&self, ast: &Arc<SyntaxTree>) -> (Arc<SyntaxTree>, Option<ReductionReason>) {
+    pub fn recursively_reduce(
+        &self,
+        ast: &Arc<SyntaxTree>,
+    ) -> (Arc<SyntaxTree>, Option<ReductionReason>) {
         let mut maybe_reason: Option<ReductionReason> = None;
         let mut reduced_ast = ast.clone();
         while let Some((ref a, ref reason)) = self.reduce(&reduced_ast) {
-            maybe_reason = Some(maybe_reason.map_or(
-                reason.clone(),
-                |from| ReductionReason::Recursive{from: from.into(), reason: reason.clone().into(), syntax: reduced_ast}
-            ));
+            maybe_reason = Some(maybe_reason.map_or(reason.clone(), |from| {
+                ReductionReason::Recursive {
+                    from: from.into(),
+                    reason: reason.clone().into(),
+                    syntax: reduced_ast,
+                }
+            }));
             reduced_ast = a.clone();
         }
         (reduced_ast, maybe_reason)
@@ -436,20 +499,22 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         left: &Arc<SyntaxTree>,
         rightleft: &Arc<SyntaxTree>,
-        rightright: &Arc<SyntaxTree>
+        rightright: &Arc<SyntaxTree>,
     ) -> ReductionResult {
         rightleft.get_concept().and_then(|rlc| match rlc {
-            x if x == S::reduction_id() => {
-                self.determine_reduction_truth(left, rightright).map(|(x, reason)| {
+            x if x == S::reduction_id() => self
+                .determine_reduction_truth(left, rightright)
+                .map(|(x, reason)| {
                     if x {
                         (self.to_ast(S::true_id()), reason)
                     } else {
                         (self.to_ast(S::false_id()), reason)
                     }
-                })
-            },
+                }),
             x if x == S::exists_such_that_id()
-                && left.get_concept().map_or(false, |c| self.is_free_variable(c)) =>
+                && left
+                    .get_concept()
+                    .map_or(false, |c| self.is_free_variable(c)) =>
             {
                 let mut might_exist = false;
                 let results: Vec<Option<(bool, ReductionReason)>> = (0..self
@@ -466,17 +531,33 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 left.get_concept().unwrap(),
                                 example.clone(),
                             );
-                            let (truth_value, maybe_reason) =
-                                self.recursively_reduce(&context_search.substitute(rightright));
+                            let (truth_value, maybe_reason) = self
+                                .recursively_reduce(
+                                    &context_search.substitute(rightright),
+                                );
                             match (truth_value.get_concept(), maybe_reason) {
-                                (Some(x), Some(reason)) if x == S::true_id() => Some((true, ReductionReason::Existence{
-                                    example,
-                                    reason: reason.into()
-                                })),
-                                (Some(x), Some(reason)) if x == S::false_id() => Some((false, ReductionReason::NonExistence{
-                                    example,
-                                    reason: reason.into()
-                                })),
+                                (Some(x), Some(reason))
+                                    if x == S::true_id() =>
+                                {
+                                    Some((
+                                        true,
+                                        ReductionReason::Existence {
+                                            example,
+                                            reason: reason.into(),
+                                        },
+                                    ))
+                                },
+                                (Some(x), Some(reason))
+                                    if x == S::false_id() =>
+                                {
+                                    Some((
+                                        false,
+                                        ReductionReason::NonExistence {
+                                            example,
+                                            reason: reason.into(),
+                                        },
+                                    ))
+                                },
                                 _ => None,
                             }
                         }
@@ -484,7 +565,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     .collect();
                 for result in results {
                     match result {
-                        Some((true, reason)) => return Some((self.to_ast(S::true_id()), reason)),
+                        Some((true, reason)) => {
+                            return Some((self.to_ast(S::true_id()), reason))
+                        },
                         Some((false, _)) => (),
                         _ => might_exist = true,
                     };
@@ -507,11 +590,31 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         if left == right {
             Some((false, ReductionReason::SyntaxCannotReduceToItself))
         } else {
-            match (self.determine_evidence_of_reduction(left, right), self.determine_evidence_of_reduction(right, left)) {
-                (Some(_), Some(_)) => panic!("{:#?} and {:#?} reduce to each other?!", left, right),
-                (Some(reason), None) => Some((true, ReductionReason::LeftReducesToRight{reason: reason.into(), left: left.clone(), right: right.clone()})),
-                (None, Some(reason)) => Some((false, ReductionReason::RightReducesToLeft{reason: reason.into(), left: left.clone(), right: right.clone()})),
-                (None, None) => None
+            match (
+                self.determine_evidence_of_reduction(left, right),
+                self.determine_evidence_of_reduction(right, left),
+            ) {
+                (Some(_), Some(_)) => panic!(
+                    "{:#?} and {:#?} reduce to each other?!",
+                    left, right
+                ),
+                (Some(reason), None) => Some((
+                    true,
+                    ReductionReason::LeftReducesToRight {
+                        reason: reason.into(),
+                        left: left.clone(),
+                        right: right.clone(),
+                    },
+                )),
+                (None, Some(reason)) => Some((
+                    false,
+                    ReductionReason::RightReducesToLeft {
+                        reason: reason.into(),
+                        left: left.clone(),
+                        right: right.clone(),
+                    },
+                )),
+                (None, None) => None,
             }
         }
     }
@@ -525,7 +628,13 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             if &reduced_left == right {
                 Some(reason)
             } else {
-                self.determine_evidence_of_reduction(&reduced_left, right).map(|new_reason| ReductionReason::Recursive{syntax: left.clone(), reason: new_reason.into(), from: reason.into()})
+                self.determine_evidence_of_reduction(&reduced_left, right).map(
+                    |new_reason| ReductionReason::Recursive {
+                        syntax: left.clone(),
+                        reason: new_reason.into(),
+                        from: reason.into(),
+                    },
+                )
             }
         })
     }
@@ -653,26 +762,40 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             another_syntax,
             &self.combine(&greater_than_syntax, some_syntax),
         );
-        let (syntax_comparison, reason) = self.recursively_reduce(&comparing_syntax);
-        let (reversed_comparison, reversed_reason) = self.recursively_reduce(&comparing_reversed_syntax);
-        (match (
-            syntax_comparison.get_concept(),
-            reversed_comparison.get_concept(),
-        ) {
-            (Some(x), Some(y)) if x == S::false_id() && y == S::false_id() => {
-                Comparison::EqualTo
+        let (syntax_comparison, reason) =
+            self.recursively_reduce(&comparing_syntax);
+        let (reversed_comparison, reversed_reason) =
+            self.recursively_reduce(&comparing_reversed_syntax);
+        (
+            match (
+                syntax_comparison.get_concept(),
+                reversed_comparison.get_concept(),
+            ) {
+                (Some(x), Some(y))
+                    if x == S::false_id() && y == S::false_id() =>
+                {
+                    Comparison::EqualTo
+                },
+                (Some(x), Some(y))
+                    if x == S::true_id() && y == S::true_id() =>
+                {
+                    panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
+                }
+                (Some(x), _) if x == S::true_id() => Comparison::GreaterThan,
+                (_, Some(x)) if x == S::true_id() => Comparison::LessThan,
+                (Some(x), _) if x == S::false_id() => {
+                    Comparison::LessThanOrEqualTo
+                },
+                (_, Some(x)) if x == S::false_id() => {
+                    Comparison::GreaterThanOrEqualTo
+                },
+                _ => Comparison::Incomparable,
             },
-            (Some(x), Some(y)) if x == S::true_id() && y == S::true_id() => {
-                panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
+            ComparisonReason::Reduction {
+                reason,
+                reversed_reason,
             },
-            (Some(x), _) if x == S::true_id() => Comparison::GreaterThan,
-            (_, Some(x)) if x == S::true_id() => Comparison::LessThan,
-            (Some(x), _) if x == S::false_id() => Comparison::LessThanOrEqualTo,
-            (_, Some(x)) if x == S::false_id() => {
-                Comparison::GreaterThanOrEqualTo
-            },
-            _ => Comparison::Incomparable,
-        }, ComparisonReason::Reduction{reason, reversed_reason})
+        )
     }
 }
 
@@ -689,7 +812,10 @@ pub enum Comparison {
 #[derive(PartialEq, Debug)]
 pub enum ComparisonReason {
     SameSyntax,
-    Reduction{reason: Option<ReductionReason>, reversed_reason: Option<ReductionReason>}
+    Reduction {
+        reason: Option<ReductionReason>,
+        reversed_reason: Option<ReductionReason>,
+    },
 }
 
 impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {

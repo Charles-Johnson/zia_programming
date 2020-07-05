@@ -119,10 +119,10 @@ fn basic_inference() {
     ));
     let true_syntax = || SyntaxTree::from("true").bind_concept(1);
     let result_syntax = || SyntaxTree::from("b").bind_concept(3);
-    let reduction_reason = ReductionReason::Inference{
+    let reduction_reason = ReductionReason::Inference {
         implication: context_search.to_ast(5),
         condition: context_search.to_ast(2),
-        reason: ReductionReason::Explicit.into()
+        reason: ReductionReason::Explicit.into(),
     };
     assert_eq!(
         context_search.reduce(&result_syntax().into()),

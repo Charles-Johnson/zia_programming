@@ -109,14 +109,18 @@ fn basic_existence() {
         SyntaxTree::new_pair(
             variable_syntax(),
             SyntaxTree::new_pair(exists_such_that_syntax, variable_syntax()),
-        ).into();
+        )
+        .into();
 
     assert_eq!(
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax),
-        Some((SyntaxTree::from("true").bind_concept(1).into(), ReductionReason::Existence{
-            example: context_search.to_ast(2),
-            reason: ReductionReason::Explicit.into(),
-        }))
+        Some((
+            SyntaxTree::from("true").bind_concept(1).into(),
+            ReductionReason::Existence {
+                example: context_search.to_ast(2),
+                reason: ReductionReason::Explicit.into(),
+            }
+        ))
     );
 }

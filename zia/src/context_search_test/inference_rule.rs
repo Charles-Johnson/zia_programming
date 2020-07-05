@@ -103,7 +103,7 @@ impl Reader for InferenceRuleSnapShot {
     fn left_id() -> usize {
         13
     }
-    
+
     fn right_id() -> usize {
         14
     }
@@ -126,13 +126,17 @@ fn inference_rule() {
     let true_syntax = SyntaxTree::new_concept(1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
-        Some((true_syntax.into(), ReductionReason::Rule{
-            reason: ReductionReason::Inference{
-                condition: context_search.to_ast(4),
-                implication: context_search.to_ast(6),
-                reason: ReductionReason::Explicit.into()
-            }.into(),
-            pattern: 2
-        }))
+        Some((
+            true_syntax.into(),
+            ReductionReason::Rule {
+                reason: ReductionReason::Inference {
+                    condition: context_search.to_ast(4),
+                    implication: context_search.to_ast(6),
+                    reason: ReductionReason::Explicit.into()
+                }
+                .into(),
+                pattern: 2
+            }
+        ))
     );
 }

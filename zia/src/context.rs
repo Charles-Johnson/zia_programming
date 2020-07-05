@@ -275,7 +275,8 @@ where
                         SyntaxTree::new_concept(S::default_id()).into()
                     };
                     match context_search
-                        .compare(&precedence_of_syntax, &precedence_of_token).0
+                        .compare(&precedence_of_syntax, &precedence_of_token)
+                        .0
                     {
                         // syntax of token has an even lower precedence than some previous lowest precendence syntax
                         // reset lowest precedence syntax with just this one

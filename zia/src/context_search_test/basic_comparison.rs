@@ -2,7 +2,10 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{Comparison, ComparisonReason, ContextCache, ContextSearch, ReductionReason},
+    context_search::{
+        Comparison, ComparisonReason, ContextCache, ContextSearch,
+        ReductionReason,
+    },
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
@@ -80,7 +83,7 @@ impl SnapShotReader for BasicComparisonSnapShot {
             "right" => Some(7),
             "3" => Some(8),
             "false" => Some(10),
-            _ => None
+            _ => None,
         }
     }
 
@@ -102,7 +105,7 @@ impl SnapShotReader for BasicComparisonSnapShot {
             7 => Some("right".into()),
             8 => Some("3".into()),
             10 => Some("false".into()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -161,12 +164,24 @@ fn basic_comparison() {
 
     assert_eq!(
         context_search.compare(&left_syntax().into(), &right_syntax().into()),
-        (Comparison::GreaterThan, ComparisonReason::Reduction{reason: Some(ReductionReason::Explicit), reversed_reason: None})
+        (
+            Comparison::GreaterThan,
+            ComparisonReason::Reduction {
+                reason: Some(ReductionReason::Explicit),
+                reversed_reason: None
+            }
+        )
     );
 
     assert_eq!(
         context_search.compare(&right_syntax().into(), &left_syntax().into()),
-        (Comparison::LessThan, ComparisonReason::Reduction{reason: None, reversed_reason: Some(ReductionReason::Explicit)})
+        (
+            Comparison::LessThan,
+            ComparisonReason::Reduction {
+                reason: None,
+                reversed_reason: Some(ReductionReason::Explicit)
+            }
+        )
     );
 
     assert_eq!(
@@ -177,17 +192,35 @@ fn basic_comparison() {
     assert_eq!(
         context_search
             .compare(&another_syntax().into(), &right_syntax().into()),
-        (Comparison::LessThanOrEqualTo, ComparisonReason::Reduction{reason: Some(ReductionReason::Explicit), reversed_reason: None})
+        (
+            Comparison::LessThanOrEqualTo,
+            ComparisonReason::Reduction {
+                reason: Some(ReductionReason::Explicit),
+                reversed_reason: None
+            }
+        )
     );
 
     assert_eq!(
         context_search
             .compare(&right_syntax().into(), &another_syntax().into()),
-        (Comparison::GreaterThanOrEqualTo, ComparisonReason::Reduction{reason: None, reversed_reason: Some(ReductionReason::Explicit)})
+        (
+            Comparison::GreaterThanOrEqualTo,
+            ComparisonReason::Reduction {
+                reason: None,
+                reversed_reason: Some(ReductionReason::Explicit)
+            }
+        )
     );
 
     assert_eq!(
         context_search.compare(&left_syntax().into(), &another_syntax().into()),
-        (Comparison::Incomparable, ComparisonReason::Reduction{reason: None, reversed_reason: None})
+        (
+            Comparison::Incomparable,
+            ComparisonReason::Reduction {
+                reason: None,
+                reversed_reason: None
+            }
+        )
     )
 }

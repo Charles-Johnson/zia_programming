@@ -120,7 +120,7 @@ impl Default for ComparisonExistenceImplicationRuleSnapshot {
             right_id_concept
         ];
         Self {
-            concepts: check_order(&concepts)
+            concepts: check_order(&concepts),
         }
     }
 }
@@ -153,7 +153,7 @@ impl Reader for ComparisonExistenceImplicationRuleSnapshot {
             23 => Some("c".into()),
             28 => Some("assoc".into()),
             29 => Some("right".into()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -176,7 +176,7 @@ impl Reader for ComparisonExistenceImplicationRuleSnapshot {
             "c" => Some(23),
             "assoc" => Some(28),
             "right" => Some(29),
-            _ => None
+            _ => None,
         }
     }
 
@@ -211,9 +211,11 @@ impl Reader for ComparisonExistenceImplicationRuleSnapshot {
     fn implication_id() -> usize {
         3
     }
+
     fn true_id() -> usize {
         0
     }
+
     fn false_id() -> usize {
         CONCEPT_LEN + 3
     }
@@ -224,7 +226,8 @@ fn comparison_existence_implication_rule_test() {
     simple_logger::init().unwrap();
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
-    let context_snap_shot = ComparisonExistenceImplicationRuleSnapshot::new_test_case();
+    let context_snap_shot =
+        ComparisonExistenceImplicationRuleSnapshot::new_test_case();
     let context_search = ContextSearch::from((
         &context_snap_shot,
         &context_delta,
@@ -233,17 +236,11 @@ fn comparison_existence_implication_rule_test() {
     let a_syntax = context_search.to_ast(21);
     let c_syntax = context_search.to_ast(23);
     assert_eq!(
-        context_search.compare(
-            &a_syntax,
-            &c_syntax
-        ).0,
+        context_search.compare(&a_syntax, &c_syntax).0,
         Comparison::GreaterThan
     );
     assert_eq!(
-        context_search.compare(
-            &c_syntax,
-            &a_syntax
-        ).0,
+        context_search.compare(&c_syntax, &a_syntax).0,
         Comparison::LessThan
     );
 }

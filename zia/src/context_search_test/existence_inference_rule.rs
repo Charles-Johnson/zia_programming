@@ -187,16 +187,21 @@ fn existence_inference_rule() {
     let condition = context_search.to_ast(4);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
-        Some((true_syntax.into(), ReductionReason::Rule{
+        Some((
+            true_syntax.into(),
+            ReductionReason::Rule {
                 pattern: 2,
-                reason: ReductionReason::Inference{
+                reason: ReductionReason::Inference {
                     implication: context_search.to_ast(6),
                     condition,
-                    reason: ReductionReason::Existence{
+                    reason: ReductionReason::Existence {
                         example: context_search.to_ast(3),
                         reason: ReductionReason::Explicit.into()
-                }.into()
-            }.into()
-        }))
+                    }
+                    .into()
+                }
+                .into()
+            }
+        ))
     );
 }
