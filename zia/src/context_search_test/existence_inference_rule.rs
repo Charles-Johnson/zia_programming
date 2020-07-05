@@ -6,6 +6,7 @@ use crate::{
     context_search_test::check_order,
     snap_shot::Reader,
 };
+use maplit::hashmap;
 
 const CONCEPT_LEN: usize = 17;
 
@@ -190,7 +191,8 @@ fn existence_inference_rule() {
         Some((
             true_syntax.into(),
             ReductionReason::Rule {
-                pattern: 2,
+                generalisation: context_search.to_ast(2),
+                variable_mask: hashmap! {9 => context_search.to_ast(7)},
                 reason: ReductionReason::Inference {
                     implication: context_search.to_ast(6),
                     condition,

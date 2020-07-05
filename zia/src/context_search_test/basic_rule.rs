@@ -6,6 +6,7 @@ use crate::{
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
+use maplit::hashmap;
 
 struct BasicRuleSnapShot {
     concepts: Vec<Concept>,
@@ -92,25 +93,19 @@ fn basic_rule() {
     assert_eq!(context_search.to_ast(0), concrete_syntax().into());
     assert_eq!(context_search.to_ast(2), left_syntax().into());
 
+    let reduction_reason = ReductionReason::Rule {
+        generalisation: context_search.to_ast(1),
+        variable_mask: hashmap! {3 => SyntaxTree::from("random").into()},
+        reason: ReductionReason::Explicit.into(),
+    };
+
     assert_eq!(
         context_search.reduce(&left_and_random_syntax),
-        Some((
-            concrete_syntax().into(),
-            ReductionReason::Rule {
-                pattern: 1,
-                reason: ReductionReason::Explicit.into()
-            }
-        ))
+        Some((concrete_syntax().into(), reduction_reason.clone()))
     );
 
     assert_eq!(
         context_search.recursively_reduce(&left_and_random_syntax),
-        (
-            concrete_syntax().into(),
-            Some(ReductionReason::Rule {
-                pattern: 1,
-                reason: ReductionReason::Explicit.into()
-            })
-        )
+        (concrete_syntax().into(), Some(reduction_reason))
     );
 }

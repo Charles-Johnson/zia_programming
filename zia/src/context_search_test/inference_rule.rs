@@ -6,6 +6,7 @@ use crate::{
     context_search_test::check_order,
     snap_shot::Reader,
 };
+use maplit::hashmap;
 
 struct InferenceRuleSnapShot {
     concepts: Vec<Concept>,
@@ -135,7 +136,8 @@ fn inference_rule() {
                     reason: ReductionReason::Explicit.into()
                 }
                 .into(),
-                pattern: 2
+                generalisation: context_search.to_ast(2),
+                variable_mask: hashmap! {9 => context_search.to_ast(7)}
             }
         ))
     );

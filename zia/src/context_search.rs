@@ -53,7 +53,8 @@ type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
 pub enum ReductionReason {
     Explicit,
     Rule {
-        pattern: usize,
+        generalisation: Arc<SyntaxTree>,
+        variable_mask: VariableMask,
         reason: Arc<ReductionReason>,
     },
     Inference {
@@ -254,17 +255,17 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             left.get_concept().and_then(|l| self.variable_mask.get(&l));
         if let (None, None) = (&left_result, &right_result) {
             self.filter_generalisations_for_pair(left, right).iter().find_map(
-                |(generalisation, variable_to_syntax)| {
+                |(generalisation, variable_mask)| {
                     let mut context_search = self.clone();
-                    context_search
-                        .variable_mask
-                        .extend(variable_to_syntax.clone());
+                    context_search.variable_mask.extend(variable_mask.clone());
                     context_search.reduce_concept(*generalisation).map(
                         |(ast, reason)| {
                             (
                                 context_search.substitute(&ast),
                                 ReductionReason::Rule {
-                                    pattern: *generalisation,
+                                    generalisation: self
+                                        .to_ast(*generalisation),
+                                    variable_mask: variable_mask.clone(),
                                     reason: Arc::new(reason),
                                 },
                             )
