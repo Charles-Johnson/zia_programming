@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{Comparison, ContextCache, ContextSearch},
+    context_search::{Comparison, ComparisonReason, ContextCache, ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };
@@ -69,9 +69,19 @@ impl SnapShotReader for BasicComparisonSnapShot {
     fn concept_from_label(
         &self,
         _: &ContextDelta,
-        _label: &str,
+        label: &str,
     ) -> Option<usize> {
-        None
+        match label {
+            ">" => Some(0),
+            "2" => Some(1),
+            "1" => Some(2),
+            "true" => Some(5),
+            "assoc" => Some(6),
+            "right" => Some(7),
+            "3" => Some(8),
+            "false" => Some(10),
+            _ => None
+        }
     }
 
     fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
@@ -81,9 +91,19 @@ impl SnapShotReader for BasicComparisonSnapShot {
     fn get_label(
         &self,
         _delta: &ContextDelta,
-        _concept_id: usize,
+        concept_id: usize,
     ) -> Option<String> {
-        None
+        match concept_id {
+            0 => Some(">".into()),
+            1 => Some("2".into()),
+            2 => Some("1".into()),
+            5 => Some("true".into()),
+            6 => Some("assoc".into()),
+            7 => Some("right".into()),
+            8 => Some("3".into()),
+            10 => Some("false".into()),
+            _ => None
+        }
     }
 
     fn greater_than_id() -> usize {
@@ -141,33 +161,33 @@ fn basic_comparison() {
 
     assert_eq!(
         context_search.compare(&left_syntax().into(), &right_syntax().into()),
-        Comparison::GreaterThan
+        (Comparison::GreaterThan, ComparisonReason::Reduction{reason: Some(ReductionReason::Explicit), reversed_reason: None})
     );
 
     assert_eq!(
         context_search.compare(&right_syntax().into(), &left_syntax().into()),
-        Comparison::LessThan
+        (Comparison::LessThan, ComparisonReason::Reduction{reason: None, reversed_reason: Some(ReductionReason::Explicit)})
     );
 
     assert_eq!(
         context_search.compare(&left_syntax().into(), &left_syntax().into()),
-        Comparison::EqualTo
+        (Comparison::EqualTo, ComparisonReason::SameSyntax)
     );
 
     assert_eq!(
         context_search
             .compare(&another_syntax().into(), &right_syntax().into()),
-        Comparison::LessThanOrEqualTo
+        (Comparison::LessThanOrEqualTo, ComparisonReason::Reduction{reason: Some(ReductionReason::Explicit), reversed_reason: None})
     );
 
     assert_eq!(
         context_search
             .compare(&right_syntax().into(), &another_syntax().into()),
-        Comparison::GreaterThanOrEqualTo
+        (Comparison::GreaterThanOrEqualTo, ComparisonReason::Reduction{reason: None, reversed_reason: Some(ReductionReason::Explicit)})
     );
 
     assert_eq!(
         context_search.compare(&left_syntax().into(), &another_syntax().into()),
-        Comparison::Incomparable
+        (Comparison::Incomparable, ComparisonReason::Reduction{reason: None, reversed_reason: None})
     )
 }

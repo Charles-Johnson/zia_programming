@@ -38,6 +38,10 @@ impl Default for BasicInferenceSnapShot {
                 result_concept,
                 implies_result_concept,
                 condition_implies_result_concept,
+                (SpecificPart::Concrete, 6).into(),
+                (SpecificPart::Concrete, 7).into(),
+                (SpecificPart::Concrete, 8).into(),
+                (SpecificPart::Concrete, 9).into(),
             ]),
         }
     }
@@ -50,6 +54,22 @@ impl SnapShotReader for BasicInferenceSnapShot {
 
     fn true_id() -> usize {
         1
+    }
+
+    fn assoc_id() -> usize {
+        6
+    }
+
+    fn left_id() -> usize {
+        7
+    }
+
+    fn precedence_id() -> usize {
+        8
+    }
+
+    fn right_id() -> usize {
+        9
     }
 
     fn concept_from_label(
@@ -100,8 +120,8 @@ fn basic_inference() {
     let true_syntax = || SyntaxTree::from("true").bind_concept(1);
     let result_syntax = || SyntaxTree::from("b").bind_concept(3);
     let reduction_reason = ReductionReason::Inference{
-        implication: 5,
-        condition: 2,
+        implication: context_search.to_ast(5),
+        condition: context_search.to_ast(2),
         reason: ReductionReason::Explicit.into()
     };
     assert_eq!(

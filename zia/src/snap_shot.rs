@@ -210,7 +210,9 @@ pub trait Reader: Default {
         let delta = ContextDelta::default();
         for id in 0..test_case.lowest_unoccupied_concept_id(&delta) {
             test_case.get_label(&delta, id).map(|s| {
-                assert_eq!(test_case.concept_from_label(&delta, &s), Some(id))
+                let concept = test_case.concept_from_label(&delta, &s);
+                let expected = Some(id);
+                assert_eq!(concept, expected, "Invariant violation for Reader implementation: get_label(d, c) = Some(s) => concept_from_label(d, &s) = Some(c) failed for c={}, s=\"{}\"", id, s);
             });
         }
         test_case

@@ -50,6 +50,10 @@ impl Default for InferenceRuleSnapShot {
                 example_composition,
                 variable_concept,
                 concept_b,
+                (SpecificPart::Concrete, 11).into(),
+                (SpecificPart::Concrete, 12).into(),
+                (SpecificPart::Concrete, 13).into(),
+                (SpecificPart::Concrete, 14).into(),
             ]),
         }
     }
@@ -93,7 +97,15 @@ impl Reader for InferenceRuleSnapShot {
     }
 
     fn assoc_id() -> usize {
-        11
+        12
+    }
+
+    fn left_id() -> usize {
+        13
+    }
+    
+    fn right_id() -> usize {
+        14
     }
 }
 
@@ -116,8 +128,8 @@ fn inference_rule() {
         context_search.reduce(&example_syntax.into()),
         Some((true_syntax.into(), ReductionReason::Rule{
             reason: ReductionReason::Inference{
-                condition: 4,
-                implication: 6,
+                condition: context_search.to_ast(4),
+                implication: context_search.to_ast(6),
                 reason: ReductionReason::Explicit.into()
             }.into(),
             pattern: 2

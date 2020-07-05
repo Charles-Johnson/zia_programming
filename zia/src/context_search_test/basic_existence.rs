@@ -49,6 +49,7 @@ impl SnapShotReader for BasicExistenceSnapShot {
         match concept_id {
             0 => Some("exists_such_that".into()),
             1 => Some("true".into()),
+            2 => Some("a".into()),
             3 => Some("_x_".into()),
             _ => None,
         }
@@ -62,6 +63,7 @@ impl SnapShotReader for BasicExistenceSnapShot {
         match label {
             "exists_such_that" => Some(0),
             "true" => Some(1),
+            "a" => Some(2),
             "_x_" => Some(3),
             _ => None,
         }
@@ -113,9 +115,8 @@ fn basic_existence() {
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax),
         Some((SyntaxTree::from("true").bind_concept(1).into(), ReductionReason::Existence{
-            example: 2,
+            example: context_search.to_ast(2),
             reason: ReductionReason::Explicit.into(),
-            assumption: variable_exists_such_that_variable_is_true_syntax
         }))
     );
 }

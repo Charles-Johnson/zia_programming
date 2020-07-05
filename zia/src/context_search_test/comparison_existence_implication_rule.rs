@@ -1,5 +1,4 @@
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
     context_search::{Comparison, ContextCache, ContextSearch},
@@ -222,6 +221,7 @@ impl Reader for ComparisonExistenceImplicationRuleSnapshot {
 
 #[test]
 fn comparison_existence_implication_rule_test() {
+    simple_logger::init().unwrap();
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = ComparisonExistenceImplicationRuleSnapshot::new_test_case();
@@ -230,18 +230,20 @@ fn comparison_existence_implication_rule_test() {
         &context_delta,
         &context_cache,
     ));
+    let a_syntax = context_search.to_ast(21);
+    let c_syntax = context_search.to_ast(23);
     assert_eq!(
         context_search.compare(
-            &SyntaxTree::new_concept(21).into(),
-            &SyntaxTree::new_concept(23).into()
-        ),
+            &a_syntax,
+            &c_syntax
+        ).0,
         Comparison::GreaterThan
     );
     assert_eq!(
         context_search.compare(
-            &SyntaxTree::new_concept(23).into(),
-            &SyntaxTree::new_concept(21).into()
-        ),
+            &c_syntax,
+            &a_syntax
+        ).0,
         Comparison::LessThan
     );
 }

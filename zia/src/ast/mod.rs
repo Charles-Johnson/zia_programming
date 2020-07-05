@@ -21,7 +21,7 @@ use std::{
 };
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SyntaxTree {
     /// The root of this syntax tree, represented as a `String`.
     syntax: Option<String>,
@@ -156,5 +156,14 @@ impl SyntaxTree {
         } else {
             false
         }
+    }
+}
+
+impl fmt::Debug for SyntaxTree {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
+        formatter.write_str(self.syntax.clone().unwrap_or("".into()).as_str())
     }
 }
