@@ -164,6 +164,8 @@ impl fmt::Debug for SyntaxTree {
         &self,
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
-        formatter.write_str(self.syntax.clone().unwrap_or("".into()).as_str())
+        formatter.write_str(
+            self.syntax.clone().unwrap_or_else(|| "".into()).as_str(),
+        )
     }
 }
