@@ -223,7 +223,6 @@ impl Reader for ComparisonExistenceImplicationRuleSnapshot {
 
 #[test]
 fn comparison_existence_implication_rule_test() {
-    simple_logger::init().unwrap();
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot =

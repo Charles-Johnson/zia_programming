@@ -171,7 +171,6 @@ impl Reader for ExistenceInferenceRuleSnapShot {
 
 #[test]
 fn existence_inference_rule() {
-    simple_logger::init().unwrap();
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = ExistenceInferenceRuleSnapShot::new_test_case();
