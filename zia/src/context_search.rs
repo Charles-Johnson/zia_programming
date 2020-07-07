@@ -64,10 +64,7 @@ pub enum ReductionReason {
     Default {
         operator: usize,
     },
-    Composition {
-        left: Option<Arc<ReductionReason>>,
-        right: Option<Arc<ReductionReason>>,
-    },
+    Partial(HashMap<Arc<SyntaxTree>, (Arc<SyntaxTree>, ReductionReason)>),
     Existence {
         example: Arc<SyntaxTree>,
         reason: Arc<ReductionReason>,
@@ -251,15 +248,17 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             right.get_concept().and_then(|r| self.variable_mask.get(&r));
         let maybe_subbed_l =
             left.get_concept().and_then(|l| self.variable_mask.get(&l));
-        if let (None, None) = (&left_result, &right_result) {
-            self.filter_generalisations_for_pair(left, right).iter().find_map(
-                |(generalisation, variable_mask)| {
+        match (left_result, right_result) {
+            (None, None) => self
+                .filter_generalisations_for_pair(left, right)
+                .iter()
+                .find_map(|(generalisation, variable_mask)| {
                     let mut context_search = self.clone();
                     context_search.variable_mask.extend(variable_mask.clone());
                     context_search.reduce_concept(*generalisation).map(
                         |(ast, reason)| {
                             (
-                                context_search.substitute(&ast, &variable_mask),
+                                context_search.substitute(&ast, variable_mask),
                                 ReductionReason::Rule {
                                     generalisation: self
                                         .to_ast(*generalisation),
@@ -269,28 +268,62 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                             )
                         },
                     )
+                }),
+            (Some((left_ast, left_reason)), None) => Some((
+                self.contract_pair(&left_ast, maybe_subbed_r.unwrap_or(right)),
+                if let ReductionReason::Partial(_) = &left_reason {
+                    left_reason
+                } else {
+                    ReductionReason::Partial(
+                        hashmap! {left.clone() => (left_ast, left_reason)},
+                    )
                 },
-            )
-        } else {
-            let (left_ast, left_reason) = left_result.map_or_else(
-                || (maybe_subbed_l.unwrap_or(left).clone(), None),
-                |(ast, reason)| (ast, Some(Arc::new(reason))),
-            );
-            let (right_ast, right_reason) = right_result.map_or_else(
-                || (maybe_subbed_r.unwrap_or(right).clone(), None),
-                |(ast, reason)| (ast, Some(Arc::new(reason))),
-            );
-            Some((
+            )),
+            (None, Some((right_ast, right_reason))) => Some((
+                self.contract_pair(maybe_subbed_l.unwrap_or(left), &right_ast),
+                if let ReductionReason::Partial(_) = &right_reason {
+                    right_reason
+                } else {
+                    ReductionReason::Partial(
+                        hashmap! {right.clone() => (right_ast, right_reason)},
+                    )
+                },
+            )),
+            (
+                Some((left_ast, left_reason)),
+                Some((right_ast, right_reason)),
+            ) => Some((
                 self.contract_pair(&left_ast, &right_ast),
-                ReductionReason::Composition {
-                    left: left_reason,
-                    right: right_reason,
+                match (left_reason.clone(), right_reason.clone()) {
+                    (
+                        ReductionReason::Partial(mut l_hm),
+                        ReductionReason::Partial(r_hm),
+                    ) => {
+                        l_hm.extend(r_hm);
+                        ReductionReason::Partial(l_hm)
+                    },
+                    (ReductionReason::Partial(mut hm), _) => {
+                        hm.insert(right.clone(), (right_ast, right_reason));
+                        ReductionReason::Partial(hm)
+                    },
+                    (_, ReductionReason::Partial(mut hm)) => {
+                        hm.insert(left.clone(), (left_ast, left_reason));
+                        ReductionReason::Partial(hm)
+                    },
+                    _ => ReductionReason::Partial(hashmap! {
+                        left.clone() => (left_ast, left_reason),
+                        right.clone() => (right_ast, right_reason)
+                    }),
                 },
-            ))
+            )),
         }
     }
 
-    pub fn substitute(&self, ast: &Arc<SyntaxTree>, variable_mask: &VariableMask) -> Arc<SyntaxTree> {
+    pub fn substitute(
+        &self,
+        ast: &Arc<SyntaxTree>,
+        variable_mask: &VariableMask,
+    ) -> Arc<SyntaxTree> {
         ast.get_concept()
             .and_then(|c| variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
@@ -659,7 +692,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         SyntaxTree::new_concept(concept_id).into()
                     };
                     if !concept.variable() {
-                        self.cache.syntax_trees.insert(concept_id, syntax.clone());
+                        self.cache
+                            .syntax_trees
+                            .insert(concept_id, syntax.clone());
                     }
                     syntax
                 },

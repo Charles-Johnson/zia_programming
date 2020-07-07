@@ -193,7 +193,8 @@ fn existence_inference_rule() {
                 generalisation: context_search.to_ast(2),
                 variable_mask: variable_mask.clone(),
                 reason: ReductionReason::Inference {
-                    implication: context_search.substitute(&context_search.to_ast(6), &variable_mask),
+                    implication: context_search
+                        .substitute(&context_search.to_ast(6), &variable_mask),
                     reason: ReductionReason::Existence {
                         example: context_search.to_ast(3),
                         reason: ReductionReason::Explicit.into()

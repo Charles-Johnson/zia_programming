@@ -16,7 +16,7 @@
 
 use crate::{
     and_also::AndAlso,
-    ast::{SyntaxTree, is_variable},
+    ast::{is_variable, SyntaxTree},
     concepts::SpecificPart,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{Comparison, ContextCache, ContextSearch},
