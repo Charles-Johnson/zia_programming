@@ -16,7 +16,7 @@
 
 use crate::{
     and_also::AndAlso,
-    ast::SyntaxTree,
+    ast::{SyntaxTree, is_variable},
     concepts::SpecificPart,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{Comparison, ContextCache, ContextSearch},
@@ -1037,8 +1037,4 @@ where
             cache: ContextCache::default(),
         }
     }
-}
-
-pub fn is_variable(string: &str) -> bool {
-    string.starts_with('_') && string.ends_with('_')
 }

@@ -59,7 +59,6 @@ pub enum ReductionReason {
     },
     Inference {
         implication: Arc<SyntaxTree>,
-        condition: Arc<SyntaxTree>,
         reason: Arc<ReductionReason>,
     },
     Default {
@@ -114,7 +113,6 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                         reduced_condition.get_concept().and_then(|x| {
                                             if x == S::true_id() {
                                                 Some((self.to_ast(x), ReductionReason::Inference{
-                                                    condition,
                                                     implication: self.to_ast(*roro),
                                                     reason: reason.into()
                                                 }))
@@ -261,7 +259,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     context_search.reduce_concept(*generalisation).map(
                         |(ast, reason)| {
                             (
-                                context_search.substitute(&ast),
+                                context_search.substitute(&ast, &variable_mask),
                                 ReductionReason::Rule {
                                     generalisation: self
                                         .to_ast(*generalisation),
@@ -292,16 +290,16 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         }
     }
 
-    fn substitute(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
+    pub fn substitute(&self, ast: &Arc<SyntaxTree>, variable_mask: &VariableMask) -> Arc<SyntaxTree> {
         ast.get_concept()
-            .and_then(|c| self.variable_mask.get(&c).cloned())
+            .and_then(|c| variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
                 ast.get_expansion().map_or_else(
                     || ast.clone(),
                     |(l, r)| {
                         self.contract_pair(
-                            &self.substitute(&l),
-                            &self.substitute(&r),
+                            &self.substitute(&l, variable_mask),
+                            &self.substitute(&r, variable_mask),
                         )
                     },
                 )
@@ -528,13 +526,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         } else {
                             let mut context_search = self.clone();
                             let example = self.to_ast(i);
+                            let variable_concept = left.get_concept().unwrap();
                             context_search.variable_mask.insert(
-                                left.get_concept().unwrap(),
+                                variable_concept,
                                 example.clone(),
                             );
                             let (truth_value, maybe_reason) = self
                                 .recursively_reduce(
-                                    &context_search.substitute(rightright),
+                                    &context_search.substitute(rightright, &hashmap! {variable_concept => example.clone()}),
                                 );
                             match (truth_value.get_concept(), maybe_reason) {
                                 (Some(x), Some(reason))

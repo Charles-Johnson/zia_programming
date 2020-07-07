@@ -184,17 +184,16 @@ fn existence_inference_rule() {
         SyntaxTree::from("b").bind_concept(10),
     );
     let true_syntax = SyntaxTree::from("true").bind_concept(1);
-    let condition = context_search.to_ast(4);
+    let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
         Some((
             true_syntax.into(),
             ReductionReason::Rule {
                 generalisation: context_search.to_ast(2),
-                variable_mask: hashmap! {9 => context_search.to_ast(7)},
+                variable_mask: variable_mask.clone(),
                 reason: ReductionReason::Inference {
-                    implication: context_search.to_ast(6),
-                    condition,
+                    implication: context_search.substitute(&context_search.to_ast(6), &variable_mask),
                     reason: ReductionReason::Existence {
                         example: context_search.to_ast(3),
                         reason: ReductionReason::Explicit.into()

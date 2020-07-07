@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use crate::context::is_variable;
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -168,4 +167,8 @@ impl fmt::Debug for SyntaxTree {
             self.syntax.clone().unwrap_or_else(|| "".into()).as_str(),
         )
     }
+}
+
+pub fn is_variable(string: &str) -> bool {
+    string.starts_with('_') && string.ends_with('_')
 }

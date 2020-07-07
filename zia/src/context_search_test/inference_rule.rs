@@ -131,7 +131,6 @@ fn inference_rule() {
             true_syntax.into(),
             ReductionReason::Rule {
                 reason: ReductionReason::Inference {
-                    condition: context_search.to_ast(4),
                     implication: context_search.to_ast(6),
                     reason: ReductionReason::Explicit.into()
                 }
