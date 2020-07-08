@@ -1,7 +1,10 @@
 use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{Comparison, ContextCache, ContextSearch, ComparisonReason, ReductionReason},
+    context_search::{
+        Comparison, ComparisonReason, ContextCache, ContextSearch,
+        ReductionReason,
+    },
     context_search_test::check_order,
     snap_shot::Reader,
 };
@@ -240,34 +243,44 @@ fn comparison_existence_implication_rule_test() {
         4 => a_syntax.clone(), // x=a
         6 => c_syntax.clone() //z=c
     };
+    let comparison_reason = Some(ReductionReason::Rule{
+        generalisation: context_search.to_ast(18),
+        variable_mask: variable_mask.clone(),
+        reason: ReductionReason::Inference{
+            implication: context_search.substitute(
+                &context_search.to_ast(20), &variable_mask
+            ),
+            reason: ReductionReason::Existence{
+                example: context_search.to_ast(22),
+                reason: ReductionReason::Recursive{
+                    syntax: context_search.to_ast(11),
+                    reason: ReductionReason::Explicit.into(),
+                    from: ReductionReason::Partial(hashmap! {
+                        context_search.to_ast(25) => (true_syntax.clone(), ReductionReason::Explicit),
+                        context_search.to_ast(27) => (true_syntax, ReductionReason::Explicit)
+                    }).into()
+                }.into()
+            }.into()
+        }.into()
+    });
     assert_eq!(
         context_search.compare(&a_syntax, &c_syntax),
-        (Comparison::GreaterThan, ComparisonReason::Reduction{
-            reason: Some(ReductionReason::Rule{
-                generalisation: context_search.to_ast(18),
-                variable_mask: variable_mask.clone(),
-                reason: ReductionReason::Inference{
-                    implication: context_search.substitute(
-                        &context_search.to_ast(20), &variable_mask
-                    ),
-                    reason: ReductionReason::Existence{
-                        example: context_search.to_ast(22),
-                        reason: ReductionReason::Recursive{
-                            syntax: context_search.to_ast(11),
-                            reason: ReductionReason::Explicit.into(),
-                            from: ReductionReason::Partial(hashmap! {
-                                context_search.to_ast(25) => (true_syntax.clone(), ReductionReason::Explicit),
-                                context_search.to_ast(27) => (true_syntax, ReductionReason::Explicit)
-                            }).into()
-                        }.into()
-                    }.into()
-                }.into()
-            }),
-            reversed_reason: None
-        })
+        (
+            Comparison::GreaterThan,
+            ComparisonReason::Reduction {
+                reason: comparison_reason.clone(),
+                reversed_reason: None
+            }
+        )
     );
     assert_eq!(
-        context_search.compare(&c_syntax, &a_syntax).0,
-        Comparison::LessThan
+        context_search.compare(&c_syntax, &a_syntax),
+        (
+            Comparison::LessThan,
+            ComparisonReason::Reduction {
+                reason: None,
+                reversed_reason: comparison_reason
+            }
+        )
     );
 }
