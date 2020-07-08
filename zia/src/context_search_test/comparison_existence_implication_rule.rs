@@ -1,10 +1,11 @@
 use crate::{
     concepts::{Concept, SpecificPart},
     context_delta::ContextDelta,
-    context_search::{Comparison, ContextCache, ContextSearch},
+    context_search::{Comparison, ContextCache, ContextSearch, ComparisonReason, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader,
 };
+use maplit::hashmap;
 
 struct ComparisonExistenceImplicationRuleSnapshot {
     concepts: Vec<Concept>,
@@ -234,9 +235,36 @@ fn comparison_existence_implication_rule_test() {
     ));
     let a_syntax = context_search.to_ast(21);
     let c_syntax = context_search.to_ast(23);
+    let true_syntax = context_search.to_ast(0);
+    let variable_mask = hashmap! {
+        4 => a_syntax.clone(), // x=a
+        6 => c_syntax.clone() //z=c
+    };
     assert_eq!(
-        context_search.compare(&a_syntax, &c_syntax).0,
-        Comparison::GreaterThan
+        context_search.compare(&a_syntax, &c_syntax),
+        (Comparison::GreaterThan, ComparisonReason::Reduction{
+            reason: Some(ReductionReason::Rule{
+                generalisation: context_search.to_ast(18),
+                variable_mask: variable_mask.clone(),
+                reason: ReductionReason::Inference{
+                    implication: context_search.substitute(
+                        &context_search.to_ast(20), &variable_mask
+                    ),
+                    reason: ReductionReason::Existence{
+                        example: context_search.to_ast(22),
+                        reason: ReductionReason::Recursive{
+                            syntax: context_search.to_ast(11),
+                            reason: ReductionReason::Explicit.into(),
+                            from: ReductionReason::Partial(hashmap! {
+                                context_search.to_ast(25) => (true_syntax.clone(), ReductionReason::Explicit),
+                                context_search.to_ast(27) => (true_syntax, ReductionReason::Explicit)
+                            }).into()
+                        }.into()
+                    }.into()
+                }.into()
+            }),
+            reversed_reason: None
+        })
     );
     assert_eq!(
         context_search.compare(&c_syntax, &a_syntax).0,
