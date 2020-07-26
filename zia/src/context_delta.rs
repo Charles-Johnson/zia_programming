@@ -16,11 +16,10 @@
 
 use crate::{
     concepts::{Concept, ConceptDelta as CD},
-    context_search::ContextCache,
+    context_cache::ContextCache,
     delta::{Apply, Delta},
 };
-use log::debug;
-use std::{collections::HashMap, fmt::Debug, mem::swap};
+use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Clone, Default)]
 pub struct ContextDelta {
@@ -65,9 +64,7 @@ impl ContextDelta {
                 ConceptDelta::Update(concept_delta.clone()),
                 temporary,
             ));
-        let mut empty_cache = ContextCache::default();
-        swap(cache_to_invalidate, &mut empty_cache);
-        debug!("Cache invalidated");
+        cache_to_invalidate.invalidate()
     }
 
     pub fn insert_string(
@@ -77,9 +74,7 @@ impl ContextDelta {
         cache_to_invalidate: &mut ContextCache,
     ) {
         self.string.insert(string.into(), string_delta);
-        let mut empty_cache = ContextCache::default();
-        swap(cache_to_invalidate, &mut empty_cache);
-        debug!("Cache invalidated");
+        cache_to_invalidate.invalidate()
     }
 
     pub const fn string(&self) -> &HashMap<String, StringDelta> {
@@ -93,9 +88,7 @@ impl ContextDelta {
         cache_to_invalidate: &mut ContextCache,
     ) {
         self.concept.insert(concept_id, concept_delta);
-        let mut empty_cache = ContextCache::default();
-        swap(cache_to_invalidate, &mut empty_cache);
-        debug!("Cache invalidated");
+        cache_to_invalidate.invalidate()
     }
 
     pub const fn concept(&self) -> &HashMap<usize, (ConceptDelta, bool)> {
@@ -108,9 +101,7 @@ impl ContextDelta {
         cache_to_invalidate: &mut ContextCache,
     ) {
         self.combine(other);
-        let mut empty_cache = ContextCache::default();
-        swap(cache_to_invalidate, &mut empty_cache);
-        debug!("Cache invalidated");
+        cache_to_invalidate.invalidate()
     }
 }
 
@@ -135,8 +126,11 @@ impl Debug for ContextDelta {
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();
             for key in unsorted_keys {
-                let (cd, _) = self.concept.get(key).unwrap();
+                let (cd, temp) = self.concept.get(key).unwrap();
                 string += &format!("\t{}: {:#?}", key, cd);
+                if *temp {
+                    string += " (temporary) ";
+                }
                 string += ",\n";
             }
             string += "    },\n";
@@ -185,8 +179,8 @@ impl Debug for ConceptDelta {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Insert(ref c) => format!("+ {:#?}", c),
-            Self::Remove(ref c) => format!("- {:#?}", c),
+            Self::Insert(ref c) => format!("+ {:#?}", c) + if c.variable() {" (variable) "} else {""},
+            Self::Remove(ref c) => format!("- {:#?}", c) + if c.variable() {" (variable) "} else {""},
             Self::Update(ref cd) => format!("{:#?}", cd),
         })
     }

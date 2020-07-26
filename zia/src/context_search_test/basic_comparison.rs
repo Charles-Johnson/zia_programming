@@ -1,9 +1,10 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
+    context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
-        Comparison, ComparisonReason, ContextCache, ContextSearch,
+        Comparison, ComparisonReason, ContextSearch,
         ReductionReason,
     },
     context_search_test::check_order,
@@ -212,7 +213,7 @@ fn basic_comparison() {
             }
         )
     );
-
+    // TODO: find out why this test is non-deterministic
     assert_eq!(
         context_search.compare(&left_syntax().into(), &another_syntax().into()),
         (

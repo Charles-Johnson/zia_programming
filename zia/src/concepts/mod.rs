@@ -71,7 +71,6 @@ impl Debug for Concept {
 }
 
 impl Concept {
-    #[cfg(test)]
     pub fn id(&self) -> usize {
         self.id
     }
@@ -275,12 +274,10 @@ impl Concept {
             specific_part: SpecificPart::Abstract(AbstractPart {
                 definition: Some((left.id, right.id)),
                 variable: match (&left.specific_part, &right.specific_part) {
+                    (SpecificPart::Abstract(a1), SpecificPart::Abstract(a2)) => a1.variable || a2.variable,
                     (SpecificPart::Abstract(a), _)
                     | (_, SpecificPart::Abstract(a))
-                        if a.variable =>
-                    {
-                        true
-                    },
+                        => a.variable,
                     _ => false,
                 },
                 ..Default::default()

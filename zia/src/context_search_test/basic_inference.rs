@@ -1,8 +1,9 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
+    context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::{ContextCache, ContextSearch, ReductionReason},
+    context_search::{ContextSearch, ReductionReason},
     context_search_test::check_order,
     snap_shot::Reader as SnapShotReader,
 };

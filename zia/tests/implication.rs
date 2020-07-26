@@ -36,7 +36,6 @@ fn partial_order_transitivity() {
 }
 #[test]
 fn partial_order_transitivity_test() {
-    simple_logger::init().unwrap();
     partial_order_transitivity();
 }
 

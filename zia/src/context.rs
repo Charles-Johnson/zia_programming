@@ -18,8 +18,9 @@ use crate::{
     and_also::AndAlso,
     ast::{is_variable, SyntaxTree},
     concepts::SpecificPart,
+    context_cache::ContextCache,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
-    context_search::{Comparison, ContextCache, ContextSearch},
+    context_search::{Comparison, ContextSearch},
     context_snap_shot::Associativity,
     delta::Apply,
     errors::{map_err_variant, ZiaError, ZiaResult},
@@ -41,9 +42,10 @@ pub struct Context<S> {
 
 type ParsingResult = ZiaResult<Arc<SyntaxTree>>;
 
-struct TokenSubsequence {
-    syntax: Vec<Arc<SyntaxTree>>,
-    positions: Vec<usize>,
+#[derive(Debug, PartialEq)]
+pub struct TokenSubsequence {
+    pub syntax: Vec<Arc<SyntaxTree>>,
+    pub positions: Vec<usize>,
 }
 
 impl<S> Context<S>
@@ -77,6 +79,16 @@ where
         }
     }
 
+    pub fn disable_reduction_cache(mut self) -> Self {
+        self.cache.disable_reduction_cache();
+        self
+    }
+
+    pub fn disable_syntax_tree_cache(mut self) -> Self {
+        self.cache.disable_syntax_tree_cache();
+        self
+    }
+
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
@@ -103,6 +115,10 @@ where
     }
 
     fn ast_from_tokens(&mut self, tokens: &[String]) -> ParsingResult {
+        info!(
+            self.logger,
+            "ast_from_tokens({:#?})", tokens
+        );
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
@@ -129,8 +145,12 @@ where
                         },
                         (x, None) => Ok(Some(x)),
                     }
-                });
-                match assoc? {
+                })?;
+                info!(
+                    self.logger,
+                    "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
+                );
+                match assoc {
                     Some(Associativity::Right) => {
                         let tail = lp_indices
                             .iter()
@@ -145,6 +165,10 @@ where
                             })?
                             .0
                             .unwrap(); // Already checked that lp_indices is non-empty;
+                        info!(
+                            self.logger,
+                            "ast_from_tokens({:#?}): tail = {}", tokens, tail
+                        );
                         if lp_indices[0] == 0 {
                             Ok(tail)
                         } else {
@@ -235,10 +259,14 @@ where
     }
 
     /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
-    fn lowest_precedence_info(
+    pub fn lowest_precedence_info(
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
+        info!(
+            self.logger,
+            "lowest_precedence_info({:#?})", tokens
+        );
         let precedence_syntax =
             SyntaxTree::new_concept(S::precedence_id()).into();
         let context_search = self.context_search();
@@ -320,10 +348,15 @@ where
                 Ok((lowest_precedence_syntax, lp_indices, this_index))
             },
         )?;
-        Ok(TokenSubsequence {
+        let result = Ok(TokenSubsequence {
             syntax,
             positions,
-        })
+        });
+        info!(
+            self.logger,
+            "lowest_precedence_info({:#?}) -> {:#?}", tokens, result
+        );
+        result
     }
 
     fn ast_from_pair(&mut self, left: &str, right: &str) -> ParsingResult {
@@ -408,12 +441,20 @@ where
             .try_for_each(|(concept, string)| self.label(*concept, string))
             .unwrap();
         self.execute("let (true and true) -> true");
-        self.execute("let (_x_ and _y_) -> false");
+        assert_eq!(self.execute("true and true"), "true");
+        self.execute("let (false and _y_) -> false");
+        // assert_eq!(self.execute("false and false"), "false");
+        assert_eq!(self.execute("false and true"), "false");
+        self.execute("let (_x_ and false) -> false");
+        assert_eq!(self.execute("true and false"), "false");
         self.execute(
             "let (_y_ exists_such_that (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
         );
         self.execute("let default > prec ->");
         self.execute("let (prec ->) > prec let");
+        assert_eq!(self.execute("let 2 > 1"), "");
+        assert_eq!(self.execute("let 1 > 0"), "");
+        assert_eq!(self.execute("2 > 0"), "true");
     }
 
     fn reduce_and_call_pair(
@@ -421,6 +462,10 @@ where
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
+        info!(
+            self.logger,
+            "reduce_and_call_pair({}, {})", left, right
+        );
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
@@ -449,6 +494,10 @@ where
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
+        info!(
+            self.logger,
+            "try_reducing_then_call({})", ast
+        );
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
@@ -459,6 +508,10 @@ where
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
+        info!(
+            self.logger,
+            "call({})", ast
+        );
         match ast.get_concept().and_then(|c| {
             self.snap_shot.read_concept(&self.delta, c).get_string()
         }) {
@@ -821,12 +874,10 @@ where
                 Some((ref left, ref right)) => {
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
-                    let ls = left.to_string();
-                    let rs = right.to_string();
                     let concept = self.find_or_insert_definition(
                         leftc,
                         rightc,
-                        is_variable(&ls) || is_variable(&rs),
+                        left.is_variable() || right.is_variable(),
                         false,
                     )?;
                     if !string.contains(' ') {

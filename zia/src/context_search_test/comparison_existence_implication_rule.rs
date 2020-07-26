@@ -1,8 +1,9 @@
 use crate::{
     concepts::{Concept, SpecificPart},
+    context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
-        Comparison, ComparisonReason, ContextCache, ContextSearch,
+        Comparison, ComparisonReason, ContextSearch,
         ReductionReason,
     },
     context_search_test::check_order,

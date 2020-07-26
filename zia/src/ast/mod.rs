@@ -20,7 +20,7 @@ use std::{
 };
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SyntaxTree {
     /// The root of this syntax tree, represented as a `String`.
     syntax: Option<String>,
@@ -35,8 +35,10 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
     fn eq(&self, other: &Self) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
             ss == os
+        } else if let (Some(sc), Some(oc)) = (&self.concept, &other.concept) {
+            sc == oc
         } else {
-            self.concept == other.concept
+            self.expansion == other.expansion
         }
     }
 }
@@ -150,24 +152,24 @@ impl SyntaxTree {
         if self.syntax.as_ref().map_or(false, |s| is_variable(s)) {
             true
         } else if let Some((l, r)) = self.get_expansion() {
-            l.syntax.as_ref().map_or(false, |s| is_variable(s))
-                || r.syntax.as_ref().map_or(false, |s| is_variable(s))
+            l.is_variable()
+                || r.is_variable()
         } else {
             false
         }
     }
 }
 
-impl fmt::Debug for SyntaxTree {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter,
-    ) -> Result<(), std::fmt::Error> {
-        formatter.write_str(
-            self.syntax.clone().unwrap_or_else(|| "".into()).as_str(),
-        )
-    }
-}
+// impl fmt::Debug for SyntaxTree {
+//     fn fmt(
+//         &self,
+//         formatter: &mut std::fmt::Formatter,
+//     ) -> Result<(), std::fmt::Error> {
+//         formatter.write_str(
+//             self.syntax.clone().unwrap_or_else(|| "".into()).as_str(),
+//         )
+//     }
+// }
 
 pub fn is_variable(string: &str) -> bool {
     string.starts_with('_') && string.ends_with('_')

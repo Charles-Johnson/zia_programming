@@ -20,9 +20,8 @@ use crate::{
     concepts::{format_string, Concept},
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
-    snap_shot::Reader as SnapShotReader,
+    snap_shot::Reader as SnapShotReader, context_cache::ContextCache,
 };
-use dashmap::DashMap;
 use log::debug;
 use maplit::{hashmap, hashset};
 use rayon::prelude::*;
@@ -41,13 +40,7 @@ pub struct ContextSearch<'a, S> {
     syntax_evaluating: HashSet<Arc<SyntaxTree>>,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct ContextCache {
-    reductions: DashMap<Arc<SyntaxTree>, ReductionResult>,
-    syntax_trees: DashMap<usize, Arc<SyntaxTree>>,
-}
-
-type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
+pub type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum ReductionReason {
@@ -177,9 +170,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> ReductionResult {
         debug!("reduce({})", ast.to_string());
-        self.cache.reductions.get(ast).map_or_else(
+        self.cache.get_reduction_or_else(ast,
             || {
-                let result = ast
+                let reduction_result = ast
                     .get_concept()
                     .and_then(|c| self.reduce_concept(c))
                     .or_else(|| {
@@ -209,14 +202,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 .or_else(|| self.reduce_pair(left, right))
                         })
                     });
-                if !ast.is_variable()
-                    && (&result).as_ref().map_or(true, |(r, _)| r != ast)
-                {
-                    self.cache.reductions.insert(ast.clone(), result.clone());
-                }
-                result
+                self.cache.insert_reduction(ast, &reduction_result);
+                reduction_result
             },
-            |r| r.as_ref().cloned(),
         )
     }
 
@@ -242,6 +230,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ReductionResult {
+        debug!("recursively_reduce_pair({}, {})", left, right);
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
         let maybe_subbed_r =
@@ -511,6 +500,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         &self,
         ast: &Arc<SyntaxTree>,
     ) -> (Arc<SyntaxTree>, Option<ReductionReason>) {
+        debug!("recursively_reduce({})", ast);
         let mut maybe_reason: Option<ReductionReason> = None;
         let mut reduced_ast = ast.clone();
         while let Some((ref a, ref reason)) = self.reduce(&reduced_ast) {
@@ -675,7 +665,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
         self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
-            self.cache.syntax_trees.get(&concept_id).map_or_else(
+            self.cache.get_syntax_tree_or_else(concept_id,
                 || {
                     let concept =
                         self.snap_shot.read_concept(self.delta, concept_id);
@@ -691,14 +681,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     } else {
                         SyntaxTree::new_concept(concept_id).into()
                     };
-                    if !concept.variable() {
-                        self.cache
-                            .syntax_trees
-                            .insert(concept_id, syntax.clone());
-                    }
+                    self.cache
+                        .insert_syntax_tree(&concept, &syntax);
                     syntax
                 },
-                |r| r.value().clone(),
             )
         })
     }
@@ -806,7 +792,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         (
             match (
                 syntax_comparison.get_concept(),
-                reversed_comparison.get_concept(),
+                reversed_comparison.get_concept()
             ) {
                 (Some(x), Some(y))
                     if x == S::false_id() && y == S::false_id() =>
@@ -859,6 +845,7 @@ impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
     fn from(
         (snap_shot, delta, cache): ContextReferences<'a, S>,
     ) -> ContextSearch<'a, S> {
+        // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
             snap_shot,
             variable_mask: hashmap! {},

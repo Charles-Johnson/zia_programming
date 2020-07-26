@@ -128,6 +128,8 @@ mod constants;
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
+mod context_cache;
+
 mod context_delta;
 
 mod context_search;

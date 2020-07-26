@@ -12,7 +12,7 @@ struct InferedPrecedenceSnapshot {
     concepts: Vec<Concept>,
 }
 
-const CONCEPT_LEN: usize = 33;
+const CONCEPT_LEN: usize = 36;
 
 impl Default for InferedPrecedenceSnapshot {
     fn default() -> Self {
@@ -121,7 +121,10 @@ impl Default for InferedPrecedenceSnapshot {
             right_id_concept,
             greater_than_reduction_precedence,
             default_greater_than_reduction_precedence,
-            reduction_preceeds_let
+            reduction_preceeds_let,
+            (SpecificPart::Concrete, 33).into(), // false
+            (SpecificPart::Concrete, 34).into(), // left
+            (SpecificPart::Concrete, 35).into() // label_of
         ];
         Self {
             concepts: check_order(&concepts),
@@ -158,6 +161,7 @@ impl Reader for InferedPrecedenceSnapshot {
             24 => Some("default".into()),
             28 => Some("assoc".into()),
             29 => Some("right".into()),
+            33 => Some("false".into()),
             _ => None,
         }
     }
@@ -182,6 +186,7 @@ impl Reader for InferedPrecedenceSnapshot {
             "default" => Some(24),
             "assoc" => Some(28),
             "right" => Some(29),
+            "false" => Some(33),
             _ => None,
         }
     }
@@ -195,7 +200,7 @@ impl Reader for InferedPrecedenceSnapshot {
     }
 
     fn left_id() -> usize {
-        CONCEPT_LEN
+        34
     }
 
     fn precedence_id() -> usize {
@@ -223,7 +228,7 @@ impl Reader for InferedPrecedenceSnapshot {
     }
 
     fn false_id() -> usize {
-        CONCEPT_LEN + 3
+        33
     }
 
     fn let_id() -> usize {
@@ -233,36 +238,29 @@ impl Reader for InferedPrecedenceSnapshot {
     fn default_id() -> usize {
         24
     }
+
+    fn label_id() -> usize {
+        35
+    }
 }
 
 impl Apply for InferedPrecedenceSnapshot {
     type Delta = ContextDelta;
 
     fn apply(&mut self, _: Self::Delta) {
-        unimplemented!()
+        
     }
 
     fn diff(&self, _: Self) -> Self::Delta {
-        unimplemented!()
+        ContextDelta::default()
     }
 }
 
 #[test]
 fn comparison_existence_implication_rule_test() {
     let mut context = Context::<InferedPrecedenceSnapshot>::new_test_case();
-    assert_eq!(context.ast_from_expression("a b -> c"), Ok(
-        SyntaxTree::from("(a b) -> c")
-        .bind_pair(
-            SyntaxTree::new_pair(SyntaxTree::from("a"), SyntaxTree::from("b")),
-            SyntaxTree::new_pair(
-                SyntaxTree::from("->").bind_concept(22),
-                SyntaxTree::from("c")
-            )
-        ).into()
-    ));
     assert_eq!(context.ast_from_expression("let a b -> c"), Ok(
-        SyntaxTree::from("let (a b) -> c)")
-        .bind_pair(
+        SyntaxTree::new_pair(
             SyntaxTree::from("let").bind_concept(21),
             SyntaxTree::new_pair(
                 SyntaxTree::new_pair(SyntaxTree::from("a"), SyntaxTree::from("b")),
@@ -272,5 +270,5 @@ fn comparison_existence_implication_rule_test() {
                 )
             )
         ).into()
-    ))
+    ));
 }
