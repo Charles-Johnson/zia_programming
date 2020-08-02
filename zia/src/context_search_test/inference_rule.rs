@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -15,8 +15,8 @@ struct InferenceRuleSnapShot {
 
 impl Default for InferenceRuleSnapShot {
     fn default() -> Self {
-        let mut implication_concept = (SpecificPart::Concrete, 0).into();
-        let mut true_concept = (SpecificPart::Concrete, 1).into();
+        let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
+        let mut true_concept = (ConcreteConceptType::True, 1).into();
         let mut concept_a = (SpecificPart::default(), 3).into();
         let mut example_concept = (SpecificPart::default(), 7).into();
         let mut variable_concept = (SpecificPart::variable(), 9).into();
@@ -52,10 +52,10 @@ impl Default for InferenceRuleSnapShot {
                 example_composition,
                 variable_concept,
                 concept_b,
-                (SpecificPart::Concrete, 11).into(),
-                (SpecificPart::Concrete, 12).into(),
-                (SpecificPart::Concrete, 13).into(),
-                (SpecificPart::Concrete, 14).into(),
+                (ConcreteConceptType::Precedence, 11).into(),
+                (ConcreteConceptType::Associativity, 12).into(),
+                (ConcreteConceptType::Left, 13).into(),
+                (ConcreteConceptType::Right, 14).into(),
             ]),
         }
     }

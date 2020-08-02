@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
@@ -19,7 +19,7 @@ const CONCEPT_LEN: usize = 11;
 
 impl Default for BasicComparisonSnapShot {
     fn default() -> Self {
-        let mut greater_than_concept = (SpecificPart::Concrete, 0).into();
+        let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 0).into();
         let mut left_concept = (SpecificPart::default(), 1).into();
         let mut right_concept = (SpecificPart::default(), 2).into();
         let mut is_greater_than_right_concept = Concept::composition_of(
@@ -32,10 +32,10 @@ impl Default for BasicComparisonSnapShot {
             &mut left_concept,
             &mut is_greater_than_right_concept,
         );
-        let mut true_concept = (SpecificPart::Concrete, 5).into();
+        let mut true_concept = (ConcreteConceptType::True, 5).into();
         left_is_greater_than_right_concept.make_reduce_to(&mut true_concept);
-        let assoc_concept = (SpecificPart::Concrete, 6).into();
-        let right_id_concept = (SpecificPart::Concrete, 7).into();
+        let assoc_concept = (ConcreteConceptType::Associativity, 6).into();
+        let right_id_concept = (ConcreteConceptType::Right, 7).into();
         let mut another_concept = (SpecificPart::default(), 8).into();
         let mut another_concept_is_greater_than_right_concept =
             Concept::composition_of(
@@ -43,7 +43,7 @@ impl Default for BasicComparisonSnapShot {
                 &mut another_concept,
                 &mut is_greater_than_right_concept,
             );
-        let mut false_concept = (SpecificPart::Concrete, 10).into();
+        let mut false_concept = (ConcreteConceptType::False, 10).into();
         another_concept_is_greater_than_right_concept
             .make_reduce_to(&mut false_concept);
         let concepts: [_; CONCEPT_LEN] = [

@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_delta::ContextDelta,
     context_search_test::check_order,
     context::Context,
@@ -16,10 +16,10 @@ const CONCEPT_LEN: usize = 36;
 
 impl Default for InferedPrecedenceSnapshot {
     fn default() -> Self {
-        let mut true_concept = (SpecificPart::Concrete, 0).into();
-        let mut greater_than_concept = (SpecificPart::Concrete, 1).into();
-        let mut exists_such_that_concept = (SpecificPart::Concrete, 2).into();
-        let mut implication_concept = (SpecificPart::Concrete, 3).into();
+        let mut true_concept = (ConcreteConceptType::True, 0).into();
+        let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
+        let mut exists_such_that_concept = (ConcreteConceptType::ExistsSuchThat, 2).into();
+        let mut implication_concept = (ConcreteConceptType::Implication, 3).into();
         let mut x = (SpecificPart::variable(), 4).into();
         let mut y = (SpecificPart::variable(), 5).into();
         let mut z = (SpecificPart::variable(), 6).into();
@@ -74,15 +74,15 @@ impl Default for InferedPrecedenceSnapshot {
                 &mut implies_x_greater_than_z,
             );
         y_exists_such_that_x_greater_than_y_and_y_greater_than_z_implies_x_greater_than_z.make_reduce_to(&mut true_concept);
-        let mut let_concept = (SpecificPart::Concrete, 21).into();
-        let mut reduction_concept = (SpecificPart::Concrete, 22).into();
-        let mut precedence_concept = (SpecificPart::Concrete, 23).into();
-        let mut default_concept = (SpecificPart::Concrete, 24).into();
+        let mut let_concept = (ConcreteConceptType::Let, 21).into();
+        let mut reduction_concept = (ConcreteConceptType::Reduction, 22).into();
+        let mut precedence_concept = (ConcreteConceptType::Precedence, 23).into();
+        let mut default_concept = (ConcreteConceptType::Default, 24).into();
         let mut let_precedence = Concept::composition_of(25, &mut precedence_concept, &mut let_concept);
         let mut reduction_precedence = Concept::composition_of(26, &mut precedence_concept, &mut reduction_concept);
         let mut greater_than_let_precedence = Concept::composition_of(27, &mut greater_than_concept, &mut let_precedence);
-        let assoc_concept = (SpecificPart::Concrete, 28).into();
-        let right_id_concept = (SpecificPart::Concrete, 29).into();
+        let assoc_concept = (ConcreteConceptType::Associativity, 28).into();
+        let right_id_concept = (ConcreteConceptType::Right, 29).into();
         let mut greater_than_reduction_precedence = Concept::composition_of(30, &mut greater_than_concept, &mut reduction_precedence);
         let mut default_greater_than_reduction_precedence = Concept::composition_of(31, &mut default_concept, &mut greater_than_reduction_precedence);
         default_greater_than_reduction_precedence.make_reduce_to(&mut true_concept);
@@ -122,9 +122,9 @@ impl Default for InferedPrecedenceSnapshot {
             greater_than_reduction_precedence,
             default_greater_than_reduction_precedence,
             reduction_preceeds_let,
-            (SpecificPart::Concrete, 33).into(), // false
-            (SpecificPart::Concrete, 34).into(), // left
-            (SpecificPart::Concrete, 35).into() // label_of
+            (ConcreteConceptType::False, 33).into(), // false
+            (ConcreteConceptType::Left, 34).into(), // left
+            (ConcreteConceptType::Label, 35).into() // label_of
         ];
         Self {
             concepts: check_order(&concepts),

@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context::Context,
     context_delta::ContextDelta,
     context_search_test::check_order,
@@ -14,10 +14,10 @@ struct BasicPrecedenceSnapShot {
 
 impl Default for BasicPrecedenceSnapShot {
     fn default() -> Self {
-        let mut precedence_concept = (SpecificPart::Concrete, 0).into();
-        let mut greater_than_concept = (SpecificPart::Concrete, 1).into();
-        let mut default_concept = (SpecificPart::Concrete, 2).into();
-        let mut true_concept = (SpecificPart::Concrete, 3).into();
+        let mut precedence_concept = (ConcreteConceptType::Precedence, 0).into();
+        let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
+        let mut default_concept = (ConcreteConceptType::Default, 2).into();
+        let mut true_concept = (ConcreteConceptType::True, 3).into();
         let mut abstract_concept = (SpecificPart::default(), 4).into();
         let mut precedence_of_abstract_concept = Concept::composition_of(
             5,
@@ -38,9 +38,9 @@ impl Default for BasicPrecedenceSnapShot {
             );
         precedence_of_abstract_concept_is_below_default
             .make_reduce_to(&mut true_concept);
-        let assoc_concept: Concept = (SpecificPart::Concrete, 8).into();
-        let left_concept: Concept = (SpecificPart::Concrete, 9).into();
-        let right_concept: Concept = (SpecificPart::Concrete, 10).into();
+        let assoc_concept: Concept = (ConcreteConceptType::Associativity, 8).into();
+        let left_concept: Concept = (ConcreteConceptType::Left, 9).into();
+        let right_concept: Concept = (ConcreteConceptType::Right, 10).into();
         Self {
             concepts: check_order(&[
                 precedence_concept,

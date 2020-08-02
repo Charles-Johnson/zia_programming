@@ -1,5 +1,5 @@
 use crate::{
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
@@ -19,10 +19,10 @@ const CONCEPT_LEN: usize = 30;
 
 impl Default for ComparisonExistenceImplicationRuleSnapshot {
     fn default() -> Self {
-        let mut true_concept = (SpecificPart::Concrete, 0).into();
-        let mut greater_than_concept = (SpecificPart::Concrete, 1).into();
-        let mut exists_such_that_concept = (SpecificPart::Concrete, 2).into();
-        let mut implication_concept = (SpecificPart::Concrete, 3).into();
+        let mut true_concept = (ConcreteConceptType::True, 0).into();
+        let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
+        let mut exists_such_that_concept = (ConcreteConceptType::ExistsSuchThat, 2).into();
+        let mut implication_concept = (ConcreteConceptType::Implication, 3).into();
         let mut x = (SpecificPart::variable(), 4).into();
         let mut y = (SpecificPart::variable(), 5).into();
         let mut z = (SpecificPart::variable(), 6).into();
@@ -90,8 +90,8 @@ impl Default for ComparisonExistenceImplicationRuleSnapshot {
         let mut b_greater_than_c =
             Concept::composition_of(27, &mut b, &mut greater_than_c);
         b_greater_than_c.make_reduce_to(&mut true_concept);
-        let assoc_concept = (SpecificPart::Concrete, 28).into();
-        let right_id_concept = (SpecificPart::Concrete, 29).into();
+        let assoc_concept = (ConcreteConceptType::Associativity, 28).into();
+        let right_id_concept = (ConcreteConceptType::Right, 29).into();
         let concepts: [_; CONCEPT_LEN] = [
             true_concept,
             greater_than_concept,

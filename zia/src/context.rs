@@ -17,7 +17,7 @@
 use crate::{
     and_also::AndAlso,
     ast::{is_variable, SyntaxTree},
-    concepts::SpecificPart,
+    concepts::{ConcreteConceptType, SpecificPart},
     context_cache::ContextCache,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     context_search::{Comparison, ContextSearch},
@@ -401,7 +401,7 @@ where
                 index,
                 (
                     ConceptDelta::Insert(
-                        (SpecificPart::Concrete, index).into(),
+                        (ConcreteConceptType::from(index), index).into(),
                     ),
                     false,
                 ),

@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_delta::ContextDelta,
     context_cache::ContextCache,
     context_search::{ContextSearch, ReductionReason},
@@ -17,14 +17,14 @@ struct ExistenceInferenceRuleSnapShot {
 
 impl Default for ExistenceInferenceRuleSnapShot {
     fn default() -> Self {
-        let mut implication_concept = (SpecificPart::Concrete, 0).into();
-        let mut true_concept = (SpecificPart::Concrete, 1).into();
+        let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
+        let mut true_concept = (ConcreteConceptType::True, 1).into();
         let mut concept_a = (SpecificPart::default(), 3).into();
         let mut example_concept = (SpecificPart::default(), 7).into();
         let mut free_variable_concept = (SpecificPart::variable(), 9).into();
         let mut concept_b = (SpecificPart::default(), 10).into();
         let mut bound_variable = (SpecificPart::variable(), 11).into();
-        let mut exists_such_that_concept = (SpecificPart::Concrete, 14).into();
+        let mut exists_such_that_concept = (ConcreteConceptType::ExistsSuchThat, 14).into();
         let mut bound_variable_composed_with_free_variable =
             Concept::composition_of(
                 13,
@@ -61,8 +61,8 @@ impl Default for ExistenceInferenceRuleSnapShot {
         let mut example_composition =
             Concept::composition_of(8, &mut concept_a, &mut example_concept);
         example_composition.make_reduce_to(&mut true_concept);
-        let assoc_concept = (SpecificPart::Concrete, 15).into();
-        let right_concept = (SpecificPart::Concrete, 16).into();
+        let assoc_concept = (ConcreteConceptType::Associativity, 15).into();
+        let right_concept = (ConcreteConceptType::Right, 16).into();
         let concepts: [_; CONCEPT_LEN] = [
             implication_concept,
             true_concept,

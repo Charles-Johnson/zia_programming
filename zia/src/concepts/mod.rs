@@ -15,6 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    constants::*,
     delta::{Apply, Change, Delta, SetChange},
     errors::{ZiaError, ZiaResult},
 };
@@ -290,12 +291,58 @@ impl Concept {
 #[derive(Clone, PartialEq)]
 pub enum SpecificPart {
     /// A concrete concept cannot be further reduced or defined as a composition.
-    Concrete,
+    Concrete(ConcreteConceptType),
     /// An abstract concept can reduce to any other concept (whose normal form isn't the former
     /// concept) and can be defined as the composition of any two concepts.
     Abstract(AbstractPart),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ConcreteConceptType {
+    Label,
+    Define,
+    Reduction,
+    Let,
+    True,
+    False,
+    Associativity,
+    Right,
+    Left,
+    Precedence,
+    Default,
+    GreaterThan,
+    Implication,
+    ExistsSuchThat,
+}
+
+impl From<usize> for ConcreteConceptType {
+    fn from(index: usize) -> Self {
+        match index {
+            LABEL => Self::Label,
+            DEFINE => Self::Define,
+            REDUCTION => Self::Reduction,
+            LET => Self::Let,
+            TRUE => Self::True,
+            FALSE => Self::False,
+            ASSOC => Self::Associativity,
+            RIGHT => Self::Right,
+            LEFT => Self::Left,
+            PRECEDENCE => Self::Precedence,
+            DEFAULT => Self::Default,
+            GREATER_THAN => Self::GreaterThan,
+            IMPLICATION => Self::Implication,
+            EXISTS_SUCH_THAT => Self::ExistsSuchThat,
+            _ => unimplemented!()
+        }
+    }
+}
+
+impl From<ConcreteConceptType> for SpecificPart {
+    fn from(cc: ConcreteConceptType) -> Self {
+        Self::Concrete(cc)
+    }
 }
 
 impl SpecificPart {
@@ -320,7 +367,7 @@ impl Debug for SpecificPart {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Concrete => "Concrete".to_string(),
+            Self::Concrete(ref cc) => format!("{:#?}", cc),
             Self::Abstract(ref ap) => format!("{:#?}", ap),
             Self::String(ref s) => format_string(s),
         })
@@ -437,12 +484,12 @@ impl From<(AbstractPart, usize)> for Concept {
     }
 }
 
-impl From<(SpecificPart, usize)> for Concept {
-    fn from((sp, id): (SpecificPart, usize)) -> Self {
+impl<T: Into<SpecificPart>> From<(T, usize)> for Concept {
+    fn from((sp, id): (T, usize)) -> Self {
         Self {
             id,
             concrete_part: ConcreteConcept::default(),
-            specific_part: sp,
+            specific_part: sp.into(),
         }
     }
 }

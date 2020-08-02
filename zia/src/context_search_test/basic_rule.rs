@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -15,7 +15,7 @@ struct BasicRuleSnapShot {
 
 impl Default for BasicRuleSnapShot {
     fn default() -> Self {
-        let mut concrete_concept = (SpecificPart::Concrete, 0).into();
+        let mut concrete_concept = (ConcreteConceptType::True, 0).into();
         let mut left_concept = (SpecificPart::default(), 2).into();
         let mut right_concept_variable = (SpecificPart::variable(), 3).into();
         let mut composite_concept = Concept::composition_of(

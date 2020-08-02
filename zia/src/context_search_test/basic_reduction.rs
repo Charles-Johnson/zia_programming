@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -14,7 +14,7 @@ struct BasicReductionSnapShot {
 
 impl Default for BasicReductionSnapShot {
     fn default() -> Self {
-        let mut concrete_concept = (SpecificPart::Concrete, 0).into();
+        let mut concrete_concept = (ConcreteConceptType::True, 0).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 1).into();
         abstract_concept.make_reduce_to(&mut concrete_concept);
         Self {

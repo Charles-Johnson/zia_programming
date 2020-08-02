@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -14,8 +14,8 @@ struct BasicInferenceSnapShot {
 
 impl Default for BasicInferenceSnapShot {
     fn default() -> Self {
-        let mut implication_concept = (SpecificPart::Concrete, 0).into();
-        let mut true_concept = (SpecificPart::Concrete, 1).into();
+        let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
+        let mut true_concept = (ConcreteConceptType::True, 1).into();
         let mut condition_concept: Concept =
             (SpecificPart::default(), 2).into();
         let mut result_concept = (SpecificPart::default(), 3).into();
@@ -39,10 +39,10 @@ impl Default for BasicInferenceSnapShot {
                 result_concept,
                 implies_result_concept,
                 condition_implies_result_concept,
-                (SpecificPart::Concrete, 6).into(),
-                (SpecificPart::Concrete, 7).into(),
-                (SpecificPart::Concrete, 8).into(),
-                (SpecificPart::Concrete, 9).into(),
+                (ConcreteConceptType::Associativity, 6).into(),
+                (ConcreteConceptType::Left, 7).into(),
+                (ConcreteConceptType::Precedence, 8).into(),
+                (ConcreteConceptType::Right, 9).into(),
             ]),
         }
     }

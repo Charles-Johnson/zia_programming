@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -16,8 +16,8 @@ const CONCEPTS_LEN: usize = 4;
 
 impl Default for BasicExistenceSnapShot {
     fn default() -> Self {
-        let exists_such_that_concept = (SpecificPart::Concrete, 0).into();
-        let mut true_concept = (SpecificPart::Concrete, 1).into();
+        let exists_such_that_concept = (ConcreteConceptType::ExistsSuchThat, 0).into();
+        let mut true_concept = (ConcreteConceptType::True, 1).into();
         let mut abstract_concept: Concept = (SpecificPart::default(), 2).into();
         let variable_concept = (SpecificPart::variable(), 3).into();
         abstract_concept.make_reduce_to(&mut true_concept);

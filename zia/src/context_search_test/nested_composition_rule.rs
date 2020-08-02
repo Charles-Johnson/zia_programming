@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, SpecificPart},
+    concepts::{Concept, SpecificPart, ConcreteConceptType},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
@@ -17,7 +17,7 @@ const CONCEPT_LENGTH: usize = 8;
 
 impl Default for NestedCompositionRuleSnapshot {
     fn default() -> Self {
-        let mut concrete_concept = (SpecificPart::Concrete, 0).into();
+        let mut concrete_concept = (ConcreteConceptType::True, 0).into();
         let mut left_concept = (SpecificPart::default(), 2).into();
         let mut right_left_concept = (SpecificPart::default(), 3).into();
         let mut right_right_concept_variable = (SpecificPart::variable(), 4).into();
@@ -27,8 +27,8 @@ impl Default for NestedCompositionRuleSnapshot {
             &mut left_concept,
             &mut right_composite_concept,
         );
-        let assoc_concept = (SpecificPart::Concrete, 6).into();
-        let right_id_concept = (SpecificPart::Concrete, 7).into();
+        let assoc_concept = (ConcreteConceptType::Associativity, 6).into();
+        let right_id_concept = (ConcreteConceptType::Right, 7).into();
         composite_concept.make_reduce_to(&mut concrete_concept);
         let concepts: [Concept; CONCEPT_LENGTH] = [
             concrete_concept,
