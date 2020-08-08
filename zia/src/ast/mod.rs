@@ -152,8 +152,7 @@ impl SyntaxTree {
         if self.syntax.as_ref().map_or(false, |s| is_variable(s)) {
             true
         } else if let Some((l, r)) = self.get_expansion() {
-            l.is_variable()
-                || r.is_variable()
+            l.is_variable() || r.is_variable()
         } else {
             false
         }

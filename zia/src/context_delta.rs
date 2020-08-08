@@ -179,8 +179,22 @@ impl Debug for ConceptDelta {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Insert(ref c) => format!("+ {:#?}", c) + if c.variable() {" (variable) "} else {""},
-            Self::Remove(ref c) => format!("- {:#?}", c) + if c.variable() {" (variable) "} else {""},
+            Self::Insert(ref c) => {
+                format!("+ {:#?}", c)
+                    + if c.variable() {
+                        " (variable) "
+                    } else {
+                        ""
+                    }
+            },
+            Self::Remove(ref c) => {
+                format!("- {:#?}", c)
+                    + if c.variable() {
+                        " (variable) "
+                    } else {
+                        ""
+                    }
+            },
             Self::Update(ref cd) => format!("{:#?}", cd),
         })
     }
