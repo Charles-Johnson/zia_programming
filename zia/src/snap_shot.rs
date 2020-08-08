@@ -1,13 +1,15 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::Concept,
+    concepts::{Concept, ConcreteConceptType},
     constants::LABEL,
     context_delta::{ConceptDelta, ContextDelta},
     delta::Apply,
     errors::{ZiaError, ZiaResult},
 };
+#[cfg(test)]
+use std::collections::HashMap;
 
-pub trait Reader: Default {
+pub trait Reader {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept>;
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
@@ -41,48 +43,6 @@ pub trait Reader: Default {
             || s.into(),
             |concept| SyntaxTree::from(s).bind_concept(concept),
         )
-    }
-    fn true_id() -> usize {
-        unimplemented!()
-    }
-    fn implication_id() -> usize {
-        unimplemented!()
-    }
-    fn precedence_id() -> usize {
-        unimplemented!()
-    }
-    fn greater_than_id() -> usize {
-        unimplemented!()
-    }
-    fn default_id() -> usize {
-        unimplemented!()
-    }
-    fn reduction_id() -> usize {
-        unimplemented!()
-    }
-    fn false_id() -> usize {
-        unimplemented!()
-    }
-    fn assoc_id() -> usize {
-        unimplemented!()
-    }
-    fn right_id() -> usize {
-        unimplemented!()
-    }
-    fn left_id() -> usize {
-        unimplemented!()
-    }
-    fn exists_such_that_id() -> usize {
-        unimplemented!()
-    }
-    fn define_id() -> usize {
-        unimplemented!()
-    }
-    fn let_id() -> usize {
-        unimplemented!()
-    }
-    fn label_id() -> usize {
-        unimplemented!()
     }
     fn concept_from_label(
         &self,
@@ -204,17 +164,111 @@ pub trait Reader: Default {
             ),
         )
     }
+    fn concrete_concept_id(
+        &self,
+        delta: &ContextDelta,
+        cc: ConcreteConceptType,
+    ) -> Option<usize>;
+    fn concrete_concept_type(
+        &self,
+        delta: &ContextDelta,
+        concept_id: usize,
+    ) -> Option<ConcreteConceptType>;
     #[cfg(test)]
-    fn new_test_case() -> Self {
-        let test_case = Self::default();
-        let delta = ContextDelta::default();
-        for id in 0..test_case.lowest_unoccupied_concept_id(&delta) {
-            test_case.get_label(&delta, id).map(|s| {
-                let concept = test_case.concept_from_label(&delta, &s);
-                let expected = Some(id);
-                assert_eq!(concept, expected, "Invariant violation for Reader implementation: get_label(d, c) = Some(s) => concept_from_label(d, &s) = Some(c) failed for c={}, s=\"{}\"", id, s);
-            });
+    fn new_test_case(
+        concepts: &[Concept],
+        concept_labels: &HashMap<usize, &'static str>,
+    ) -> Self;
+}
+
+#[cfg(test)]
+pub mod mock {
+    use super::Reader;
+    use crate::{
+        concepts::{Concept, ConcreteConceptType},
+        context_delta::ContextDelta,
+        context_search_test::check_order,
+        delta::Apply,
+    };
+    use bimap::BiMap;
+    use std::collections::HashMap;
+
+    #[derive(Default)]
+    pub struct MockSnapShot {
+        concrete_concepts: BiMap<usize, ConcreteConceptType>,
+        concept_labels: BiMap<usize, &'static str>,
+        concepts: Vec<Concept>,
+    }
+    impl Apply for MockSnapShot {
+        type Delta = ContextDelta;
+
+        fn apply(&mut self, _: Self::Delta) {}
+
+        fn diff(&self, _: Self) -> Self::Delta {
+            ContextDelta::default()
         }
-        test_case
+    }
+    impl Reader for MockSnapShot {
+        fn new_test_case(
+            concepts: &[Concept],
+            concept_labels: &HashMap<usize, &'static str>,
+        ) -> Self {
+            Self {
+                concepts: check_order(concepts),
+                concept_labels: concept_labels
+                    .iter()
+                    .map(|(l, r)| (*l, *r))
+                    .collect(),
+                concrete_concepts: concepts
+                    .iter()
+                    .filter_map(|c| {
+                        c.get_concrete_concept_type().map(|cc| (c.id(), cc))
+                    })
+                    .collect(),
+            }
+        }
+
+        fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
+            self.concepts.get(concept_id)
+        }
+
+        fn lowest_unoccupied_concept_id(
+            &self,
+            _: &crate::context_delta::ContextDelta,
+        ) -> usize {
+            self.concepts.len()
+        }
+
+        fn get_label(
+            &self,
+            _: &ContextDelta,
+            concept_id: usize,
+        ) -> Option<String> {
+            self.concept_labels.get_by_left(&concept_id).map(|s| s.to_string())
+        }
+
+        fn concept_from_label(
+            &self,
+            _: &ContextDelta,
+            s: &str,
+        ) -> Option<usize> {
+            self.concept_labels.get_by_right(&s).cloned()
+        }
+
+        fn concrete_concept_id(
+            &self,
+            _: &ContextDelta,
+            cc: ConcreteConceptType,
+        ) -> Option<usize> {
+            self.concrete_concepts.get_by_right(&cc).cloned()
+        }
+
+        fn concrete_concept_type(
+            &self,
+            _: &ContextDelta,
+            concept_id: usize,
+        ) -> Option<ConcreteConceptType> {
+            self.concrete_concepts.get_by_left(&concept_id).cloned()
+        }
     }
 }

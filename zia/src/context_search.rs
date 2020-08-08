@@ -17,10 +17,11 @@
 use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
-    concepts::{format_string, Concept},
+    concepts::{format_string, Concept, ConcreteConceptType},
+    context_cache::ContextCache,
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
-    snap_shot::Reader as SnapShotReader, context_cache::ContextCache,
+    snap_shot::Reader as SnapShotReader,
 };
 use log::debug;
 use maplit::{hashmap, hashset};
@@ -90,8 +91,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         debug!("infer_reduction({:#?})", concept);
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
-            roc.get_definition().and_then(|(l, _)| {
-                if l == S::implication_id() {
+            roc.get_definition().and_then(|(l, _)| self.is_concrete_type(ConcreteConceptType::Implication, l))
+                .and_then(|_| {
                     roc.get_righthand_of().iter().find_map(|roro| {
                         self.snap_shot
                             .read_concept(self.delta, *roro)
@@ -100,24 +101,51 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 let condition = self.to_ast(condition_id);
                                 self.reduce(&condition)
                                     .and_then(|(reduced_condition, reason)| {
-                                        reduced_condition.get_concept().and_then(|x| {
-                                            if x == S::true_id() {
-                                                Some((self.to_ast(x), ReductionReason::Inference{
-                                                    implication: self.to_ast(*roro),
-                                                    reason: reason.into()
-                                                }))
-                                            } else {
-                                                None
-                                            }
-                                        })
+                                        reduced_condition.get_concept().and_then(|x| self.is_concrete_type(ConcreteConceptType::True, x))
+                                            .map(|x| (self.to_ast(x), ReductionReason::Inference{
+                                                implication: self.to_ast(*roro),
+                                                reason: reason.into()
+                                            }))
                                     })
                             })
                     })
-                } else {
-                    None
                 }
-            })
+            )
         })
+    }
+
+    fn is_concrete_type(
+        &self,
+        cct: ConcreteConceptType,
+        concept_id: usize,
+    ) -> Option<usize> {
+        if Some(cct) == self.concrete_type(concept_id) {
+            Some(concept_id)
+        } else {
+            None
+        }
+    }
+
+    fn concrete_type(&self, concept_id: usize) -> Option<ConcreteConceptType> {
+        self.snap_shot.concrete_concept_type(self.delta, concept_id)
+    }
+
+    fn concrete_type_of_ast(
+        &self,
+        ast: &Arc<SyntaxTree>,
+    ) -> Option<ConcreteConceptType> {
+        ast.get_concept().and_then(|c| self.concrete_type(c))
+    }
+
+    fn concrete_concept_id(&self, cct: ConcreteConceptType) -> Option<usize> {
+        self.snap_shot.concrete_concept_id(self.delta, cct)
+    }
+
+    pub fn concrete_ast(
+        &self,
+        cct: ConcreteConceptType,
+    ) -> Option<Arc<SyntaxTree>> {
+        self.concrete_concept_id(cct).map(|id| self.to_ast(id))
     }
 
     /// Returns the syntax for the reduction of a concept.
@@ -170,42 +198,49 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> ReductionResult {
         debug!("reduce({})", ast.to_string());
-        self.cache.get_reduction_or_else(ast,
-            || {
-                let reduction_result = ast
-                    .get_concept()
-                    .and_then(|c| self.reduce_concept(c))
-                    .or_else(|| {
-                        ast.get_expansion().and_then(|(ref left, ref right)| {
-                            left.get_concept()
-                                .and_then(|lc| {
-                                    if lc == S::precedence_id() {
+        self.cache.get_reduction_or_else(ast, || {
+            let reduction_result = ast
+                .get_concept()
+                .and_then(|c| self.reduce_concept(c))
+                .or_else(|| {
+                    ast.get_expansion().and_then(|(ref left, ref right)| {
+                        left.get_concept()
+                            .and_then(|lc| match self.concrete_type(lc) {
+                                Some(ConcreteConceptType::Precedence) => self
+                                    .concrete_concept_id(
+                                        ConcreteConceptType::Default,
+                                    )
+                                    .and_then(|default_concept_id| {
                                         self.reduce_otherwise_default(
                                             ast,
                                             left,
                                             right,
                                             lc,
-                                            S::default_id(),
+                                            default_concept_id,
                                         )
-                                    } else if lc == S::assoc_id() {
+                                    }),
+                                Some(ConcreteConceptType::Associativity) => {
+                                    self.concrete_concept_id(
+                                        ConcreteConceptType::Right,
+                                    )
+                                    .and_then(|default_concept_id| {
                                         self.reduce_otherwise_default(
                                             ast,
                                             left,
                                             right,
                                             lc,
-                                            S::right_id(),
+                                            default_concept_id,
                                         )
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .or_else(|| self.reduce_pair(left, right))
-                        })
-                    });
-                self.cache.insert_reduction(ast, &reduction_result);
-                reduction_result
-            },
-        )
+                                    })
+                                },
+                                _ => None,
+                            })
+                            .or_else(|| self.reduce_pair(left, right))
+                    })
+                });
+            self.cache.insert_reduction(ast, &reduction_result);
+            reduction_result
+        })
     }
 
     // Reduces a syntax tree based on the properties of the left and right branches
@@ -370,10 +405,11 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             .and_then(|(lc, rc)| {
                 self.find_definition(*lc, *rc).map(|def| {
                     SyntaxTree::from(
-                        self.snap_shot.get_label(self.delta, def).map_or_else(
-                            || self.display_joint(lefthand, righthand),
-                            |label| label,
-                        ),
+                        self.snap_shot
+                            .get_label(self.delta, def)
+                            .unwrap_or_else(|| {
+                                self.display_joint(lefthand, righthand)
+                            }),
                     )
                     .bind_concept(def)
                 })
@@ -523,18 +559,18 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         rightleft: &Arc<SyntaxTree>,
         rightright: &Arc<SyntaxTree>,
     ) -> ReductionResult {
-        rightleft.get_concept().and_then(|rlc| match rlc {
-            x if x == S::reduction_id() => self
+        self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
+            ConcreteConceptType::Reduction => self
                 .determine_reduction_truth(left, rightright)
-                .map(|(x, reason)| {
+                .and_then(|(x, reason)| {
                     if x {
-                        (self.to_ast(S::true_id()), reason)
+                        self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
                     } else {
-                        (self.to_ast(S::false_id()), reason)
+                        self.concrete_ast(ConcreteConceptType::False).map(|ast| (ast, reason))
                     }
                 }),
-            x if x == S::exists_such_that_id()
-                && left
+            ConcreteConceptType::ExistsSuchThat
+                if left
                     .get_concept()
                     .map_or(false, |c| self.is_free_variable(c)) =>
             {
@@ -558,9 +594,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                 .recursively_reduce(
                                     &context_search.substitute(rightright, &hashmap! {variable_concept => example.clone()}),
                                 );
-                            match (truth_value.get_concept(), maybe_reason) {
-                                (Some(x), Some(reason))
-                                    if x == S::true_id() =>
+                            match (self.concrete_type_of_ast(&truth_value), maybe_reason) {
+                                (Some(ConcreteConceptType::True), Some(reason)) =>
                                 {
                                     Some((
                                         true,
@@ -570,8 +605,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                                         },
                                     ))
                                 },
-                                (Some(x), Some(reason))
-                                    if x == S::false_id() =>
+                                (Some(ConcreteConceptType::False), Some(reason)) =>
                                 {
                                     Some((
                                         false,
@@ -589,7 +623,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 for result in results {
                     match result {
                         Some((true, reason)) => {
-                            return Some((self.to_ast(S::true_id()), reason))
+                            return self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
                         },
                         Some((false, _)) => (),
                         _ => might_exist = true,
@@ -598,7 +632,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 if might_exist {
                     None
                 } else {
-                    Some((self.to_ast(S::false_id()), ReductionReason::Absence))
+                    self.concrete_ast( ConcreteConceptType::False).map(|ast| (ast, ReductionReason::Absence))
                 }
             }
             _ => None,
@@ -665,27 +699,22 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
         self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
-            self.cache.get_syntax_tree_or_else(concept_id,
-                || {
-                    let concept =
-                        self.snap_shot.read_concept(self.delta, concept_id);
-                    let syntax = if let Some(s) =
-                        concept.get_string().map_or_else(
-                            || self.snap_shot.get_label(self.delta, concept_id),
-                            |s| Some(format_string(&s)),
-                        ) {
-                        SyntaxTree::from(s).bind_concept(concept_id).into()
-                    } else if let Some((left, right)) = concept.get_definition()
-                    {
-                        self.combine(&self.to_ast(left), &self.to_ast(right))
-                    } else {
-                        SyntaxTree::new_concept(concept_id).into()
-                    };
-                    self.cache
-                        .insert_syntax_tree(&concept, &syntax);
-                    syntax
-                },
-            )
+            self.cache.get_syntax_tree_or_else(concept_id, || {
+                let concept =
+                    self.snap_shot.read_concept(self.delta, concept_id);
+                let syntax = if let Some(s) = concept.get_string().map_or_else(
+                    || self.snap_shot.get_label(self.delta, concept_id),
+                    |s| Some(format_string(&s)),
+                ) {
+                    SyntaxTree::from(s).bind_concept(concept_id).into()
+                } else if let Some((left, right)) = concept.get_definition() {
+                    self.combine(&self.to_ast(left), &self.to_ast(right))
+                } else {
+                    SyntaxTree::new_concept(concept_id).into()
+                };
+                self.cache.insert_syntax_tree(&concept, &syntax);
+                syntax
+            })
         })
     }
 
@@ -731,11 +760,19 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     pub fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
-        let assoc_of_ast = self.combine(&self.to_ast(S::assoc_id()), ast);
-        if Some(S::left_id())
-            == self.reduce(&assoc_of_ast).and_then(|(ast, _)| ast.get_concept())
+        if let Some(associativity_concept_id) =
+            self.concrete_concept_id(ConcreteConceptType::Associativity)
         {
-            Associativity::Left
+            let assoc_of_ast =
+                self.combine(&self.to_ast(associativity_concept_id), ast);
+            let maybe_concrete_concept_type = self
+                .reduce(&assoc_of_ast)
+                .and_then(|(ast, _)| self.concrete_type_of_ast(&ast));
+            if Some(ConcreteConceptType::Left) == maybe_concrete_concept_type {
+                Associativity::Left
+            } else {
+                Associativity::Right
+            }
         } else {
             Associativity::Right
         }
@@ -775,50 +812,60 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
-        let greater_than_syntax =
-            SyntaxTree::new_concept(S::greater_than_id()).into();
-        let comparing_syntax = self.combine(
-            some_syntax,
-            &self.combine(&greater_than_syntax, another_syntax),
-        );
-        let comparing_reversed_syntax = self.combine(
-            another_syntax,
-            &self.combine(&greater_than_syntax, some_syntax),
-        );
-        let (syntax_comparison, reason) =
-            self.recursively_reduce(&comparing_syntax);
-        let (reversed_comparison, reversed_reason) =
-            self.recursively_reduce(&comparing_reversed_syntax);
-        (
-            match (
-                syntax_comparison.get_concept(),
-                reversed_comparison.get_concept()
-            ) {
-                (Some(x), Some(y))
-                    if x == S::false_id() && y == S::false_id() =>
-                {
-                    Comparison::EqualTo
+        if let Some(greater_than_concept_id) =
+            self.concrete_concept_id(ConcreteConceptType::GreaterThan)
+        {
+            let greater_than_syntax =
+                SyntaxTree::new_concept(greater_than_concept_id).into();
+            let comparing_syntax = self.combine(
+                some_syntax,
+                &self.combine(&greater_than_syntax, another_syntax),
+            );
+            let comparing_reversed_syntax = self.combine(
+                another_syntax,
+                &self.combine(&greater_than_syntax, some_syntax),
+            );
+            let (syntax_comparison, reason) =
+                self.recursively_reduce(&comparing_syntax);
+            let (reversed_comparison, reversed_reason) =
+                self.recursively_reduce(&comparing_reversed_syntax);
+            (
+                match (
+                    self.concrete_type_of_ast(&syntax_comparison),
+                    self.concrete_type_of_ast(&reversed_comparison),
+                ) {
+                    (
+                        Some(ConcreteConceptType::False),
+                        Some(ConcreteConceptType::False),
+                    ) => Comparison::EqualTo,
+                    (
+                        Some(ConcreteConceptType::True),
+                        Some(ConcreteConceptType::True),
+                    ) => {
+                        panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
+                    },
+                    (Some(ConcreteConceptType::True), _) => {
+                        Comparison::GreaterThan
+                    },
+                    (_, Some(ConcreteConceptType::True)) => {
+                        Comparison::LessThan
+                    },
+                    (Some(ConcreteConceptType::False), _) => {
+                        Comparison::LessThanOrEqualTo
+                    },
+                    (_, Some(ConcreteConceptType::False)) => {
+                        Comparison::GreaterThanOrEqualTo
+                    },
+                    _ => Comparison::Incomparable,
                 },
-                (Some(x), Some(y))
-                    if x == S::true_id() && y == S::true_id() =>
-                {
-                    panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
-                }
-                (Some(x), _) if x == S::true_id() => Comparison::GreaterThan,
-                (_, Some(x)) if x == S::true_id() => Comparison::LessThan,
-                (Some(x), _) if x == S::false_id() => {
-                    Comparison::LessThanOrEqualTo
+                ComparisonReason::Reduction {
+                    reason,
+                    reversed_reason,
                 },
-                (_, Some(x)) if x == S::false_id() => {
-                    Comparison::GreaterThanOrEqualTo
-                },
-                _ => Comparison::Incomparable,
-            },
-            ComparisonReason::Reduction {
-                reason,
-                reversed_reason,
-            },
-        )
+            )
+        } else {
+            (Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept)
+        }
     }
 }
 
@@ -839,6 +886,7 @@ pub enum ComparisonReason {
         reason: Option<ReductionReason>,
         reversed_reason: Option<ReductionReason>,
     },
+    NoGreaterThanConcept,
 }
 
 impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {

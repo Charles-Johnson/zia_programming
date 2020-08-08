@@ -20,6 +20,7 @@ crate-type = ["lib"]
 path = "src/lib.rs"
 
 [dependencies]
+bimap = "0.5"
 dashmap = "3.5.0"
 lazy_static = "1.2.0"
 maplit = "1.0.2"

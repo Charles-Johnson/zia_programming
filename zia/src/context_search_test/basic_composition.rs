@@ -4,74 +4,18 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::ContextSearch,
-    context_search_test::check_order,
-    snap_shot::Reader as SnapShotReader,
+    snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
-
-struct BasicCompositionSnapShot {
-    concepts: Vec<Concept>,
-}
-
-impl Default for BasicCompositionSnapShot {
-    fn default() -> Self {
-        let mut left_concept = (SpecificPart::default(), 1).into();
-        let mut right_concept = (SpecificPart::default(), 2).into();
-        let composite_concept =
-            Concept::composition_of(0, &mut left_concept, &mut right_concept);
-        Self {
-            concepts: check_order(&[
-                composite_concept,
-                left_concept,
-                right_concept,
-            ]),
-        }
-    }
-}
-
-impl SnapShotReader for BasicCompositionSnapShot {
-    fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-        self.concepts.get(concept_id)
-    }
-
-    fn concept_from_label(
-        &self,
-        _: &ContextDelta,
-        label: &str,
-    ) -> Option<usize> {
-        match label {
-            "a" => Some(0),
-            "b" => Some(1),
-            "c" => Some(2),
-            _ => None,
-        }
-    }
-
-    fn lowest_unoccupied_concept_id(&self, _delta: &ContextDelta) -> usize {
-        self.concepts.len()
-    }
-
-    fn get_label(
-        &self,
-        _delta: &ContextDelta,
-        concept_id: usize,
-    ) -> Option<String> {
-        match concept_id {
-            0 => Some("a".into()),
-            1 => Some("b".into()),
-            2 => Some("c".into()),
-            _ => None,
-        }
-    }
-}
+use maplit::hashmap;
+use std::collections::HashMap;
 
 #[test]
 fn basic_composition() {
-    let snapshot = BasicCompositionSnapShot::new_test_case();
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search = ContextSearch::<BasicCompositionSnapShot>::from((
-        &snapshot, &delta, &cache,
-    ));
+    let context_search =
+        ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
     let left_syntax = SyntaxTree::from("b").bind_concept(1);
     let right_syntax = SyntaxTree::from("c").bind_concept(2);
     let composite_syntax = SyntaxTree::from("a")
@@ -95,4 +39,20 @@ fn basic_composition() {
     assert_eq!(context_search.to_ast(0), composite_syntax().into());
     assert_eq!(context_search.to_ast(1), left_syntax().into());
     assert_eq!(context_search.to_ast(2), right_syntax().into());
+}
+
+fn labels() -> HashMap<usize, &'static str> {
+    hashmap! {
+        0 => "a",
+        1 => "b",
+        2 => "c",
+    }
+}
+
+fn concepts() -> [Concept; 3] {
+    let mut left_concept = (SpecificPart::default(), 1).into();
+    let mut right_concept = (SpecificPart::default(), 2).into();
+    let composite_concept =
+        Concept::composition_of(0, &mut left_concept, &mut right_concept);
+    [composite_concept, left_concept, right_concept]
 }

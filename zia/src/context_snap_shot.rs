@@ -15,15 +15,13 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    concepts::Concept,
-    constants::{
-        ASSOC, DEFAULT, DEFINE, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
-        IMPLICATION, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE,
-    },
+    concepts::{Concept, ConcreteConceptType},
+    constants::LABEL,
     context_delta::{ConceptDelta, ContextDelta, StringDelta},
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
+use bimap::BiMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Display,
@@ -40,6 +38,7 @@ pub struct ContextSnapShot {
     concepts: Vec<Option<Concept>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
+    concrete_concepts: BiMap<usize, ConcreteConceptType>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -168,62 +167,6 @@ impl ContextSnapShot {
 }
 
 impl SnapShotReader for ContextSnapShot {
-    fn true_id() -> usize {
-        TRUE
-    }
-
-    fn implication_id() -> usize {
-        IMPLICATION
-    }
-
-    fn precedence_id() -> usize {
-        PRECEDENCE
-    }
-
-    fn default_id() -> usize {
-        DEFAULT
-    }
-
-    fn greater_than_id() -> usize {
-        GREATER_THAN
-    }
-
-    fn reduction_id() -> usize {
-        REDUCTION
-    }
-
-    fn false_id() -> usize {
-        FALSE
-    }
-
-    fn assoc_id() -> usize {
-        ASSOC
-    }
-
-    fn right_id() -> usize {
-        RIGHT
-    }
-
-    fn left_id() -> usize {
-        LEFT
-    }
-
-    fn exists_such_that_id() -> usize {
-        EXISTS_SUCH_THAT
-    }
-
-    fn define_id() -> usize {
-        DEFINE
-    }
-
-    fn label_id() -> usize {
-        LABEL
-    }
-
-    fn let_id() -> usize {
-        LET
-    }
-
     fn concept_from_label(
         &self,
         delta: &ContextDelta,
@@ -317,6 +260,53 @@ impl SnapShotReader for ContextSnapShot {
                 .and_then(|n| self.read_concept(delta, n).get_string()),
         }
     }
+
+    fn concrete_concept_id(
+        &self,
+        delta: &ContextDelta,
+        cc: ConcreteConceptType,
+    ) -> Option<usize> {
+        let mut id = None;
+        for (concept_id, (cd, _)) in delta.concept() {
+            match cd {
+                ConceptDelta::Insert(c)
+                    if c.get_concrete_concept_type() == Some(cc) =>
+                {
+                    id = Some(Some(*concept_id))
+                },
+                ConceptDelta::Remove(c)
+                    if c.get_concrete_concept_type() == Some(cc) =>
+                {
+                    id = Some(None)
+                },
+                _ => (),
+            };
+        }
+        id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).cloned())
+    }
+
+    fn concrete_concept_type(
+        &self,
+        delta: &ContextDelta,
+        concept_id: usize,
+    ) -> Option<ConcreteConceptType> {
+        if let Some(maybe_concrete_type) =
+            delta.concept().get(&concept_id).and_then(|(cd, _)| match cd {
+                ConceptDelta::Insert(c) => Some(c.get_concrete_concept_type()),
+                ConceptDelta::Remove(_) => panic!("Concept has been removed"),
+                _ => None,
+            })
+        {
+            maybe_concrete_type
+        } else {
+            self.concrete_concepts.get_by_left(&concept_id).cloned()
+        }
+    }
+
+    #[cfg(test)]
+    fn new_test_case(_: &[Concept], _: &HashMap<usize, &'static str>) -> Self {
+        unimplemented!()
+    }
 }
 
 impl Apply for ContextSnapShot {
@@ -342,9 +332,15 @@ impl Apply for ContextSnapShot {
                 match cd {
                     ConceptDelta::Insert(c) => {
                         self.concepts[*id] = Some(c.clone());
+                        if let Some(cct) = c.get_concrete_concept_type() {
+                            self.concrete_concepts.insert(*id, cct);
+                        }
                     },
-                    ConceptDelta::Remove(_) => {
+                    ConceptDelta::Remove(c) => {
                         self.blindly_remove_concept(*id);
+                        if let Some(cct) = c.get_concrete_concept_type() {
+                            self.concrete_concepts.remove_by_right(&cct);
+                        }
                     },
                     ConceptDelta::Update(d) => {
                         self.write_concept(*id).apply(d.clone())

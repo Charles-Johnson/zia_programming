@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#[cfg(test)]
+use crate::concepts::Concept;
 use crate::{
     and_also::AndAlso,
     ast::{is_variable, SyntaxTree},
@@ -29,7 +31,11 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
-use std::{default::Default, iter::from_fn, mem::swap, sync::Arc};
+#[cfg(test)]
+use std::collections::HashMap;
+use std::{
+    convert::TryFrom, default::Default, iter::from_fn, mem::swap, sync::Arc,
+};
 
 #[derive(Clone)]
 pub struct Context<S> {
@@ -63,7 +69,10 @@ where
     }
 
     #[cfg(test)]
-    pub fn new_test_case() -> Self {
+    pub fn new_test_case(
+        concepts: &[Concept],
+        concept_labels: &HashMap<usize, &'static str>,
+    ) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let logger = {
             let plain =
@@ -71,7 +80,7 @@ where
             Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
         };
         Self {
-            snap_shot: S::new_test_case(),
+            snap_shot: S::new_test_case(concepts, concept_labels),
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),
@@ -115,10 +124,7 @@ where
     }
 
     fn ast_from_tokens(&mut self, tokens: &[String]) -> ParsingResult {
-        info!(
-            self.logger,
-            "ast_from_tokens({:#?})", tokens
-        );
+        info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
@@ -131,8 +137,8 @@ where
                 if lp_indices.is_empty() {
                     return Err(ZiaError::AmbiguousExpression);
                 }
-                let assoc = lp_syntax.iter().try_fold(None, |assoc, syntax| {
-                    match (
+                let assoc =
+                    lp_syntax.iter().try_fold(None, |assoc, syntax| match (
                         self.context_search().get_associativity(syntax),
                         assoc,
                     ) {
@@ -144,8 +150,7 @@ where
                             }
                         },
                         (x, None) => Ok(Some(x)),
-                    }
-                })?;
+                    })?;
                 info!(
                     self.logger,
                     "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
@@ -263,12 +268,7 @@ where
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence> {
-        info!(
-            self.logger,
-            "lowest_precedence_info({:#?})", tokens
-        );
-        let precedence_syntax =
-            SyntaxTree::new_concept(S::precedence_id()).into();
+        info!(self.logger, "lowest_precedence_info({:#?})", tokens);
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
@@ -285,12 +285,16 @@ where
                         raw_syntax_of_token.bind_concept(c).into();
                     (
                         context_search
-                            .combine(&precedence_syntax, &syntax_of_token),
+                            .concrete_ast(ConcreteConceptType::Precedence)
+                            .map(|ast| {
+                                context_search.combine(&ast, &syntax_of_token)
+                            }),
                         syntax_of_token,
                     )
                 } else {
                     (
-                        SyntaxTree::new_concept(S::default_id()).into(),
+                        context_search
+                            .concrete_ast(ConcreteConceptType::Default),
                         raw_syntax_of_token.into(),
                     )
                 };
@@ -298,14 +302,18 @@ where
                 for syntax in lowest_precedence_syntax.clone() {
                     let precedence_of_syntax = if syntax.get_concept().is_some()
                     {
-                        context_search.combine(&precedence_syntax, &syntax)
+                        context_search
+                            .concrete_ast(ConcreteConceptType::Precedence)
+                            .map(|ast| context_search.combine(&ast, &syntax))
                     } else {
-                        SyntaxTree::new_concept(S::default_id()).into()
+                        context_search
+                            .concrete_ast(ConcreteConceptType::Default)
                     };
-                    match context_search
-                        .compare(&precedence_of_syntax, &precedence_of_token)
-                        .0
-                    {
+                    match precedence_of_syntax
+                        .and_also(&precedence_of_token)
+                        .map_or(Comparison::Incomparable, |(pos, pot)| {
+                            context_search.compare(pos, pot).0
+                        }) {
                         // syntax of token has an even lower precedence than some previous lowest precendence syntax
                         // reset lowest precedence syntax with just this one
                         Comparison::GreaterThan => {
@@ -365,18 +373,22 @@ where
         Ok(self.context_search().combine(&lefthand, &righthand))
     }
 
+    fn concrete_concept_id(&self, cct: ConcreteConceptType) -> Option<usize> {
+        self.snap_shot.concrete_concept_id(&self.delta, cct)
+    }
+
     fn ast_from_token(&mut self, t: &str) -> ParsingResult {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
             let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
             if is_variable(t) && ast.get_concept().is_none() {
+                let label_id = self
+                    .concrete_concept_id(ConcreteConceptType::Label)
+                    .ok_or(ZiaError::NoLabelConcept)?;
                 let concept_id = self.new_default(SpecificPart::variable());
                 let definition = self.find_or_insert_definition(
-                    S::label_id(),
-                    concept_id,
-                    true,
-                    true,
+                    label_id, concept_id, true, true,
                 )?;
                 let string_id = self.new_string(t);
                 self.update_reduction(definition, string_id, true)?;
@@ -401,7 +413,14 @@ where
                 index,
                 (
                     ConceptDelta::Insert(
-                        (ConcreteConceptType::from(index), index).into(),
+                        (
+                            ConcreteConceptType::try_from(index).map_or_else(
+                                |_| SpecificPart::default(),
+                                |cct| cct.into(),
+                            ),
+                            index,
+                        )
+                            .into(),
                     ),
                     false,
                 ),
@@ -462,10 +481,7 @@ where
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        info!(
-            self.logger,
-            "reduce_and_call_pair({}, {})", left, right
-        );
+        info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
@@ -494,10 +510,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        info!(
-            self.logger,
-            "try_reducing_then_call({})", ast
-        );
+        info!(self.logger, "try_reducing_then_call({})", ast);
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
@@ -508,10 +521,7 @@ where
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
-        info!(
-            self.logger,
-            "call({})", ast
-        );
+        info!(self.logger, "call({})", ast);
         match ast.get_concept().and_then(|c| {
             self.snap_shot.read_concept(&self.delta, c).get_string()
         }) {
@@ -548,49 +558,52 @@ where
         }
     }
 
+    fn concrete_type(&self, concept_id: usize) -> Option<ConcreteConceptType> {
+        self.snap_shot.concrete_concept_type(&self.delta, concept_id)
+    }
+
+    fn concrete_type_of_ast(
+        &self,
+        ast: &Arc<SyntaxTree>,
+    ) -> Option<ConcreteConceptType> {
+        ast.get_concept().and_then(|c| self.concrete_type(c))
+    }
+
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        left.get_concept()
-            .and_then(|lc| {
-                if lc == S::let_id() {
-                    right
-                        .get_expansion()
-                        .and_then(|(left, right)| {
-                            self.execute_let(&left, &right).and_then(
-                                |x| match x {
-                                    Err(ZiaError::CannotReduceFurther)
-                                    | Err(ZiaError::UnusedSymbol) => None,
-                                    _ => Some(x),
-                                },
-                            )
+        self.concrete_type_of_ast(left)
+            .and_then(|cct| match cct {
+                ConcreteConceptType::Let => right
+                    .get_expansion()
+                    .and_then(|(left, right)| {
+                        self.execute_let(&left, &right).and_then(|x| match x {
+                            Err(ZiaError::CannotReduceFurther)
+                            | Err(ZiaError::UnusedSymbol) => None,
+                            _ => Some(x),
                         })
-                        .or_else(|| {
-                            Some({
-                                let true_syntax =
-                                    self.context_search().to_ast(S::true_id());
-                                self.execute_reduction(right, &true_syntax)
-                            })
-                        })
-                        .map(|r| r.map(|()| "".to_string()))
-                } else if lc == S::label_id() {
-                    Some(Ok("'".to_string()
-                        + &right
-                            .get_concept()
-                            .and_then(|c| {
-                                self.snap_shot.get_label(&self.delta, c)
-                            })
-                            .unwrap_or_else(|| right.to_string())
-                        + "'"))
-                } else {
-                    None
-                }
+                    })
+                    .or_else(|| {
+                        self.context_search()
+                            .concrete_ast(ConcreteConceptType::True)
+                            .map(|ast| self.execute_reduction(right, &ast))
+                    })
+                    .map(|r| r.map(|()| "".to_string())),
+                ConcreteConceptType::Label => Some(Ok("'".to_string()
+                    + &right
+                        .get_concept()
+                        .and_then(|c| self.snap_shot.get_label(&self.delta, c))
+                        .unwrap_or_else(|| right.to_string())
+                    + "'")),
+                _ => None,
             })
             .unwrap_or_else(|| {
-                if right.get_concept() == Some(S::reduction_id()) {
+                if let Some(ConcreteConceptType::Reduction) =
+                    self.concrete_type_of_ast(right)
+                {
                     self.try_reducing_then_call(left)
                 } else {
                     self.reduce_and_call_pair(left, right)
@@ -619,19 +632,25 @@ where
         rightright: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         rightleft.get_concept().map_or(Err(ZiaError::UnusedSymbol), |c| {
-            if c == S::reduction_id() {
-                self.execute_reduction(left, rightright)
-            } else if c == S::define_id() {
-                self.execute_definition(left, rightright)
-            } else {
-                let rightleft_reduction =
-                    self.snap_shot.read_concept(&self.delta, c).get_reduction();
-                if let Some(r) = rightleft_reduction {
-                    let ast = self.context_search().to_ast(r);
-                    self.match_righthand_pair(left, &ast, rightright)
-                } else {
-                    Err(ZiaError::CannotReduceFurther)
-                }
+            match self.concrete_type(c) {
+                Some(ConcreteConceptType::Reduction) => {
+                    self.execute_reduction(left, rightright)
+                },
+                Some(ConcreteConceptType::Define) => {
+                    self.execute_definition(left, rightright)
+                },
+                _ => {
+                    let rightleft_reduction = self
+                        .snap_shot
+                        .read_concept(&self.delta, c)
+                        .get_reduction();
+                    if let Some(r) = rightleft_reduction {
+                        let ast = self.context_search().to_ast(r);
+                        self.match_righthand_pair(left, &ast, rightright)
+                    } else {
+                        Err(ZiaError::CannotReduceFurther)
+                    }
+                },
             }
         })
     }
@@ -900,13 +919,12 @@ where
     }
 
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
+        let label_id = self
+            .concrete_concept_id(ConcreteConceptType::Label)
+            .ok_or(ZiaError::NoLabelConcept)?;
         let variable = is_variable(string);
-        let definition = self.find_or_insert_definition(
-            S::label_id(),
-            concept,
-            variable,
-            variable,
-        )?;
+        let definition = self
+            .find_or_insert_definition(label_id, concept, variable, variable)?;
         let string_id = self.new_string(string);
         self.update_reduction(definition, string_id, variable)
     }

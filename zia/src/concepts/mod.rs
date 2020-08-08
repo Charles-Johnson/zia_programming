@@ -15,12 +15,15 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    constants::*,
+    constants::{
+        ASSOC, DEFAULT, DEFINE, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
+        IMPLICATION, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE,
+    },
     delta::{Apply, Change, Delta, SetChange},
     errors::{ZiaError, ZiaResult},
 };
 use maplit::hashset;
-use std::{collections::HashSet, fmt::Debug};
+use std::{collections::HashSet, convert::TryFrom, fmt::Debug};
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
@@ -72,7 +75,7 @@ impl Debug for Concept {
 }
 
 impl Concept {
-    pub fn id(&self) -> usize {
+    pub const fn id(&self) -> usize {
         self.id
     }
 
@@ -252,6 +255,13 @@ impl Concept {
         })
     }
 
+    pub fn get_concrete_concept_type(&self) -> Option<ConcreteConceptType> {
+        match &self.specific_part {
+            SpecificPart::Concrete(cc) => Some(*cc),
+            _ => None,
+        }
+    }
+
     #[cfg(test)]
     pub fn make_reduce_to(&mut self, other: &mut Concept) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
@@ -275,10 +285,12 @@ impl Concept {
             specific_part: SpecificPart::Abstract(AbstractPart {
                 definition: Some((left.id, right.id)),
                 variable: match (&left.specific_part, &right.specific_part) {
-                    (SpecificPart::Abstract(a1), SpecificPart::Abstract(a2)) => a1.variable || a2.variable,
+                    (
+                        SpecificPart::Abstract(a1),
+                        SpecificPart::Abstract(a2),
+                    ) => a1.variable || a2.variable,
                     (SpecificPart::Abstract(a), _)
-                    | (_, SpecificPart::Abstract(a))
-                        => a.variable,
+                    | (_, SpecificPart::Abstract(a)) => a.variable,
                     _ => false,
                 },
                 ..Default::default()
@@ -299,7 +311,7 @@ pub enum SpecificPart {
     String(String),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ConcreteConceptType {
     Label,
     Define,
@@ -317,24 +329,26 @@ pub enum ConcreteConceptType {
     ExistsSuchThat,
 }
 
-impl From<usize> for ConcreteConceptType {
-    fn from(index: usize) -> Self {
+impl TryFrom<usize> for ConcreteConceptType {
+    type Error = ();
+
+    fn try_from(index: usize) -> Result<Self, Self::Error> {
         match index {
-            LABEL => Self::Label,
-            DEFINE => Self::Define,
-            REDUCTION => Self::Reduction,
-            LET => Self::Let,
-            TRUE => Self::True,
-            FALSE => Self::False,
-            ASSOC => Self::Associativity,
-            RIGHT => Self::Right,
-            LEFT => Self::Left,
-            PRECEDENCE => Self::Precedence,
-            DEFAULT => Self::Default,
-            GREATER_THAN => Self::GreaterThan,
-            IMPLICATION => Self::Implication,
-            EXISTS_SUCH_THAT => Self::ExistsSuchThat,
-            _ => unimplemented!()
+            LABEL => Ok(Self::Label),
+            DEFINE => Ok(Self::Define),
+            REDUCTION => Ok(Self::Reduction),
+            LET => Ok(Self::Let),
+            TRUE => Ok(Self::True),
+            FALSE => Ok(Self::False),
+            ASSOC => Ok(Self::Associativity),
+            RIGHT => Ok(Self::Right),
+            LEFT => Ok(Self::Left),
+            PRECEDENCE => Ok(Self::Precedence),
+            DEFAULT => Ok(Self::Default),
+            GREATER_THAN => Ok(Self::GreaterThan),
+            IMPLICATION => Ok(Self::Implication),
+            EXISTS_SUCH_THAT => Ok(Self::ExistsSuchThat),
+            _ => Err(()),
         }
     }
 }

@@ -104,4 +104,8 @@ pub enum ZiaError {
         "Symbol was expected to be used to label a concept but isn't."
     ))]
     UnusedSymbol,
+    #[snafu(display(
+        "Tried to label a concept without a concept of a label."
+    ))]
+    NoLabelConcept,
 }
