@@ -13,9 +13,9 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+extern crate zia;
 #[macro_use]
 extern crate proptest;
-extern crate zia;
 
 use zia::{ZiaError, NEW_CONTEXT};
 
@@ -24,17 +24,16 @@ fn empty_parentheses() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("()"), ZiaError::EmptyParentheses.to_string());
 }
-proptest! {
-    #[test]
-    fn ambiguous_expression(a in "a|b|c", b in "a|b|c", c in "a|b|c") {
-        let mut cont = NEW_CONTEXT.clone();
-        prop_assume!(a != b || b != c || c != a);
-        assert_eq!(cont.execute(&format!("let assoc {} -> left", c)), "");
-        assert_eq!(
-            cont.execute(&format!("{} {} {}", a, b, c)),
-            ZiaError::AmbiguousExpression.to_string()
-        );
-    }
+#[test]
+fn ambiguous_expression() {
+    let mut cont = NEW_CONTEXT.clone();
+    assert_eq!(cont.execute("let assoc c -> left"), "");
+    assert_eq!(
+        cont.execute("a b c"),
+        ZiaError::AmbiguousExpression.to_string()
+    );
+}
+proptest!{
     // No input should crash the interpreter
     #[test]
     fn random_input(a in "\\PC*") {
