@@ -24,7 +24,7 @@ fn pair_to_symbol() {
     cont.execute("let a b -> c");
     assert_eq!(cont.execute("a b"), "c");
 }
-    // Checking whether two reduction rules can be correctly chained together for an expression with a nested pair.
+// Checking whether two reduction rules can be correctly chained together for an expression with a nested pair.
 #[test]
 fn nested_pair_to_symbol() {
     let mut cont = NEW_CONTEXT.clone();

@@ -23,10 +23,7 @@ fn indirect_reduction() {
     assert_eq!(cont.execute("let a b -> c"), "");
     assert_eq!(cont.execute("let d e -> f"), "");
     assert_eq!(cont.execute("let g := c f"), "");
-    assert_eq!(
-        cont.execute("(a b) d e"),
-        "g"
-    );
+    assert_eq!(cont.execute("(a b) d e"), "g");
 }
 
 // The interpreter should not allow a definition of a concept in terms of concepts that may reduce to the former concept.
@@ -46,8 +43,5 @@ fn reducing_part_of_a_labelled_concept() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("let a := b c d"), "");
     assert_eq!(cont.execute("let c d -> e"), "");
-    assert_eq!(
-        cont.execute("a"),
-        cont.execute("b e")
-    );
+    assert_eq!(cont.execute("a"), cont.execute("b e"));
 }

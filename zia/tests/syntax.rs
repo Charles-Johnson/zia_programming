@@ -33,7 +33,7 @@ fn ambiguous_expression() {
         ZiaError::AmbiguousExpression.to_string()
     );
 }
-proptest!{
+proptest! {
     // No input should crash the interpreter
     #[test]
     fn random_input(a in "\\PC*") {
