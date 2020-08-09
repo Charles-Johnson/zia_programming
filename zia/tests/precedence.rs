@@ -14,13 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#[macro_use]
-extern crate proptest;
 extern crate zia;
-#[macro_use]
-extern crate test_zia;
 
-use test_zia::CONCRETE_SYMBOLS;
 use zia::NEW_CONTEXT;
 
 #[test]
@@ -31,12 +26,8 @@ fn lower_than_default_precedence() {
     assert_eq!(context.execute("c d b"), "(c d) b");
 }
 
-proptest! {
-    #[test]
-    fn default_precedence(a in "\\PC*") {
-        assume_abstract!(a);
-        assume_symbol!(a);
-        let mut context = NEW_CONTEXT.clone();
-        assert_eq!(context.execute(&format!("prec {}", a)), "default");
-    }
+#[test]
+fn default_precedence() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("prec a"), "default");
 }
