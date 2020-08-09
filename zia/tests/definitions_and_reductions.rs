@@ -13,72 +13,41 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-#[macro_use]
-extern crate proptest;
-#[macro_use]
-extern crate test_zia;
 extern crate zia;
 
-// Needed for assume_abstract macro which is needed for let_definition macro
-use test_zia::CONCRETE_SYMBOLS;
 use zia::{ZiaError, NEW_CONTEXT};
 
-proptest! {
-    #[test]
-    fn indirect_reduction(
-        a in "a|b|c|d|e|f|g",
-        b in "a|b|c|d|e|f|g",
-        c in "a|b|c|d|e|f|g",
-        d in "a|b|c|d|e|f|g",
-        e in "a|b|c|d|e|f|g",
-        f in "a|b|c|d|e|f|g",
-        g in "a|b|c|d|e|f|g",
-    ) {
-        prop_assume!((a != d || b != e) && c != f); // To prevent redundant reduction
-        prop_assume!((a != c) || (b != f)); // Without this assumption, (a b) d e -> c is possibly true
-        prop_assume!((d != c) || (e != f)); // Without this assumption, (a b) d e -> f is possibly true
-        let mut cont = NEW_CONTEXT.clone();
-        reduce_pair!(cont, a, b, c);
-        reduce_pair!(cont, d, e, f);
-        let_definition!(cont, g, c, f);
-        let print = format!("({} {}) {} {}", a, b, d, e);
-        assert_eq!(
-            cont.execute(&print),
-            g
-        );
-    }
-    // The interpreter should not allow a definition of a concept in terms of concepts that may reduce to the former concept.
-    #[test]
-    fn sneeky_infinite_reduction_chain(a in "a|b|c|d", b in "a|b|c|d", c in "a|b|c|d", d in "a|b|c|d") {
-        assume_abstract!(a);
-        assume_symbols!(b);
-        let mut cont = NEW_CONTEXT.clone();
-        reduce_pair!(cont, c, d, a);
-        let definition = format!("let {} := {} {} {}", a, b, c, d);
-        assert_eq!(
-            cont.execute(&definition),
-            ZiaError::InfiniteDefinition.to_string()
-        );
-    }
-    // A reduction defined for a concept which is used to compose labelled concepts should not be accepted by the interpreter.
-    #[test]
-    fn reducing_part_of_a_labelled_concept(
-        a in "a|b|c|d|e",
-        b in "a|b|c|d|e",
-        c in "a|b|c|d|e",
-        d in "a|b|c|d|e",
-        e in "a|b|c|d|e",
-    ) {
-        assume_abstract!(a);
-        assume_symbols!(a, b, c, d, e);
-        prop_assume!(a != b && a != c && a != d); // To avoid a circular definition
-        let mut cont = NEW_CONTEXT.clone();
-        let definition = format!("let {} := {} {} {}", a, b, c, d);
-        assert_eq!(cont.execute(&definition), "");
-        reduce_pair!(cont, c, d, e);
-        assert_eq!(
-            cont.execute(&a),
-            cont.execute(&format!("{} {}", b, e))
-        );
-    }
+#[test]
+fn indirect_reduction() {
+    let mut cont = NEW_CONTEXT.clone();
+    assert_eq!(cont.execute("let a b -> c"), "");
+    assert_eq!(cont.execute("let d e -> f"), "");
+    assert_eq!(cont.execute("let g := c f"), "");
+    assert_eq!(
+        cont.execute("(a b) d e"),
+        "g"
+    );
+}
+
+// The interpreter should not allow a definition of a concept in terms of concepts that may reduce to the former concept.
+#[test]
+fn sneeky_infinite_reduction_chain() {
+    let mut cont = NEW_CONTEXT.clone();
+    assert_eq!(cont.execute("let c d -> a"), "");
+    assert_eq!(
+        cont.execute("let a := b c d"),
+        ZiaError::InfiniteDefinition.to_string()
+    );
+}
+
+// A reduction defined for a concept which is used to compose labelled concepts should not be accepted by the interpreter.
+#[test]
+fn reducing_part_of_a_labelled_concept() {
+    let mut cont = NEW_CONTEXT.clone();
+    assert_eq!(cont.execute("let a := b c d"), "");
+    assert_eq!(cont.execute("let c d -> e"), "");
+    assert_eq!(
+        cont.execute("a"),
+        cont.execute("b e")
+    );
 }

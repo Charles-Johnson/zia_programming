@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 extern crate zia;
 
-// Needed for assume_abstract macro which is needed for let_definition macro
 use zia::{ZiaError, NEW_CONTEXT};
 
 // The label of a new symbol should reduce to the string of the symbol.
