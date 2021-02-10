@@ -122,9 +122,6 @@ mod ast;
 /// The units that make up the context. Defined in terms of their relationship with other concepts.
 mod concepts;
 
-/// Integers that represent concrete concepts.
-mod constants;
-
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 

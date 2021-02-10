@@ -1,7 +1,6 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType},
-    constants::LABEL,
     context_delta::{ConceptDelta, ContextDelta},
     errors::{ZiaError, ZiaResult},
 };
@@ -81,7 +80,7 @@ pub trait Reader {
             .find_map(|concept| {
                 self.read_concept(delta, *concept)
                     .get_composition()
-                    .filter(|(left, _)| *left != LABEL)
+                    .filter(|(left, _)| Some(*left) != self.concrete_concept_id(delta, ConcreteConceptType::Label))
             })
             .is_none()
     }
@@ -103,11 +102,10 @@ pub trait Reader {
             .get_righthand_of()
             .iter()
             .find(|candidate| {
-                self.read_concept(delta, **candidate)
+                self.concrete_concept_id(delta, ConcreteConceptType::Label) == Some(self.read_concept(delta, **candidate)
                     .get_composition()
                     .expect("Candidate should have a definition!")
-                    .0
-                    == LABEL
+                    .0)
             })
             .cloned()
     }

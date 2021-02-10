@@ -14,14 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-    constants::{
-        ASSOC, DEFAULT, DEFINE, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
-        IMPLICATION, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE,
-    },
-    errors::{ZiaError, ZiaResult},
-};
-use std::{collections::HashSet, convert::TryFrom, fmt::Debug};
+use crate::errors::{ZiaError, ZiaResult};
+use std::{collections::HashSet, fmt::Debug};
 use maplit::hashset;
 
 /// Data type for any type of concept.
@@ -279,30 +273,6 @@ pub enum ConcreteConceptType {
     GreaterThan,
     Implication,
     ExistsSuchThat,
-}
-
-impl TryFrom<usize> for ConcreteConceptType {
-    type Error = ();
-
-    fn try_from(index: usize) -> Result<Self, Self::Error> {
-        match index {
-            LABEL => Ok(Self::Label),
-            DEFINE => Ok(Self::Define),
-            REDUCTION => Ok(Self::Reduction),
-            LET => Ok(Self::Let),
-            TRUE => Ok(Self::True),
-            FALSE => Ok(Self::False),
-            ASSOC => Ok(Self::Associativity),
-            RIGHT => Ok(Self::Right),
-            LEFT => Ok(Self::Left),
-            PRECEDENCE => Ok(Self::Precedence),
-            DEFAULT => Ok(Self::Default),
-            GREATER_THAN => Ok(Self::GreaterThan),
-            IMPLICATION => Ok(Self::Implication),
-            EXISTS_SUCH_THAT => Ok(Self::ExistsSuchThat),
-            _ => Err(()),
-        }
-    }
 }
 
 impl From<ConcreteConceptType> for SpecificPart {

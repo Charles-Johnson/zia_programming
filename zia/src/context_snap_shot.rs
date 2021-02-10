@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{and_also::AndAlso, concepts::{Concept, ConcreteConceptType, SpecificPart}, constants::LABEL, context_delta::{ConceptDelta, ContextDelta, NewConceptDelta, DirectConceptDelta}, context_delta, delta::Apply, delta::Change, snap_shot::Reader as SnapShotReader};
+use crate::{and_also::AndAlso, concepts::{Concept, ConcreteConceptType, SpecificPart}, context_delta::{ConceptDelta, ContextDelta, NewConceptDelta, DirectConceptDelta}, context_delta, delta::Apply, delta::Change, snap_shot::Reader as SnapShotReader};
 use bimap::BiMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -160,7 +160,7 @@ impl ContextSnapShot {
             if let Some(candidate) = candidates.pop_front() {
                 let candidate_concept = self.read_concept(delta, candidate);
                 if let Some((r, x)) = candidate_concept.get_composition() {
-                    if r == LABEL {
+                    if self.concrete_concept_type(delta, r) == Some(ConcreteConceptType::Label) {
                         return Some(x);
                     }
                 }
