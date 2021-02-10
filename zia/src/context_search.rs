@@ -45,6 +45,7 @@ pub type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum ReductionReason {
+    Comparison(Arc<ComparisonReason>),
     Explicit,
     Rule {
         generalisation: Arc<SyntaxTree>,
@@ -560,6 +561,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         rightright: &Arc<SyntaxTree>,
     ) -> ReductionResult {
         self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
+            ConcreteConceptType::GreaterThan => {
+                let (comparison, comparison_reason) = self.compare(left, rightright);
+                match comparison {
+                    Comparison::GreaterThan => self.concrete_ast(ConcreteConceptType::True),
+                    Comparison::EqualTo | Comparison::LessThan | Comparison::LessThanOrEqualTo=> self.concrete_ast(ConcreteConceptType::False),
+                    Comparison::GreaterThanOrEqualTo | Comparison::Incomparable => None
+                }.map(|ast| (ast, ReductionReason::Comparison(Arc::new(comparison_reason))))
+            },
             ConcreteConceptType::Reduction => self
                 .determine_reduction_truth(left, rightright)
                 .and_then(|(x, reason)| {
@@ -809,7 +818,8 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         some_syntax: &Arc<SyntaxTree>,
         another_syntax: &Arc<SyntaxTree>,
     ) -> (Comparison, ComparisonReason) {
-        if some_syntax == another_syntax {
+
+        if dbg!(some_syntax) == dbg!(another_syntax) {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
         if let Some(greater_than_concept_id) =
