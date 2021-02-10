@@ -3,7 +3,6 @@ use crate::{
     concepts::{Concept, ConcreteConceptType},
     constants::LABEL,
     context_delta::{ConceptDelta, ContextDelta},
-    delta::Apply,
     errors::{ZiaError, ZiaResult},
 };
 #[cfg(test)]
@@ -14,18 +13,12 @@ pub trait Reader {
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
             .concept().get(&id)
-            .and_then(|(cd, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c.clone()),
-                ConceptDelta::Remove(_) => None,
-                ConceptDelta::Update(d) => {
-                    let mut concept = self
-                        .get_concept(id)
-                        .expect("Deltas imply that a concept that doesn't exist will be updated!")
-                        .clone();
-                    concept.apply(d.clone());
-                    Some(concept)
-                }
-            })
+            .and_then(|cds| {for (cd, _) in cds {
+                match cd {
+                ConceptDelta::Direct(dcd) => todo!(),
+                ConceptDelta::Indirect(icd) => todo!()
+                }}
+            todo!()})
             .unwrap_or_else(|| {
                 self.get_concept(id)
                     .unwrap_or_else(|| panic!("No concept with id = {}", id))
@@ -55,7 +48,7 @@ pub trait Reader {
         concept: usize,
     ) -> usize {
         self.read_concept(delta, concept)
-            .get_definition()
+            .get_composition()
             .and_then(|(left, right)| {
                 self.get_reduction_or_reduction_of_composition(delta, left)
                     .find_definition(
@@ -68,7 +61,7 @@ pub trait Reader {
     }
     fn is_disconnected(&self, delta: &ContextDelta, concept: usize) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
-            && self.read_concept(delta, concept).get_definition().is_none()
+            && self.read_concept(delta, concept).get_composition().is_none()
             && self.read_concept(delta, concept).get_lefthand_of().is_empty()
             && self.righthand_of_without_label_is_empty(delta, concept)
             && self
@@ -87,7 +80,7 @@ pub trait Reader {
             .iter()
             .find_map(|concept| {
                 self.read_concept(delta, *concept)
-                    .get_definition()
+                    .get_composition()
                     .filter(|(left, _)| *left != LABEL)
             })
             .is_none()
@@ -111,7 +104,7 @@ pub trait Reader {
             .iter()
             .find(|candidate| {
                 self.read_concept(delta, **candidate)
-                    .get_definition()
+                    .get_composition()
                     .expect("Candidate should have a definition!")
                     .0
                     == LABEL
@@ -125,7 +118,7 @@ pub trait Reader {
         inner: usize,
     ) -> bool {
         if let Some((left, right)) =
-            self.read_concept(delta, outer).get_definition()
+            self.read_concept(delta, outer).get_composition()
         {
             left == inner
                 || right == inner
@@ -144,7 +137,7 @@ pub trait Reader {
         if let Some(r) = self.read_concept(delta, inner_concept).get_reduction()
         {
             if r == outer_concept || self.contains(delta, r, outer_concept) {
-                Err(ZiaError::InfiniteDefinition)
+                Err(ZiaError::InfiniteComposition)
             } else {
                 self.check_reductions(delta, outer_concept, r)
             }

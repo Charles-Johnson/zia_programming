@@ -182,4 +182,5 @@ fn comparison_existence_implication_rule_test() {
         )
         .into())
     );
+    assert_eq!(context.execute("default > (prec let)"), "true");
 }

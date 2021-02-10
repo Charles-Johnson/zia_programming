@@ -91,12 +91,12 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         debug!("infer_reduction({:#?})", concept);
         concept.get_righthand_of().iter().find_map(|ro| {
             let roc = self.snap_shot.read_concept(self.delta, *ro);
-            roc.get_definition().and_then(|(l, _)| self.is_concrete_type(ConcreteConceptType::Implication, l))
+            roc.get_composition().and_then(|(l, _)| self.is_concrete_type(ConcreteConceptType::Implication, l))
                 .and_then(|_| {
                     roc.get_righthand_of().iter().find_map(|roro| {
                         self.snap_shot
                             .read_concept(self.delta, *roro)
-                            .get_definition()
+                            .get_composition()
                             .and_then(|(condition_id, _)| {
                                 let condition = self.to_ast(condition_id);
                                 self.reduce(&condition)
@@ -180,7 +180,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             let mut context_search = self.clone();
             context_search.syntax_evaluating.insert(ast.clone());
             reduced_pair = context_search.reduce_pair(left, right);
-            let find = |c| self.find_definition(operator_id, c);
+            let find = |c| self.find_composition(operator_id, c);
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
         } {
@@ -403,7 +403,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             .get_concept()
             .and_also(&righthand.get_concept())
             .and_then(|(lc, rc)| {
-                self.find_definition(*lc, *rc).map(|def| {
+                self.find_composition(*lc, *rc).map(|def| {
                     SyntaxTree::from(
                         self.snap_shot
                             .get_label(self.delta, def)
@@ -428,7 +428,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             if let Some((gl, gr)) = self
                 .snap_shot
                 .read_concept(self.delta, generalisation)
-                .get_definition()
+                .get_composition()
             {
                 if let Some((l, r)) = ast.get_expansion() {
                     let gen_left_var = self.is_free_variable(gl);
@@ -528,7 +528,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     }
 
     fn is_leaf_concept(&self, l: usize) -> bool {
-        self.snap_shot.read_concept(self.delta, l).get_definition().is_none()
+        self.snap_shot.read_concept(self.delta, l).get_composition().is_none()
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
@@ -707,7 +707,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     |s| Some(format_string(&s)),
                 ) {
                     SyntaxTree::from(s).bind_concept(concept_id).into()
-                } else if let Some((left, right)) = concept.get_definition() {
+                } else if let Some((left, right)) = concept.get_composition() {
                     self.combine(&self.to_ast(left), &self.to_ast(right))
                 } else {
                     SyntaxTree::new_concept(concept_id).into()
@@ -727,7 +727,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             .get_concept()
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
-                self.find_definition(*l, *r)
+                self.find_composition(*l, *r)
                     .map(|concept| self.join(ast, other).bind_concept(concept))
             })
             .unwrap_or_else(|| self.join(ast, other));
@@ -782,7 +782,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
     pub fn expand(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) =
-                self.snap_shot.read_concept(self.delta, con).get_definition()
+                self.snap_shot.read_concept(self.delta, con).get_composition()
             {
                 self.combine(
                     &self.expand(&self.to_ast(left)),
@@ -798,7 +798,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         }
     }
 
-    pub fn find_definition(&self, left: usize, right: usize) -> Option<usize> {
+    pub fn find_composition(&self, left: usize, right: usize) -> Option<usize> {
         let left_concept = self.snap_shot.read_concept(self.delta, left);
         let right_concept = self.snap_shot.read_concept(self.delta, right);
         left_concept.find_definition(&right_concept)

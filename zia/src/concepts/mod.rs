@@ -19,11 +19,10 @@ use crate::{
         ASSOC, DEFAULT, DEFINE, EXISTS_SUCH_THAT, FALSE, GREATER_THAN,
         IMPLICATION, LABEL, LEFT, LET, PRECEDENCE, REDUCTION, RIGHT, TRUE,
     },
-    delta::{Apply, Change, Delta, SetChange},
     errors::{ZiaError, ZiaResult},
 };
-use maplit::hashset;
 use std::{collections::HashSet, convert::TryFrom, fmt::Debug};
+use maplit::hashset;
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
@@ -81,73 +80,24 @@ impl Concept {
 
     pub fn variable(&self) -> bool {
         if let SpecificPart::Abstract(AbstractPart {
-            variable,
+            composition,
             ..
-        }) = self.specific_part
+        }) = &self.specific_part
         {
-            variable
+            match composition {
+                MaybeComposition::Composition(CompositePart{free_variables, binding_variables, ..}) => !free_variables.is_empty() || !binding_variables.is_empty(),
+                MaybeComposition::Leaf(is_variable) => *is_variable
+            }
         } else {
             false
         }
     }
 
-    pub fn delete_definition(&self, id: usize) -> [ConceptDelta; 3] {
-        [
-            AbstractDelta {
-                definition: self.get_definition().diff(None),
-                reduction: Change::Same,
-            }
-            .into(),
-            ConceptDelta {
-                lefthand_of: SetChange {
-                    remove: hashset! {id},
-                    add: hashset! {},
-                },
-                reduces_from: SetChange::default(),
-                righthand_of: SetChange::default(),
-                specific_part: AbstractDelta::default(),
-            },
-            ConceptDelta {
-                righthand_of: SetChange {
-                    remove: hashset! {id},
-                    add: hashset! {},
-                },
-                reduces_from: SetChange::default(),
-                lefthand_of: SetChange::default(),
-                specific_part: AbstractDelta::default(),
-            },
-        ]
-    }
-
     pub fn remove_reduction(
         &self,
         id: usize,
-    ) -> ZiaResult<[(usize, ConceptDelta); 2]> {
+    ) -> ZiaResult<usize> {
         self.get_reduction()
-            .map(|reduction| {
-                [
-                    (
-                        id,
-                        AbstractDelta {
-                            reduction: self.get_reduction().diff(None),
-                            definition: Change::Same,
-                        }
-                        .into(),
-                    ),
-                    (
-                        reduction,
-                        ConceptDelta {
-                            reduces_from: SetChange {
-                                remove: hashset! {id},
-                                add: hashset! {},
-                            },
-                            lefthand_of: SetChange::default(),
-                            righthand_of: SetChange::default(),
-                            specific_part: AbstractDelta::default(),
-                        },
-                    ),
-                ]
-            })
             .ok_or(ZiaError::RedundantReduction)
     }
 
@@ -181,10 +131,14 @@ impl Concept {
         }
     }
 
-    /// If concept is abstract and has a definition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
-    pub fn get_definition(&self) -> Option<(usize, usize)> {
+    /// If concept is abstract and has a composition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
+    pub fn get_composition(&self) -> Option<(usize, usize)> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => c.definition,
+            SpecificPart::Abstract(ref c) => if let MaybeComposition::Composition(CompositePart{lefthand, righthand, ..}) = c.composition {
+                Some((lefthand, righthand))
+            } else {
+                None
+            },
             _ => None,
         }
     }
@@ -193,53 +147,22 @@ impl Concept {
         &self,
         id: usize,
         reduction: usize,
-    ) -> ZiaResult<[ConceptDelta; 2]> {
+    ) -> ZiaResult<()> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok([
-                c.make_reduce_to_delta(reduction).into(),
-                ConceptDelta {
-                    reduces_from: SetChange {
-                        add: hashset! {id},
-                        remove: hashset! {},
-                    },
-                    lefthand_of: SetChange::default(),
-                    righthand_of: SetChange::default(),
-                    specific_part: AbstractDelta::default(),
-                },
-            ]),
+            SpecificPart::Abstract(ref c) => Ok(()),
             _ => Err(ZiaError::ConcreteReduction),
         }
     }
 
-    pub fn set_definition(
+    pub fn set_composition(
         &self,
         d: usize,
         l: usize,
         r: usize,
-    ) -> ZiaResult<[ConceptDelta; 3]> {
+    ) -> ZiaResult<()> {
         match &self.specific_part {
-            SpecificPart::Abstract(c) => Ok([
-                c.set_definition_delta(l, r).into(),
-                ConceptDelta {
-                    lefthand_of: SetChange {
-                        add: hashset! {d},
-                        remove: hashset! {},
-                    },
-                    righthand_of: SetChange::default(),
-                    reduces_from: SetChange::default(),
-                    specific_part: AbstractDelta::default(),
-                },
-                ConceptDelta {
-                    lefthand_of: SetChange::default(),
-                    righthand_of: SetChange {
-                        add: hashset! {d},
-                        remove: hashset! {},
-                    },
-                    reduces_from: SetChange::default(),
-                    specific_part: AbstractDelta::default(),
-                },
-            ]),
-            _ => Err(ZiaError::SettingDefinitionOfConcrete),
+            SpecificPart::Abstract(c) => Ok(()),
+            _ => Err(ZiaError::SettingCompositionOfConcrete),
         }
     }
 
@@ -262,7 +185,6 @@ impl Concept {
         }
     }
 
-    #[cfg(test)]
     pub fn make_reduce_to(&mut self, other: &mut Concept) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
             ap.reduces_to = Some(other.id);
@@ -272,7 +194,6 @@ impl Concept {
         }
     }
 
-    #[cfg(test)]
     pub fn composition_of(
         id: usize,
         left: &mut Concept,
@@ -280,19 +201,50 @@ impl Concept {
     ) -> Self {
         left.concrete_part.lefthand_of.insert(id);
         right.concrete_part.righthand_of.insert(id);
+        let mut free_variables = hashset!{};
+        let mut binding_variables = hashset!{};
+        let right_is_quantifier = match &right.specific_part {
+            SpecificPart::Abstract(ap) => {
+                match &ap.composition {
+                    MaybeComposition::Composition(cp) => {
+                        free_variables.extend(&cp.free_variables);
+                        binding_variables.extend(&cp.binding_variables);
+                    },
+                    MaybeComposition::Leaf(true) => {
+                        free_variables.insert(right.id);
+                    }
+                    MaybeComposition::Leaf(false) => {}
+                }
+                false
+            },
+            SpecificPart::Concrete(cct) => cct == &ConcreteConceptType::ExistsSuchThat,
+            SpecificPart::String(_) => false
+        };
+        if let SpecificPart::Abstract(ap) = &left.specific_part {
+            match &ap.composition {
+                MaybeComposition::Composition(cp) => {
+                    free_variables.extend(cp.free_variables.difference(&cp.binding_variables));
+                    binding_variables.extend(cp.binding_variables.difference(&cp.free_variables));
+                },
+                MaybeComposition::Leaf(true) => {
+                    if right_is_quantifier {
+                        binding_variables.insert(left.id);
+                    } else {
+                        free_variables.insert(left.id);
+                    }
+                }
+                MaybeComposition::Leaf(false) => {}
+            }
+        }
         Self {
             id,
             specific_part: SpecificPart::Abstract(AbstractPart {
-                definition: Some((left.id, right.id)),
-                variable: match (&left.specific_part, &right.specific_part) {
-                    (
-                        SpecificPart::Abstract(a1),
-                        SpecificPart::Abstract(a2),
-                    ) => a1.variable || a2.variable,
-                    (SpecificPart::Abstract(a), _)
-                    | (_, SpecificPart::Abstract(a)) => a.variable,
-                    _ => false,
-                },
+                composition: MaybeComposition::Composition(CompositePart{
+                    lefthand: left.id,
+                    righthand: right.id,
+                    free_variables,
+                    binding_variables
+                }),
                 ..Default::default()
             }),
             concrete_part: ConcreteConcept::default(),
@@ -362,9 +314,8 @@ impl From<ConcreteConceptType> for SpecificPart {
 impl SpecificPart {
     pub const fn variable() -> Self {
         Self::Abstract(AbstractPart {
-            definition: None,
+            composition: MaybeComposition::Leaf(true),
             reduces_to: None,
-            variable: true,
         })
     }
 }
@@ -392,106 +343,6 @@ pub fn format_string(s: &str) -> String {
     format!("\"{}\"", s)
 }
 
-#[derive(Clone, Default)]
-pub struct ConceptDelta {
-    specific_part: AbstractDelta,
-    lefthand_of: SetChange,
-    righthand_of: SetChange,
-    reduces_from: SetChange,
-}
-
-impl std::fmt::Debug for ConceptDelta {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter,
-    ) -> Result<(), std::fmt::Error> {
-        let mut string = "{".to_string();
-        if let Change::Different {
-            before,
-            after,
-        } = self.specific_part.definition
-        {
-            string += &format!(" definition: {:?} -> {:?},", before, after);
-        }
-        if let Change::Different {
-            before,
-            after,
-        } = self.specific_part.reduction
-        {
-            string += &format!(" reduction: {:?} -> {:?},", before, after);
-        }
-        if !self.lefthand_of.is_same() {
-            string += &format!(" lefthand_of: {:#?},", self.lefthand_of);
-        }
-        if !self.righthand_of.is_same() {
-            string += &format!(" righthand_of: {:#?},", self.righthand_of);
-        }
-        if !self.reduces_from.is_same() {
-            string += &format!(" reduces_from: {:#?},", self.reduces_from);
-        }
-        formatter.write_str(&(string + "}"))
-    }
-}
-
-impl Delta for ConceptDelta {
-    fn combine(&mut self, other: Self) {
-        self.specific_part.combine(other.specific_part);
-        self.lefthand_of.combine(other.lefthand_of);
-        self.righthand_of.combine(other.righthand_of);
-        self.reduces_from.combine(other.reduces_from);
-    }
-}
-
-impl Apply for Concept {
-    type Delta = ConceptDelta;
-
-    fn apply(&mut self, delta: ConceptDelta) {
-        let ConceptDelta {
-            lefthand_of,
-            righthand_of,
-            reduces_from,
-            specific_part,
-        } = delta;
-        self.concrete_part.lefthand_of.apply(lefthand_of);
-        self.concrete_part.righthand_of.apply(righthand_of);
-        self.concrete_part.reduces_from.apply(reduces_from);
-        if let SpecificPart::Abstract(ref mut ap) = self.specific_part {
-            ap.apply(specific_part);
-        };
-    }
-
-    fn diff(&self, next: Self) -> ConceptDelta {
-        let lefthand_of =
-            self.concrete_part.lefthand_of.diff(next.concrete_part.lefthand_of);
-        let righthand_of = self
-            .concrete_part
-            .righthand_of
-            .diff(next.concrete_part.righthand_of);
-        let reduces_from = self
-            .concrete_part
-            .reduces_from
-            .diff(next.concrete_part.reduces_from);
-        ConceptDelta {
-            lefthand_of,
-            righthand_of,
-            reduces_from,
-            specific_part: match (&self.specific_part, next.specific_part) {
-                (
-                    SpecificPart::Abstract(ap1),
-                    SpecificPart::Abstract(ref ap2),
-                ) => ap1.diff(ap2.clone()),
-                (SpecificPart::Abstract(ap1), _) => {
-                    ap1.diff(AbstractPart::default())
-                },
-                (_, SpecificPart::Abstract(ap2)) => {
-                    AbstractPart::default().diff(ap2)
-                },
-                _ => AbstractDelta::default(),
-            },
-        }
-    }
-}
-
 impl From<(AbstractPart, usize)> for Concept {
     fn from((ap, id): (AbstractPart, usize)) -> Self {
         (SpecificPart::Abstract(ap), id).into()
@@ -508,17 +359,6 @@ impl<T: Into<SpecificPart>> From<(T, usize)> for Concept {
     }
 }
 
-impl From<AbstractDelta> for ConceptDelta {
-    fn from(ap: AbstractDelta) -> Self {
-        Self {
-            lefthand_of: SetChange::default(),
-            righthand_of: SetChange::default(),
-            reduces_from: SetChange::default(),
-            specific_part: ap,
-        }
-    }
-}
-
 impl From<(String, usize)> for Concept {
     fn from((string, id): (String, usize)) -> Self {
         (SpecificPart::String(string), id).into()
@@ -529,11 +369,28 @@ impl From<(String, usize)> for Concept {
 #[derive(Clone, PartialEq)]
 pub struct AbstractPart {
     /// The concept may be defined as a composition of two other concepts.
-    definition: Option<(usize, usize)>,
+    composition: MaybeComposition,
     /// The concept may reduce to another concept.
     reduces_to: Option<usize>,
-    /// The concept might be a variable
-    variable: bool,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct CompositePart {
+    /// concept id for lefthand part of the composition
+    lefthand: usize,
+    /// concept id for righthand part of the composition
+    righthand: usize,
+    /// The concept's composition might contain free variables
+    free_variables: HashSet<usize>,
+    /// The concept's composition might contain binding variables
+    binding_variables: HashSet<usize>
+}
+
+#[derive(Clone, PartialEq)]
+pub enum MaybeComposition {
+    Composition(CompositePart),
+    // true if concept is variable
+    Leaf(bool)
 }
 
 impl Debug for AbstractPart {
@@ -542,9 +399,9 @@ impl Debug for AbstractPart {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str("{")?;
-        self.definition.iter().try_for_each(|(l, r)| {
-            formatter.write_str(&format!("definition: {}, {},", l, r))
-        })?;
+        if let MaybeComposition::Composition(CompositePart{lefthand, righthand, ..}) = self.composition {
+            formatter.write_str(&format!("composition: {}, {},", lefthand, righthand))?;
+        }
         self.reduces_to.iter().try_for_each(|r| {
             formatter.write_str(&format!("reduces_to: {},", r))
         })?;
@@ -552,71 +409,21 @@ impl Debug for AbstractPart {
     }
 }
 
-impl Apply for AbstractPart {
-    type Delta = AbstractDelta;
-
-    fn apply(&mut self, delta: AbstractDelta) {
-        self.definition.apply(delta.definition);
-        self.reduces_to.apply(delta.reduction);
-    }
-
-    fn diff(&self, next: Self) -> AbstractDelta {
-        AbstractDelta {
-            definition: self.definition.diff(next.definition),
-            reduction: self.reduces_to.diff(next.reduces_to),
-        }
-    }
-}
-
-impl Delta for AbstractDelta {
-    fn combine(&mut self, other: Self) {
-        self.definition = self.definition.clone().combine(other.definition);
-        self.reduction = self.reduction.clone().combine(other.reduction);
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AbstractDelta {
-    definition: Change<Option<(usize, usize)>>,
-    reduction: Change<Option<usize>>,
-}
-
 impl Default for AbstractPart {
-    /// The default concept doesn't have a definition and doesn't further reduce.
+    /// The default concept doesn't have a composition and doesn't further reduce.
     fn default() -> Self {
         Self {
-            definition: None,
+            composition: MaybeComposition::Leaf(false),
             reduces_to: None,
-            variable: false,
-        }
-    }
-}
-
-impl AbstractPart {
-    pub fn set_definition_delta(
-        &self,
-        lefthand: usize,
-        righthand: usize,
-    ) -> AbstractDelta {
-        AbstractDelta {
-            definition: self.definition.diff(Some((lefthand, righthand))),
-            reduction: Change::Same,
-        }
-    }
-
-    pub fn make_reduce_to_delta(&self, concept: usize) -> AbstractDelta {
-        AbstractDelta {
-            definition: Change::Same,
-            reduction: self.reduces_to.diff(Some(concept)),
         }
     }
 }
 
 #[derive(Clone, PartialEq, Default)]
 pub struct ConcreteConcept {
-    /// Set of all indices of the concepts which have this concept as the lefthand of their definition
+    /// Set of all indices of the concepts which have this concept as the lefthand of their composition
     lefthand_of: HashSet<usize>,
-    /// Set of all indices of the concepts which have this concept as the righthand of their definition
+    /// Set of all indices of the concepts which have this concept as the righthand of their composition
     righthand_of: HashSet<usize>,
     /// Set of all indices of the concepts which reduce to this concept.
     reduces_from: HashSet<usize>,

@@ -14,13 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-    concepts::{Concept, ConcreteConceptType},
-    constants::LABEL,
-    context_delta::{ConceptDelta, ContextDelta, StringDelta},
-    delta::Apply,
-    snap_shot::Reader as SnapShotReader,
-};
+use crate::{and_also::AndAlso, concepts::{Concept, ConcreteConceptType, SpecificPart}, constants::LABEL, context_delta::{ConceptDelta, ContextDelta, NewConceptDelta, DirectConceptDelta}, context_delta, delta::Apply, delta::Change, snap_shot::Reader as SnapShotReader};
 use bimap::BiMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -96,13 +90,27 @@ impl ContextSnapShot {
             None => panic!("No concept with id = {}", id),
         }
     }
+    // TODO document why this is a safe abstraction or refactor `self.concepts` as a slotmap
+    fn write_concept_pair(&mut self, left: usize, right: usize) -> [&mut Concept; 2] {
+        let ptr = self.concepts.as_mut_ptr();
+        let (opt_l, opt_r) = unsafe {
+            let l = ptr.add(left).as_mut().expect("Null pointer");
+            let r = ptr.add(right).as_mut().expect("Null pointer");
+            (l, r)
+        };
+        let (l, r) = opt_l.and_also_mut(opt_r).expect("some concepts are empty");
+        [l, r]
+    }
 
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
-        for (id, (cd, _)) in delta.concept() {
-            if let ConceptDelta::Insert(_) = cd {
-                if length <= *id {
-                    length = *id + 1;
+        for (id, cdv) in delta.concept() {
+            for (cd, _) in cdv {
+                // Is new_concept_id the same as id?
+                if let ConceptDelta::Direct(DirectConceptDelta::New { new_concept_id, delta }) = cd {
+                    if length <= *id {
+                        length = *id + 1;
+                    }
                 }
             }
         }
@@ -133,12 +141,12 @@ impl ContextSnapShot {
             .map_or_else(
                 || self.string_map.get(s),
                 |string_delta| match string_delta {
-                    StringDelta::Update {
+                    context_delta::Change::Update {
                         after,
                         ..
                     } => Some(after),
-                    StringDelta::Insert(concept) => Some(concept),
-                    StringDelta::Remove(_) => None,
+                    context_delta::Change::Create(concept) => Some(concept),
+                    context_delta::Change::Remove(_) => None,
                 },
             )
             .cloned()
@@ -151,7 +159,7 @@ impl ContextSnapShot {
         loop {
             if let Some(candidate) = candidates.pop_front() {
                 let candidate_concept = self.read_concept(delta, candidate);
-                if let Some((r, x)) = candidate_concept.get_definition() {
+                if let Some((r, x)) = candidate_concept.get_composition() {
                     if r == LABEL {
                         return Some(x);
                     }
@@ -187,23 +195,27 @@ impl SnapShotReader for ContextSnapShot {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
-        for (id, (cd, _)) in delta.concept() {
-            if let ConceptDelta::Insert(_) = cd {
-                if *id >= new_concept_length {
-                    new_concept_length = *id + 1
+        for (id, cdv) in delta.concept() {
+            for (cd, _) in cdv {
+                if let ConceptDelta::Direct(DirectConceptDelta::New { new_concept_id, delta }) = cd {
+                    if *id >= new_concept_length {
+                        new_concept_length = *id + 1
+                    }
                 }
             }
         }
-        for (id, (cd, _)) in delta.concept() {
-            match cd {
-                ConceptDelta::Insert(_) => {
-                    removed_gaps.insert(*id);
-                },
-                ConceptDelta::Remove(_) => {
-                    added_gaps.push(*id);
-                    removed_gaps.remove(id);
-                },
-                ConceptDelta::Update(_) => (),
+        for (id, cdv) in delta.concept() {
+            for (cd, _) in cdv {
+                match cd {
+                    ConceptDelta::Direct(DirectConceptDelta::New{..}) => {
+                        removed_gaps.insert(*id);
+                    },
+                    ConceptDelta::Direct(DirectConceptDelta::Remove(_)) => {
+                        added_gaps.push(*id);
+                        removed_gaps.remove(id);
+                    },
+                    _ => (),
+                }
             }
         }
         let index: usize;
@@ -267,20 +279,22 @@ impl SnapShotReader for ContextSnapShot {
         cc: ConcreteConceptType,
     ) -> Option<usize> {
         let mut id = None;
-        for (concept_id, (cd, _)) in delta.concept() {
-            match cd {
-                ConceptDelta::Insert(c)
-                    if c.get_concrete_concept_type() == Some(cc) =>
-                {
-                    id = Some(Some(*concept_id))
-                },
-                ConceptDelta::Remove(c)
-                    if c.get_concrete_concept_type() == Some(cc) =>
-                {
-                    id = Some(None)
-                },
-                _ => (),
-            };
+        for (concept_id, cdv) in delta.concept() {
+            for (cd, _) in cdv {
+                match cd {
+                    ConceptDelta::Direct(DirectConceptDelta::New{new_concept_id, ..})
+                        if self.concrete_concept_type(delta, *concept_id) == Some(cc) =>
+                    {
+                        id = Some(Some(*concept_id))
+                    },
+                    ConceptDelta::Direct(DirectConceptDelta::Remove(concept_id))
+                        if self.concrete_concept_type(delta, *concept_id) == Some(cc) =>
+                    {
+                        id = Some(None)
+                    },
+                    _ => (),
+                };
+            }
         }
         id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).cloned())
     }
@@ -290,17 +304,7 @@ impl SnapShotReader for ContextSnapShot {
         delta: &ContextDelta,
         concept_id: usize,
     ) -> Option<ConcreteConceptType> {
-        if let Some(maybe_concrete_type) =
-            delta.concept().get(&concept_id).and_then(|(cd, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c.get_concrete_concept_type()),
-                ConceptDelta::Remove(_) => panic!("Concept has been removed"),
-                _ => None,
-            })
-        {
-            maybe_concrete_type
-        } else {
-            self.concrete_concepts.get_by_left(&concept_id).cloned()
-        }
+        self.read_concept(delta, concept_id).get_concrete_concept_type()
     }
 
     #[cfg(test)]
@@ -314,37 +318,71 @@ impl Apply for ContextSnapShot {
 
     fn apply(&mut self, delta: ContextDelta) {
         delta.string().iter().for_each(|(s, sd)| match sd {
-            StringDelta::Update {
+            context_delta::Change::Update {
                 after,
                 ..
             } => {
                 self.string_map.insert(s.to_string(), *after);
             },
-            StringDelta::Insert(id) => self.add_string(*id, s),
-            StringDelta::Remove(_) => self.remove_string(s),
+            context_delta::Change::Create(id) => self.add_string(*id, s),
+            context_delta::Change::Remove(_) => self.remove_string(s),
         });
         let concept_len = self.concept_len(&delta);
         if concept_len > self.concepts.len() {
             self.concepts.extend(vec![None; concept_len - self.concepts.len()]);
         }
-        for (id, (cd, temporary)) in delta.concept() {
-            if !temporary {
-                match cd {
-                    ConceptDelta::Insert(c) => {
-                        self.concepts[*id] = Some(c.clone());
-                        if let Some(cct) = c.get_concrete_concept_type() {
-                            self.concrete_concepts.insert(*id, cct);
+        for (id, concept_deltas) in delta.concept() {
+            for (cd, temporary) in concept_deltas {
+                if !temporary {
+                    if let ConceptDelta::Direct(dcd) = cd {
+                        match dcd {
+                            DirectConceptDelta::New{new_concept_id, delta} => {
+                                match delta {
+                                    NewConceptDelta::String(s) => {
+                                        self.string_map.insert(s.into(), *new_concept_id);
+                                        self.concepts[*new_concept_id] = Some((SpecificPart::String(s.into()), *new_concept_id).into());
+                                    },
+                                    NewConceptDelta::Composition(c) => {
+                                        let [left, right] = self.write_concept_pair(c.left_id, c.right_id);
+                                        debug_assert!(*new_concept_id != c.left_id);
+                                        debug_assert!(*new_concept_id != c.right_id);
+                                        self.concepts[*new_concept_id] = Some(Concept::composition_of(*new_concept_id, left, right));
+                                    },
+                                    NewConceptDelta::Left{composition_id, right_id, concrete_type, variable} => {
+                                        todo!();
+                                    },
+                                    NewConceptDelta::Right{composition_id, left_id, concrete_type, variable} => {
+                                        todo!();
+                                    },
+                                    NewConceptDelta::ReducesTo(reduced_concept_id) => {
+                                        todo!();
+                                    }
+                                }
+                            }
+                            DirectConceptDelta::Compose{..} => todo!(),
+                            DirectConceptDelta::Reduce{..} => todo!(),
+                            DirectConceptDelta::Remove(_) => todo!()
                         }
-                    },
-                    ConceptDelta::Remove(c) => {
-                        self.blindly_remove_concept(*id);
-                        if let Some(cct) = c.get_concrete_concept_type() {
-                            self.concrete_concepts.remove_by_right(&cct);
-                        }
-                    },
-                    ConceptDelta::Update(d) => {
-                        self.write_concept(*id).apply(d.clone())
-                    },
+                    };
+                    // match cd {
+                    //     ConceptDelta::Insert(c) => {
+                    //         self.concepts[*id] = Some(c.clone());
+                    //         if let Some(cct) = c.get_concrete_concept_type() {
+                    //             self.concrete_concepts.insert(*id, cct);
+                    //         }
+                    //     },
+                    //     ConceptDelta::Remove(c) => {
+                    //         self.blindly_remove_concept(*id);
+                    //         if let Some(cct) = c.get_concrete_concept_type() {
+                    //             self.concrete_concepts.remove_by_right(&cct);
+                    //         }
+                    //     },
+                    //     ConceptDelta::Update(d) => {
+                    //         let concept = self.write_concept(*id);
+                    //         // Need to map delta to concept mutable method
+                    //         todo!();
+                    //     },
+                    // }
                 }
             }
         }

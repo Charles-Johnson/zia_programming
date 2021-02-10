@@ -31,7 +31,7 @@ fn pair_on_the_left() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(
         cont.execute("let (a b) := c"),
-        ZiaError::BadDefinition.to_string()
+        ZiaError::BadComposition.to_string()
     );
 }
 
@@ -52,7 +52,7 @@ fn bad_refactor() {
     assert_eq!(cont.execute("let a := b c"), "");
     assert_eq!(
         cont.execute("let b := a"),
-        ZiaError::DefinitionCollision.to_string()
+        ZiaError::CompositionCollision.to_string()
     );
 }
 
@@ -64,7 +64,7 @@ fn defining_used_symbol_as_used_pair() {
     assert_eq!(cont.execute("let f := d e"), "");
     assert_eq!(
         cont.execute("let d := b c"),
-        ZiaError::DefinitionCollision.to_string()
+        ZiaError::CompositionCollision.to_string()
     );
 }
 
@@ -74,7 +74,7 @@ fn definition_loop() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(
         cont.execute("let a := a b"),
-        ZiaError::InfiniteDefinition.to_string()
+        ZiaError::InfiniteComposition.to_string()
     );
 }
 
@@ -84,7 +84,7 @@ fn nested_definition_loop() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(
         cont.execute("let a := (a b) b"),
-        ZiaError::InfiniteDefinition.to_string()
+        ZiaError::InfiniteComposition.to_string()
     );
 }
 
@@ -95,7 +95,7 @@ fn chained_definitions_loop() {
     assert_eq!(cont.execute("let c := a b"), "");
     assert_eq!(
         cont.execute("let a := c b"),
-        ZiaError::InfiniteDefinition.to_string()
+        ZiaError::InfiniteComposition.to_string()
     );
 }
 
@@ -106,7 +106,7 @@ fn redundantly_remove_definition() {
     assert_eq!(cont.execute("let a := b c"), "");
     assert_eq!(
         cont.execute("let b := b"),
-        ZiaError::RedundantDefinitionRemoval.to_string()
+        ZiaError::RedundantCompositionRemoval.to_string()
     );
 }
 
@@ -117,7 +117,7 @@ fn redundancy() {
     assert_eq!(cont.execute("let a := b c"), "");
     assert_eq!(
         cont.execute("let a := b c"),
-        ZiaError::RedundantDefinition.to_string()
+        ZiaError::RedundantComposition.to_string()
     );
 }
 
@@ -127,6 +127,6 @@ fn setting_definition_of_concrete() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(
         cont.execute("let label_of := a b"),
-        ZiaError::SettingDefinitionOfConcrete.to_string()
+        ZiaError::SettingCompositionOfConcrete.to_string()
     );
 }

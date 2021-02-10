@@ -33,7 +33,7 @@ fn sneeky_infinite_reduction_chain() {
     assert_eq!(cont.execute("let c d -> a"), "");
     assert_eq!(
         cont.execute("let a := b c d"),
-        ZiaError::InfiniteDefinition.to_string()
+        ZiaError::InfiniteComposition.to_string()
     );
 }
 
