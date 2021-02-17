@@ -18,12 +18,12 @@ fn basic_comparison() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let left_syntax = || SyntaxTree::new_concept(1);
-    let right_syntax = || SyntaxTree::new_concept(2);
-    let another_syntax = || SyntaxTree::new_concept(8);
+    let left_syntax = context_search.to_ast(1);
+    let right_syntax = context_search.to_ast(2);
+    let another_syntax = context_search.to_ast(8);
 
     assert_eq!(
-        context_search.compare(&left_syntax().into(), &right_syntax().into()),
+        context_search.compare(&left_syntax, &right_syntax),
         (
             Comparison::GreaterThan,
             ComparisonReason::Reduction {
@@ -34,7 +34,7 @@ fn basic_comparison() {
     );
 
     assert_eq!(
-        context_search.compare(&right_syntax().into(), &left_syntax().into()),
+        context_search.compare(&right_syntax, &left_syntax),
         (
             Comparison::LessThan,
             ComparisonReason::Reduction {
@@ -45,13 +45,13 @@ fn basic_comparison() {
     );
 
     assert_eq!(
-        context_search.compare(&left_syntax().into(), &left_syntax().into()),
+        context_search.compare(&left_syntax, &left_syntax),
         (Comparison::EqualTo, ComparisonReason::SameSyntax)
     );
 
     assert_eq!(
         context_search
-            .compare(&another_syntax().into(), &right_syntax().into()),
+            .compare(&another_syntax, &right_syntax),
         (
             Comparison::LessThanOrEqualTo,
             ComparisonReason::Reduction {
@@ -63,7 +63,7 @@ fn basic_comparison() {
 
     assert_eq!(
         context_search
-            .compare(&right_syntax().into(), &another_syntax().into()),
+            .compare(&right_syntax, &another_syntax),
         (
             Comparison::GreaterThanOrEqualTo,
             ComparisonReason::Reduction {
@@ -74,7 +74,7 @@ fn basic_comparison() {
     );
     // TODO: find out why this test is non-deterministic
     assert_eq!(
-        context_search.compare(&left_syntax().into(), &another_syntax().into()),
+        context_search.compare(&left_syntax, &another_syntax),
         (
             Comparison::Incomparable,
             ComparisonReason::Reduction {
