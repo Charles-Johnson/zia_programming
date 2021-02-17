@@ -177,7 +177,7 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         default_concept_id: usize,
     ) -> ReductionResult {
         let mut reduced_pair: ReductionResult = None;
-        if self.syntax_evaluating.get(ast).is_some() || {
+        if self.syntax_evaluating.contains(ast) || {
             let mut context_search = self.clone();
             context_search.syntax_evaluating.insert(ast.clone());
             reduced_pair = context_search.reduce_pair(left, right);
@@ -819,14 +819,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         another_syntax: &Arc<SyntaxTree>,
     ) -> (Comparison, ComparisonReason) {
 
-        if dbg!(some_syntax) == dbg!(another_syntax) {
+        if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
         if let Some(greater_than_concept_id) =
             self.concrete_concept_id(ConcreteConceptType::GreaterThan)
         {
             let greater_than_syntax =
-                SyntaxTree::new_concept(greater_than_concept_id).into();
+                self.to_ast(greater_than_concept_id);
             let comparing_syntax = self.combine(
                 some_syntax,
                 &self.combine(&greater_than_syntax, another_syntax),
@@ -835,14 +835,31 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                 another_syntax,
                 &self.combine(&greater_than_syntax, some_syntax),
             );
-            let (syntax_comparison, reason) =
-                self.recursively_reduce(&comparing_syntax);
-            let (reversed_comparison, reversed_reason) =
-                self.recursively_reduce(&comparing_reversed_syntax);
+            let mut reason = None;
+            let mut reversed_reason = None;
+            
             (
                 match (
-                    self.concrete_type_of_ast(&syntax_comparison),
-                    self.concrete_type_of_ast(&reversed_comparison),
+                    if self.syntax_evaluating.contains(&comparing_syntax) {
+                        self.cache.get_reduction_or_else(&comparing_syntax, || None).map(|(s, r)| (s, Some(r)))
+                    } else {
+                        let mut context_search = self.clone();
+                        context_search.syntax_evaluating.insert(comparing_syntax.clone());
+                        Some(context_search.recursively_reduce(&comparing_syntax))
+                    }.and_then(|(syntax_comparison, local_reason)| {
+                        reason = local_reason;
+                        self.concrete_type_of_ast(&syntax_comparison)
+                    }),
+                    if self.syntax_evaluating.contains(&comparing_reversed_syntax) {
+                        self.cache.get_reduction_or_else(&comparing_reversed_syntax, || None).map(|(s, r)| (s, Some(r)))
+                    } else {
+                        let mut context_search = self.clone();
+                        context_search.syntax_evaluating.insert(comparing_reversed_syntax.clone());
+                        Some(context_search.recursively_reduce(&comparing_reversed_syntax))
+                    }.and_then(|(reversed_comparison, local_reversed_reason)| {
+                        reversed_reason = local_reversed_reason;
+                        self.concrete_type_of_ast(&reversed_comparison)
+                    })
                 ) {
                     (
                         Some(ConcreteConceptType::False),
@@ -868,9 +885,40 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     },
                     _ => Comparison::Incomparable,
                 },
-                ComparisonReason::Reduction {
-                    reason,
-                    reversed_reason,
+                match (&reason, &reversed_reason) {
+                    (Some(ReductionReason::Comparison(cr)), rr) => {
+                        match cr.as_ref() {
+                            ComparisonReason::Reduction{reason, reversed_reason} if rr == reversed_reason => {
+                                ComparisonReason::Reduction {
+                                    reversed_reason: reversed_reason.clone(),
+                                    reason: reason.clone()
+                                }
+                            },
+                            _ => ComparisonReason::Reduction {
+                                reason,
+                                reversed_reason,
+                            }
+                        }
+                    },
+                    (r, Some(ReductionReason::Comparison(cr))) => {
+                        match cr.as_ref() {
+                            ComparisonReason::Reduction{reason, reversed_reason} if r == reversed_reason => {
+                                ComparisonReason::Reduction {
+                                    reversed_reason: reason.clone(),
+                                    reason: reversed_reason.clone()
+                                }
+                            },
+                            _ => ComparisonReason::Reduction {
+                                reason,
+                                reversed_reason,
+                            }
+                        }
+                    },
+                    _ => 
+                    ComparisonReason::Reduction {
+                        reason,
+                        reversed_reason,
+                    }
                 },
             )
         } else {
