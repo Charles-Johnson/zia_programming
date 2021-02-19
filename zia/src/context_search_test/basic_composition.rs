@@ -16,10 +16,10 @@ fn basic_composition() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let left_syntax = SyntaxTree::from("b").bind_concept(1);
-    let right_syntax = SyntaxTree::from("c").bind_concept(2);
+    let left_syntax = SyntaxTree::from("b").bind_nonquantifier_concept(1);
+    let right_syntax = SyntaxTree::from("c").bind_nonquantifier_concept(2);
     let composite_syntax = SyntaxTree::from("a")
-        .bind_concept(0)
+        .bind_nonquantifier_concept(0)
         .bind_pair(left_syntax.clone(), right_syntax.clone());
     let composite_syntax = || composite_syntax.clone();
     let left_syntax = || left_syntax.clone();

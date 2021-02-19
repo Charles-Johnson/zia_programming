@@ -67,7 +67,7 @@ fn basic_precedence() {
                     SyntaxTree::from("c"),
                     SyntaxTree::from("b")
                 ),
-                SyntaxTree::from("a").bind_concept(4)
+                SyntaxTree::from("a").bind_nonquantifier_concept(4)
             )
             .into())
     );

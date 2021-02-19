@@ -270,7 +270,7 @@ where
                     self.snap_shot.concept_from_label(&self.delta, token)
                 {
                     let syntax_of_token =
-                        raw_syntax_of_token.bind_concept(c).into();
+                        self.snap_shot.bind_concept_to_syntax(&self.delta, raw_syntax_of_token, c).into();
                     (
                         context_search
                             .concrete_ast(ConcreteConceptType::Precedence)
@@ -370,7 +370,7 @@ where
             self.ast_from_expression(t)
         } else {
             let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
-            if is_variable(t) && ast.get_concept().is_none() {
+            if ast.is_variable() && ast.get_concept().is_none() {
                 let label_id = self
                     .concrete_concept_id(ConcreteConceptType::Label)
                     .ok_or(ZiaError::NoLabelConcept)?;
@@ -382,7 +382,8 @@ where
                     label_id, new_concept_id, true,
                 )?;
                 self.update_reduction(composition, string_id, true)?;
-                Ok(SyntaxTree::from(t).bind_concept(new_concept_id).into())
+                let syntax = SyntaxTree::from(t);
+                Ok(self.snap_shot.bind_concept_to_syntax(&self.delta, syntax, new_concept_id).into())
             } else {
                 Ok(ast.into())
             }
@@ -785,7 +786,8 @@ where
             .and_also(&right.get_concept())
             .and_then(|(l, r)| {
                 self.context_search().find_composition(*l, *r).map(|concept| {
-                    SyntaxTree::from(syntax).bind_concept(concept)
+                    let syntax = SyntaxTree::from(syntax);
+                    self.snap_shot.bind_concept_to_syntax(&self.delta, syntax, concept)
                 })
             })
             .unwrap_or_else(|| syntax.into())
@@ -846,7 +848,7 @@ where
                     let concept = self.find_or_insert_composition(
                         leftc,
                         rightc,
-                        left.is_variable() || right.is_variable()
+                        ast.is_variable()
                     )?;
                     if !string.contains(' ') {
                         self.label(concept, string)?;

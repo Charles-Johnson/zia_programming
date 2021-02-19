@@ -39,17 +39,17 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
         &mut x_greater_than_y,
         &mut and_y_greater_than_z,
     );
-    let mut exists_such_that_x_greater_than_y_and_y_greater_than_z =
+    let mut y_exists_such_that =
         Concept::composition_of(
             16,
+            &mut y,
             &mut exists_such_that_concept,
-            &mut x_greater_than_y_and_y_greater_than_z,
         );
     let mut y_exists_such_that_x_greater_than_y_and_y_greater_than_z =
         Concept::composition_of(
             17,
-            &mut y,
-            &mut exists_such_that_x_greater_than_y_and_y_greater_than_z,
+            &mut y_exists_such_that,
+            &mut x_greater_than_y_and_y_greater_than_z,
         );
     let mut x_greater_than_z =
         Concept::composition_of(18, &mut x, &mut greater_than_z);
@@ -118,7 +118,7 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
             greater_than_y,
             x_greater_than_y,
             x_greater_than_y_and_y_greater_than_z,
-            exists_such_that_x_greater_than_y_and_y_greater_than_z,
+            y_exists_such_that,
             y_exists_such_that_x_greater_than_y_and_y_greater_than_z,
             x_greater_than_z,
             implies_x_greater_than_z,
@@ -162,20 +162,20 @@ fn concept_labels() -> HashMap<usize, &'static str> {
 }
 
 #[test]
-fn comparison_existence_implication_rule_test() {
+fn infered_precedence_test() {
     let mut context =
         Context::<MockSnapShot>::new_test_case(&concepts(), &concept_labels());
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
         Ok(SyntaxTree::new_pair(
-            SyntaxTree::from("let").bind_concept(21),
+            SyntaxTree::from("let").bind_nonquantifier_concept(21),
             SyntaxTree::new_pair(
                 SyntaxTree::new_pair(
                     SyntaxTree::from("a"),
                     SyntaxTree::from("b")
                 ),
                 SyntaxTree::new_pair(
-                    SyntaxTree::from("->").bind_concept(22),
+                    SyntaxTree::from("->").bind_nonquantifier_concept(22),
                     SyntaxTree::from("c")
                 )
             )

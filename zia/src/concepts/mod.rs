@@ -217,8 +217,10 @@ impl Concept {
         if let SpecificPart::Abstract(ap) = &left.specific_part {
             match &ap.composition {
                 MaybeComposition::Composition(cp) => {
-                    free_variables.extend(cp.free_variables.difference(&cp.binding_variables));
-                    binding_variables.extend(cp.binding_variables.difference(&cp.free_variables));
+                    free_variables.retain(|v| !cp.binding_variables.contains(v));
+                    free_variables.extend(&cp.free_variables);
+                    binding_variables.retain(|v| !cp.free_variables.contains(v));
+                    binding_variables.extend(&cp.binding_variables);
                 },
                 MaybeComposition::Leaf(true) => {
                     if right_is_quantifier {

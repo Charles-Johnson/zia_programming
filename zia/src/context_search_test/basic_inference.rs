@@ -16,8 +16,8 @@ fn basic_inference() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let true_syntax = || SyntaxTree::from("true").bind_concept(1);
-    let result_syntax = || SyntaxTree::from("b").bind_concept(3);
+    let true_syntax = || SyntaxTree::from("true").bind_nonquantifier_concept(1);
+    let result_syntax = || SyntaxTree::from("b").bind_nonquantifier_concept(3);
     let reduction_reason = ReductionReason::Inference {
         implication: context_search.to_ast(5),
         reason: ReductionReason::Explicit.into(),

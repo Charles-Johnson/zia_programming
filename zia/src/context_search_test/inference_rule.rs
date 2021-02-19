@@ -68,10 +68,10 @@ fn inference_rule() {
         &context_cache,
     ));
     let example_syntax = SyntaxTree::new_pair(
-        SyntaxTree::new_concept(7),
-        SyntaxTree::new_concept(10),
+        SyntaxTree::new_constant_concept(7),
+        SyntaxTree::new_constant_concept(10),
     );
-    let true_syntax = SyntaxTree::new_concept(1);
+    let true_syntax = SyntaxTree::new_constant_concept(1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
         Some((

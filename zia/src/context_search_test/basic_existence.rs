@@ -17,12 +17,12 @@ fn basic_existence() {
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
     let exists_such_that_syntax =
-        SyntaxTree::from("exists_such_that").bind_concept(0);
-    let variable_syntax = || SyntaxTree::from("_x_").bind_concept(3);
+        SyntaxTree::from("exists_such_that").bind_quantifier_concept(0);
+    let variable_syntax = || SyntaxTree::from("_x_").bind_nonquantifier_concept(3);
     let variable_exists_such_that_variable_is_true_syntax =
         SyntaxTree::new_pair(
+            SyntaxTree::new_pair(variable_syntax(), exists_such_that_syntax),
             variable_syntax(),
-            SyntaxTree::new_pair(exists_such_that_syntax, variable_syntax()),
         )
         .into();
 
@@ -30,7 +30,7 @@ fn basic_existence() {
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax),
         Some((
-            SyntaxTree::from("true").bind_concept(1).into(),
+            SyntaxTree::from("true").bind_nonquantifier_concept(1).into(),
             ReductionReason::Existence {
                 example: context_search.to_ast(2),
                 reason: ReductionReason::Explicit.into(),

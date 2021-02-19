@@ -33,8 +33,25 @@ pub trait Reader {
     fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
-            |concept| SyntaxTree::from(s).bind_concept(concept),
+            |concept| {
+                let syntax = SyntaxTree::from(s);
+                self.bind_concept_to_syntax(delta, syntax, concept)
+            }
         )
+    }
+    fn bind_concept_to_syntax(&self, delta: &ContextDelta, syntax: SyntaxTree, concept: usize) -> SyntaxTree {
+        if self.concrete_concept_type(delta,concept) == Some(ConcreteConceptType::ExistsSuchThat) {
+            syntax.bind_quantifier_concept(concept)
+        } else {
+            syntax.bind_nonquantifier_concept(concept)
+        }
+    }
+    fn new_syntax_from_concept(&self, delta: &ContextDelta, concept: usize) -> SyntaxTree {
+        if self.concrete_concept_type(delta,concept) == Some(ConcreteConceptType::ExistsSuchThat) {
+            SyntaxTree::new_quantifier_concept(concept)
+        } else {
+            SyntaxTree::new_constant_concept(concept)
+        }
     }
     fn concept_from_label(
         &self,

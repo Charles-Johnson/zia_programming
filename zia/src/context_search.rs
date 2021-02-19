@@ -258,6 +258,9 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     left, rightleft, rightright,
                 )
             })
+            .or_else(|| left.get_expansion().and_then(|(leftleft, leftright)| {
+                self.reduce_by_expanded_left_branch(&leftleft, &leftright, right)
+            }))
             .or_else(|| self.recursively_reduce_pair(left, right))
     }
 
@@ -405,14 +408,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             .and_also(&righthand.get_concept())
             .and_then(|(lc, rc)| {
                 self.find_composition(*lc, *rc).map(|def| {
-                    SyntaxTree::from(
+                    let syntax = SyntaxTree::from(
                         self.snap_shot
                             .get_label(self.delta, def)
                             .unwrap_or_else(|| {
                                 self.display_joint(lefthand, righthand)
                             }),
-                    )
-                    .bind_concept(def)
+                    );
+                    self.snap_shot.bind_concept_to_syntax(self.delta, syntax, def)
                 })
             })
             .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
@@ -553,33 +556,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
         (reduced_ast, maybe_reason)
     }
 
-    // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
-    fn reduce_by_expanded_right_branch(
-        &self,
-        left: &Arc<SyntaxTree>,
-        rightleft: &Arc<SyntaxTree>,
-        rightright: &Arc<SyntaxTree>,
-    ) -> ReductionResult {
-        self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
-            ConcreteConceptType::GreaterThan => {
-                let (comparison, comparison_reason) = self.compare(left, rightright);
-                match comparison {
-                    Comparison::GreaterThan => self.concrete_ast(ConcreteConceptType::True),
-                    Comparison::EqualTo | Comparison::LessThan | Comparison::LessThanOrEqualTo=> self.concrete_ast(ConcreteConceptType::False),
-                    Comparison::GreaterThanOrEqualTo | Comparison::Incomparable => None
-                }.map(|ast| (ast, ReductionReason::Comparison(Arc::new(comparison_reason))))
-            },
-            ConcreteConceptType::Reduction => self
-                .determine_reduction_truth(left, rightright)
-                .and_then(|(x, reason)| {
-                    if x {
-                        self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
-                    } else {
-                        self.concrete_ast(ConcreteConceptType::False).map(|ast| (ast, reason))
-                    }
-                }),
+    fn reduce_by_expanded_left_branch(&self, leftleft: &Arc<SyntaxTree>, leftright: &Arc<SyntaxTree>, right: &Arc<SyntaxTree>) -> ReductionResult {
+        self.concrete_type_of_ast(leftright).and_then(|cct| match cct {
             ConcreteConceptType::ExistsSuchThat
-                if left
+                if leftleft
                     .get_concept()
                     .map_or(false, |c| self.is_free_variable(c)) =>
             {
@@ -594,14 +574,14 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                         } else {
                             let mut context_search = self.clone();
                             let example = self.to_ast(i);
-                            let variable_concept = left.get_concept().unwrap();
+                            let variable_concept = leftleft.get_concept().unwrap();
                             context_search.variable_mask.insert(
                                 variable_concept,
                                 example.clone(),
                             );
                             let (truth_value, maybe_reason) = self
                                 .recursively_reduce(
-                                    &context_search.substitute(rightright, &hashmap! {variable_concept => example.clone()}),
+                                    &context_search.substitute(right, &hashmap! {variable_concept => example.clone()}),
                                 );
                             match (self.concrete_type_of_ast(&truth_value), maybe_reason) {
                                 (Some(ConcreteConceptType::True), Some(reason)) =>
@@ -644,6 +624,35 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     self.concrete_ast( ConcreteConceptType::False).map(|ast| (ast, ReductionReason::Absence))
                 }
             }
+            _ => None,
+        })
+    }
+
+    // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
+    fn reduce_by_expanded_right_branch(
+        &self,
+        left: &Arc<SyntaxTree>,
+        rightleft: &Arc<SyntaxTree>,
+        rightright: &Arc<SyntaxTree>,
+    ) -> ReductionResult {
+        self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
+            ConcreteConceptType::GreaterThan => {
+                let (comparison, comparison_reason) = self.compare(left, rightright);
+                match comparison {
+                    Comparison::GreaterThan => self.concrete_ast(ConcreteConceptType::True),
+                    Comparison::EqualTo | Comparison::LessThan | Comparison::LessThanOrEqualTo=> self.concrete_ast(ConcreteConceptType::False),
+                    Comparison::GreaterThanOrEqualTo | Comparison::Incomparable => None
+                }.map(|ast| (ast, ReductionReason::Comparison(Arc::new(comparison_reason))))
+            },
+            ConcreteConceptType::Reduction => self
+                .determine_reduction_truth(left, rightright)
+                .and_then(|(x, reason)| {
+                    if x {
+                        self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
+                    } else {
+                        self.concrete_ast(ConcreteConceptType::False).map(|ast| (ast, reason))
+                    }
+                }),
             _ => None,
         })
     }
@@ -715,11 +724,11 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
                     || self.snap_shot.get_label(self.delta, concept_id),
                     |s| Some(format_string(&s)),
                 ) {
-                    SyntaxTree::from(s).bind_concept(concept_id).into()
+                    self.snap_shot.bind_concept_to_syntax(self.delta, SyntaxTree::from(s), concept_id).into()
                 } else if let Some((left, right)) = concept.get_composition() {
                     self.combine(&self.to_ast(left), &self.to_ast(right))
                 } else {
-                    SyntaxTree::new_concept(concept_id).into()
+                    self.snap_shot.new_syntax_from_concept(self.delta, concept_id).into()
                 };
                 self.cache.insert_syntax_tree(&concept, &syntax);
                 syntax
@@ -737,7 +746,10 @@ impl<'a, S: SnapShotReader + Sync> ContextSearch<'a, S> {
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
                 self.find_composition(*l, *r)
-                    .map(|concept| self.join(ast, other).bind_concept(concept))
+                    .map(|concept| {
+                        let syntax = self.join(ast, other);
+                        self.snap_shot.bind_concept_to_syntax(self.delta, syntax, concept)
+                    })
             })
             .unwrap_or_else(|| self.join(ast, other));
         syntax.into()

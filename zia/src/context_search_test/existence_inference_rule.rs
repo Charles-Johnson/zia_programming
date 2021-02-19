@@ -35,10 +35,10 @@ fn existence_inference_rule() {
         &context_cache,
     ));
     let example_syntax = SyntaxTree::new_pair(
-        SyntaxTree::from("example").bind_concept(7),
-        SyntaxTree::from("b").bind_concept(10),
+        SyntaxTree::from("example").bind_nonquantifier_concept(7),
+        SyntaxTree::from("b").bind_nonquantifier_concept(10),
     );
-    let true_syntax = SyntaxTree::from("true").bind_concept(1);
+    let true_syntax = SyntaxTree::from("true").bind_nonquantifier_concept(1);
     let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
         context_search.reduce(&example_syntax.into()),
@@ -78,16 +78,16 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
             &mut bound_variable,
             &mut free_variable_concept,
         );
-    let mut exists_such_that_bound_variable_composed_with_free_variable =
+    let mut bound_variable_exists_such_that =
         Concept::composition_of(
             12,
+            &mut bound_variable,
             &mut exists_such_that_concept,
-            &mut bound_variable_composed_with_free_variable,
         );
     let mut cause_concept = Concept::composition_of(
         4,
-        &mut bound_variable,
-        &mut exists_such_that_bound_variable_composed_with_free_variable,
+        &mut bound_variable_exists_such_that,
+        &mut bound_variable_composed_with_free_variable,
     );
     let mut result_concept =
         Concept::composition_of(2, &mut free_variable_concept, &mut concept_b);
@@ -120,7 +120,7 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
         free_variable_concept,
         concept_b,
         bound_variable,
-        exists_such_that_bound_variable_composed_with_free_variable,
+        bound_variable_exists_such_that,
         bound_variable_composed_with_free_variable,
         exists_such_that_concept,
         assoc_concept,
