@@ -76,16 +76,6 @@ where
         }
     }
 
-    pub fn disable_reduction_cache(mut self) -> Self {
-        self.cache.disable_reduction_cache();
-        self
-    }
-
-    pub fn disable_syntax_tree_cache(mut self) -> Self {
-        self.cache.disable_syntax_tree_cache();
-        self
-    }
-
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);

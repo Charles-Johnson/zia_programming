@@ -14,15 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-    and_also::AndAlso,
-    ast::SyntaxTree,
-    concepts::{format_string, Concept, ConcreteConceptType},
-    context_cache::ContextCache,
-    context_delta::ContextDelta,
-    context_snap_shot::Associativity,
-    snap_shot::Reader as SnapShotReader,
-};
+use crate::{and_also::AndAlso, ast::SyntaxTree, concepts::{format_string, Concept, ConcreteConceptType}, context_cache::ContextCache, context_delta::ContextDelta, context_snap_shot::Associativity, context_cache::ContextCacheList, snap_shot::Reader as SnapShotReader};
 use log::debug;
 use maplit::{hashmap, hashset};
 use rayon::prelude::*;
@@ -37,7 +29,7 @@ pub struct ContextSearch<'a, S> {
     snap_shot: &'a S,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
-    cache: &'a ContextCache,
+    caches: Arc<ContextCacheList<'a>>,
     syntax_evaluating: HashSet<Arc<SyntaxTree>>,
 }
 
@@ -178,7 +170,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     ) -> ReductionResult {
         let mut reduced_pair: ReductionResult = None;
         if self.syntax_evaluating.contains(ast) || {
-            let mut context_search = self.clone();
+            let cache = ContextCache::default();
+            let mut context_search = self.spawn(&cache);
             context_search.syntax_evaluating.insert(ast.clone());
             reduced_pair = context_search.reduce_pair(left, right);
             let find = |c| self.find_composition(operator_id, c);
@@ -198,12 +191,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> ReductionResult {
-        // This is a stupid hack to fix one of the unit tests
-        if ast.to_string() == "a > c".to_owned() {
-            return ast.get_expansion().and_then(|(left, right)| self.reduce_pair(&left, &right)); 
-        }
         debug!("reduce({})", ast.to_string());
-        self.cache.get_reduction_or_else(ast, || {
+        self.caches.get_reduction_or_else(ast, || {
             let reduction_result = ast
                 .get_concept()
                 .and_then(|c| self.reduce_concept(c))
@@ -243,7 +232,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             .or_else(|| self.reduce_pair(left, right))
                     })
                 });
-            self.cache.insert_reduction(ast, &reduction_result);
+            self.caches.insert_reduction(ast, &reduction_result);
             reduction_result
         })
     }
@@ -280,12 +269,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             right.get_concept().and_then(|r| self.variable_mask.get(&r));
         let maybe_subbed_l =
             left.get_concept().and_then(|l| self.variable_mask.get(&l));
+        let cache = ContextCache::default();
         match (left_result, right_result) {
             (None, None) => self
                 .filter_generalisations_for_pair(left, right)
                 .iter()
                 .find_map(|(generalisation, variable_mask)| {
-                    let mut context_search = self.clone();
+                    let mut context_search = self.spawn(&cache);
                     // Stack overflow occurs if you remove this
                     context_search.variable_mask.extend(variable_mask.clone());
                     context_search.reduce_concept(*generalisation).map(
@@ -548,6 +538,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     .map_or(false, |c| self.is_free_variable(c)) =>
             {
                 let mut might_exist = false;
+                let cache = ContextCache::default();
                 let results: Vec<Option<(bool, ReductionReason)>> = (0..self
                     .snap_shot
                     .lowest_unoccupied_concept_id(self.delta))
@@ -556,7 +547,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         if self.is_free_variable(i) {
                             None
                         } else {
-                            let mut context_search = self.clone();
+                            let mut context_search = self.spawn(&cache);
                             let example = self.to_ast(i);
                             let variable_concept = leftleft.get_concept().unwrap();
                             context_search.variable_mask.insert(
@@ -701,7 +692,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
         self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
-            self.cache.get_syntax_tree_or_else(concept_id, || {
+            self.caches.get_syntax_tree_or_else(concept_id, || {
                 let concept =
                     self.snap_shot.read_concept(self.delta, concept_id);
                 let syntax = if let Some(s) = concept.get_string().map_or_else(
@@ -714,7 +705,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 } else {
                     self.snap_shot.new_syntax_from_concept(self.delta, concept_id).into()
                 };
-                self.cache.insert_syntax_tree(&concept, &syntax);
+                self.caches.insert_syntax_tree(&concept, &syntax);
                 syntax
             })
         })
@@ -833,13 +824,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             );
             let mut reason = None;
             let mut reversed_reason = None;
-            
+            let cache = ContextCache::default();
             (
                 match (
                     if self.syntax_evaluating.contains(&comparing_syntax) {
-                        self.cache.get_reduction_or_else(&comparing_syntax, || None).map(|(s, r)| (s, Some(r)))
+                        self.caches.get_reduction_or_else(&comparing_syntax, || None).map(|(s, r)| (s, Some(r)))
                     } else {
-                        let mut context_search = self.clone();
+                        let mut context_search = self.spawn(&cache);
                         context_search.syntax_evaluating.insert(comparing_syntax.clone());
                         Some(context_search.recursively_reduce(&comparing_syntax))
                     }.and_then(|(syntax_comparison, local_reason)| {
@@ -847,9 +838,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         self.concrete_type_of_ast(&syntax_comparison)
                     }),
                     if self.syntax_evaluating.contains(&comparing_reversed_syntax) {
-                        self.cache.get_reduction_or_else(&comparing_reversed_syntax, || None).map(|(s, r)| (s, Some(r)))
+                        self.caches.get_reduction_or_else(&comparing_reversed_syntax, || None).map(|(s, r)| (s, Some(r)))
                     } else {
-                        let mut context_search = self.clone();
+                        let mut context_search = self.spawn(&cache);
                         context_search.syntax_evaluating.insert(comparing_reversed_syntax.clone());
                         Some(context_search.recursively_reduce(&comparing_reversed_syntax))
                     }.and_then(|(reversed_comparison, local_reversed_reason)| {
@@ -921,6 +912,16 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             (Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept)
         }
     }
+
+    pub fn spawn(&self, cache: &'a ContextCache) -> Self {
+        Self {
+            caches: Arc::new(ContextCacheList::spawn(&self.caches, cache)),
+            delta: self.delta,
+            snap_shot: self.snap_shot,
+            syntax_evaluating: self.syntax_evaluating.clone(),
+            variable_mask: self.variable_mask.clone()
+        }
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -952,24 +953,12 @@ impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
             snap_shot,
             variable_mask: hashmap! {},
             delta,
-            cache,
+            caches: Arc::new(cache.into()),
             syntax_evaluating: hashset! {},
         }
     }
 }
 
 type ContextReferences<'a, S> = (&'a S, &'a ContextDelta, &'a ContextCache);
-
-impl<'a, S> Clone for ContextSearch<'a, S> {
-    fn clone(&self) -> ContextSearch<'a, S> {
-        ContextSearch {
-            snap_shot: self.snap_shot,
-            variable_mask: self.variable_mask.clone(),
-            delta: self.delta,
-            cache: self.cache,
-            syntax_evaluating: self.syntax_evaluating.clone(),
-        }
-    }
-}
 
 type VariableMask = HashMap<usize, Arc<SyntaxTree>>;
