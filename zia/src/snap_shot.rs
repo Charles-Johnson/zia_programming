@@ -201,7 +201,7 @@ pub mod mock {
     use bimap::BiMap;
     use std::collections::HashMap;
 
-    #[derive(Default)]
+    #[derive(Debug, Default)]
     pub struct MockSnapShot {
         concrete_concepts: BiMap<usize, ConcreteConceptType>,
         concept_labels: BiMap<usize, &'static str>,

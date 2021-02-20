@@ -19,9 +19,13 @@ impl ContextCache {
         concept_id: usize,
         build_syntax: impl Fn() -> Arc<SyntaxTree>,
     ) -> Arc<SyntaxTree> {
-        self.syntax_trees
-            .get(&concept_id)
-            .map_or_else(build_syntax, |r| r.value().clone())
+        if self.syntax_trees_disabled {
+            build_syntax()
+        } else {
+            self.syntax_trees
+                .get(&concept_id)
+                .map_or_else(build_syntax, |r| r.value().clone())
+        }
     }
 
     pub fn insert_syntax_tree(
@@ -39,7 +43,11 @@ impl ContextCache {
         ast: &Arc<SyntaxTree>,
         reduce: impl Fn() -> ReductionResult,
     ) -> ReductionResult {
-        self.reductions.get(ast).map_or_else(reduce, |r| r.as_ref().cloned())
+        if self.reductions_disabled {
+            reduce()
+        } else {
+            self.reductions.get(ast).map_or_else(reduce, |r| r.as_ref().cloned())
+        }
     }
 
     pub fn insert_reduction(

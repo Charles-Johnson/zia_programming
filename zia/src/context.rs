@@ -22,7 +22,7 @@ use slog::{info, o, Drain, Logger};
 #[cfg(test)]
 use std::collections::HashMap;
 use std::{
-    convert::TryFrom, default::Default, iter::from_fn, mem::swap, sync::Arc,
+    convert::TryFrom, default::Default, fmt::Debug, iter::from_fn, mem::swap, sync::Arc,
 };
 
 #[derive(Clone)]
@@ -44,7 +44,7 @@ pub struct TokenSubsequence {
 
 impl<S> Context<S>
 where
-    S: SnapShotReader + Default + Sync + Apply<Delta = ContextDelta>,
+    S: SnapShotReader + Default + Sync + Apply<Delta = ContextDelta> + Debug,
 {
     #[must_use]
     pub fn new() -> Self {
