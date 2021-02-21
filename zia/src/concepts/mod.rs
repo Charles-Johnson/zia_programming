@@ -15,7 +15,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    context_delta::{Composition, NewConceptDelta, NewDirectConceptDelta},
+    context_delta::{
+        Composition, IndirectConceptDelta, NewConceptDelta,
+        NewDirectConceptDelta,
+    },
     errors::{ZiaError, ZiaResult},
 };
 use maplit::hashset;
@@ -83,6 +86,37 @@ impl From<&NewDirectConceptDelta> for Concept {
 impl Concept {
     pub const fn id(&self) -> usize {
         self.id
+    }
+
+    pub fn apply_indirect(&mut self, delta: &IndirectConceptDelta) {
+        match delta {
+            IndirectConceptDelta::ComposedOf(Composition {
+                left_id,
+                right_id,
+            }) => {
+                if let SpecificPart::Abstract(ref mut ap) = self.specific_part {
+                    ap.composition =
+                        MaybeComposition::Composition(CompositePart {
+                            lefthand: *left_id,
+                            righthand: *right_id,
+                            free_variables: hashset! {},
+                            binding_variables: hashset! {},
+                        });
+                } else {
+                    panic!("Concept isn't abstract");
+                }
+            },
+            IndirectConceptDelta::LefthandOf(composition_id) => {
+                self.concrete_part.lefthand_of.insert(*composition_id);
+            },
+            IndirectConceptDelta::RighthandOf(composition_id) => {
+                self.concrete_part.righthand_of.insert(*composition_id);
+            },
+            IndirectConceptDelta::ReducesFrom(unreduced_id) => {
+                self.concrete_part.reduces_from.insert(*unreduced_id);
+            },
+            _ => todo!(),
+        }
     }
 
     pub fn variable(&self) -> bool {

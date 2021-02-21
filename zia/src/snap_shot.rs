@@ -3,7 +3,7 @@ use crate::{
     concepts::{Concept, ConcreteConceptType},
     context_delta::{
         Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
-        NewConceptDelta,
+        IndirectConceptDelta, NewConceptDelta,
     },
     errors::{ZiaError, ZiaResult},
 };
@@ -18,7 +18,7 @@ pub trait Reader {
             .concept()
             .get(&id)
             .and_then(|cds| {
-                let mut concept = None;
+                let mut concept: Option<Concept> = None;
                 for (cd, _) in cds {
                     match cd {
                         ConceptDelta::Direct(DirectConceptDelta::New(ndcd)) => {
@@ -41,7 +41,13 @@ pub trait Reader {
                             change,
                             unreduced_id,
                         }) => todo!(),
-                        ConceptDelta::Indirect(icd) => todo!(),
+                        ConceptDelta::Indirect(delta) => {
+                            if let Some(ref mut c) = concept {
+                                c.apply_indirect(delta);
+                            } else {
+                                panic!("Concept doesn't exist");
+                            }
+                        },
                     }
                 }
                 concept
