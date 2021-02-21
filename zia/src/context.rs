@@ -429,50 +429,11 @@ where
         let label_id = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         let mut concrete_constructor =
             |concrete_id: Option<usize>, concrete_label, concrete_type| {
-                let concrete_id = concrete_id.unwrap_or_else(|| {
-                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta)
-                });
-                let concrete_label_id = concrete_id + 1;
-                let direct_delta =
-                    DirectConceptDelta::New(NewDirectConceptDelta {
-                        new_concept_id: concrete_label_id,
-                        delta: NewConceptDelta::String(concrete_label),
-                    });
-                self.delta.update_concept_delta(
-                    &direct_delta,
-                    false,
-                    &mut self.cache,
-                );
-
-                let composition_id =
-                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-                let direct_delta =
-                    DirectConceptDelta::New(NewDirectConceptDelta {
-                        new_concept_id: composition_id,
-                        delta: NewConceptDelta::ReducesTo {
-                            reduction: concrete_label_id,
-                            variable: false,
-                        },
-                    });
-                self.delta.update_concept_delta(
-                    &direct_delta,
-                    false,
-                    &mut self.cache,
-                );
-                let direct_delta =
-                    DirectConceptDelta::New(NewDirectConceptDelta {
-                        delta: NewConceptDelta::Right {
-                            composition_id,
-                            left_id: label_id,
-                            concrete_type: Some(concrete_type),
-                            variable: false,
-                        },
-                        new_concept_id: concrete_id,
-                    });
-                self.delta.update_concept_delta(
-                    &direct_delta,
-                    false,
-                    &mut self.cache,
+                self.new_labelled_concept(
+                    concrete_id,
+                    concrete_label,
+                    Some(concrete_type),
+                    label_id,
                 );
             };
         let labels = vec![
@@ -492,11 +453,11 @@ where
         ];
         concrete_constructor(
             Some(label_id),
-            "label_of".into(),
+            "label_of",
             ConcreteConceptType::Label,
         );
         for (label, concrete_type) in labels {
-            concrete_constructor(None, label.into(), concrete_type);
+            concrete_constructor(None, label, concrete_type);
         }
         self.execute("let (true and true) -> true");
         assert_eq!(self.execute("true and true"), "true");
@@ -915,7 +876,16 @@ where
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => self.new_labelled_default(string),
+                None => {
+                    let label_id = self
+                        .snap_shot
+                        .concrete_concept_id(
+                            &self.delta,
+                            ConcreteConceptType::Label,
+                        )
+                        .ok_or(ZiaError::NoLabelConcept)?;
+                    Ok(self.new_labelled_concept(None, string, None, label_id))
+                },
                 Some((ref left, ref right)) => {
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
@@ -933,11 +903,63 @@ where
         }
     }
 
-    fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default =
-            self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-        self.label(new_default, string)?;
-        Ok(new_default)
+    fn new_labelled_concept(
+        &mut self,
+        new_concept_id: Option<usize>,
+        string: &str,
+        concrete_type: Option<ConcreteConceptType>,
+        label_id: usize,
+    ) -> usize {
+        let new_concept_id = new_concept_id.unwrap_or_else(|| {
+            self.snap_shot.lowest_unoccupied_concept_id(&self.delta)
+        });
+        let new_concept_label_id = {
+            let new_concept_label_id = new_concept_id + 1;
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                new_concept_id: new_concept_label_id,
+                delta: NewConceptDelta::String(string.into()),
+            });
+            self.delta.update_concept_delta(
+                &direct_delta,
+                false,
+                &mut self.cache,
+            );
+            new_concept_label_id
+        };
+        let composition_id = {
+            let composition_id =
+                self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                new_concept_id: composition_id,
+                delta: NewConceptDelta::ReducesTo {
+                    reduction: new_concept_label_id,
+                    variable: false,
+                },
+            });
+            self.delta.update_concept_delta(
+                &direct_delta,
+                false,
+                &mut self.cache,
+            );
+            composition_id
+        };
+        {
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                delta: NewConceptDelta::Right {
+                    composition_id,
+                    left_id: label_id,
+                    concrete_type,
+                    variable: false,
+                },
+                new_concept_id,
+            });
+            self.delta.update_concept_delta(
+                &direct_delta,
+                false,
+                &mut self.cache,
+            );
+        };
+        new_concept_id
     }
 
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
