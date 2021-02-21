@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::errors::{ZiaError, ZiaResult};
+use crate::{
+    context_delta::{Composition, NewConceptDelta, NewDirectConceptDelta},
+    errors::{ZiaError, ZiaResult},
+};
 use maplit::hashset;
 use std::{collections::HashSet, fmt::Debug};
 
@@ -64,6 +67,16 @@ impl Debug for Concept {
         }
         string += &format!(" specific_part: {:#?}", self.specific_part);
         formatter.write_str(&(string + "}"))
+    }
+}
+
+impl From<&NewDirectConceptDelta> for Concept {
+    fn from(ndcd: &NewDirectConceptDelta) -> Self {
+        Self {
+            id: ndcd.new_concept_id,
+            concrete_part: (&ndcd.delta).into(),
+            specific_part: (&ndcd.delta).into(),
+        }
     }
 }
 
@@ -292,6 +305,58 @@ impl From<ConcreteConceptType> for SpecificPart {
     }
 }
 
+impl From<&NewConceptDelta> for SpecificPart {
+    fn from(delta: &NewConceptDelta) -> Self {
+        match delta {
+            NewConceptDelta::Composition(Composition {
+                left_id,
+                right_id,
+            }) => Self::Abstract(AbstractPart {
+                composition: MaybeComposition::Composition(CompositePart {
+                    binding_variables: hashset! {},
+                    free_variables: hashset! {},
+                    lefthand: *left_id,
+                    righthand: *right_id,
+                }),
+                reduces_to: None,
+            }),
+            NewConceptDelta::Left {
+                concrete_type,
+                variable,
+                ..
+            }
+            | NewConceptDelta::Right {
+                concrete_type,
+                variable,
+                ..
+            } => {
+                // A variable cannot be concrete
+                concrete_type.map_or_else(
+                    || {
+                        Self::Abstract(AbstractPart {
+                            composition: MaybeComposition::Leaf(*variable),
+                            reduces_to: None,
+                        })
+                    },
+                    |ct| {
+                        debug_assert!(!variable);
+                        Self::Concrete(ct)
+                    },
+                )
+            },
+            NewConceptDelta::String(s) => Self::String(s.clone()),
+            NewConceptDelta::ReducesTo(reduction) => {
+                Self::Abstract(AbstractPart {
+                    composition: MaybeComposition::Leaf(todo!(
+                        "need to specify if concept is variable"
+                    )),
+                    reduces_to: Some(*reduction),
+                })
+            },
+        }
+    }
+}
+
 impl SpecificPart {
     pub const fn variable() -> Self {
         Self::Abstract(AbstractPart {
@@ -416,4 +481,28 @@ pub struct ConcreteConcept {
     righthand_of: HashSet<usize>,
     /// Set of all indices of the concepts which reduce to this concept.
     reduces_from: HashSet<usize>,
+}
+
+impl From<&NewConceptDelta> for ConcreteConcept {
+    fn from(delta: &NewConceptDelta) -> Self {
+        match delta {
+            NewConceptDelta::Composition(_)
+            | NewConceptDelta::ReducesTo(_)
+            | NewConceptDelta::String(_) => Self::default(),
+            NewConceptDelta::Left {
+                composition_id,
+                ..
+            } => Self {
+                lefthand_of: hashset! {*composition_id},
+                ..Default::default()
+            },
+            NewConceptDelta::Right {
+                composition_id,
+                ..
+            } => Self {
+                righthand_of: hashset! {*composition_id},
+                ..Default::default()
+            },
+        }
+    }
 }

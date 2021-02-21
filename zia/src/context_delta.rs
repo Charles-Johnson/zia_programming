@@ -35,12 +35,10 @@ impl ContextDelta {
     ) {
         let dcd = (concept_delta.into(), temporary);
         match concept_delta {
-            DirectConceptDelta::New {
-                new_concept_id,
-                delta,
-            } => {
-                self.insert_delta_for_new_concept(*new_concept_id, dcd);
-                match delta {
+            DirectConceptDelta::New(ndcd) => {
+                let new_concept_id = ndcd.new_concept_id;
+                self.insert_delta_for_new_concept(new_concept_id, dcd);
+                match &ndcd.delta {
                     NewConceptDelta::String(s) => {
                         self.string
                             .entry(s.into())
@@ -52,24 +50,24 @@ impl ContextDelta {
                                 Change::Remove(id) => {
                                     *v = Change::Update {
                                         before: *id,
-                                        after: *new_concept_id,
+                                        after: new_concept_id,
                                     }
                                 },
                             })
-                            .or_insert_with(|| Change::Create(*new_concept_id));
+                            .or_insert_with(|| Change::Create(new_concept_id));
                     },
                     NewConceptDelta::Composition(Composition {
                         left_id,
                         right_id,
                     }) => {
                         let cd = (
-                            IndirectConceptDelta::LefthandOf(*new_concept_id)
+                            IndirectConceptDelta::LefthandOf(new_concept_id)
                                 .into(),
                             temporary,
                         );
                         self.insert_delta_for_existing_concept(*left_id, cd);
                         let cd = (
-                            IndirectConceptDelta::RighthandOf(*new_concept_id)
+                            IndirectConceptDelta::RighthandOf(new_concept_id)
                                 .into(),
                             temporary,
                         );
@@ -88,7 +86,7 @@ impl ContextDelta {
                         self.insert_delta_for_existing_concept(*right_id, cd);
                         let cd = (
                             IndirectConceptDelta::ComposedOf(Composition {
-                                left_id: *new_concept_id,
+                                left_id: new_concept_id,
                                 right_id: *right_id,
                             })
                             .into(),
@@ -113,7 +111,7 @@ impl ContextDelta {
                         let cd = (
                             IndirectConceptDelta::ComposedOf(Composition {
                                 left_id: *left_id,
-                                right_id: *new_concept_id,
+                                right_id: new_concept_id,
                             })
                             .into(),
                             temporary,
@@ -125,7 +123,7 @@ impl ContextDelta {
                     },
                     NewConceptDelta::ReducesTo(reduced_concept_id) => {
                         let cd = (
-                            IndirectConceptDelta::ReducesFrom(*new_concept_id)
+                            IndirectConceptDelta::ReducesFrom(new_concept_id)
                                 .into(),
                             temporary,
                         );
@@ -389,10 +387,7 @@ pub enum IndirectConceptDelta {
 
 #[derive(Clone, Debug)]
 pub enum DirectConceptDelta {
-    New {
-        new_concept_id: usize,
-        delta: NewConceptDelta,
-    },
+    New(NewDirectConceptDelta),
     Compose {
         composition_id: usize,
         change: Change<Composition>,
@@ -402,6 +397,12 @@ pub enum DirectConceptDelta {
         change: Change<usize>,
     },
     Remove(usize),
+}
+
+#[derive(Clone, Debug)]
+pub struct NewDirectConceptDelta {
+    pub delta: NewConceptDelta,
+    pub new_concept_id: usize,
 }
 
 #[derive(Clone, Debug)]

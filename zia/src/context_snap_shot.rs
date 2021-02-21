@@ -20,6 +20,7 @@ use crate::{
     context_delta,
     context_delta::{
         ConceptDelta, ContextDelta, DirectConceptDelta, NewConceptDelta,
+        NewDirectConceptDelta,
     },
     delta::{Apply, Change},
     snap_shot::Reader as SnapShotReader,
@@ -122,10 +123,12 @@ impl ContextSnapShot {
         for (id, cdv) in delta.concept() {
             for (cd, _) in cdv {
                 // Is new_concept_id the same as id?
-                if let ConceptDelta::Direct(DirectConceptDelta::New {
-                    new_concept_id,
-                    delta,
-                }) = cd
+                if let ConceptDelta::Direct(DirectConceptDelta::New(
+                    NewDirectConceptDelta {
+                        new_concept_id,
+                        delta,
+                    },
+                )) = cd
                 {
                     if length <= *id {
                         length = *id + 1;
@@ -218,10 +221,12 @@ impl SnapShotReader for ContextSnapShot {
         let mut new_concept_length = self.concepts.len();
         for (id, cdv) in delta.concept() {
             for (cd, _) in cdv {
-                if let ConceptDelta::Direct(DirectConceptDelta::New {
-                    new_concept_id,
-                    delta,
-                }) = cd
+                if let ConceptDelta::Direct(DirectConceptDelta::New(
+                    NewDirectConceptDelta {
+                        new_concept_id,
+                        delta,
+                    },
+                )) = cd
                 {
                     if *id >= new_concept_length {
                         new_concept_length = *id + 1
@@ -309,10 +314,12 @@ impl SnapShotReader for ContextSnapShot {
         for (concept_id, cdv) in delta.concept() {
             for (cd, _) in cdv {
                 match cd {
-                    ConceptDelta::Direct(DirectConceptDelta::New {
-                        new_concept_id,
-                        ..
-                    }) if self.concrete_concept_type(delta, *concept_id)
+                    ConceptDelta::Direct(DirectConceptDelta::New(
+                        NewDirectConceptDelta {
+                            new_concept_id,
+                            ..
+                        },
+                    )) if self.concrete_concept_type(delta, *concept_id)
                         == Some(cc) =>
                     {
                         id = Some(Some(*concept_id))
@@ -368,10 +375,12 @@ impl Apply for ContextSnapShot {
                 if !temporary {
                     if let ConceptDelta::Direct(dcd) = cd {
                         match dcd {
-                            DirectConceptDelta::New {
-                                new_concept_id,
-                                delta,
-                            } => match delta {
+                            DirectConceptDelta::New(
+                                NewDirectConceptDelta {
+                                    new_concept_id,
+                                    delta,
+                                },
+                            ) => match delta {
                                 NewConceptDelta::String(s) => {
                                     self.string_map
                                         .insert(s.into(), *new_concept_id);

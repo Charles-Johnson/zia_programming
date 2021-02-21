@@ -23,6 +23,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::{
         Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
+        NewDirectConceptDelta,
     },
     context_search::{Comparison, ContextSearch},
     context_snap_shot::Associativity,
@@ -388,10 +389,11 @@ where
                 let string_id = self.new_string(t);
                 let new_concept_id =
                     self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-                let concept_delta = DirectConceptDelta::New {
-                    new_concept_id,
-                    delta: NewConceptDelta::ReducesTo(string_id),
-                };
+                let concept_delta =
+                    DirectConceptDelta::New(NewDirectConceptDelta {
+                        new_concept_id,
+                        delta: NewConceptDelta::ReducesTo(string_id),
+                    });
                 self.delta.update_concept_delta(
                     &concept_delta,
                     true,
@@ -428,10 +430,11 @@ where
                     self.snap_shot.lowest_unoccupied_concept_id(&self.delta)
                 });
                 let concrete_label_id = concrete_id + 1;
-                let direct_delta = DirectConceptDelta::New {
-                    new_concept_id: concrete_label_id,
-                    delta: NewConceptDelta::String(concrete_label),
-                };
+                let direct_delta =
+                    DirectConceptDelta::New(NewDirectConceptDelta {
+                        new_concept_id: concrete_label_id,
+                        delta: NewConceptDelta::String(concrete_label),
+                    });
                 self.delta.update_concept_delta(
                     &direct_delta,
                     false,
@@ -440,24 +443,26 @@ where
 
                 let composition_id =
                     self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-                let direct_delta = DirectConceptDelta::New {
-                    new_concept_id: composition_id,
-                    delta: NewConceptDelta::ReducesTo(concrete_label_id),
-                };
+                let direct_delta =
+                    DirectConceptDelta::New(NewDirectConceptDelta {
+                        new_concept_id: composition_id,
+                        delta: NewConceptDelta::ReducesTo(concrete_label_id),
+                    });
                 self.delta.update_concept_delta(
                     &direct_delta,
                     false,
                     &mut self.cache,
                 );
-                let direct_delta = DirectConceptDelta::New {
-                    delta: NewConceptDelta::Right {
-                        composition_id,
-                        left_id: label_id,
-                        concrete_type: Some(concrete_type),
-                        variable: false,
-                    },
-                    new_concept_id: concrete_id,
-                };
+                let direct_delta =
+                    DirectConceptDelta::New(NewDirectConceptDelta {
+                        delta: NewConceptDelta::Right {
+                            composition_id,
+                            left_id: label_id,
+                            concrete_type: Some(concrete_type),
+                            variable: false,
+                        },
+                        new_concept_id: concrete_id,
+                    });
                 self.delta.update_concept_delta(
                     &direct_delta,
                     false,
@@ -943,10 +948,10 @@ where
     fn new_string(&mut self, string: impl Into<String> + Clone) -> usize {
         let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         self.delta.update_concept_delta(
-            &DirectConceptDelta::New {
+            &DirectConceptDelta::New(NewDirectConceptDelta {
                 delta: NewConceptDelta::String(string.into()),
                 new_concept_id: index,
-            },
+            }),
             false,
             &mut self.cache,
         );
@@ -969,13 +974,13 @@ where
                 let new_concept_id =
                     self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
                 self.delta.update_concept_delta(
-                    &DirectConceptDelta::New {
+                    &DirectConceptDelta::New(NewDirectConceptDelta {
                         delta: NewConceptDelta::Composition(Composition {
                             left_id: lefthand,
                             right_id: righthand,
                         }),
                         new_concept_id,
-                    },
+                    }),
                     temporary,
                     &mut self.cache,
                 );

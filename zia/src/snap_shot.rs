@@ -1,7 +1,10 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType},
-    context_delta::{ConceptDelta, ContextDelta},
+    context_delta::{
+        Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
+        NewConceptDelta,
+    },
     errors::{ZiaError, ZiaResult},
 };
 #[cfg(test)]
@@ -10,17 +13,38 @@ use std::collections::HashMap;
 pub trait Reader {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept>;
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
+        let mut concept = self.get_concept(id).cloned();
         delta
             .concept()
             .get(&id)
             .and_then(|cds| {
+                let mut concept = None;
                 for (cd, _) in cds {
                     match cd {
-                        ConceptDelta::Direct(dcd) => todo!(),
+                        ConceptDelta::Direct(DirectConceptDelta::New(ndcd)) => {
+                            debug_assert!(concept.is_none());
+                            debug_assert_eq!(ndcd.new_concept_id, id);
+                            concept = Some(ndcd.into());
+                        },
+                        ConceptDelta::Direct(DirectConceptDelta::Remove(
+                            concept_id,
+                        )) => {
+                            debug_assert_eq!(*concept_id, id);
+                            debug_assert!(concept.is_some());
+                            concept = None;
+                        },
+                        ConceptDelta::Direct(DirectConceptDelta::Compose {
+                            change,
+                            composition_id,
+                        }) => todo!(),
+                        ConceptDelta::Direct(DirectConceptDelta::Reduce {
+                            change,
+                            unreduced_id,
+                        }) => todo!(),
                         ConceptDelta::Indirect(icd) => todo!(),
                     }
                 }
-                todo!()
+                concept
             })
             .unwrap_or_else(|| {
                 self.get_concept(id)
