@@ -16,13 +16,28 @@
 
 #[cfg(test)]
 use crate::concepts::Concept;
-use crate::{and_also::AndAlso, ast::{is_variable, SyntaxTree}, concepts::{ConcreteConceptType, SpecificPart}, context_cache::ContextCache, context_delta::{Composition, ContextDelta, Change, DirectConceptDelta, NewConceptDelta}, context_search::{Comparison, ContextSearch}, context_snap_shot::Associativity, delta::Apply, errors::{map_err_variant, ZiaError, ZiaResult}, parser::parse_line, snap_shot::Reader as SnapShotReader};
+use crate::{
+    and_also::AndAlso,
+    ast::{is_variable, SyntaxTree},
+    concepts::{ConcreteConceptType, SpecificPart},
+    context_cache::ContextCache,
+    context_delta::{
+        Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
+    },
+    context_search::{Comparison, ContextSearch},
+    context_snap_shot::Associativity,
+    delta::Apply,
+    errors::{map_err_variant, ZiaError, ZiaResult},
+    parser::parse_line,
+    snap_shot::Reader as SnapShotReader,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
 #[cfg(test)]
 use std::collections::HashMap;
 use std::{
-    convert::TryFrom, default::Default, fmt::Debug, iter::from_fn, mem::swap, sync::Arc,
+    convert::TryFrom, default::Default, fmt::Debug, iter::from_fn, mem::swap,
+    sync::Arc,
 };
 
 #[derive(Clone)]
@@ -259,8 +274,14 @@ where
                 let (precedence_of_token, syntax_of_token) = if let Some(c) =
                     self.snap_shot.concept_from_label(&self.delta, token)
                 {
-                    let syntax_of_token =
-                        self.snap_shot.bind_concept_to_syntax(&self.delta, raw_syntax_of_token, c).into();
+                    let syntax_of_token = self
+                        .snap_shot
+                        .bind_concept_to_syntax(
+                            &self.delta,
+                            raw_syntax_of_token,
+                            c,
+                        )
+                        .into();
                     (
                         context_search
                             .concrete_ast(ConcreteConceptType::Precedence)
@@ -365,15 +386,28 @@ where
                     .concrete_concept_id(ConcreteConceptType::Label)
                     .ok_or(ZiaError::NoLabelConcept)?;
                 let string_id = self.new_string(t);
-                let new_concept_id =  self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-                let concept_delta = DirectConceptDelta::New{new_concept_id, delta: NewConceptDelta::ReducesTo(string_id)};
-                self.delta.update_concept_delta(&concept_delta, true, &mut self.cache);
+                let new_concept_id =
+                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+                let concept_delta = DirectConceptDelta::New {
+                    new_concept_id,
+                    delta: NewConceptDelta::ReducesTo(string_id),
+                };
+                self.delta.update_concept_delta(
+                    &concept_delta,
+                    true,
+                    &mut self.cache,
+                );
                 let composition = self.find_or_insert_composition(
-                    label_id, new_concept_id, true,
+                    label_id,
+                    new_concept_id,
+                    true,
                 )?;
                 self.update_reduction(composition, string_id, true)?;
                 let syntax = SyntaxTree::from(t);
-                Ok(self.snap_shot.bind_concept_to_syntax(&self.delta, syntax, new_concept_id).into())
+                Ok(self
+                    .snap_shot
+                    .bind_concept_to_syntax(&self.delta, syntax, new_concept_id)
+                    .into())
             } else {
                 Ok(ast.into())
             }
@@ -388,19 +422,48 @@ where
 
     fn setup(&mut self) {
         let label_id = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-        let mut concrete_constructor = |concrete_id: Option<usize>, concrete_label, concrete_type| {
-            let concrete_id = concrete_id.unwrap_or_else(|| self.snap_shot.lowest_unoccupied_concept_id(&self.delta));
-            let concrete_label_id = concrete_id + 1;
-            let direct_delta = DirectConceptDelta::New{new_concept_id: concrete_label_id, delta: NewConceptDelta::String(concrete_label)};
-            self.delta.update_concept_delta(&direct_delta, false, &mut self.cache);
+        let mut concrete_constructor =
+            |concrete_id: Option<usize>, concrete_label, concrete_type| {
+                let concrete_id = concrete_id.unwrap_or_else(|| {
+                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta)
+                });
+                let concrete_label_id = concrete_id + 1;
+                let direct_delta = DirectConceptDelta::New {
+                    new_concept_id: concrete_label_id,
+                    delta: NewConceptDelta::String(concrete_label),
+                };
+                self.delta.update_concept_delta(
+                    &direct_delta,
+                    false,
+                    &mut self.cache,
+                );
 
-            let composition_id =
-                self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
-            let direct_delta = DirectConceptDelta::New{new_concept_id: composition_id, delta: NewConceptDelta::ReducesTo(concrete_label_id)};
-            self.delta.update_concept_delta(&direct_delta, false, &mut self.cache);
-            let direct_delta = DirectConceptDelta::New{delta: NewConceptDelta::Right{composition_id, left_id: label_id, concrete_type: Some(concrete_type), variable: false}, new_concept_id: concrete_id};
-            self.delta.update_concept_delta(&direct_delta, false, &mut self.cache);
-        };
+                let composition_id =
+                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+                let direct_delta = DirectConceptDelta::New {
+                    new_concept_id: composition_id,
+                    delta: NewConceptDelta::ReducesTo(concrete_label_id),
+                };
+                self.delta.update_concept_delta(
+                    &direct_delta,
+                    false,
+                    &mut self.cache,
+                );
+                let direct_delta = DirectConceptDelta::New {
+                    delta: NewConceptDelta::Right {
+                        composition_id,
+                        left_id: label_id,
+                        concrete_type: Some(concrete_type),
+                        variable: false,
+                    },
+                    new_concept_id: concrete_id,
+                };
+                self.delta.update_concept_delta(
+                    &direct_delta,
+                    false,
+                    &mut self.cache,
+                );
+            };
         let labels = vec![
             (":=", ConcreteConceptType::Define),
             ("->", ConcreteConceptType::Reduction),
@@ -416,7 +479,11 @@ where
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
         ];
-        concrete_constructor(Some(label_id), "label_of".into(), ConcreteConceptType::Label);
+        concrete_constructor(
+            Some(label_id),
+            "label_of".into(),
+            ConcreteConceptType::Label,
+        );
         for (label, concrete_type) in labels {
             concrete_constructor(None, label.into(), concrete_type);
         }
@@ -677,7 +744,10 @@ where
     }
 
     fn cleanly_delete_composition(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.snap_shot.read_concept(&self.delta, concept).get_composition()
+        match self
+            .snap_shot
+            .read_concept(&self.delta, concept)
+            .get_composition()
         {
             None => Err(ZiaError::RedundantCompositionRemoval),
             Some((left, right)) => {
@@ -776,7 +846,11 @@ where
             .and_then(|(l, r)| {
                 self.context_search().find_composition(*l, *r).map(|concept| {
                     let syntax = SyntaxTree::from(syntax);
-                    self.snap_shot.bind_concept_to_syntax(&self.delta, syntax, concept)
+                    self.snap_shot.bind_concept_to_syntax(
+                        &self.delta,
+                        syntax,
+                        concept,
+                    )
                 })
             })
             .unwrap_or_else(|| syntax.into())
@@ -837,7 +911,7 @@ where
                     let concept = self.find_or_insert_composition(
                         leftc,
                         rightc,
-                        ast.is_variable()
+                        ast.is_variable(),
                     )?;
                     if !string.contains(' ') {
                         self.label(concept, string)?;
@@ -849,7 +923,8 @@ where
     }
 
     fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+        let new_default =
+            self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         self.label(new_default, string)?;
         Ok(new_default)
     }
@@ -859,8 +934,8 @@ where
             .concrete_concept_id(ConcreteConceptType::Label)
             .ok_or(ZiaError::NoLabelConcept)?;
         let variable = is_variable(string);
-        let composition = self
-            .find_or_insert_composition(label_id, concept, variable)?;
+        let composition =
+            self.find_or_insert_composition(label_id, concept, variable)?;
         let string_id = self.new_string(string);
         self.update_reduction(composition, string_id, variable)
     }
@@ -868,7 +943,10 @@ where
     fn new_string(&mut self, string: impl Into<String> + Clone) -> usize {
         let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         self.delta.update_concept_delta(
-            &DirectConceptDelta::New{delta: NewConceptDelta::String(string.into()), new_concept_id: index},
+            &DirectConceptDelta::New {
+                delta: NewConceptDelta::String(string.into()),
+                new_concept_id: index,
+            },
             false,
             &mut self.cache,
         );
@@ -888,14 +966,18 @@ where
         let pair = self.context_search().find_composition(lefthand, righthand);
         match pair {
             None => {
-                let new_concept_id = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+                let new_concept_id =
+                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
                 self.delta.update_concept_delta(
-                    &DirectConceptDelta::New{
-                        delta: NewConceptDelta::Composition(Composition{left_id: lefthand, right_id: righthand}),
-                        new_concept_id
+                    &DirectConceptDelta::New {
+                        delta: NewConceptDelta::Composition(Composition {
+                            left_id: lefthand,
+                            right_id: righthand,
+                        }),
+                        new_concept_id,
                     },
                     temporary,
-                    &mut self.cache
+                    &mut self.cache,
                 );
                 Ok(new_concept_id)
             },

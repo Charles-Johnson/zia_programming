@@ -40,11 +40,7 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
         &mut and_y_greater_than_z,
     );
     let mut y_exists_such_that =
-        Concept::composition_of(
-            16,
-            &mut y,
-            &mut exists_such_that_concept,
-        );
+        Concept::composition_of(16, &mut y, &mut exists_such_that_concept);
     let mut y_exists_such_that_x_greater_than_y_and_y_greater_than_z =
         Concept::composition_of(
             17,

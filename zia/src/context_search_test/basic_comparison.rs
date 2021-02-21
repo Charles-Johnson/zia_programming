@@ -50,8 +50,7 @@ fn basic_comparison() {
     );
 
     assert_eq!(
-        context_search
-            .compare(&another_syntax, &right_syntax),
+        context_search.compare(&another_syntax, &right_syntax),
         (
             Comparison::LessThanOrEqualTo,
             ComparisonReason::Reduction {
@@ -62,8 +61,7 @@ fn basic_comparison() {
     );
 
     assert_eq!(
-        context_search
-            .compare(&right_syntax, &another_syntax),
+        context_search.compare(&right_syntax, &another_syntax),
         (
             Comparison::GreaterThanOrEqualTo,
             ComparisonReason::Reduction {

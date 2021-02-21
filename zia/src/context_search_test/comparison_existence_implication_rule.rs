@@ -118,17 +118,13 @@ fn concepts() -> [Concept; 30] {
         &mut and_y_greater_than_z,
     );
     let mut y_exists_such_that =
-        Concept::composition_of(
-            16,
-            &mut y,
-            &mut exists_such_that_concept,
-        );
+        Concept::composition_of(16, &mut y, &mut exists_such_that_concept);
     let mut y_exists_such_that_x_greater_than_y_and_y_greater_than_z =
-    Concept::composition_of(
-        17,
-        &mut y_exists_such_that,
-        &mut x_greater_than_y_and_y_greater_than_z,
-    );
+        Concept::composition_of(
+            17,
+            &mut y_exists_such_that,
+            &mut x_greater_than_y_and_y_greater_than_z,
+        );
     let mut x_greater_than_z =
         Concept::composition_of(18, &mut x, &mut greater_than_z);
     let mut implies_x_greater_than_z = Concept::composition_of(

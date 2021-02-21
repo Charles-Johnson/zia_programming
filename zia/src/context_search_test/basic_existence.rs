@@ -18,7 +18,8 @@ fn basic_existence() {
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
     let exists_such_that_syntax =
         SyntaxTree::from("exists_such_that").bind_quantifier_concept(0);
-    let variable_syntax = || SyntaxTree::from("_x_").bind_nonquantifier_concept(3);
+    let variable_syntax =
+        || SyntaxTree::from("_x_").bind_nonquantifier_concept(3);
     let variable_exists_such_that_variable_is_true_syntax =
         SyntaxTree::new_pair(
             SyntaxTree::new_pair(variable_syntax(), exists_such_that_syntax),

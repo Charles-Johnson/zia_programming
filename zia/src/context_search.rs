@@ -14,7 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{and_also::AndAlso, ast::SyntaxTree, concepts::{format_string, Concept, ConcreteConceptType}, context_cache::ContextCache, context_delta::ContextDelta, context_snap_shot::Associativity, context_cache::ContextCacheList, snap_shot::Reader as SnapShotReader};
+use crate::{
+    and_also::AndAlso,
+    ast::SyntaxTree,
+    concepts::{format_string, Concept, ConcreteConceptType},
+    context_cache::{ContextCache, ContextCacheList},
+    context_delta::ContextDelta,
+    context_snap_shot::Associativity,
+    snap_shot::Reader as SnapShotReader,
+};
 use log::debug;
 use maplit::{hashmap, hashset};
 use rayon::prelude::*;
@@ -251,9 +259,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     left, rightleft, rightright,
                 )
             })
-            .or_else(|| left.get_expansion().and_then(|(leftleft, leftright)| {
-                self.reduce_by_expanded_left_branch(&leftleft, &leftright, right)
-            }))
+            .or_else(|| {
+                left.get_expansion().and_then(|(leftleft, leftright)| {
+                    self.reduce_by_expanded_left_branch(
+                        &leftleft, &leftright, right,
+                    )
+                })
+            })
             .or_else(|| self.recursively_reduce_pair(left, right))
     }
 
@@ -410,7 +422,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                                 self.display_joint(lefthand, righthand)
                             }),
                     );
-                    self.snap_shot.bind_concept_to_syntax(self.delta, syntax, def)
+                    self.snap_shot
+                        .bind_concept_to_syntax(self.delta, syntax, def)
                 })
             })
             .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
@@ -423,40 +436,55 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         ast: &Arc<SyntaxTree>,
         generalisation: usize,
     ) -> Option<VariableMask> {
-        self.is_free_variable(generalisation).then(|| {
-            if let Some((gl, gr)) = self
-                .snap_shot
-                .read_concept(self.delta, generalisation)
-                .get_composition()
-            {
-                ast.get_expansion().and_then(|(l, r)| {
-                    match (self.is_free_variable(gl), self.is_free_variable(gr)) {
-                        (true, true) => {
-                            self.check_generalisation(&l, gl).and_also_move(
-                                self.check_generalisation(&r, gr)).and_then(|(lm, mut rm)|
-                            {
-                                for (lmk, lmv) in lm {
-                                    if let Some(rmv) = rm.get(&lmk) {
-                                        if rmv != &lmv {
-                                            return None;
+        self.is_free_variable(generalisation)
+            .then(|| {
+                if let Some((gl, gr)) = self
+                    .snap_shot
+                    .read_concept(self.delta, generalisation)
+                    .get_composition()
+                {
+                    ast.get_expansion().and_then(|(l, r)| {
+                        match (
+                            self.is_free_variable(gl),
+                            self.is_free_variable(gr),
+                        ) {
+                            (true, true) => self
+                                .check_generalisation(&l, gl)
+                                .and_also_move(
+                                    self.check_generalisation(&r, gr),
+                                )
+                                .and_then(|(lm, mut rm)| {
+                                    for (lmk, lmv) in lm {
+                                        if let Some(rmv) = rm.get(&lmk) {
+                                            if rmv != &lmv {
+                                                return None;
+                                            }
+                                        } else {
+                                            rm.insert(lmk, lmv);
                                         }
-                                    } else {
-                                        rm.insert(lmk, lmv);
                                     }
-                                }
-                                Some(rm)
-                            })
-                        },
-                        (true, false) if r.get_concept() == Some(gr) => self.check_generalisation(&l, gl),
-                        (false, true) if l.get_concept() == Some(gl) => self.check_generalisation(&r, gr),
-                        (false, false) if l.get_concept() == Some(gl) && r.get_concept() == Some(gr) => Some(hashmap!{}),
-                        _ => None
-                    }
-                })
-            } else {
-                Some(hashmap! {generalisation => ast.clone()})
-            }
-        }).flatten()
+                                    Some(rm)
+                                }),
+                            (true, false) if r.get_concept() == Some(gr) => {
+                                self.check_generalisation(&l, gl)
+                            },
+                            (false, true) if l.get_concept() == Some(gl) => {
+                                self.check_generalisation(&r, gr)
+                            },
+                            (false, false)
+                                if l.get_concept() == Some(gl)
+                                    && r.get_concept() == Some(gr) =>
+                            {
+                                Some(hashmap! {})
+                            },
+                            _ => None,
+                        }
+                    })
+                } else {
+                    Some(hashmap! {generalisation => ast.clone()})
+                }
+            })
+            .flatten()
     }
 
     fn find_generalisations(&self, ast: &Arc<SyntaxTree>) -> HashSet<usize> {
@@ -530,7 +558,12 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         (reduced_ast, maybe_reason)
     }
 
-    fn reduce_by_expanded_left_branch(&self, leftleft: &Arc<SyntaxTree>, leftright: &Arc<SyntaxTree>, right: &Arc<SyntaxTree>) -> ReductionResult {
+    fn reduce_by_expanded_left_branch(
+        &self,
+        leftleft: &Arc<SyntaxTree>,
+        leftright: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
+    ) -> ReductionResult {
         self.concrete_type_of_ast(leftright).and_then(|cct| match cct {
             ConcreteConceptType::ExistsSuchThat
                 if leftleft
@@ -612,20 +645,38 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     ) -> ReductionResult {
         self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
             ConcreteConceptType::GreaterThan => {
-                let (comparison, comparison_reason) = self.compare(left, rightright);
+                let (comparison, comparison_reason) =
+                    self.compare(left, rightright);
                 match comparison {
-                    Comparison::GreaterThan => self.concrete_ast(ConcreteConceptType::True),
-                    Comparison::EqualTo | Comparison::LessThan | Comparison::LessThanOrEqualTo=> self.concrete_ast(ConcreteConceptType::False),
-                    Comparison::GreaterThanOrEqualTo | Comparison::Incomparable => None
-                }.map(|ast| (ast, ReductionReason::Comparison(Arc::new(comparison_reason))))
+                    Comparison::GreaterThan => {
+                        self.concrete_ast(ConcreteConceptType::True)
+                    },
+                    Comparison::EqualTo
+                    | Comparison::LessThan
+                    | Comparison::LessThanOrEqualTo => {
+                        self.concrete_ast(ConcreteConceptType::False)
+                    },
+                    Comparison::GreaterThanOrEqualTo
+                    | Comparison::Incomparable => None,
+                }
+                .map(|ast| {
+                    (
+                        ast,
+                        ReductionReason::Comparison(Arc::new(
+                            comparison_reason,
+                        )),
+                    )
+                })
             },
             ConcreteConceptType::Reduction => self
                 .determine_reduction_truth(left, rightright)
                 .and_then(|(x, reason)| {
                     if x {
-                        self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
+                        self.concrete_ast(ConcreteConceptType::True)
+                            .map(|ast| (ast, reason))
                     } else {
-                        self.concrete_ast(ConcreteConceptType::False).map(|ast| (ast, reason))
+                        self.concrete_ast(ConcreteConceptType::False)
+                            .map(|ast| (ast, reason))
                     }
                 }),
             _ => None,
@@ -699,11 +750,19 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     || self.snap_shot.get_label(self.delta, concept_id),
                     |s| Some(format_string(&s)),
                 ) {
-                    self.snap_shot.bind_concept_to_syntax(self.delta, SyntaxTree::from(s), concept_id).into()
+                    self.snap_shot
+                        .bind_concept_to_syntax(
+                            self.delta,
+                            SyntaxTree::from(s),
+                            concept_id,
+                        )
+                        .into()
                 } else if let Some((left, right)) = concept.get_composition() {
                     self.combine(&self.to_ast(left), &self.to_ast(right))
                 } else {
-                    self.snap_shot.new_syntax_from_concept(self.delta, concept_id).into()
+                    self.snap_shot
+                        .new_syntax_from_concept(self.delta, concept_id)
+                        .into()
                 };
                 self.caches.insert_syntax_tree(&concept, &syntax);
                 syntax
@@ -720,11 +779,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             .get_concept()
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
-                self.find_composition(*l, *r)
-                    .map(|concept| {
-                        let syntax = self.join(ast, other);
-                        self.snap_shot.bind_concept_to_syntax(self.delta, syntax, concept)
-                    })
+                self.find_composition(*l, *r).map(|concept| {
+                    let syntax = self.join(ast, other);
+                    self.snap_shot
+                        .bind_concept_to_syntax(self.delta, syntax, concept)
+                })
             })
             .unwrap_or_else(|| self.join(ast, other));
         syntax.into()
@@ -805,15 +864,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         some_syntax: &Arc<SyntaxTree>,
         another_syntax: &Arc<SyntaxTree>,
     ) -> (Comparison, ComparisonReason) {
-
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
         if let Some(greater_than_concept_id) =
             self.concrete_concept_id(ConcreteConceptType::GreaterThan)
         {
-            let greater_than_syntax =
-                self.to_ast(greater_than_concept_id);
+            let greater_than_syntax = self.to_ast(greater_than_concept_id);
             let comparing_syntax = self.combine(
                 some_syntax,
                 &self.combine(&greater_than_syntax, another_syntax),
@@ -828,25 +885,51 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             (
                 match (
                     if self.syntax_evaluating.contains(&comparing_syntax) {
-                        self.caches.get_reduction_or_else(&comparing_syntax, || None).map(|(s, r)| (s, Some(r)))
+                        self.caches
+                            .get_reduction_or_else(&comparing_syntax, || None)
+                            .map(|(s, r)| (s, Some(r)))
                     } else {
                         let mut context_search = self.spawn(&cache);
-                        context_search.syntax_evaluating.insert(comparing_syntax.clone());
-                        Some(context_search.recursively_reduce(&comparing_syntax))
-                    }.and_then(|(syntax_comparison, local_reason)| {
-                        reason = local_reason;
-                        self.concrete_type_of_ast(&syntax_comparison)
-                    }),
-                    if self.syntax_evaluating.contains(&comparing_reversed_syntax) {
-                        self.caches.get_reduction_or_else(&comparing_reversed_syntax, || None).map(|(s, r)| (s, Some(r)))
+                        context_search
+                            .syntax_evaluating
+                            .insert(comparing_syntax.clone());
+                        Some(
+                            context_search
+                                .recursively_reduce(&comparing_syntax),
+                        )
+                    }
+                    .and_then(
+                        |(syntax_comparison, local_reason)| {
+                            reason = local_reason;
+                            self.concrete_type_of_ast(&syntax_comparison)
+                        },
+                    ),
+                    if self
+                        .syntax_evaluating
+                        .contains(&comparing_reversed_syntax)
+                    {
+                        self.caches
+                            .get_reduction_or_else(
+                                &comparing_reversed_syntax,
+                                || None,
+                            )
+                            .map(|(s, r)| (s, Some(r)))
                     } else {
                         let mut context_search = self.spawn(&cache);
-                        context_search.syntax_evaluating.insert(comparing_reversed_syntax.clone());
-                        Some(context_search.recursively_reduce(&comparing_reversed_syntax))
-                    }.and_then(|(reversed_comparison, local_reversed_reason)| {
-                        reversed_reason = local_reversed_reason;
-                        self.concrete_type_of_ast(&reversed_comparison)
-                    })
+                        context_search
+                            .syntax_evaluating
+                            .insert(comparing_reversed_syntax.clone());
+                        Some(
+                            context_search
+                                .recursively_reduce(&comparing_reversed_syntax),
+                        )
+                    }
+                    .and_then(
+                        |(reversed_comparison, local_reversed_reason)| {
+                            reversed_reason = local_reversed_reason;
+                            self.concrete_type_of_ast(&reversed_comparison)
+                        },
+                    ),
                 ) {
                     (
                         Some(ConcreteConceptType::False),
@@ -875,37 +958,42 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 match (&reason, &reversed_reason) {
                     (Some(ReductionReason::Comparison(cr)), rr) => {
                         match cr.as_ref() {
-                            ComparisonReason::Reduction{reason, reversed_reason} if rr == reversed_reason => {
+                            ComparisonReason::Reduction {
+                                reason,
+                                reversed_reason,
+                            } if rr == reversed_reason => {
                                 ComparisonReason::Reduction {
                                     reversed_reason: reversed_reason.clone(),
-                                    reason: reason.clone()
+                                    reason: reason.clone(),
                                 }
                             },
                             _ => ComparisonReason::Reduction {
                                 reason,
                                 reversed_reason,
-                            }
+                            },
                         }
                     },
                     (r, Some(ReductionReason::Comparison(cr))) => {
                         match cr.as_ref() {
-                            ComparisonReason::Reduction{reason, reversed_reason} if r == reversed_reason => {
+                            ComparisonReason::Reduction {
+                                reason,
+                                reversed_reason,
+                            } if r == reversed_reason => {
                                 ComparisonReason::Reduction {
                                     reversed_reason: reason.clone(),
-                                    reason: reversed_reason.clone()
+                                    reason: reversed_reason.clone(),
                                 }
                             },
                             _ => ComparisonReason::Reduction {
                                 reason,
                                 reversed_reason,
-                            }
+                            },
                         }
                     },
-                    _ => 
-                    ComparisonReason::Reduction {
+                    _ => ComparisonReason::Reduction {
                         reason,
                         reversed_reason,
-                    }
+                    },
                 },
             )
         } else {
@@ -919,7 +1007,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             delta: self.delta,
             snap_shot: self.snap_shot,
             syntax_evaluating: self.syntax_evaluating.clone(),
-            variable_mask: self.variable_mask.clone()
+            variable_mask: self.variable_mask.clone(),
         }
     }
 }

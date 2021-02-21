@@ -57,9 +57,11 @@ fn basic_rule() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let concrete_syntax = || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
+    let concrete_syntax =
+        || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
     let left_syntax = || SyntaxTree::from("left").bind_nonquantifier_concept(2);
-    let right_left_syntax = SyntaxTree::from("right_left").bind_nonquantifier_concept(3);
+    let right_left_syntax =
+        SyntaxTree::from("right_left").bind_nonquantifier_concept(3);
     let left_and_right_left_and_random_syntax = SyntaxTree::new_pair(
         left_syntax(),
         SyntaxTree::new_pair(right_left_syntax, SyntaxTree::from("random")),

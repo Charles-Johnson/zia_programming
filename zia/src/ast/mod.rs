@@ -13,7 +13,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use std::{collections::HashSet, fmt::{self, Debug}, hash::{Hash, Hasher}, sync::Arc};
+use std::{
+    collections::HashSet,
+    fmt::{self, Debug},
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use maplit::hashset;
 
@@ -24,8 +29,8 @@ pub struct SyntaxTree {
     syntax: Option<String>,
     /// Index of the concept that the syntax may represent.
     concept: Option<usize>,
-    /// 
-    node: SyntaxNode
+    ///
+    node: SyntaxNode,
 }
 
 impl Debug for SyntaxTree {
@@ -41,26 +46,31 @@ impl Debug for SyntaxTree {
 #[derive(Clone, Debug)]
 enum SyntaxNode {
     /// This syntax tree may branch to two subtrees
-    Branch{left: Arc<SyntaxTree>, right: Arc<SyntaxTree>, free_variables: HashSet<Arc<SyntaxTree>>, binding_variables: HashSet<Arc<SyntaxTree>>},
+    Branch {
+        left: Arc<SyntaxTree>,
+        right: Arc<SyntaxTree>,
+        free_variables: HashSet<Arc<SyntaxTree>>,
+        binding_variables: HashSet<Arc<SyntaxTree>>,
+    },
     /// or have no descendants
-    Leaf(SyntaxLeaf)
+    Leaf(SyntaxLeaf),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum SyntaxLeaf {
     Variable,
     Constant,
-    Quantifier
+    Quantifier,
 }
 
 #[derive(Clone, Debug)]
 struct SyntaxExpansion {
     left: Arc<SyntaxTree>,
-    right: Arc<SyntaxTree>,      
+    right: Arc<SyntaxTree>,
     /// The variables that aren't bound by any quantifiers
     free_variables: HashSet<Arc<SyntaxTree>>,
     /// The variables that bind the equivalent free variable via quantifiers
-    binding_variables: HashSet<Arc<SyntaxTree>>
+    binding_variables: HashSet<Arc<SyntaxTree>>,
 }
 
 impl SyntaxNode {
@@ -73,7 +83,11 @@ impl SyntaxNode {
         let mut free_variables = HashSet::<Arc<SyntaxTree>>::new();
         let mut binding_variables = HashSet::<Arc<SyntaxTree>>::new();
         let right_is_quantifier = match &right.node {
-            SyntaxNode::Branch{free_variables: fv, binding_variables: bv, ..} => {
+            SyntaxNode::Branch {
+                free_variables: fv,
+                binding_variables: bv,
+                ..
+            } => {
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.extend(bv.iter().cloned());
                 false
@@ -83,10 +97,14 @@ impl SyntaxNode {
                 false
             },
             SyntaxNode::Leaf(SyntaxLeaf::Constant) => false,
-            SyntaxNode::Leaf(SyntaxLeaf::Quantifier) => true
+            SyntaxNode::Leaf(SyntaxLeaf::Quantifier) => true,
         };
         match &left.node {
-            SyntaxNode::Branch{free_variables: fv, binding_variables: bv, ..} => {
+            SyntaxNode::Branch {
+                free_variables: fv,
+                binding_variables: bv,
+                ..
+            } => {
                 free_variables.retain(|v| !bv.contains(v));
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.retain(|v| !fv.contains(v));
@@ -99,13 +117,13 @@ impl SyntaxNode {
                     free_variables.insert(left.clone());
                 }
             },
-            SyntaxNode::Leaf(_) => {}
+            SyntaxNode::Leaf(_) => {},
         }
-        Self::Branch{
+        Self::Branch {
             left,
             right,
             binding_variables,
-            free_variables
+            free_variables,
         }
     }
 }
@@ -114,9 +132,31 @@ impl SyntaxNode {
 impl PartialEq for SyntaxNode {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Branch{left, right, ..}, Self::Branch{left: other_left, right: other_right, ..}) => left == other_left && right == other_right,
+            (
+                Self::Branch {
+                    left,
+                    right,
+                    ..
+                },
+                Self::Branch {
+                    left: other_left,
+                    right: other_right,
+                    ..
+                },
+            ) => left == other_left && right == other_right,
             (Self::Leaf(leaf), Self::Leaf(other_leaf)) => leaf == other_leaf,
-            (Self::Leaf(_), Self::Branch{..}) | (Self::Branch{..}, Self::Leaf(_)) => false,
+            (
+                Self::Leaf(_),
+                Self::Branch {
+                    ..
+                },
+            )
+            | (
+                Self::Branch {
+                    ..
+                },
+                Self::Leaf(_),
+            ) => false,
         }
     }
 }
@@ -202,7 +242,7 @@ impl SyntaxTree {
         Self {
             syntax: None,
             concept: Some(concept_id),
-            node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier)
+            node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier),
         }
     }
 
@@ -214,7 +254,7 @@ impl SyntaxTree {
         Self {
             syntax: None,
             concept: None,
-            node: SyntaxNode::new_pair(left, right)
+            node: SyntaxNode::new_pair(left, right),
         }
     }
 
@@ -243,7 +283,12 @@ impl SyntaxTree {
 
     /// An expression does have an expansion while a symbol does not.
     pub fn get_expansion(&self) -> Option<(Arc<Self>, Arc<Self>)> {
-        if let SyntaxNode::Branch{left, right, ..} = &self.node {
+        if let SyntaxNode::Branch {
+            left,
+            right,
+            ..
+        } = &self.node
+        {
             Some((left.clone(), right.clone()))
         } else {
             None
@@ -265,11 +310,13 @@ impl SyntaxTree {
 
     pub fn is_variable(&self) -> bool {
         match &self.node {
-            SyntaxNode::Branch{free_variables, binding_variables, ..} => {
-                !free_variables.is_empty() || !binding_variables.is_empty()
-            },
+            SyntaxNode::Branch {
+                free_variables,
+                binding_variables,
+                ..
+            } => !free_variables.is_empty() || !binding_variables.is_empty(),
             SyntaxNode::Leaf(SyntaxLeaf::Variable) => true,
-            SyntaxNode::Leaf(_) => false
+            SyntaxNode::Leaf(_) => false,
         }
     }
 }

@@ -78,12 +78,11 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
             &mut bound_variable,
             &mut free_variable_concept,
         );
-    let mut bound_variable_exists_such_that =
-        Concept::composition_of(
-            12,
-            &mut bound_variable,
-            &mut exists_such_that_concept,
-        );
+    let mut bound_variable_exists_such_that = Concept::composition_of(
+        12,
+        &mut bound_variable,
+        &mut exists_such_that_concept,
+    );
     let mut cause_concept = Concept::composition_of(
         4,
         &mut bound_variable_exists_such_that,

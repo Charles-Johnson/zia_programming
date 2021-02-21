@@ -11,13 +11,17 @@ pub trait Reader {
     fn get_concept(&self, concept_id: usize) -> Option<&Concept>;
     fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
         delta
-            .concept().get(&id)
-            .and_then(|cds| {for (cd, _) in cds {
-                match cd {
-                ConceptDelta::Direct(dcd) => todo!(),
-                ConceptDelta::Indirect(icd) => todo!()
-                }}
-            todo!()})
+            .concept()
+            .get(&id)
+            .and_then(|cds| {
+                for (cd, _) in cds {
+                    match cd {
+                        ConceptDelta::Direct(dcd) => todo!(),
+                        ConceptDelta::Indirect(icd) => todo!(),
+                    }
+                }
+                todo!()
+            })
             .unwrap_or_else(|| {
                 self.get_concept(id)
                     .unwrap_or_else(|| panic!("No concept with id = {}", id))
@@ -36,18 +40,31 @@ pub trait Reader {
             |concept| {
                 let syntax = SyntaxTree::from(s);
                 self.bind_concept_to_syntax(delta, syntax, concept)
-            }
+            },
         )
     }
-    fn bind_concept_to_syntax(&self, delta: &ContextDelta, syntax: SyntaxTree, concept: usize) -> SyntaxTree {
-        if self.concrete_concept_type(delta,concept) == Some(ConcreteConceptType::ExistsSuchThat) {
+    fn bind_concept_to_syntax(
+        &self,
+        delta: &ContextDelta,
+        syntax: SyntaxTree,
+        concept: usize,
+    ) -> SyntaxTree {
+        if self.concrete_concept_type(delta, concept)
+            == Some(ConcreteConceptType::ExistsSuchThat)
+        {
             syntax.bind_quantifier_concept(concept)
         } else {
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept(&self, delta: &ContextDelta, concept: usize) -> SyntaxTree {
-        if self.concrete_concept_type(delta,concept) == Some(ConcreteConceptType::ExistsSuchThat) {
+    fn new_syntax_from_concept(
+        &self,
+        delta: &ContextDelta,
+        concept: usize,
+    ) -> SyntaxTree {
+        if self.concrete_concept_type(delta, concept)
+            == Some(ConcreteConceptType::ExistsSuchThat)
+        {
             SyntaxTree::new_quantifier_concept(concept)
         } else {
             SyntaxTree::new_constant_concept(concept)
@@ -95,9 +112,15 @@ pub trait Reader {
             .get_righthand_of()
             .iter()
             .find_map(|concept| {
-                self.read_concept(delta, *concept)
-                    .get_composition()
-                    .filter(|(left, _)| Some(*left) != self.concrete_concept_id(delta, ConcreteConceptType::Label))
+                self.read_concept(delta, *concept).get_composition().filter(
+                    |(left, _)| {
+                        Some(*left)
+                            != self.concrete_concept_id(
+                                delta,
+                                ConcreteConceptType::Label,
+                            )
+                    },
+                )
             })
             .is_none()
     }
@@ -119,10 +142,13 @@ pub trait Reader {
             .get_righthand_of()
             .iter()
             .find(|candidate| {
-                self.concrete_concept_id(delta, ConcreteConceptType::Label) == Some(self.read_concept(delta, **candidate)
-                    .get_composition()
-                    .expect("Candidate should have a definition!")
-                    .0)
+                self.concrete_concept_id(delta, ConcreteConceptType::Label)
+                    == Some(
+                        self.read_concept(delta, **candidate)
+                            .get_composition()
+                            .expect("Candidate should have a definition!")
+                            .0,
+                    )
             })
             .cloned()
     }

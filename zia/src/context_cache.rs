@@ -8,14 +8,14 @@ use std::{mem::swap, sync::Arc};
 #[derive(Debug)]
 pub struct ContextCacheList<'a> {
     head: &'a ContextCache,
-    tail: Option<Arc<ContextCacheList<'a>>>
+    tail: Option<Arc<ContextCacheList<'a>>>,
 }
 
 impl<'a> From<&'a ContextCache> for ContextCacheList<'a> {
     fn from(head: &'a ContextCache) -> Self {
         Self {
             head,
-            tail: None
+            tail: None,
         }
     }
 }
@@ -24,17 +24,23 @@ impl<'a> ContextCacheList<'a> {
     pub fn spawn(list: &Arc<Self>, cache: &'a ContextCache) -> Self {
         Self {
             head: cache,
-            tail: Some(list.clone())
+            tail: Some(list.clone()),
         }
     }
+
     pub fn get_syntax_tree_or_else(
         &self,
         concept_id: usize,
         build_syntax: impl Fn() -> Arc<SyntaxTree> + Copy,
     ) -> Arc<SyntaxTree> {
-        self.head.syntax_trees
-            .get(&concept_id)
-            .map_or_else(|| self.tail.as_ref().map_or_else(build_syntax, |ccl| ccl.get_syntax_tree_or_else(concept_id, build_syntax)), |r| r.value().clone())
+        self.head.syntax_trees.get(&concept_id).map_or_else(
+            || {
+                self.tail.as_ref().map_or_else(build_syntax, |ccl| {
+                    ccl.get_syntax_tree_or_else(concept_id, build_syntax)
+                })
+            },
+            |r| r.value().clone(),
+        )
     }
 
     pub fn insert_syntax_tree(
@@ -52,7 +58,14 @@ impl<'a> ContextCacheList<'a> {
         ast: &Arc<SyntaxTree>,
         reduce: impl Fn() -> ReductionResult + Copy,
     ) -> ReductionResult {
-        self.head.reductions.get(ast).map_or_else(|| self.tail.as_ref().map_or_else(reduce, |ccl| ccl.get_reduction_or_else(ast, reduce)), |r| r.as_ref().cloned())
+        self.head.reductions.get(ast).map_or_else(
+            || {
+                self.tail.as_ref().map_or_else(reduce, |ccl| {
+                    ccl.get_reduction_or_else(ast, reduce)
+                })
+            },
+            |r| r.as_ref().cloned(),
+        )
     }
 
     pub fn insert_reduction(

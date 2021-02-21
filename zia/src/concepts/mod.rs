@@ -15,8 +15,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::errors::{ZiaError, ZiaResult};
-use std::{collections::HashSet, fmt::Debug};
 use maplit::hashset;
+use std::{collections::HashSet, fmt::Debug};
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
@@ -79,20 +79,22 @@ impl Concept {
         }) = &self.specific_part
         {
             match composition {
-                MaybeComposition::Composition(CompositePart{free_variables, binding_variables, ..}) => !free_variables.is_empty() || !binding_variables.is_empty(),
-                MaybeComposition::Leaf(is_variable) => *is_variable
+                MaybeComposition::Composition(CompositePart {
+                    free_variables,
+                    binding_variables,
+                    ..
+                }) => {
+                    !free_variables.is_empty() || !binding_variables.is_empty()
+                },
+                MaybeComposition::Leaf(is_variable) => *is_variable,
             }
         } else {
             false
         }
     }
 
-    pub fn remove_reduction(
-        &self,
-        id: usize,
-    ) -> ZiaResult<usize> {
-        self.get_reduction()
-            .ok_or(ZiaError::RedundantReduction)
+    pub fn remove_reduction(&self, id: usize) -> ZiaResult<usize> {
+        self.get_reduction().ok_or(ZiaError::RedundantReduction)
     }
 
     pub fn find_what_reduces_to_it(
@@ -128,20 +130,23 @@ impl Concept {
     /// If concept is abstract and has a composition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
     pub fn get_composition(&self) -> Option<(usize, usize)> {
         match self.specific_part {
-            SpecificPart::Abstract(ref c) => if let MaybeComposition::Composition(CompositePart{lefthand, righthand, ..}) = c.composition {
-                Some((lefthand, righthand))
-            } else {
-                None
+            SpecificPart::Abstract(ref c) => {
+                if let MaybeComposition::Composition(CompositePart {
+                    lefthand,
+                    righthand,
+                    ..
+                }) = c.composition
+                {
+                    Some((lefthand, righthand))
+                } else {
+                    None
+                }
             },
             _ => None,
         }
     }
 
-    pub fn reduce_to(
-        &self,
-        id: usize,
-        reduction: usize,
-    ) -> ZiaResult<()> {
+    pub fn reduce_to(&self, id: usize, reduction: usize) -> ZiaResult<()> {
         match self.specific_part {
             SpecificPart::Abstract(ref c) => Ok(()),
             _ => Err(ZiaError::ConcreteReduction),
@@ -195,8 +200,8 @@ impl Concept {
     ) -> Self {
         left.concrete_part.lefthand_of.insert(id);
         right.concrete_part.righthand_of.insert(id);
-        let mut free_variables = hashset!{};
-        let mut binding_variables = hashset!{};
+        let mut free_variables = hashset! {};
+        let mut binding_variables = hashset! {};
         let right_is_quantifier = match &right.specific_part {
             SpecificPart::Abstract(ap) => {
                 match &ap.composition {
@@ -206,20 +211,24 @@ impl Concept {
                     },
                     MaybeComposition::Leaf(true) => {
                         free_variables.insert(right.id);
-                    }
-                    MaybeComposition::Leaf(false) => {}
+                    },
+                    MaybeComposition::Leaf(false) => {},
                 }
                 false
             },
-            SpecificPart::Concrete(cct) => cct == &ConcreteConceptType::ExistsSuchThat,
-            SpecificPart::String(_) => false
+            SpecificPart::Concrete(cct) => {
+                cct == &ConcreteConceptType::ExistsSuchThat
+            },
+            SpecificPart::String(_) => false,
         };
         if let SpecificPart::Abstract(ap) = &left.specific_part {
             match &ap.composition {
                 MaybeComposition::Composition(cp) => {
-                    free_variables.retain(|v| !cp.binding_variables.contains(v));
+                    free_variables
+                        .retain(|v| !cp.binding_variables.contains(v));
                     free_variables.extend(&cp.free_variables);
-                    binding_variables.retain(|v| !cp.free_variables.contains(v));
+                    binding_variables
+                        .retain(|v| !cp.free_variables.contains(v));
                     binding_variables.extend(&cp.binding_variables);
                 },
                 MaybeComposition::Leaf(true) => {
@@ -228,18 +237,18 @@ impl Concept {
                     } else {
                         free_variables.insert(left.id);
                     }
-                }
-                MaybeComposition::Leaf(false) => {}
+                },
+                MaybeComposition::Leaf(false) => {},
             }
         }
         Self {
             id,
             specific_part: SpecificPart::Abstract(AbstractPart {
-                composition: MaybeComposition::Composition(CompositePart{
+                composition: MaybeComposition::Composition(CompositePart {
                     lefthand: left.id,
                     righthand: right.id,
                     free_variables,
-                    binding_variables
+                    binding_variables,
                 }),
                 ..Default::default()
             }),
@@ -355,14 +364,14 @@ pub struct CompositePart {
     /// The concept's composition might contain free variables
     free_variables: HashSet<usize>,
     /// The concept's composition might contain binding variables
-    binding_variables: HashSet<usize>
+    binding_variables: HashSet<usize>,
 }
 
 #[derive(Clone, PartialEq)]
 pub enum MaybeComposition {
     Composition(CompositePart),
     // true if concept is variable
-    Leaf(bool)
+    Leaf(bool),
 }
 
 impl Debug for AbstractPart {
@@ -371,8 +380,16 @@ impl Debug for AbstractPart {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str("{")?;
-        if let MaybeComposition::Composition(CompositePart{lefthand, righthand, ..}) = self.composition {
-            formatter.write_str(&format!("composition: {}, {},", lefthand, righthand))?;
+        if let MaybeComposition::Composition(CompositePart {
+            lefthand,
+            righthand,
+            ..
+        }) = self.composition
+        {
+            formatter.write_str(&format!(
+                "composition: {}, {},",
+                lefthand, righthand
+            ))?;
         }
         self.reduces_to.iter().try_for_each(|r| {
             formatter.write_str(&format!("reduces_to: {},", r))

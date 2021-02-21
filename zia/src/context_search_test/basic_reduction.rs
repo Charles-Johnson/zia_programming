@@ -16,8 +16,10 @@ fn basic_reduction() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let abstract_syntax = || SyntaxTree::from("abstract").bind_nonquantifier_concept(1);
-    let concrete_syntax = || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
+    let abstract_syntax =
+        || SyntaxTree::from("abstract").bind_nonquantifier_concept(1);
+    let concrete_syntax =
+        || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
 
     assert_eq!(
         context_search.recursively_reduce(&abstract_syntax().into()),
