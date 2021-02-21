@@ -390,8 +390,7 @@ where
         let label_id = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
         let mut concrete_constructor = |concrete_id: Option<usize>, concrete_label, concrete_type| {
             let concrete_id = concrete_id.unwrap_or_else(|| self.snap_shot.lowest_unoccupied_concept_id(&self.delta));
-            let concrete_label_id = 
-                self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+            let concrete_label_id = concrete_id + 1;
             let direct_delta = DirectConceptDelta::New{new_concept_id: concrete_label_id, delta: NewConceptDelta::String(concrete_label)};
             self.delta.update_concept_delta(&direct_delta, false, &mut self.cache);
 
