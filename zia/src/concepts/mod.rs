@@ -379,14 +379,13 @@ impl From<&NewConceptDelta> for SpecificPart {
                 )
             },
             NewConceptDelta::String(s) => Self::String(s.clone()),
-            NewConceptDelta::ReducesTo(reduction) => {
-                Self::Abstract(AbstractPart {
-                    composition: MaybeComposition::Leaf(todo!(
-                        "need to specify if concept is variable"
-                    )),
-                    reduces_to: Some(*reduction),
-                })
-            },
+            NewConceptDelta::ReducesTo {
+                reduction,
+                variable,
+            } => Self::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(*variable),
+                reduces_to: Some(*reduction),
+            }),
         }
     }
 }
@@ -521,7 +520,9 @@ impl From<&NewConceptDelta> for ConcreteConcept {
     fn from(delta: &NewConceptDelta) -> Self {
         match delta {
             NewConceptDelta::Composition(_)
-            | NewConceptDelta::ReducesTo(_)
+            | NewConceptDelta::ReducesTo {
+                ..
+            }
             | NewConceptDelta::String(_) => Self::default(),
             NewConceptDelta::Left {
                 composition_id,

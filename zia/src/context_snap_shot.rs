@@ -424,9 +424,9 @@ impl Apply for ContextSnapShot {
                                 } => {
                                     todo!();
                                 },
-                                NewConceptDelta::ReducesTo(
-                                    reduced_concept_id,
-                                ) => {
+                                NewConceptDelta::ReducesTo {
+                                    ..
+                                } => {
                                     todo!();
                                 },
                             },

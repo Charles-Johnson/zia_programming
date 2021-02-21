@@ -392,7 +392,10 @@ where
                 let concept_delta =
                     DirectConceptDelta::New(NewDirectConceptDelta {
                         new_concept_id,
-                        delta: NewConceptDelta::ReducesTo(string_id),
+                        delta: NewConceptDelta::ReducesTo {
+                            reduction: string_id,
+                            variable: true,
+                        },
                     });
                 self.delta.update_concept_delta(
                     &concept_delta,
@@ -446,7 +449,10 @@ where
                 let direct_delta =
                     DirectConceptDelta::New(NewDirectConceptDelta {
                         new_concept_id: composition_id,
-                        delta: NewConceptDelta::ReducesTo(concrete_label_id),
+                        delta: NewConceptDelta::ReducesTo {
+                            reduction: concrete_label_id,
+                            variable: false,
+                        },
                     });
                 self.delta.update_concept_delta(
                     &direct_delta,

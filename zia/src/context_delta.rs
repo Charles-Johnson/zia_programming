@@ -121,16 +121,16 @@ impl ContextDelta {
                             cd,
                         );
                     },
-                    NewConceptDelta::ReducesTo(reduced_concept_id) => {
+                    NewConceptDelta::ReducesTo {
+                        reduction,
+                        variable,
+                    } => {
                         let cd = (
                             IndirectConceptDelta::ReducesFrom(new_concept_id)
                                 .into(),
                             temporary,
                         );
-                        self.insert_delta_for_existing_concept(
-                            *reduced_concept_id,
-                            cd,
-                        );
+                        self.insert_delta_for_existing_concept(*reduction, cd);
                     },
                 }
             },
@@ -423,7 +423,10 @@ pub enum NewConceptDelta {
         concrete_type: Option<ConcreteConceptType>,
         variable: bool,
     },
-    ReducesTo(usize),
+    ReducesTo {
+        variable: bool,
+        reduction: usize,
+    },
 }
 
 #[derive(Clone)]
