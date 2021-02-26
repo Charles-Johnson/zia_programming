@@ -1053,42 +1053,45 @@ where
         reduction: usize,
         temporary: bool,
     ) -> ZiaResult<()> {
-        self.snap_shot
-            .get_normal_form(&self.delta, reduction)
-            .and_then(|n| {
-                if concept == n {
-                    Some(Err(ZiaError::CyclicReduction))
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_else(|| {
-                self.snap_shot
-                    .read_concept(&self.delta, concept)
-                    .get_reduction()
-                    .and_then(|r| {
-                        if r == reduction {
-                            Some(Err(ZiaError::RedundantReduction))
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_else(|| {
-                        if reduction
-                            == self.snap_shot.get_reduction_of_composition(
-                                &self.delta,
-                                concept,
-                            )
-                        {
-                            Err(ZiaError::RedundantReduction)
-                        } else {
-                            // Check if concept can be reduced, update self.delta
-                            // and invalidate cache
-                            todo!();
-                            Ok(())
-                        }
-                    })
-            })
+        let maybe_normal_form =
+            self.snap_shot.get_normal_form(&self.delta, reduction);
+        if maybe_normal_form == Some(concept) {
+            Err(ZiaError::CyclicReduction)
+        } else {
+            self.snap_shot
+                .read_concept(&self.delta, concept)
+                .get_reduction()
+                .and_then(|r| {
+                    (r == reduction).then(|| Err(ZiaError::RedundantReduction))
+                })
+                .unwrap_or_else(|| {
+                    if reduction
+                        == self
+                            .snap_shot
+                            .get_reduction_of_composition(&self.delta, concept)
+                    {
+                        Err(ZiaError::RedundantReduction)
+                    } else {
+                        let change = maybe_normal_form.map_or_else(
+                            || Change::Create(reduction),
+                            |before| Change::Update {
+                                before,
+                                after: reduction,
+                            },
+                        );
+                        let delta = DirectConceptDelta::Reduce {
+                            unreduced_id: concept,
+                            change,
+                        };
+                        self.delta.update_concept_delta(
+                            &delta,
+                            temporary,
+                            &mut self.cache,
+                        );
+                        Ok(())
+                    }
+                })
+        }
     }
 }
 

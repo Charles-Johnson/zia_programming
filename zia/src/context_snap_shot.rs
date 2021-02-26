@@ -422,7 +422,25 @@ impl Apply for ContextSnapShot {
                                     concrete_type,
                                     variable,
                                 } => {
-                                    todo!();
+                                    let [left, composition] = self
+                                        .write_concept_pair(
+                                            *left_id,
+                                            *composition_id,
+                                        );
+                                    debug_assert!(new_concept_id != left_id);
+                                    debug_assert!(
+                                        new_concept_id != composition_id
+                                    );
+                                    self.concepts[*new_concept_id] = Some(
+                                        Concept::righthand_of(
+                                            *new_concept_id,
+                                            left,
+                                            composition,
+                                            *concrete_type,
+                                            *variable,
+                                        )
+                                        .unwrap(),
+                                    );
                                 },
                                 NewConceptDelta::ReducesTo {
                                     ..

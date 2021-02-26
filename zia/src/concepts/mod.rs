@@ -302,6 +302,72 @@ impl Concept {
             concrete_part: ConcreteConcept::default(),
         }
     }
+
+    pub fn righthand_of(
+        id: usize,
+        left: &mut Concept,
+        composition: &mut Concept,
+        concrete_concept_type: Option<ConcreteConceptType>,
+        variable: bool,
+    ) -> ZiaResult<Self> {
+        if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
+            match ap.composition {
+                MaybeComposition::Composition(_)
+                | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
+                MaybeComposition::Leaf(false) => {
+                    left.concrete_part.lefthand_of.insert(composition.id);
+                    let mut binding_variables = hashset! {};
+                    let mut free_variables = hashset! {};
+                    if concrete_concept_type
+                        == Some(ConcreteConceptType::ExistsSuchThat)
+                    {
+                        debug_assert!(matches!(
+                            left.specific_part,
+                            SpecificPart::Abstract(AbstractPart {
+                                composition: MaybeComposition::Leaf(true),
+                                ..
+                            })
+                        ));
+                        binding_variables.insert(left.id);
+                    } else if let SpecificPart::Abstract(AbstractPart {
+                        composition: MaybeComposition::Composition(cp),
+                        ..
+                    }) = &left.specific_part
+                    {
+                        binding_variables = cp.binding_variables.clone();
+                        free_variables = cp.free_variables.clone();
+                    };
+                    ap.composition =
+                        MaybeComposition::Composition(CompositePart {
+                            binding_variables,
+                            free_variables,
+                            lefthand: left.id,
+                            righthand: id,
+                        });
+                    Ok(Self {
+                        concrete_part: ConcreteConcept {
+                            righthand_of: hashset! {composition.id},
+                            ..Default::default()
+                        },
+                        id,
+                        specific_part: concrete_concept_type.map_or_else(
+                            || {
+                                SpecificPart::Abstract(AbstractPart {
+                                    composition: MaybeComposition::Leaf(
+                                        variable,
+                                    ),
+                                    ..Default::default()
+                                })
+                            },
+                            SpecificPart::Concrete,
+                        ),
+                    })
+                },
+            }
+        } else {
+            Err(ZiaError::SettingCompositionOfConcrete)
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
