@@ -396,7 +396,8 @@ where
                             reduction: string_id,
                             variable: true,
                         },
-                    });
+                    })
+                    .into();
                 self.delta.update_concept_delta(
                     &concept_delta,
                     true,
@@ -768,7 +769,7 @@ where
 
     fn blindly_remove_concept(&mut self, id: usize) {
         self.delta.update_concept_delta(
-            &DirectConceptDelta::Remove(id),
+            &DirectConceptDelta::Remove(id).into(),
             false,
             &mut self.cache,
         );
@@ -918,7 +919,8 @@ where
             let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
                 new_concept_id: new_concept_label_id,
                 delta: NewConceptDelta::String(string.into()),
-            });
+            })
+            .into();
             self.delta.update_concept_delta(
                 &direct_delta,
                 false,
@@ -935,7 +937,8 @@ where
                     reduction: new_concept_label_id,
                     variable: false,
                 },
-            });
+            })
+            .into();
             self.delta.update_concept_delta(
                 &direct_delta,
                 false,
@@ -952,7 +955,8 @@ where
                     variable: false,
                 },
                 new_concept_id,
-            });
+            })
+            .into();
             self.delta.update_concept_delta(
                 &direct_delta,
                 false,
@@ -979,7 +983,8 @@ where
             &DirectConceptDelta::New(NewDirectConceptDelta {
                 delta: NewConceptDelta::String(string.into()),
                 new_concept_id: index,
-            }),
+            })
+            .into(),
             false,
             &mut self.cache,
         );
@@ -1008,7 +1013,8 @@ where
                             right_id: righthand,
                         }),
                         new_concept_id,
-                    }),
+                    })
+                    .into(),
                     temporary,
                     &mut self.cache,
                 );
@@ -1082,7 +1088,8 @@ where
                         let delta = DirectConceptDelta::Reduce {
                             unreduced_id: concept,
                             change,
-                        };
+                        }
+                        .into();
                         self.delta.update_concept_delta(
                             &delta,
                             temporary,

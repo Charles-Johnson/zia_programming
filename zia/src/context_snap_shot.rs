@@ -121,14 +121,18 @@ impl ContextSnapShot {
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, cdv) in delta.concept() {
-            for (cd, _) in cdv {
+            for dcd in cdv.iter().filter_map(|(cd, _)| {
+                if let ConceptDelta::Direct(dcd) = cd {
+                    Some(dcd)
+                } else {
+                    None
+                }
+            }) {
                 // Is new_concept_id the same as id?
-                if let ConceptDelta::Direct(DirectConceptDelta::New(
-                    NewDirectConceptDelta {
-                        new_concept_id,
-                        delta,
-                    },
-                )) = cd
+                if let DirectConceptDelta::New(NewDirectConceptDelta {
+                    new_concept_id,
+                    delta,
+                }) = dcd.as_ref()
                 {
                     if length <= *id {
                         length = *id + 1;
@@ -220,13 +224,17 @@ impl SnapShotReader for ContextSnapShot {
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
         for (id, cdv) in delta.concept() {
-            for (cd, _) in cdv {
-                if let ConceptDelta::Direct(DirectConceptDelta::New(
-                    NewDirectConceptDelta {
-                        new_concept_id,
-                        delta,
-                    },
-                )) = cd
+            for dcd in cdv.iter().filter_map(|(cd, _)| {
+                if let ConceptDelta::Direct(dcd) = cd {
+                    Some(dcd)
+                } else {
+                    None
+                }
+            }) {
+                if let DirectConceptDelta::New(NewDirectConceptDelta {
+                    new_concept_id,
+                    delta,
+                }) = dcd.as_ref()
                 {
                     if *id >= new_concept_length {
                         new_concept_length = *id + 1
@@ -235,14 +243,20 @@ impl SnapShotReader for ContextSnapShot {
             }
         }
         for (id, cdv) in delta.concept() {
-            for (cd, _) in cdv {
-                match cd {
-                    ConceptDelta::Direct(DirectConceptDelta::New {
+            for dcd in cdv.iter().filter_map(|(cd, _)| {
+                if let ConceptDelta::Direct(dcd) = cd {
+                    Some(dcd)
+                } else {
+                    None
+                }
+            }) {
+                match dcd.as_ref() {
+                    DirectConceptDelta::New {
                         ..
-                    }) => {
+                    } => {
                         removed_gaps.insert(*id);
                     },
-                    ConceptDelta::Direct(DirectConceptDelta::Remove(_)) => {
+                    DirectConceptDelta::Remove(_) => {
                         added_gaps.push(*id);
                         removed_gaps.remove(id);
                     },
@@ -311,28 +325,26 @@ impl SnapShotReader for ContextSnapShot {
         cc: ConcreteConceptType,
     ) -> Option<usize> {
         let mut id = None;
-        for (concept_id, cdv) in delta.concept() {
-            for (cd, _) in cdv {
-                match cd {
-                    ConceptDelta::Direct(DirectConceptDelta::New(
-                        NewDirectConceptDelta {
-                            new_concept_id,
-                            ..
-                        },
-                    )) if self.concrete_concept_type(delta, *concept_id)
-                        == Some(cc) =>
-                    {
-                        id = Some(Some(*concept_id))
-                    },
-                    ConceptDelta::Direct(DirectConceptDelta::Remove(
-                        concept_id,
-                    )) if self.concrete_concept_type(delta, *concept_id)
-                        == Some(cc) =>
-                    {
-                        id = Some(None)
-                    },
+        for (concept_id, cdv) in
+            delta.concept().iter().filter(|(concept_id, _)| {
+                self.concrete_concept_type(delta, **concept_id) == Some(cc)
+            })
+        {
+            for dcd in cdv.iter().filter_map(|(cd, _)| {
+                if let ConceptDelta::Direct(dcd) = cd {
+                    Some(dcd)
+                } else {
+                    None
+                }
+            }) {
+                match dcd.as_ref() {
+                    DirectConceptDelta::New(NewDirectConceptDelta {
+                        new_concept_id,
+                        ..
+                    }) => id = Some(Some(*concept_id)),
+                    DirectConceptDelta::Remove(concept_id) => id = Some(None),
                     _ => (),
-                };
+                }
             }
         }
         id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).cloned())
@@ -370,113 +382,73 @@ impl Apply for ContextSnapShot {
         if concept_len > self.concepts.len() {
             self.concepts.extend(vec![None; concept_len - self.concepts.len()]);
         }
-        for (id, concept_deltas) in delta.concept() {
-            for (cd, temporary) in concept_deltas {
-                if !temporary {
-                    if let ConceptDelta::Direct(dcd) = cd {
-                        match dcd {
-                            DirectConceptDelta::New(
-                                NewDirectConceptDelta {
-                                    new_concept_id,
-                                    delta,
-                                },
-                            ) => match delta {
-                                NewConceptDelta::String(s) => {
-                                    self.string_map
-                                        .insert(s.into(), *new_concept_id);
-                                    self.concepts[*new_concept_id] = Some(
-                                        (
-                                            SpecificPart::String(s.into()),
-                                            *new_concept_id,
-                                        )
-                                            .into(),
-                                    );
-                                },
-                                NewConceptDelta::Composition(c) => {
-                                    let [left, right] = self
-                                        .write_concept_pair(
-                                            c.left_id, c.right_id,
-                                        );
-                                    debug_assert!(*new_concept_id != c.left_id);
-                                    debug_assert!(
-                                        *new_concept_id != c.right_id
-                                    );
-                                    self.concepts[*new_concept_id] =
-                                        Some(Concept::composition_of(
-                                            *new_concept_id,
-                                            left,
-                                            right,
-                                        ));
-                                },
-                                NewConceptDelta::Left {
-                                    composition_id,
-                                    right_id,
-                                    concrete_type,
-                                    variable,
-                                } => {
-                                    todo!();
-                                },
-                                NewConceptDelta::Right {
-                                    composition_id,
-                                    left_id,
-                                    concrete_type,
-                                    variable,
-                                } => {
-                                    let [left, composition] = self
-                                        .write_concept_pair(
-                                            *left_id,
-                                            *composition_id,
-                                        );
-                                    debug_assert!(new_concept_id != left_id);
-                                    debug_assert!(
-                                        new_concept_id != composition_id
-                                    );
-                                    self.concepts[*new_concept_id] = Some(
-                                        Concept::righthand_of(
-                                            *new_concept_id,
-                                            left,
-                                            composition,
-                                            *concrete_type,
-                                            *variable,
-                                        )
-                                        .unwrap(),
-                                    );
-                                },
-                                NewConceptDelta::ReducesTo {
-                                    ..
-                                } => {
-                                    todo!();
-                                },
-                            },
-                            DirectConceptDelta::Compose {
-                                ..
-                            } => todo!(),
-                            DirectConceptDelta::Reduce {
-                                ..
-                            } => todo!(),
-                            DirectConceptDelta::Remove(_) => todo!(),
-                        }
-                    };
-                    // match cd {
-                    //     ConceptDelta::Insert(c) => {
-                    //         self.concepts[*id] = Some(c.clone());
-                    //         if let Some(cct) = c.get_concrete_concept_type() {
-                    //             self.concrete_concepts.insert(*id, cct);
-                    //         }
-                    //     },
-                    //     ConceptDelta::Remove(c) => {
-                    //         self.blindly_remove_concept(*id);
-                    //         if let Some(cct) = c.get_concrete_concept_type() {
-                    //             self.concrete_concepts.remove_by_right(&cct);
-                    //         }
-                    //     },
-                    //     ConceptDelta::Update(d) => {
-                    //         let concept = self.write_concept(*id);
-                    //         // Need to map delta to concept mutable method
-                    //         todo!();
-                    //     },
-                    // }
-                }
+        for concept_delta in delta.concepts_to_apply_in_order() {
+            match concept_delta.as_ref() {
+                DirectConceptDelta::New(NewDirectConceptDelta {
+                    new_concept_id,
+                    delta,
+                }) => match delta {
+                    NewConceptDelta::String(s) => {
+                        self.string_map.insert(s.into(), *new_concept_id);
+                        self.concepts[*new_concept_id] = Some(
+                            (SpecificPart::String(s.into()), *new_concept_id)
+                                .into(),
+                        );
+                    },
+                    NewConceptDelta::Composition(c) => {
+                        let [left, right] =
+                            self.write_concept_pair(c.left_id, c.right_id);
+                        debug_assert!(*new_concept_id != c.left_id);
+                        debug_assert!(*new_concept_id != c.right_id);
+                        self.concepts[*new_concept_id] =
+                            Some(Concept::composition_of(
+                                *new_concept_id,
+                                left,
+                                right,
+                            ));
+                    },
+                    NewConceptDelta::Left {
+                        composition_id,
+                        right_id,
+                        concrete_type,
+                        variable,
+                    } => {
+                        todo!();
+                    },
+                    NewConceptDelta::Right {
+                        composition_id,
+                        left_id,
+                        concrete_type,
+                        variable,
+                    } => {
+                        let [left, composition] =
+                            self.write_concept_pair(*left_id, *composition_id);
+                        debug_assert!(new_concept_id != left_id);
+                        debug_assert!(new_concept_id != composition_id);
+                        self.concepts[*new_concept_id] = Some(
+                            Concept::righthand_of(
+                                *new_concept_id,
+                                left,
+                                composition,
+                                *concrete_type,
+                                *variable,
+                            )
+                            .unwrap(),
+                        );
+                    },
+                    NewConceptDelta::ReducesTo {
+                        ..
+                    } => {
+                        todo!();
+                    },
+                },
+                DirectConceptDelta::Compose {
+                    ..
+                } => todo!(),
+                DirectConceptDelta::Reduce {
+                    ..
+                } => todo!(),
+                DirectConceptDelta::Remove(_) => todo!(),
             }
         }
     }

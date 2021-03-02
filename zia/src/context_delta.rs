@@ -18,23 +18,25 @@ use crate::{concepts::ConcreteConceptType, context_cache::ContextCache};
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::{self, Debug, Display, Formatter},
+    sync::Arc,
 };
 
 #[derive(Clone, Default)]
 pub struct ContextDelta {
     string: HashMap<String, Change<usize>>,
+    concepts_to_apply_in_order: Vec<Arc<DirectConceptDelta>>,
     concept: HashMap<usize, Vec<(ConceptDelta, bool)>>,
 }
 
 impl ContextDelta {
     pub fn update_concept_delta(
         &mut self,
-        concept_delta: &DirectConceptDelta,
+        concept_delta: &Arc<DirectConceptDelta>,
         temporary: bool,
         cache_to_invalidate: &mut ContextCache,
     ) {
         let dcd = (concept_delta.into(), temporary);
-        match concept_delta {
+        match concept_delta.as_ref() {
             DirectConceptDelta::New(ndcd) => {
                 let new_concept_id = ndcd.new_concept_id;
                 self.insert_delta_for_new_concept(new_concept_id, dcd);
@@ -230,7 +232,14 @@ impl ContextDelta {
                 );
             },
         };
+        if !temporary {
+            self.concepts_to_apply_in_order.push(concept_delta.clone());
+        }
         cache_to_invalidate.invalidate();
+    }
+
+    pub fn concepts_to_apply_in_order(&self) -> &Vec<Arc<DirectConceptDelta>> {
+        &self.concepts_to_apply_in_order
     }
 
     fn insert_delta_for_existing_concept(
@@ -242,11 +251,17 @@ impl ContextDelta {
             concept_id,
             cd,
             |last_delta, concept_id: usize| {
-                if let ConceptDelta::Direct(DirectConceptDelta::Remove(_)) =
-                    last_delta
-                {
-                    panic!("Concept {} already removed", concept_id);
-                }
+                match last_delta {
+                    ConceptDelta::Direct(dcd)
+                        if matches!(
+                            dcd.as_ref(),
+                            &DirectConceptDelta::Remove(_)
+                        ) =>
+                    {
+                        panic!("Concept {} already removed", concept_id)
+                    }
+                    _ => (),
+                };
             },
         );
     }
@@ -260,13 +275,17 @@ impl ContextDelta {
             concept_id,
             cd,
             |last_delta, concept_id: usize| {
-                if let ConceptDelta::Direct(DirectConceptDelta::Remove(_)) =
-                    last_delta
-                {
-                    ()
-                } else {
-                    panic!("Concept {} already exists", concept_id);
-                }
+                match last_delta {
+                    ConceptDelta::Direct(dcd)
+                        if matches!(
+                            dcd.as_ref(),
+                            &DirectConceptDelta::Remove(_)
+                        ) =>
+                    {
+                        ()
+                    },
+                    _ => panic!("Concept {} already exists", concept_id),
+                };
             },
         );
     }
@@ -356,12 +375,12 @@ impl<T: Clone + Display> Debug for Change<T> {
 
 #[derive(Clone)]
 pub enum ConceptDelta {
-    Direct(DirectConceptDelta),
+    Direct(Arc<DirectConceptDelta>),
     Indirect(IndirectConceptDelta),
 }
 
-impl From<&DirectConceptDelta> for ConceptDelta {
-    fn from(dcd: &DirectConceptDelta) -> Self {
+impl From<&Arc<DirectConceptDelta>> for ConceptDelta {
+    fn from(dcd: &Arc<DirectConceptDelta>) -> Self {
         Self::Direct(dcd.clone())
     }
 }
