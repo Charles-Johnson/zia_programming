@@ -952,7 +952,7 @@ where
                     NewConceptDelta::Double {
                         composition_id,
                         concrete_type,
-                        variable: false
+                        variable: false,
                     }
                 } else {
                     NewConceptDelta::Right {

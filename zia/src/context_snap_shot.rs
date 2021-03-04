@@ -418,11 +418,16 @@ impl Apply for ContextSnapShot {
                     NewConceptDelta::Double {
                         composition_id,
                         concrete_type,
-                        variable
+                        variable,
                     } => {
                         let composition = self.write_concept(*composition_id);
                         debug_assert!(new_concept_id != composition_id);
-                        self.concepts[*new_concept_id] = Some(Concept::double(*new_concept_id, composition, *variable, *concrete_type));
+                        self.concepts[*new_concept_id] = Some(Concept::double(
+                            *new_concept_id,
+                            composition,
+                            *variable,
+                            *concrete_type,
+                        ));
                     },
                     NewConceptDelta::Right {
                         composition_id,

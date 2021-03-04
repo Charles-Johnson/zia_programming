@@ -369,26 +369,46 @@ impl Concept {
         }
     }
 
-    pub fn double(id: usize, composition: &mut Concept, variable: bool, concrete_concept_type: Option<ConcreteConceptType>) -> Self {
+    pub fn double(
+        id: usize,
+        composition: &mut Concept,
+        variable: bool,
+        concrete_concept_type: Option<ConcreteConceptType>,
+    ) -> Self {
         let concept = Self {
             concrete_part: ConcreteConcept {
-                lefthand_of: hashset!{composition.id},
-                righthand_of: hashset!{composition.id},
-                reduces_from: hashset!{}
+                lefthand_of: hashset! {composition.id},
+                righthand_of: hashset! {composition.id},
+                reduces_from: hashset! {},
             },
             id,
             specific_part: concrete_concept_type.map_or_else(
-                || SpecificPart::Abstract(AbstractPart {composition: MaybeComposition::Leaf(variable), reduces_to: None}), |ct| {
+                || {
+                    SpecificPart::Abstract(AbstractPart {
+                        composition: MaybeComposition::Leaf(variable),
+                        reduces_to: None,
+                    })
+                },
+                |ct| {
                     debug_assert!(!variable);
                     SpecificPart::Concrete(ct)
-                })
+                },
+            ),
         };
-        if let SpecificPart::Abstract(AbstractPart{composition, ..}) = &mut composition.specific_part {
-            *composition = MaybeComposition::Composition(CompositePart{
+        if let SpecificPart::Abstract(AbstractPart {
+            composition,
+            ..
+        }) = &mut composition.specific_part
+        {
+            *composition = MaybeComposition::Composition(CompositePart {
                 lefthand: id,
                 righthand: id,
-                free_variables: if variable {hashset!{id}} else {hashset!{}},
-                binding_variables: hashset!{}
+                free_variables: if variable {
+                    hashset! {id}
+                } else {
+                    hashset! {}
+                },
+                binding_variables: hashset! {},
             });
         } else {
             panic!("tried to compose a conctrete concept");
@@ -473,7 +493,8 @@ impl From<&NewConceptDelta> for SpecificPart {
                 concrete_type,
                 variable,
                 ..
-            } | NewConceptDelta::Double {
+            }
+            | NewConceptDelta::Double {
                 concrete_type,
                 variable,
                 ..
@@ -641,7 +662,8 @@ impl From<&NewConceptDelta> for ConcreteConcept {
             NewConceptDelta::Left {
                 composition_id,
                 ..
-            } | NewConceptDelta::Double {
+            }
+            | NewConceptDelta::Double {
                 composition_id,
                 ..
             } => Self {
@@ -651,7 +673,8 @@ impl From<&NewConceptDelta> for ConcreteConcept {
             NewConceptDelta::Right {
                 composition_id,
                 ..
-            } | NewConceptDelta::Double {
+            }
+            | NewConceptDelta::Double {
                 composition_id,
                 ..
             } => Self {
