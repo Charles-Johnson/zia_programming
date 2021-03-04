@@ -321,13 +321,6 @@ impl Concept {
                     if concrete_concept_type
                         == Some(ConcreteConceptType::ExistsSuchThat)
                     {
-                        debug_assert!(matches!(
-                            left.specific_part,
-                            SpecificPart::Abstract(AbstractPart {
-                                composition: MaybeComposition::Leaf(true),
-                                ..
-                            })
-                        ));
                         binding_variables.insert(left.id);
                     } else if let SpecificPart::Abstract(AbstractPart {
                         composition: MaybeComposition::Composition(cp),
