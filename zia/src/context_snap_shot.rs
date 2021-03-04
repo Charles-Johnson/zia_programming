@@ -415,6 +415,15 @@ impl Apply for ContextSnapShot {
                     } => {
                         todo!();
                     },
+                    NewConceptDelta::Double {
+                        composition_id,
+                        concrete_type,
+                        variable
+                    } => {
+                        let composition = self.write_concept(*composition_id);
+                        debug_assert!(new_concept_id != composition_id);
+                        self.concepts[*new_concept_id] = Some(Concept::double(*new_concept_id, composition, *variable, *concrete_type));
+                    },
                     NewConceptDelta::Right {
                         composition_id,
                         left_id,
@@ -437,9 +446,17 @@ impl Apply for ContextSnapShot {
                         );
                     },
                     NewConceptDelta::ReducesTo {
-                        ..
+                        reduction,
+                        variable,
                     } => {
-                        todo!();
+                        debug_assert!(new_concept_id != reduction);
+                        let reduction_concept = self.write_concept(*reduction);
+                        self.concepts[*new_concept_id] =
+                            Some(Concept::reduction_to(
+                                *new_concept_id,
+                                reduction_concept,
+                                *variable,
+                            ));
                     },
                 },
                 DirectConceptDelta::Compose {

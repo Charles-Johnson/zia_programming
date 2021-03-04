@@ -123,6 +123,23 @@ impl ContextDelta {
                             cd,
                         );
                     },
+                    NewConceptDelta::Double {
+                        composition_id,
+                        ..
+                    } => {
+                        let cd = (
+                            IndirectConceptDelta::ComposedOf(Composition {
+                                left_id: new_concept_id,
+                                right_id: new_concept_id,
+                            })
+                            .into(),
+                            temporary,
+                        );
+                        self.insert_delta_for_existing_concept(
+                            *composition_id,
+                            cd,
+                        );
+                    },
                     NewConceptDelta::ReducesTo {
                         reduction,
                         variable,
@@ -439,6 +456,13 @@ pub enum NewConceptDelta {
     Right {
         composition_id: usize,
         left_id: usize,
+        concrete_type: Option<ConcreteConceptType>,
+        variable: bool,
+    },
+    // TODO prevent concrete concept from being a variable
+    /// Used for e.g. `let label_of label_of -> 'label_of'`
+    Double {
+        composition_id: usize,
         concrete_type: Option<ConcreteConceptType>,
         variable: bool,
     },

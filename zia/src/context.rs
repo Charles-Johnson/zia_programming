@@ -948,11 +948,19 @@ where
         };
         {
             let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
-                delta: NewConceptDelta::Right {
-                    composition_id,
-                    left_id: label_id,
-                    concrete_type,
-                    variable: false,
+                delta: if new_concept_id == label_id {
+                    NewConceptDelta::Double {
+                        composition_id,
+                        concrete_type,
+                        variable: false
+                    }
+                } else {
+                    NewConceptDelta::Right {
+                        composition_id,
+                        left_id: label_id,
+                        concrete_type,
+                        variable: false,
+                    }
                 },
                 new_concept_id,
             })

@@ -368,6 +368,50 @@ impl Concept {
             Err(ZiaError::SettingCompositionOfConcrete)
         }
     }
+
+    pub fn double(id: usize, composition: &mut Concept, variable: bool, concrete_concept_type: Option<ConcreteConceptType>) -> Self {
+        let concept = Self {
+            concrete_part: ConcreteConcept {
+                lefthand_of: hashset!{composition.id},
+                righthand_of: hashset!{composition.id},
+                reduces_from: hashset!{}
+            },
+            id,
+            specific_part: concrete_concept_type.map_or_else(
+                || SpecificPart::Abstract(AbstractPart {composition: MaybeComposition::Leaf(variable), reduces_to: None}), |ct| {
+                    debug_assert!(!variable);
+                    SpecificPart::Concrete(ct)
+                })
+        };
+        if let SpecificPart::Abstract(AbstractPart{composition, ..}) = &mut composition.specific_part {
+            *composition = MaybeComposition::Composition(CompositePart{
+                lefthand: id,
+                righthand: id,
+                free_variables: if variable {hashset!{id}} else {hashset!{}},
+                binding_variables: hashset!{}
+            });
+        } else {
+            panic!("tried to compose a conctrete concept");
+        }
+        concept
+    }
+
+    pub fn reduction_to(
+        id: usize,
+        reduction: &mut Concept,
+        variable: bool,
+    ) -> Self {
+        let new_concept = Self {
+            concrete_part: Default::default(),
+            id,
+            specific_part: SpecificPart::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(variable),
+                reduces_to: Some(reduction.id),
+            }),
+        };
+        reduction.concrete_part.reduces_from.insert(id);
+        new_concept
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -426,6 +470,10 @@ impl From<&NewConceptDelta> for SpecificPart {
                 ..
             }
             | NewConceptDelta::Right {
+                concrete_type,
+                variable,
+                ..
+            } | NewConceptDelta::Double {
                 concrete_type,
                 variable,
                 ..
@@ -593,11 +641,17 @@ impl From<&NewConceptDelta> for ConcreteConcept {
             NewConceptDelta::Left {
                 composition_id,
                 ..
+            } | NewConceptDelta::Double {
+                composition_id,
+                ..
             } => Self {
                 lefthand_of: hashset! {*composition_id},
                 ..Default::default()
             },
             NewConceptDelta::Right {
+                composition_id,
+                ..
+            } | NewConceptDelta::Double {
                 composition_id,
                 ..
             } => Self {
