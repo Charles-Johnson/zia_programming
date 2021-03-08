@@ -436,6 +436,10 @@ impl Apply for ContextSnapShot {
                         variable,
                     } => {
                         todo!();
+                        if let Some(cct) = concrete_type {
+                            self.concrete_concepts
+                                .insert(*new_concept_id, *cct);
+                        }
                     },
                     NewConceptDelta::Double {
                         composition_id,
@@ -450,6 +454,10 @@ impl Apply for ContextSnapShot {
                             *variable,
                             *concrete_type,
                         ));
+                        if let Some(cct) = concrete_type {
+                            self.concrete_concepts
+                                .insert(*new_concept_id, *cct);
+                        }
                     },
                     NewConceptDelta::Right {
                         composition_id,
@@ -471,6 +479,10 @@ impl Apply for ContextSnapShot {
                             )
                             .unwrap(),
                         );
+                        if let Some(cct) = concrete_type {
+                            self.concrete_concepts
+                                .insert(*new_concept_id, *cct);
+                        }
                     },
                     NewConceptDelta::ReducesTo {
                         reduction,

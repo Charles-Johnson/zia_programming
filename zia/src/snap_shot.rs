@@ -91,9 +91,16 @@ pub trait Reader {
         delta: &ContextDelta,
         concept: usize,
     ) -> SyntaxTree {
-        if self.concrete_concept_type(delta, concept)
-            == Some(ConcreteConceptType::ExistsSuchThat)
-        {
+        let quantifier = self.concrete_concept_type(delta, concept)
+            == Some(ConcreteConceptType::ExistsSuchThat);
+        if let Some(s) = self.get_label(delta, concept) {
+            let syntax = SyntaxTree::from(s);
+            if quantifier {
+                syntax.bind_quantifier_concept(concept)
+            } else {
+                syntax.bind_nonquantifier_concept(concept)
+            }
+        } else if quantifier {
             SyntaxTree::new_quantifier_concept(concept)
         } else {
             SyntaxTree::new_constant_concept(concept)
@@ -167,11 +174,13 @@ pub trait Reader {
         delta: &ContextDelta,
         concept: usize,
     ) -> Option<usize> {
+        let maybe_label_concept_id =
+            self.concrete_concept_id(delta, ConcreteConceptType::Label);
         self.read_concept(delta, concept)
             .get_righthand_of()
             .iter()
             .find(|candidate| {
-                self.concrete_concept_id(delta, ConcreteConceptType::Label)
+                maybe_label_concept_id
                     == Some(
                         self.read_concept(delta, **candidate)
                             .get_composition()
