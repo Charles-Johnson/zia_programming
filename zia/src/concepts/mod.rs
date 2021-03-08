@@ -269,6 +269,18 @@ impl Concept {
         }
     }
 
+    pub fn make_no_longer_reduce_to(
+        &mut self,
+        before_reduced_concept: &mut Concept,
+    ) {
+        if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
+            before_reduced_concept.concrete_part.reduces_from.remove(&self.id);
+            ap.reduces_to = None;
+        } else {
+            panic!("Concrete concept did not reduce to anything");
+        }
+    }
+
     pub fn composition_of(
         id: usize,
         left: &mut Concept,

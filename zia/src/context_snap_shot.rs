@@ -530,8 +530,32 @@ impl Apply for ContextSnapShot {
                     },
                 },
                 DirectConceptDelta::Reduce {
-                    ..
-                } => todo!(),
+                    change,
+                    unreduced_id,
+                } => {
+                    match change {
+                        Change::Create(reduced_id) => {
+                            let [unreduced_concept, reduced_concept]: [&mut Concept; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
+                            unreduced_concept.make_reduce_to(reduced_concept);
+                        },
+                        Change::Update {
+                            before: before_reduced_id,
+                            after: after_reduced_id,
+                        } => {
+                            let [unreduced_concept, before_reduced_concept, after_reduced_concept]: [&mut Concept; 3] = self.write_concepts(arr![usize; *unreduced_id, *before_reduced_id, *after_reduced_id]).into();
+                            unreduced_concept.make_no_longer_reduce_to(
+                                before_reduced_concept,
+                            );
+                            unreduced_concept
+                                .make_reduce_to(after_reduced_concept);
+                        },
+                        Change::Remove(reduced_id) => {
+                            let [unreduced_concept, reduced_concept]: [&mut Concept; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
+                            unreduced_concept
+                                .make_no_longer_reduce_to(reduced_concept);
+                        },
+                    }
+                },
                 DirectConceptDelta::Remove(_) => todo!(),
             }
         }
