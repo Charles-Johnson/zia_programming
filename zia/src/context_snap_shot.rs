@@ -19,15 +19,19 @@ use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta,
     context_delta::{
-        ConceptDelta, ContextDelta, DirectConceptDelta, NewConceptDelta,
-        NewDirectConceptDelta,
+        Change, Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
+        NewConceptDelta, NewDirectConceptDelta,
     },
-    delta::{Apply, Change},
+    delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
 use bimap::BiMap;
+use generic_array::{
+    arr, functional::FunctionalSequence, ArrayLength, GenericArray,
+};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    convert::TryInto,
     fmt::Display,
 };
 
@@ -116,6 +120,24 @@ impl ContextSnapShot {
         let (l, r) =
             opt_l.and_also_mut(opt_r).expect("some concepts are empty");
         [l, r]
+    }
+
+    // TODO document why this is a safe abstraction or refactor `self.concepts` as a slotmap
+    fn write_concepts<
+        'a,
+        N: ArrayLength<usize> + ArrayLength<&'a mut Concept>,
+    >(
+        &'a mut self,
+        ids: GenericArray<usize, N>,
+    ) -> GenericArray<&'a mut Concept, N> {
+        let ptr = self.concepts.as_mut_ptr();
+        ids.map(|x| unsafe {
+            ptr.add(x)
+                .as_mut()
+                .expect("Null pointer")
+                .as_mut()
+                .expect("some concepts are empty")
+        })
     }
 
     fn concept_len(&self, delta: &ContextDelta) -> usize {
@@ -465,8 +487,48 @@ impl Apply for ContextSnapShot {
                     },
                 },
                 DirectConceptDelta::Compose {
-                    ..
-                } => todo!(),
+                    change,
+                    composition_id,
+                } => match change {
+                    Change::Create(Composition {
+                        left_id,
+                        right_id,
+                    }) => {
+                        let [composition, left, right]: [&mut Concept; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
+                        composition
+                            .change_composition(Change::Create([left, right]))
+                            .unwrap();
+                    },
+                    Change::Update {
+                        before:
+                            Composition {
+                                left_id,
+                                right_id,
+                            },
+                        after:
+                            Composition {
+                                left_id: after_left_id,
+                                right_id: after_right_id,
+                            },
+                    } => {
+                        let [composition, before_left, before_right, after_left, after_right]: [&mut Concept; 5] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id, *after_left_id, *after_right_id]).into();
+                        composition
+                            .change_composition(Change::Update {
+                                before: [before_left, before_right],
+                                after: [after_left, after_right],
+                            })
+                            .unwrap();
+                    },
+                    Change::Remove(Composition {
+                        left_id,
+                        right_id,
+                    }) => {
+                        let [composition, left, right]: [&mut Concept; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
+                        composition
+                            .change_composition(Change::Remove([left, right]))
+                            .unwrap();
+                    },
+                },
                 DirectConceptDelta::Reduce {
                     ..
                 } => todo!(),

@@ -471,15 +471,35 @@ pub enum NewConceptDelta {
         reduction: usize,
     },
 }
-
-#[derive(Clone)]
-pub enum Change<T: Clone> {
+pub enum Change<T> {
     Create(T),
     Update {
         before: T,
         after: T,
     },
     Remove(T),
+}
+
+impl<T: Clone> Clone for Change<T> {
+    fn clone(&self) -> Self {
+        self.map(T::clone)
+    }
+}
+
+impl<T> Change<T> {
+    pub fn map<U>(&self, mut f: impl FnMut(&T) -> U) -> Change<U> {
+        match self {
+            Self::Create(x) => Change::Create(f(x)),
+            Self::Update {
+                before,
+                after,
+            } => Change::Update {
+                before: f(before),
+                after: f(after),
+            },
+            Self::Remove(x) => Change::Remove(f(x)),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
