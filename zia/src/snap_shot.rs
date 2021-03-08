@@ -38,10 +38,16 @@ pub trait Reader {
                             DirectConceptDelta::Reduce {
                                 change,
                                 unreduced_id,
-                            } => todo!(),
+                            } => {
+                                debug_assert_eq!(*unreduced_id, id);
+                                concept
+                                    .as_mut()
+                                    .expect("concept must already exist")
+                                    .change_reduction(*change);
+                            },
                         },
                         ConceptDelta::Indirect(delta) => {
-                            if let Some(ref mut c) = concept {
+                            if let Some(c) = &mut concept {
                                 c.apply_indirect(delta);
                             } else {
                                 panic!("Concept doesn't exist");

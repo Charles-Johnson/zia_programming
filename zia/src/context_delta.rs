@@ -471,6 +471,8 @@ pub enum NewConceptDelta {
         reduction: usize,
     },
 }
+
+#[derive(Copy)]
 pub enum Change<T> {
     Create(T),
     Update {

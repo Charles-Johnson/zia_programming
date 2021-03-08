@@ -88,6 +88,24 @@ impl Concept {
         self.id
     }
 
+    pub fn change_reduction(&mut self, change: Change<usize>) {
+        if let SpecificPart::Abstract(ap) = &mut self.specific_part {
+            match change {
+                Change::Create(reduced_concept_id)
+                | Change::Update {
+                    after: reduced_concept_id,
+                    ..
+                } => {
+                    ap.reduces_to = Some(reduced_concept_id);
+                },
+                Change::Remove(reduced_concept_id) => {
+                    debug_assert_eq!(Some(reduced_concept_id), ap.reduces_to);
+                    ap.reduces_to = None;
+                },
+            }
+        }
+    }
+
     pub fn apply_indirect(&mut self, delta: &IndirectConceptDelta) {
         match delta {
             IndirectConceptDelta::ComposedOf(Composition {
