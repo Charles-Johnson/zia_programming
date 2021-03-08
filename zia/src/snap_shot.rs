@@ -17,7 +17,7 @@ pub trait Reader {
             .concept()
             .get(&id)
             .and_then(|cds| {
-                let mut concept: Option<Concept> = None;
+                let mut concept = self.get_concept(id).cloned();
                 for (cd, _) in cds {
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
