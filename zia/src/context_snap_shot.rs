@@ -143,13 +143,7 @@ impl ContextSnapShot {
     fn concept_len(&self, delta: &ContextDelta) -> usize {
         let mut length = self.concepts.len();
         for (id, cdv) in delta.concept() {
-            for dcd in cdv.iter().filter_map(|(cd, _)| {
-                if let ConceptDelta::Direct(dcd) = cd {
-                    Some(dcd)
-                } else {
-                    None
-                }
-            }) {
+            for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 // Is new_concept_id the same as id?
                 if let DirectConceptDelta::New(NewDirectConceptDelta {
                     new_concept_id,
@@ -246,13 +240,7 @@ impl SnapShotReader for ContextSnapShot {
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
         for (id, cdv) in delta.concept() {
-            for dcd in cdv.iter().filter_map(|(cd, _)| {
-                if let ConceptDelta::Direct(dcd) = cd {
-                    Some(dcd)
-                } else {
-                    None
-                }
-            }) {
+            for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 if let DirectConceptDelta::New(NewDirectConceptDelta {
                     new_concept_id,
                     delta,
@@ -265,13 +253,7 @@ impl SnapShotReader for ContextSnapShot {
             }
         }
         for (id, cdv) in delta.concept() {
-            for dcd in cdv.iter().filter_map(|(cd, _)| {
-                if let ConceptDelta::Direct(dcd) = cd {
-                    Some(dcd)
-                } else {
-                    None
-                }
-            }) {
+            for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 match dcd.as_ref() {
                     DirectConceptDelta::New {
                         ..
@@ -352,13 +334,7 @@ impl SnapShotReader for ContextSnapShot {
                 self.concrete_concept_type(delta, **concept_id) == Some(cc)
             })
         {
-            for dcd in cdv.iter().filter_map(|(cd, _)| {
-                if let ConceptDelta::Direct(dcd) = cd {
-                    Some(dcd)
-                } else {
-                    None
-                }
-            }) {
+            for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 match dcd.as_ref() {
                     DirectConceptDelta::New(NewDirectConceptDelta {
                         new_concept_id,
@@ -410,6 +386,10 @@ impl Apply for ContextSnapShot {
                     new_concept_id,
                     delta,
                 }) => match delta {
+                    NewConceptDelta::Variable => {
+                        self.concepts[*new_concept_id] =
+                            Some(Concept::make_variable(*new_concept_id))
+                    },
                     NewConceptDelta::String(s) => {
                         self.string_map.insert(s.into(), *new_concept_id);
                         self.concepts[*new_concept_id] = Some(

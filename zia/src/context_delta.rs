@@ -25,22 +25,22 @@ use std::{
 pub struct ContextDelta {
     string: HashMap<String, Change<usize>>,
     concepts_to_apply_in_order: Vec<Arc<DirectConceptDelta>>,
-    concept: HashMap<usize, Vec<(ConceptDelta, bool)>>,
+    concept: HashMap<usize, Vec<ConceptDelta>>,
 }
 
 impl ContextDelta {
     pub fn update_concept_delta(
         &mut self,
         concept_delta: &Arc<DirectConceptDelta>,
-        temporary: bool,
         cache_to_invalidate: &mut ContextCache,
     ) {
-        let dcd = (concept_delta.into(), temporary);
+        let dcd = ConceptDelta::Direct(concept_delta.clone());
         match concept_delta.as_ref() {
             DirectConceptDelta::New(ndcd) => {
                 let new_concept_id = ndcd.new_concept_id;
                 self.insert_delta_for_new_concept(new_concept_id, dcd);
                 match &ndcd.delta {
+                    NewConceptDelta::Variable => {},
                     NewConceptDelta::String(s) => {
                         self.string
                             .entry(s.into())
@@ -62,17 +62,13 @@ impl ContextDelta {
                         left_id,
                         right_id,
                     }) => {
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::LefthandOf(new_concept_id)
-                                .into(),
-                            temporary,
-                        );
+                                .into();
                         self.insert_delta_for_existing_concept(*left_id, cd);
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::RighthandOf(new_concept_id)
-                                .into(),
-                            temporary,
-                        );
+                                .into();
                         self.insert_delta_for_existing_concept(*right_id, cd);
                     },
                     NewConceptDelta::Left {
@@ -80,20 +76,16 @@ impl ContextDelta {
                         right_id,
                         ..
                     } => {
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::RighthandOf(*composition_id)
-                                .into(),
-                            temporary,
-                        );
+                                .into();
                         self.insert_delta_for_existing_concept(*right_id, cd);
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::ComposedOf(Composition {
                                 left_id: new_concept_id,
                                 right_id: *right_id,
                             })
-                            .into(),
-                            temporary,
-                        );
+                            .into();
                         self.insert_delta_for_existing_concept(
                             *composition_id,
                             cd,
@@ -104,20 +96,16 @@ impl ContextDelta {
                         left_id,
                         ..
                     } => {
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::LefthandOf(*composition_id)
-                                .into(),
-                            temporary,
-                        );
+                                .into();
                         self.insert_delta_for_existing_concept(*left_id, cd);
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::ComposedOf(Composition {
                                 left_id: *left_id,
                                 right_id: new_concept_id,
                             })
-                            .into(),
-                            temporary,
-                        );
+                            .into();
                         self.insert_delta_for_existing_concept(
                             *composition_id,
                             cd,
@@ -127,14 +115,12 @@ impl ContextDelta {
                         composition_id,
                         ..
                     } => {
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::ComposedOf(Composition {
                                 left_id: new_concept_id,
                                 right_id: new_concept_id,
                             })
-                            .into(),
-                            temporary,
-                        );
+                            .into();
                         self.insert_delta_for_existing_concept(
                             *composition_id,
                             cd,
@@ -144,11 +130,9 @@ impl ContextDelta {
                         reduction,
                         variable,
                     } => {
-                        let cd = (
+                        let cd =
                             IndirectConceptDelta::ReducesFrom(new_concept_id)
-                                .into(),
-                            temporary,
-                        );
+                                .into();
                         self.insert_delta_for_existing_concept(*reduction, cd);
                     },
                 }
@@ -168,21 +152,15 @@ impl ContextDelta {
                         left_id,
                         right_id,
                     } = before;
-                    let cd = (
-                        IndirectConceptDelta::NoLongerLefthandOf(
-                            *composition_id,
-                        )
-                        .into(),
-                        temporary,
-                    );
+                    let cd = IndirectConceptDelta::NoLongerLefthandOf(
+                        *composition_id,
+                    )
+                    .into();
                     self.insert_delta_for_existing_concept(*left_id, cd);
-                    let cd = (
-                        IndirectConceptDelta::NoLongerRighthandOf(
-                            *composition_id,
-                        )
-                        .into(),
-                        temporary,
-                    );
+                    let cd = IndirectConceptDelta::NoLongerRighthandOf(
+                        *composition_id,
+                    )
+                    .into();
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
                 if let Change::Create(after)
@@ -195,17 +173,11 @@ impl ContextDelta {
                         left_id,
                         right_id,
                     } = after;
-                    let cd = (
-                        IndirectConceptDelta::LefthandOf(*composition_id)
-                            .into(),
-                        temporary,
-                    );
+                    let cd = IndirectConceptDelta::LefthandOf(*composition_id)
+                        .into();
                     self.insert_delta_for_existing_concept(*left_id, cd);
-                    let cd = (
-                        IndirectConceptDelta::RighthandOf(*composition_id)
-                            .into(),
-                        temporary,
-                    );
+                    let cd = IndirectConceptDelta::RighthandOf(*composition_id)
+                        .into();
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
             },
@@ -220,13 +192,10 @@ impl ContextDelta {
                     ..
                 } = change
                 {
-                    let cd = (
-                        IndirectConceptDelta::NoLongerReducesFrom(
-                            *unreduced_id,
-                        )
-                        .into(),
-                        temporary,
-                    );
+                    let cd = IndirectConceptDelta::NoLongerReducesFrom(
+                        *unreduced_id,
+                    )
+                    .into();
                     self.insert_delta_for_existing_concept(*before, cd);
                 }
                 if let Change::Create(after)
@@ -235,10 +204,8 @@ impl ContextDelta {
                     ..
                 } = change
                 {
-                    let cd = (
-                        IndirectConceptDelta::ReducesFrom(*unreduced_id).into(),
-                        temporary,
-                    );
+                    let cd =
+                        IndirectConceptDelta::ReducesFrom(*unreduced_id).into();
                     self.insert_delta_for_existing_concept(*after, cd);
                 }
             },
@@ -249,9 +216,7 @@ impl ContextDelta {
                 );
             },
         };
-        if !temporary {
-            self.concepts_to_apply_in_order.push(concept_delta.clone());
-        }
+        self.concepts_to_apply_in_order.push(concept_delta.clone());
         cache_to_invalidate.invalidate();
     }
 
@@ -262,7 +227,7 @@ impl ContextDelta {
     fn insert_delta_for_existing_concept(
         &mut self,
         concept_id: usize,
-        cd: (ConceptDelta, bool),
+        cd: ConceptDelta,
     ) {
         self.insert_delta_for_concept(
             concept_id,
@@ -286,7 +251,7 @@ impl ContextDelta {
     fn insert_delta_for_new_concept(
         &mut self,
         concept_id: usize,
-        cd: (ConceptDelta, bool),
+        cd: ConceptDelta,
     ) {
         self.insert_delta_for_concept(
             concept_id,
@@ -310,7 +275,7 @@ impl ContextDelta {
     fn insert_delta_for_concept(
         &mut self,
         concept_id: usize,
-        cd: (ConceptDelta, bool),
+        cd: ConceptDelta,
         sanity_check: impl Fn(&ConceptDelta, usize),
     ) {
         match self.concept.entry(concept_id) {
@@ -318,8 +283,7 @@ impl ContextDelta {
                 let last_delta = &e
                     .get()
                     .last()
-                    .expect("Vector must include at least one element")
-                    .0;
+                    .expect("Vector must include at least one element");
                 sanity_check(last_delta, concept_id);
                 e.get_mut().push(cd);
             },
@@ -333,7 +297,7 @@ impl ContextDelta {
         &self.string
     }
 
-    pub const fn concept(&self) -> &HashMap<usize, Vec<(ConceptDelta, bool)>> {
+    pub const fn concept(&self) -> &HashMap<usize, Vec<ConceptDelta>> {
         &self.concept
     }
 }
@@ -359,12 +323,8 @@ impl Debug for ContextDelta {
             let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
             unsorted_keys.sort();
             for key in unsorted_keys {
-                for (cd, temp) in self.concept.get(key).unwrap() {
-                    string += &format!("\t{}: {:#?}", key, cd);
-                    if *temp {
-                        string += " (temporary) ";
-                    }
-                    string += ",\n";
+                for cd in self.concept.get(key).unwrap() {
+                    string += &format!("\t{}: {:#?},\n", key, cd);
                 }
             }
             string += "    },\n";
@@ -396,9 +356,13 @@ pub enum ConceptDelta {
     Indirect(IndirectConceptDelta),
 }
 
-impl From<&Arc<DirectConceptDelta>> for ConceptDelta {
-    fn from(dcd: &Arc<DirectConceptDelta>) -> Self {
-        Self::Direct(dcd.clone())
+impl ConceptDelta {
+    pub fn try_direct(&self) -> Option<&Arc<DirectConceptDelta>> {
+        if let ConceptDelta::Direct(dcd) = &self {
+            Some(dcd)
+        } else {
+            None
+        }
     }
 }
 
@@ -445,6 +409,7 @@ pub struct NewDirectConceptDelta {
 pub enum NewConceptDelta {
     String(String),
     Composition(Composition),
+    Variable,
     // TODO prevent concrete concept from being a variable
     Left {
         composition_id: usize,

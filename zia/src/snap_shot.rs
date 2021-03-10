@@ -18,7 +18,7 @@ pub trait Reader {
             .get(&id)
             .and_then(|cds| {
                 let mut concept = self.get_concept(id).cloned();
-                for (cd, _) in cds {
+                for cd in cds {
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
                             DirectConceptDelta::New(ndcd) => {

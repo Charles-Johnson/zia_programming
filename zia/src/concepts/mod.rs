@@ -88,6 +88,17 @@ impl Concept {
         self.id
     }
 
+    pub fn make_variable(id: usize) -> Concept {
+        Self {
+            id,
+            concrete_part: Default::default(),
+            specific_part: SpecificPart::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(true),
+                ..Default::default()
+            }),
+        }
+    }
+
     pub fn change_reduction(&mut self, change: Change<usize>) {
         if let SpecificPart::Abstract(ap) = &mut self.specific_part {
             match change {
@@ -473,6 +484,10 @@ impl From<ConcreteConceptType> for SpecificPart {
 impl From<&NewConceptDelta> for SpecificPart {
     fn from(delta: &NewConceptDelta) -> Self {
         match delta {
+            NewConceptDelta::Variable => Self::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(true),
+                reduces_to: None,
+            }),
             NewConceptDelta::Composition(Composition {
                 left_id,
                 right_id,
@@ -772,6 +787,7 @@ pub struct ConcreteConcept {
 impl From<&NewConceptDelta> for ConcreteConcept {
     fn from(delta: &NewConceptDelta) -> Self {
         match delta {
+            NewConceptDelta::Variable => Self::default(),
             NewConceptDelta::Composition(_)
             | NewConceptDelta::ReducesTo {
                 ..
