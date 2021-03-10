@@ -16,8 +16,8 @@
 
 use crate::{
     context_delta::{
-        Change, Composition, IndirectConceptDelta, NewConceptDelta,
-        NewDirectConceptDelta,
+        Change, Composition, DirectConceptDelta, IndirectConceptDelta,
+        NewConceptDelta, NewDirectConceptDelta,
     },
     errors::{ZiaError, ZiaResult},
 };
@@ -86,6 +86,41 @@ impl From<&NewDirectConceptDelta> for Concept {
 impl Concept {
     pub const fn id(&self) -> usize {
         self.id
+    }
+
+    pub fn compose_delta(
+        &self,
+        left_id: usize,
+        right_id: usize,
+    ) -> ZiaResult<DirectConceptDelta> {
+        let after = Composition {
+            left_id,
+            right_id,
+        };
+        if let SpecificPart::Abstract(ap) = &self.specific_part {
+            Ok(DirectConceptDelta::Compose {
+                change: match ap.composition {
+                    MaybeComposition::Composition(CompositePart {
+                        lefthand,
+                        righthand,
+                        ..
+                    }) => Change::Update {
+                        before: Composition {
+                            left_id: lefthand,
+                            right_id: righthand,
+                        },
+                        after,
+                    },
+                    MaybeComposition::Leaf(false) => Change::Create(after),
+                    MaybeComposition::Leaf(true) => {
+                        panic!("Not sure what you are trying to do here ...")
+                    },
+                },
+                composition_id: self.id,
+            })
+        } else {
+            Err(ZiaError::SettingCompositionOfConcrete)
+        }
     }
 
     pub fn make_variable(id: usize) -> Concept {

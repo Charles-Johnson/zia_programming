@@ -1026,9 +1026,14 @@ where
                 composition,
                 righthand,
             )?;
-            // Check if concept's composition can be set, update self.delta
-            // and invalidate cache
-            todo!();
+            let composition_concept =
+                self.snap_shot.read_concept(&self.delta, composition);
+            self.delta.update_concept_delta(
+                &Arc::new(
+                    composition_concept.compose_delta(lefthand, righthand)?,
+                ),
+                &mut self.cache,
+            );
             Ok(())
         }
     }
