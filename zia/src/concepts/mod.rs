@@ -365,12 +365,67 @@ impl Concept {
         }
     }
 
+    pub fn lefthand_of(
+        id: usize,
+        right: &mut Concept,
+        composition: &mut Concept,
+        concrete_concept_type: Option<ConcreteConceptType>,
+    ) -> ZiaResult<Self> {
+        if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
+            match ap.composition {
+                MaybeComposition::Composition(_)
+                | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
+                MaybeComposition::Leaf(false) => {
+                    right.concrete_part.righthand_of.insert(composition.id);
+                    let mut binding_variables = hashset! {};
+                    let mut free_variables = hashset! {};
+                    if right.get_concrete_concept_type()
+                        == Some(ConcreteConceptType::ExistsSuchThat)
+                    {
+                        binding_variables.insert(id);
+                    } else if let SpecificPart::Abstract(AbstractPart {
+                        composition: MaybeComposition::Composition(cp),
+                        ..
+                    }) = &right.specific_part
+                    {
+                        binding_variables = cp.binding_variables.clone();
+                        free_variables = cp.free_variables.clone();
+                    };
+                    ap.composition =
+                        MaybeComposition::Composition(CompositePart {
+                            binding_variables,
+                            free_variables,
+                            lefthand: id,
+                            righthand: right.id,
+                        });
+                    Ok(Self {
+                        concrete_part: ConcreteConcept {
+                            lefthand_of: hashset! {composition.id},
+                            ..Default::default()
+                        },
+                        id,
+                        specific_part: concrete_concept_type.map_or_else(
+                            || {
+                                SpecificPart::Abstract(AbstractPart {
+                                    composition: MaybeComposition::Leaf(false),
+                                    ..Default::default()
+                                })
+                            },
+                            SpecificPart::Concrete,
+                        ),
+                    })
+                },
+            }
+        } else {
+            Err(ZiaError::SettingCompositionOfConcrete)
+        }
+    }
+
     pub fn righthand_of(
         id: usize,
         left: &mut Concept,
         composition: &mut Concept,
         concrete_concept_type: Option<ConcreteConceptType>,
-        variable: bool,
     ) -> ZiaResult<Self> {
         if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
             match ap.composition {
@@ -408,9 +463,7 @@ impl Concept {
                         specific_part: concrete_concept_type.map_or_else(
                             || {
                                 SpecificPart::Abstract(AbstractPart {
-                                    composition: MaybeComposition::Leaf(
-                                        variable,
-                                    ),
+                                    composition: MaybeComposition::Leaf(false),
                                     ..Default::default()
                                 })
                             },
@@ -427,7 +480,6 @@ impl Concept {
     pub fn double(
         id: usize,
         composition: &mut Concept,
-        variable: bool,
         concrete_concept_type: Option<ConcreteConceptType>,
     ) -> Self {
         let concept = Self {
@@ -440,14 +492,11 @@ impl Concept {
             specific_part: concrete_concept_type.map_or_else(
                 || {
                     SpecificPart::Abstract(AbstractPart {
-                        composition: MaybeComposition::Leaf(variable),
+                        composition: MaybeComposition::Leaf(false),
                         reduces_to: None,
                     })
                 },
-                |ct| {
-                    debug_assert!(!variable);
-                    SpecificPart::Concrete(ct)
-                },
+                SpecificPart::Concrete,
             ),
         };
         if let SpecificPart::Abstract(AbstractPart {
@@ -458,11 +507,7 @@ impl Concept {
             *composition = MaybeComposition::Composition(CompositePart {
                 lefthand: id,
                 righthand: id,
-                free_variables: if variable {
-                    hashset! {id}
-                } else {
-                    hashset! {}
-                },
+                free_variables: hashset! {},
                 binding_variables: hashset! {},
             });
         } else {
@@ -545,33 +590,24 @@ impl From<&NewConceptDelta> for SpecificPart {
             }),
             NewConceptDelta::Left {
                 concrete_type,
-                variable,
                 ..
             }
             | NewConceptDelta::Right {
                 concrete_type,
-                variable,
                 ..
             }
             | NewConceptDelta::Double {
                 concrete_type,
-                variable,
                 ..
-            } => {
-                // A variable cannot be concrete
-                concrete_type.map_or_else(
-                    || {
-                        Self::Abstract(AbstractPart {
-                            composition: MaybeComposition::Leaf(*variable),
-                            reduces_to: None,
-                        })
-                    },
-                    |ct| {
-                        debug_assert!(!variable);
-                        Self::Concrete(ct)
-                    },
-                )
-            },
+            } => concrete_type.map_or_else(
+                || {
+                    Self::Abstract(AbstractPart {
+                        composition: MaybeComposition::Leaf(false),
+                        reduces_to: None,
+                    })
+                },
+                Self::Concrete,
+            ),
             NewConceptDelta::String(s) => Self::String(s.clone()),
             NewConceptDelta::ReducesTo {
                 reduction,

@@ -410,26 +410,20 @@ pub enum NewConceptDelta {
     String(String),
     Composition(Composition),
     Variable,
-    // TODO prevent concrete concept from being a variable
     Left {
         composition_id: usize,
         right_id: usize,
         concrete_type: Option<ConcreteConceptType>,
-        variable: bool,
     },
-    // TODO prevent concrete concept from being a variable
     Right {
         composition_id: usize,
         left_id: usize,
         concrete_type: Option<ConcreteConceptType>,
-        variable: bool,
     },
-    // TODO prevent concrete concept from being a variable
     /// Used for e.g. `let label_of label_of -> 'label_of'`
     Double {
         composition_id: usize,
         concrete_type: Option<ConcreteConceptType>,
-        variable: bool,
     },
     ReducesTo {
         variable: bool,

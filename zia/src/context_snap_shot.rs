@@ -413,9 +413,23 @@ impl Apply for ContextSnapShot {
                         composition_id,
                         right_id,
                         concrete_type,
-                        variable,
                     } => {
-                        todo!();
+                        let [right, composition]: [&mut Concept; 2] = self
+                            .write_concepts(
+                                arr![usize; *right_id, *composition_id],
+                            )
+                            .into();
+                        debug_assert!(new_concept_id != right_id);
+                        debug_assert!(new_concept_id != composition_id);
+                        self.concepts[*new_concept_id] = Some(
+                            Concept::lefthand_of(
+                                *new_concept_id,
+                                right,
+                                composition,
+                                *concrete_type,
+                            )
+                            .unwrap(),
+                        );
                         if let Some(cct) = concrete_type {
                             self.concrete_concepts
                                 .insert(*new_concept_id, *cct);
@@ -424,14 +438,12 @@ impl Apply for ContextSnapShot {
                     NewConceptDelta::Double {
                         composition_id,
                         concrete_type,
-                        variable,
                     } => {
                         let composition = self.write_concept(*composition_id);
                         debug_assert!(new_concept_id != composition_id);
                         self.concepts[*new_concept_id] = Some(Concept::double(
                             *new_concept_id,
                             composition,
-                            *variable,
                             *concrete_type,
                         ));
                         if let Some(cct) = concrete_type {
@@ -443,10 +455,12 @@ impl Apply for ContextSnapShot {
                         composition_id,
                         left_id,
                         concrete_type,
-                        variable,
                     } => {
-                        let [left, composition] =
-                            self.write_concept_pair(*left_id, *composition_id);
+                        let [left, composition]: [&mut Concept; 2] = self
+                            .write_concepts(
+                                arr![usize; *left_id, *composition_id],
+                            )
+                            .into();
                         debug_assert!(new_concept_id != left_id);
                         debug_assert!(new_concept_id != composition_id);
                         self.concepts[*new_concept_id] = Some(
@@ -455,7 +469,6 @@ impl Apply for ContextSnapShot {
                                 left,
                                 composition,
                                 *concrete_type,
-                                *variable,
                             )
                             .unwrap(),
                         );
