@@ -79,7 +79,7 @@
 //! assert_eq!(context.execute("let a -> d"), "");
 //!
 //! // Try to specify the composition of a concept in terms of itself
-//! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteDefinition.to_string());
+//! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteComposition.to_string());
 //!
 //! // Try to specify the reduction of concept in terms of itself
 //! assert_eq!(context.execute("let c d -> (c d) e"), ZiaError::ExpandingReduction.to_string());
