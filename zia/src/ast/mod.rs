@@ -20,8 +20,6 @@ use std::{
     sync::Arc,
 };
 
-use maplit::hashset;
-
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone)]
 pub struct SyntaxTree {

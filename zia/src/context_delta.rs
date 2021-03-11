@@ -36,10 +36,10 @@ impl ContextDelta {
     ) {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         match concept_delta.as_ref() {
-            DirectConceptDelta::New(ndcd) => {
-                let new_concept_id = ndcd.new_concept_id;
+            DirectConceptDelta::New(newdcd) => {
+                let new_concept_id = newdcd.new_concept_id;
                 self.insert_delta_for_new_concept(new_concept_id, dcd);
-                match &ndcd.delta {
+                match &newdcd.delta {
                     NewConceptDelta::Variable => {},
                     NewConceptDelta::String(s) => {
                         self.string
@@ -128,7 +128,7 @@ impl ContextDelta {
                     },
                     NewConceptDelta::ReducesTo {
                         reduction,
-                        variable,
+                        ..
                     } => {
                         let cd =
                             IndirectConceptDelta::ReducesFrom(new_concept_id)
@@ -262,10 +262,7 @@ impl ContextDelta {
                         if matches!(
                             dcd.as_ref(),
                             &DirectConceptDelta::Remove(_)
-                        ) =>
-                    {
-                        ()
-                    },
+                        ) => {},
                     _ => panic!("Concept {} already exists", concept_id),
                 };
             },

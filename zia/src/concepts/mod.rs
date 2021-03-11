@@ -212,7 +212,7 @@ impl Concept {
         }
     }
 
-    pub fn remove_reduction(&self, id: usize) -> ZiaResult<usize> {
+    pub fn remove_reduction(&self) -> ZiaResult<usize> {
         self.get_reduction().ok_or(ZiaError::RedundantReduction)
     }
 
@@ -262,13 +262,6 @@ impl Concept {
                 }
             },
             _ => None,
-        }
-    }
-
-    pub fn reduce_to(&self, id: usize, reduction: usize) -> ZiaResult<()> {
-        match self.specific_part {
-            SpecificPart::Abstract(ref c) => Ok(()),
-            _ => Err(ZiaError::ConcreteReduction),
         }
     }
 
@@ -872,11 +865,15 @@ impl From<&NewConceptDelta> for ConcreteConcept {
                 ..
             }
             | NewConceptDelta::String(_) => Self::default(),
-            NewConceptDelta::Left {
+            NewConceptDelta::Double {
                 composition_id,
                 ..
-            }
-            | NewConceptDelta::Double {
+            } => Self {
+                lefthand_of: hashset! {*composition_id},
+                righthand_of: hashset! {*composition_id},
+                ..Default::default()
+            },
+            NewConceptDelta::Left {
                 composition_id,
                 ..
             } => Self {
@@ -884,10 +881,6 @@ impl From<&NewConceptDelta> for ConcreteConcept {
                 ..Default::default()
             },
             NewConceptDelta::Right {
-                composition_id,
-                ..
-            }
-            | NewConceptDelta::Double {
                 composition_id,
                 ..
             } => Self {

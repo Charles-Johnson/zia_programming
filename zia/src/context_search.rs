@@ -18,7 +18,7 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType},
-    context_cache::{ContextCache, ContextCacheList},
+    context_cache::{CacheList, ContextCache},
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
     snap_shot::Reader as SnapShotReader,
@@ -37,7 +37,7 @@ pub struct ContextSearch<'a, S> {
     snap_shot: &'a S,
     variable_mask: VariableMask,
     delta: &'a ContextDelta,
-    caches: Arc<ContextCacheList<'a>>,
+    caches: Arc<CacheList<'a>>,
     syntax_evaluating: HashSet<Arc<SyntaxTree>>,
 }
 
@@ -1003,7 +1003,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     pub fn spawn(&self, cache: &'a ContextCache) -> Self {
         Self {
-            caches: Arc::new(ContextCacheList::spawn(&self.caches, cache)),
+            caches: Arc::new(CacheList::spawn(&self.caches, cache)),
             delta: self.delta,
             snap_shot: self.snap_shot,
             syntax_evaluating: self.syntax_evaluating.clone(),

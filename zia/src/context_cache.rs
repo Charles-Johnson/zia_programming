@@ -6,12 +6,12 @@ use log::debug;
 use std::{mem::swap, sync::Arc};
 
 #[derive(Debug)]
-pub struct ContextCacheList<'a> {
+pub struct CacheList<'a> {
     head: &'a ContextCache,
-    tail: Option<Arc<ContextCacheList<'a>>>,
+    tail: Option<Arc<CacheList<'a>>>,
 }
 
-impl<'a> From<&'a ContextCache> for ContextCacheList<'a> {
+impl<'a> From<&'a ContextCache> for CacheList<'a> {
     fn from(head: &'a ContextCache) -> Self {
         Self {
             head,
@@ -20,7 +20,7 @@ impl<'a> From<&'a ContextCache> for ContextCacheList<'a> {
     }
 }
 
-impl<'a> ContextCacheList<'a> {
+impl<'a> CacheList<'a> {
     pub fn spawn(list: &Arc<Self>, cache: &'a ContextCache) -> Self {
         Self {
             head: cache,

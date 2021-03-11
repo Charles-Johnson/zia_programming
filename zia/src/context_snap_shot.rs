@@ -31,7 +31,6 @@ use generic_array::{
 };
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    convert::TryInto,
     fmt::Display,
 };
 
@@ -147,9 +146,10 @@ impl ContextSnapShot {
                 // Is new_concept_id the same as id?
                 if let DirectConceptDelta::New(NewDirectConceptDelta {
                     new_concept_id,
-                    delta,
+                    ..
                 }) = dcd.as_ref()
                 {
+                    debug_assert_eq!(id, new_concept_id);
                     if length <= *id {
                         length = *id + 1;
                     }
@@ -161,11 +161,6 @@ impl ContextSnapShot {
 
     fn add_string(&mut self, string_id: usize, string: &str) {
         self.string_map.insert(string.to_string(), string_id);
-    }
-
-    fn blindly_remove_concept(&mut self, id: usize) {
-        self.concepts[id] = None;
-        self.gaps.push(id);
     }
 
     fn remove_string(&mut self, string: &str) {
@@ -243,9 +238,10 @@ impl SnapShotReader for ContextSnapShot {
             for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 if let DirectConceptDelta::New(NewDirectConceptDelta {
                     new_concept_id,
-                    delta,
+                    ..
                 }) = dcd.as_ref()
                 {
+                    debug_assert_eq!(id, new_concept_id);
                     if *id >= new_concept_length {
                         new_concept_length = *id + 1
                     }
@@ -279,9 +275,6 @@ impl SnapShotReader for ContextSnapShot {
                 (Some(id), _) => {
                     if removed_gaps.contains(&id) {
                         continue;
-                    } else {
-                        index = id;
-                        break;
                     }
                 },
                 (None, Some(gi)) => {
@@ -289,13 +282,9 @@ impl SnapShotReader for ContextSnapShot {
                         if gi == 0 {
                             index = new_concept_length;
                             break;
-                        } else {
-                            gap_index = Some(gi - 1);
-                            continue;
                         }
-                    } else {
-                        index = self.gaps[gi];
-                        break;
+                        gap_index = Some(gi - 1);
+                        continue;
                     }
                 },
                 (None, None) => {
@@ -339,8 +328,14 @@ impl SnapShotReader for ContextSnapShot {
                     DirectConceptDelta::New(NewDirectConceptDelta {
                         new_concept_id,
                         ..
-                    }) => id = Some(Some(*concept_id)),
-                    DirectConceptDelta::Remove(concept_id) => id = Some(None),
+                    }) => {
+                        debug_assert_eq!(concept_id, new_concept_id);
+                        id = Some(Some(*concept_id))
+                    },
+                    DirectConceptDelta::Remove(concept_id) => {
+                        debug_assert_eq!(Some(Some(*concept_id)), id);
+                        id = Some(None)
+                    },
                     _ => (),
                 }
             }

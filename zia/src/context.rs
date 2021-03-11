@@ -18,8 +18,8 @@
 use crate::concepts::Concept;
 use crate::{
     and_also::AndAlso,
-    ast::{is_variable, SyntaxTree},
-    concepts::{ConcreteConceptType, SpecificPart},
+    ast::SyntaxTree,
+    concepts::ConcreteConceptType,
     context_cache::ContextCache,
     context_delta::{
         Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
@@ -35,8 +35,7 @@ use crate::{
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
 use std::{
-    collections::HashMap, convert::TryFrom, default::Default, fmt::Debug,
-    iter::from_fn, mem::swap, sync::Arc,
+    collections::HashMap, default::Default, fmt::Debug, mem::swap, sync::Arc,
 };
 
 #[derive(Clone)]
@@ -717,8 +716,6 @@ where
         {
             None => Err(ZiaError::RedundantCompositionRemoval),
             Some((left, right)) => {
-                // Update self.delta to include deletion of concept's composition
-                todo!();
                 self.try_delete_concept(concept)?;
                 self.try_delete_concept(left)?;
                 self.try_delete_concept(right)
@@ -851,7 +848,7 @@ where
     fn delete_reduction(&mut self, concept_id: usize) -> ZiaResult<()> {
         self.snap_shot
             .read_concept(&self.delta, concept_id)
-            .remove_reduction(concept_id)
+            .remove_reduction()
             .map(|z| {
                 // update self.delta to include deletion of composition
                 // and invalidate cache
@@ -959,7 +956,6 @@ where
         let label_id = self
             .concrete_concept_id(ConcreteConceptType::Label)
             .ok_or(ZiaError::NoLabelConcept)?;
-        let variable = is_variable(string);
         let composition = self.find_or_insert_composition(label_id, concept)?;
         let string_id = self.new_string(string);
         self.update_reduction(composition, string_id)

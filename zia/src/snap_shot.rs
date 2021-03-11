@@ -2,8 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType},
     context_delta::{
-        Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
-        IndirectConceptDelta, NewConceptDelta,
+        Change, Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
     },
     errors::{ZiaError, ZiaResult},
 };
@@ -34,7 +33,80 @@ pub trait Reader {
                             DirectConceptDelta::Compose {
                                 change,
                                 composition_id,
-                            } => todo!(),
+                            } => {
+                                debug_assert_eq!(*composition_id, id);
+                                match change {
+                                    Change::Create(Composition {
+                                        left_id,
+                                        right_id,
+                                    }) => {
+                                        let mut left =
+                                            self.read_concept(delta, *left_id);
+                                        let mut right =
+                                            self.read_concept(delta, *right_id);
+                                        concept
+                                            .as_mut()
+                                            .unwrap()
+                                            .change_composition(Change::Create(
+                                                [&mut left, &mut right],
+                                            ))
+                                            .unwrap();
+                                    },
+                                    Change::Update {
+                                        before:
+                                            Composition {
+                                                left_id: bl,
+                                                right_id: br,
+                                            },
+                                        after:
+                                            Composition {
+                                                left_id: al,
+                                                right_id: ar,
+                                            },
+                                    } => {
+                                        concept
+                                            .as_mut()
+                                            .unwrap()
+                                            .change_composition(
+                                                Change::Update {
+                                                    before: [
+                                                        &mut self.read_concept(
+                                                            delta, *bl,
+                                                        ),
+                                                        &mut self.read_concept(
+                                                            delta, *br,
+                                                        ),
+                                                    ],
+                                                    after: [
+                                                        &mut self.read_concept(
+                                                            delta, *al,
+                                                        ),
+                                                        &mut self.read_concept(
+                                                            delta, *ar,
+                                                        ),
+                                                    ],
+                                                },
+                                            )
+                                            .unwrap();
+                                    },
+                                    Change::Remove(Composition {
+                                        left_id,
+                                        right_id,
+                                    }) => {
+                                        let mut left =
+                                            self.read_concept(delta, *left_id);
+                                        let mut right =
+                                            self.read_concept(delta, *right_id);
+                                        concept
+                                            .as_mut()
+                                            .unwrap()
+                                            .change_composition(Change::Remove(
+                                                [&mut left, &mut right],
+                                            ))
+                                            .unwrap();
+                                    },
+                                };
+                            },
                             DirectConceptDelta::Reduce {
                                 change,
                                 unreduced_id,
