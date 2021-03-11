@@ -179,7 +179,15 @@ impl Concept {
             IndirectConceptDelta::ReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.insert(*unreduced_id);
             },
-            _ => todo!(),
+            IndirectConceptDelta::NoLongerLefthandOf(composition_id) => {
+                self.concrete_part.lefthand_of.remove(composition_id);
+            },
+            IndirectConceptDelta::NoLongerRighthandOf(composition_id) => {
+                self.concrete_part.righthand_of.remove(composition_id);
+            },
+            IndirectConceptDelta::NoLongerReducesFrom(unreduced_id) => {
+                self.concrete_part.reduces_from.remove(unreduced_id);
+            }
         }
     }
 
