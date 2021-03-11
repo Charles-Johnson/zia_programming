@@ -187,7 +187,7 @@ impl Concept {
             },
             IndirectConceptDelta::NoLongerReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.remove(unreduced_id);
-            }
+            },
         }
     }
 
