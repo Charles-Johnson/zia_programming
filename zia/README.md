@@ -26,9 +26,10 @@ be possible once more functionality is added. For example, the need to group pai
 in parentheses will be alleviated by functionality to set the relative precedence and associativity
 of concepts.
 
-So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-`"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, "prec", "deafult", ">" but the labels
-can be changed to different symbols for different languages or disciplines.
+So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
+`->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>`, `=>` and
+`exists_such_that` but the labels can be changed to different symbols for different languages or
+disciplines.
 
 ## Examples
 
@@ -38,12 +39,6 @@ use zia::{Context, ZiaError};
 
 // Construct a new `Context` using the `new` method
 let mut context = Context::new();
-
-// Specify operator precedence for `let` and `->`.
-assert_eq!(context.execute("let default > prec ->"), "");
-assert_eq!(context.execute("let (prec ->) > prec let"), "");
-// Cannot yet infer partial order. Requires implication to express transitive property
-assert_eq!(context.execute("let default > prec let"), "");
 
 // Specify the rule that the concept "a b" reduces to concept "c"
 assert_eq!(context.execute("let a b -> c"), "");
@@ -70,7 +65,7 @@ assert_eq!(context.execute("표시 a b"), "\'c\'");
 assert_eq!(context.execute("let a -> d"), "");
 
 // Try to specify the composition of a concept in terms of itself
-assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteDefinition.to_string());
+assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteComposition.to_string());
 
 // Try to specify the reduction of concept in terms of itself
 assert_eq!(context.execute("let c d -> (c d) e"), ZiaError::ExpandingReduction.to_string());
@@ -101,8 +96,8 @@ assert_eq!(context.execute("h i j"), "true");
 assert_eq!(context.execute("assoc a"), "right");
 
 // Define patterns
-assert_eq!(context.execute("let _x_ and false -> false"), "");
-assert_eq!(context.execute("foo and false"), "false");
+assert_eq!(context.execute("let _x_ or true -> true"), "");
+assert_eq!(context.execute("false or true"), "true");
 ```
 
 License: GPL-3.0

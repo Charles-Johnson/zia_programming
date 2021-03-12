@@ -14,29 +14,52 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use ast::SyntaxTree;
-use concepts::{AbstractPart, Concept};
-use constants::{DEFINE, LABEL, LET, REDUCTION, TRUE};
-use context_delta::{
-    update_concept_delta, ConceptDelta, ContextDelta, StringDelta,
+#[cfg(test)]
+use crate::concepts::Concept;
+use crate::{
+    and_also::AndAlso,
+    ast::SyntaxTree,
+    concepts::ConcreteConceptType,
+    context_cache::ContextCache,
+    context_delta::{
+        Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
+        NewDirectConceptDelta,
+    },
+    context_search::{Comparison, ContextSearch},
+    context_snap_shot::Associativity,
+    delta::Apply,
+    errors::{map_err_variant, ZiaError, ZiaResult},
+    parser::parse_line,
+    snap_shot::Reader as SnapShotReader,
 };
-use context_search::ContextSearch;
-use delta::{Apply, Delta};
-use errors::{map_err_variant, ZiaError, ZiaResult};
 #[cfg(not(target_arch = "wasm32"))]
-use slog::{Drain, Logger};
-use snap_shot::SnapShot;
-use std::{default::Default, iter::from_fn, mem::swap, rc::Rc};
+use slog::{info, o, Drain, Logger};
+use std::{
+    collections::HashMap, default::Default, fmt::Debug, mem::swap, sync::Arc,
+};
 
 #[derive(Clone)]
-pub struct Context {
-    snap_shot: SnapShot,
+pub struct Context<S> {
+    snap_shot: S,
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta,
+    cache: ContextCache,
+    variable_labels: HashMap<String, usize>,
 }
 
-impl Context {
+type ParsingResult = ZiaResult<Arc<SyntaxTree>>;
+
+#[derive(Debug, PartialEq)]
+pub struct TokenSubsequence {
+    pub syntax: Vec<Arc<SyntaxTree>>,
+    pub positions: Vec<usize>,
+}
+
+impl<S> Context<S>
+where
+    S: SnapShotReader + Default + Sync + Apply<Delta = ContextDelta> + Debug,
+{
     #[must_use]
     pub fn new() -> Self {
         let mut cont = Self::default();
@@ -47,12 +70,32 @@ impl Context {
         cont
     }
 
+    #[cfg(test)]
+    pub fn new_test_case(
+        concepts: &[Concept],
+        concept_labels: &HashMap<usize, &'static str>,
+    ) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let logger = {
+            let plain =
+                slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
+            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
+        };
+        Self {
+            snap_shot: S::new_test_case(concepts, concept_labels),
+            #[cfg(not(target_arch = "wasm32"))]
+            logger,
+            delta: ContextDelta::default(),
+            cache: ContextCache::default(),
+            variable_labels: HashMap::new(),
+        }
+    }
+
     pub fn execute(&mut self, command: &str) -> String {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({})", command);
         let string = self
-            .snap_shot
-            .ast_from_expression(&self.delta, command)
+            .ast_from_expression(command)
             .and_then(|a| {
                 #[cfg(not(target_arch = "wasm32"))]
                 info!(
@@ -65,7 +108,314 @@ impl Context {
         #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
+        self.variable_labels = HashMap::new();
         string
+    }
+
+    pub fn ast_from_expression(&mut self, s: &str) -> ParsingResult {
+        let tokens: Vec<String> = parse_line(s)?;
+        self.ast_from_tokens(&tokens)
+    }
+
+    fn ast_from_tokens(&mut self, tokens: &[String]) -> ParsingResult {
+        info!(self.logger, "ast_from_tokens({:#?})", tokens);
+        match tokens.len() {
+            0 => Err(ZiaError::EmptyParentheses),
+            1 => self.ast_from_token(&tokens[0]),
+            2 => self.ast_from_pair(&tokens[0], &tokens[1]),
+            _ => {
+                let TokenSubsequence {
+                    syntax: lp_syntax,
+                    positions: lp_indices,
+                } = self.lowest_precedence_info(tokens)?;
+                if lp_indices.is_empty() {
+                    return Err(ZiaError::AmbiguousExpression);
+                }
+                let assoc =
+                    lp_syntax.iter().try_fold(None, |assoc, syntax| match (
+                        self.context_search().get_associativity(syntax),
+                        assoc,
+                    ) {
+                        (x, Some(y)) => {
+                            if x == y {
+                                Ok(Some(x))
+                            } else {
+                                Err(ZiaError::AmbiguousExpression)
+                            }
+                        },
+                        (x, None) => Ok(Some(x)),
+                    })?;
+                info!(
+                    self.logger,
+                    "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
+                );
+                match assoc {
+                    Some(Associativity::Right) => {
+                        let tail = lp_indices
+                            .iter()
+                            .rev()
+                            .try_fold((None, None), |state, lp_index| {
+                                self.associativity_try_fold_handler(
+                                    tokens,
+                                    state,
+                                    *lp_index,
+                                    &Associativity::Right,
+                                )
+                            })?
+                            .0
+                            .unwrap(); // Already checked that lp_indices is non-empty;
+                        info!(
+                            self.logger,
+                            "ast_from_tokens({:#?}): tail = {}", tokens, tail
+                        );
+                        if lp_indices[0] == 0 {
+                            Ok(tail)
+                        } else {
+                            let head =
+                                self.ast_from_tokens(&tokens[..lp_indices[0]])?;
+                            Ok(self.context_search().combine(&head, &tail))
+                        }
+                    },
+                    Some(Associativity::Left) => lp_indices
+                        .iter()
+                        .try_fold((None, None), |state, lp_index| {
+                            self.associativity_try_fold_handler(
+                                tokens,
+                                state,
+                                *lp_index,
+                                &Associativity::Left,
+                            )
+                        })?
+                        .0
+                        .ok_or(ZiaError::AmbiguousExpression),
+                    None => Err(ZiaError::AmbiguousExpression),
+                }
+            },
+        }
+    }
+
+    fn associativity_try_fold_handler(
+        &mut self,
+        tokens: &[String],
+        state: (Option<Arc<SyntaxTree>>, Option<usize>),
+        lp_index: usize,
+        assoc: &Associativity,
+    ) -> ZiaResult<(Option<Arc<SyntaxTree>>, Option<usize>)> {
+        let prev_lp_index = state.1;
+        let slice = assoc.slice_tokens(tokens, prev_lp_index, lp_index);
+        // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
+        if slice.is_empty() {
+            return Err(ZiaError::AmbiguousExpression);
+        }
+        let edge_index = match assoc {
+            Associativity::Left => slice.len() - 1,
+            Associativity::Right => 0,
+        };
+        let lp_with_the_rest = if lp_index == edge_index {
+            let edge_syntax = self.ast_from_token(&slice[edge_index])?;
+            if slice.len() == 1 {
+                edge_syntax
+            } else {
+                match assoc {
+                    Associativity::Left => {
+                        let rest_of_syntax = if slice.len() < 3 {
+                            self.ast_from_token(&slice[slice.len() - 1])?
+                        } else {
+                            self.ast_from_tokens(&slice[..slice.len() - 1])?
+                        };
+                        self.context_search()
+                            .combine(&rest_of_syntax, &edge_syntax)
+                    },
+                    Associativity::Right => {
+                        let rest_of_syntax = if slice.len() < 3 {
+                            self.ast_from_token(&slice[1])?
+                        } else {
+                            self.ast_from_tokens(&slice[1..])?
+                        };
+                        self.context_search()
+                            .combine(&edge_syntax, &rest_of_syntax)
+                    },
+                }
+            }
+        } else {
+            self.ast_from_tokens(slice)?
+        };
+        let edge = state.0;
+        Ok((
+            Some(match edge {
+                None => lp_with_the_rest,
+                Some(e) => match assoc {
+                    Associativity::Left => {
+                        self.context_search().combine(&e, &lp_with_the_rest)
+                    },
+                    Associativity::Right => {
+                        self.context_search().combine(&lp_with_the_rest, &e)
+                    },
+                },
+            }),
+            Some(lp_index),
+        ))
+    }
+
+    /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
+    pub fn lowest_precedence_info(
+        &self,
+        tokens: &[String],
+    ) -> ZiaResult<TokenSubsequence> {
+        info!(self.logger, "lowest_precedence_info({:#?})", tokens);
+        let context_search = self.context_search();
+        let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
+            // Initially assume no concepts have the lowest precedence
+            (Vec::<Arc<SyntaxTree>>::new(), Vec::<usize>::new(), None),
+            |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
+             token| {
+                // Increment index
+                let this_index = prev_index.map(|x| x + 1).or(Some(0));
+                let raw_syntax_of_token = SyntaxTree::from(token);
+                let (precedence_of_token, syntax_of_token) = self
+                    .snap_shot
+                    .concept_from_label(&self.delta, token)
+                    .map_or_else(
+                        || {
+                            (
+                                context_search
+                                    .concrete_ast(ConcreteConceptType::Default),
+                                raw_syntax_of_token.clone().into(),
+                            )
+                        },
+                        |c| {
+                            let syntax_of_token = self
+                                .snap_shot
+                                .bind_concept_to_syntax(
+                                    &self.delta,
+                                    raw_syntax_of_token.clone(),
+                                    c,
+                                )
+                                .into();
+                            (
+                                context_search
+                                    .concrete_ast(
+                                        ConcreteConceptType::Precedence,
+                                    )
+                                    .map(|ast| {
+                                        context_search
+                                            .combine(&ast, &syntax_of_token)
+                                    }),
+                                syntax_of_token,
+                            )
+                        },
+                    );
+                // Compare current token's precedence with each currently assumed lowest syntax
+                for syntax in lowest_precedence_syntax.clone() {
+                    let precedence_of_syntax = if syntax.get_concept().is_some()
+                    {
+                        context_search
+                            .concrete_ast(ConcreteConceptType::Precedence)
+                            .map(|ast| context_search.combine(&ast, &syntax))
+                    } else {
+                        context_search
+                            .concrete_ast(ConcreteConceptType::Default)
+                    };
+                    match precedence_of_syntax
+                        .and_also(&precedence_of_token)
+                        .map_or(Comparison::Incomparable, |(pos, pot)| {
+                            context_search.compare(pos, pot).0
+                        }) {
+                        // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                        // reset lowest precedence syntax with just this one
+                        Comparison::GreaterThan => {
+                            return Ok((
+                                vec![syntax_of_token],
+                                vec![this_index.unwrap()],
+                                this_index,
+                            ))
+                        },
+                        // syntax of token has a higher precedence than some previous lowest precendence syntax
+                        // keep existing lowest precedence syntax as-is
+                        Comparison::LessThan => {
+                            return Ok((
+                                lowest_precedence_syntax,
+                                lp_indices,
+                                this_index,
+                            ))
+                        },
+                        // syntax of token has at least an equal precedence as the previous lowest precedence syntax
+                        // include syntax is lowest precedence syntax list
+                        Comparison::EqualTo
+                        | Comparison::GreaterThanOrEqualTo => {
+                            lowest_precedence_syntax.push(syntax_of_token);
+                            lp_indices.push(this_index.unwrap());
+                            return Ok((
+                                lowest_precedence_syntax,
+                                lp_indices,
+                                this_index,
+                            ));
+                        },
+                        // Cannot determine if token has higher or lower precedence than this syntax
+                        // Check other syntax with lowest precedence
+                        Comparison::Incomparable
+                        | Comparison::LessThanOrEqualTo => (),
+                    };
+                }
+                // syntax of token has neither higher or lower precedence than the lowest precedence syntax
+                lowest_precedence_syntax.push(syntax_of_token);
+                lp_indices.push(this_index.unwrap());
+                Ok((lowest_precedence_syntax, lp_indices, this_index))
+            },
+        )?;
+        let result = Ok(TokenSubsequence {
+            syntax,
+            positions,
+        });
+        info!(
+            self.logger,
+            "lowest_precedence_info({:#?}) -> {:#?}", tokens, result
+        );
+        result
+    }
+
+    fn ast_from_pair(&mut self, left: &str, right: &str) -> ParsingResult {
+        let lefthand = self.ast_from_token(left)?;
+        let righthand = self.ast_from_token(right)?;
+        Ok(self.context_search().combine(&lefthand, &righthand))
+    }
+
+    fn concrete_concept_id(&self, cct: ConcreteConceptType) -> Option<usize> {
+        self.snap_shot.concrete_concept_id(&self.delta, cct)
+    }
+
+    fn ast_from_token(&mut self, t: &str) -> ParsingResult {
+        if t.contains(' ') || t.contains('(') || t.contains(')') {
+            self.ast_from_expression(t)
+        } else {
+            let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
+            if ast.is_variable() && ast.get_concept().is_none() {
+                let new_concept_id =
+                    self.variable_labels.get(t).copied().unwrap_or_else(|| {
+                        let new_concept_id = self
+                            .snap_shot
+                            .lowest_unoccupied_concept_id(&self.delta);
+                        let concept_delta =
+                            DirectConceptDelta::New(NewDirectConceptDelta {
+                                new_concept_id,
+                                delta: NewConceptDelta::Variable,
+                            })
+                            .into();
+                        self.delta.update_concept_delta(
+                            &concept_delta,
+                            &mut self.cache,
+                        );
+                        self.variable_labels.insert(t.into(), new_concept_id);
+                        new_concept_id
+                    });
+                Ok(self
+                    .snap_shot
+                    .bind_concept_to_syntax(&self.delta, ast, new_concept_id)
+                    .into())
+            } else {
+                Ok(ast.into())
+            }
+        }
     }
 
     fn commit(&mut self) {
@@ -75,59 +425,79 @@ impl Context {
     }
 
     fn setup(&mut self) {
-        let mut concrete_constructor = || {
-            let (delta, index) = self.snap_shot.add_concept_delta(
-                &self.delta,
-                Concept::default(),
-                false,
-            );
-            self.delta.combine(delta);
-            index
-        };
+        let label_id = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+        let mut concrete_constructor =
+            |concrete_id: Option<usize>, concrete_label, concrete_type| {
+                self.new_labelled_concept(
+                    concrete_id,
+                    concrete_label,
+                    Some(concrete_type),
+                    label_id,
+                );
+            };
         let labels = vec![
-            "label_of", ":=", "->", "let", "true", "false", "assoc", "right",
-            "left", "prec", "default", ">",
+            (":=", ConcreteConceptType::Define),
+            ("->", ConcreteConceptType::Reduction),
+            ("let", ConcreteConceptType::Let),
+            ("true", ConcreteConceptType::True),
+            ("false", ConcreteConceptType::False),
+            ("assoc", ConcreteConceptType::Associativity),
+            ("right", ConcreteConceptType::Right),
+            ("left", ConcreteConceptType::Left),
+            ("prec", ConcreteConceptType::Precedence),
+            ("default", ConcreteConceptType::Default),
+            (">", ConcreteConceptType::GreaterThan),
+            ("=>", ConcreteConceptType::Implication),
+            ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
         ];
-        let mut counter = 0;
-        let concepts: Vec<usize> = from_fn(|| {
-            if counter < labels.len() {
-                counter += 1;
-                Some(concrete_constructor())
-            } else {
-                None
-            }
-        })
-        .collect();
-        concepts
-            .iter()
-            .zip(&labels)
-            .try_for_each(|(concept, string)| self.label(*concept, string))
-            .unwrap();
+        concrete_constructor(
+            Some(label_id),
+            "label_of",
+            ConcreteConceptType::Label,
+        );
+        for (label, concrete_type) in labels {
+            concrete_constructor(None, label, concrete_type);
+        }
+        self.execute("let (true and true) -> true");
+        assert_eq!(self.execute("true and true"), "true");
+        self.execute("let (false and _y_) -> false");
+        // assert_eq!(self.execute("false and false"), "false");
+        assert_eq!(self.execute("false and true"), "false");
+        self.execute("let (_x_ and false) -> false");
+        assert_eq!(self.execute("true and false"), "false");
+        assert_eq!(self.execute("let (assoc exists_such_that) -> left"), "");
+        assert_eq!(self.execute(
+            "let ((_y_ exists_such_that) (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
+        ), "");
+        self.execute("let default > prec ->");
+        self.execute("let (prec ->) > prec let");
+        assert_eq!(self.execute("let 2 > 1"), "");
+        assert_eq!(self.execute("let 1 > 0"), "");
+        assert_eq!(self.execute("2 > 0"), "true");
     }
 
     fn reduce_and_call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let reduced_left =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(left);
-        let reduced_right =
-            ContextSearch::from((&self.snap_shot, &self.delta)).reduce(right);
+        info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
+        let reduced_left = self.context_search().reduce(left);
+        let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
             (None, None) => Err(ZiaError::CannotReduceFurther),
-            (Some(rl), None) => self.call_pair(&rl, right),
-            (None, Some(rr)) => self.call_pair(left, &rr),
-            (Some(rl), Some(rr)) => self.call_pair(&rl, &rr),
+            (Some((rl, _)), None) => self.call_pair(&rl, right),
+            (None, Some((rr, _))) => self.call_pair(left, &rr),
+            (Some((rl, _)), Some((rr, _))) => self.call_pair(&rl, &rr),
         }
     }
 
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let expansion = &self.snap_shot.expand(&self.delta, ast);
+        let expansion = &self.context_search().expand(ast);
         if expansion == ast {
             Err(ZiaError::CannotExpandFurther)
         } else {
@@ -138,10 +508,10 @@ impl Context {
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
-        ast: &Rc<SyntaxTree>,
+        ast: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        let normal_form = &ContextSearch::from((&self.snap_shot, &self.delta))
-            .recursively_reduce(ast);
+        info!(self.logger, "try_reducing_then_call({})", ast);
+        let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
         } else {
@@ -150,7 +520,8 @@ impl Context {
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &Rc<SyntaxTree>) -> ZiaResult<String> {
+    fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
+        info!(self.logger, "call({})", ast);
         match ast.get_concept().and_then(|c| {
             self.snap_shot.read_concept(&self.delta, c).get_string()
         }) {
@@ -165,8 +536,8 @@ impl Context {
                             &ZiaError::CannotReduceFurther,
                             || {
                                 Ok(self
-                                    .snap_shot
-                                    .contract_pair(&self.delta, left, right)
+                                    .context_search()
+                                    .contract_pair(left, right)
                                     .to_string())
                             },
                         )
@@ -187,15 +558,26 @@ impl Context {
         }
     }
 
+    fn concrete_type(&self, concept_id: usize) -> Option<ConcreteConceptType> {
+        self.snap_shot.concrete_concept_type(&self.delta, concept_id)
+    }
+
+    fn concrete_type_of_ast(
+        &self,
+        ast: &Arc<SyntaxTree>,
+    ) -> Option<ConcreteConceptType> {
+        ast.get_concept().and_then(|c| self.concrete_type(c))
+    }
+
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<String> {
-        left.get_concept()
-            .and_then(|lc| match lc {
-                LET => right
+        self.concrete_type_of_ast(left)
+            .and_then(|cct| match cct {
+                ConcreteConceptType::Let => right
                     .get_expansion()
                     .and_then(|(left, right)| {
                         self.execute_let(&left, &right).and_then(|x| match x {
@@ -205,14 +587,12 @@ impl Context {
                         })
                     })
                     .or_else(|| {
-                        Some({
-                            let true_syntax =
-                                self.snap_shot.to_ast(&self.delta, TRUE);
-                            self.execute_reduction(right, &true_syntax)
-                        })
+                        self.context_search()
+                            .concrete_ast(ConcreteConceptType::True)
+                            .map(|ast| self.execute_reduction(right, &ast))
                     })
                     .map(|r| r.map(|()| "".to_string())),
-                LABEL => Some(Ok("'".to_string()
+                ConcreteConceptType::Label => Some(Ok("'".to_string()
                     + &right
                         .get_concept()
                         .and_then(|c| self.snap_shot.get_label(&self.delta, c))
@@ -220,17 +600,22 @@ impl Context {
                     + "'")),
                 _ => None,
             })
-            .unwrap_or_else(|| match right.get_concept() {
-                Some(c) if c == REDUCTION => self.try_reducing_then_call(left),
-                _ => self.reduce_and_call_pair(left, right),
+            .unwrap_or_else(|| {
+                if let Some(ConcreteConceptType::Reduction) =
+                    self.concrete_type_of_ast(right)
+                {
+                    self.try_reducing_then_call(left)
+                } else {
+                    self.reduce_and_call_pair(left, right)
+                }
             })
     }
 
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn execute_let(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> Option<ZiaResult<()>> {
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
@@ -238,56 +623,60 @@ impl Context {
     }
 
     /// If the lefthand of the righthand part of the syntax is `->` then `execute_reduction` is called with the lefthand part and the righthand of the
-    /// righthand part of the syntax. Similarly for `:=`, `execute_definition` is called. If the lefthand of the righthand part of the syntax is associated
+    /// righthand part of the syntax. Similarly for `:=`, `execute_composition` is called. If the lefthand of the righthand part of the syntax is associated
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &mut self,
-        left: &Rc<SyntaxTree>,
-        rightleft: &Rc<SyntaxTree>,
-        rightright: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        rightleft: &Arc<SyntaxTree>,
+        rightright: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
-        match rightleft.get_concept() {
-            Some(c) => match c {
-                REDUCTION => self.execute_reduction(left, rightright),
-                DEFINE => self.execute_definition(left, rightright),
+        rightleft.get_concept().map_or(Err(ZiaError::UnusedSymbol), |c| {
+            match self.concrete_type(c) {
+                Some(ConcreteConceptType::Reduction) => {
+                    self.execute_reduction(left, rightright)
+                },
+                Some(ConcreteConceptType::Define) => {
+                    self.execute_composition(left, rightright)
+                },
                 _ => {
                     let rightleft_reduction = self
                         .snap_shot
                         .read_concept(&self.delta, c)
                         .get_reduction();
-                    if let Some(r) = rightleft_reduction {
-                        let ast = self.snap_shot.to_ast(&self.delta, r);
-                        self.match_righthand_pair(left, &ast, rightright)
-                    } else {
-                        Err(ZiaError::CannotReduceFurther)
-                    }
+                    rightleft_reduction.map_or(
+                        Err(ZiaError::CannotReduceFurther),
+                        |r| {
+                            let ast = self.context_search().to_ast(r);
+                            self.match_righthand_pair(left, &ast, rightright)
+                        },
+                    )
                 },
-            },
-            None => Err(ZiaError::UnusedSymbol),
-        }
+            }
+        })
     }
 
-    /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteDefinition)`. Otherwise `define` is called.
-    fn execute_definition(
+    /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteComposition)`. Otherwise `define` is called.
+    fn execute_composition(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if old.contains(new) {
-            Err(ZiaError::InfiniteDefinition)
+            Err(ZiaError::InfiniteComposition)
         } else {
             self.define(new, old)
         }
     }
 
-    /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadDefinition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
+    /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
-        new: &Rc<SyntaxTree>,
-        old: &Rc<SyntaxTree>,
+        new: &Arc<SyntaxTree>,
+        old: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
-            Err(ZiaError::BadDefinition)
+            Err(ZiaError::BadComposition)
         } else {
             match (new.get_concept(), old.get_concept(), old.get_expansion()) {
                 (_, None, None) => Err(ZiaError::RedundantRefactor),
@@ -308,16 +697,16 @@ impl Context {
                 },
                 (Some(a), Some(b), None) => {
                     if a == b {
-                        self.cleanly_delete_definition(a)
+                        self.cleanly_delete_composition(a)
                     } else {
-                        Err(ZiaError::DefinitionCollision)
+                        Err(ZiaError::CompositionCollision)
                     }
                 },
                 (Some(a), Some(b), Some(_)) => {
                     if a == b {
-                        Err(ZiaError::RedundantDefinition)
+                        Err(ZiaError::RedundantComposition)
                     } else {
-                        Err(ZiaError::DefinitionCollision)
+                        Err(ZiaError::CompositionCollision)
                     }
                 },
                 (Some(a), None, Some((ref left, ref right))) => {
@@ -327,23 +716,14 @@ impl Context {
         }
     }
 
-    fn cleanly_delete_definition(&mut self, concept: usize) -> ZiaResult<()> {
-        match self.snap_shot.read_concept(&self.delta, concept).get_definition()
+    fn cleanly_delete_composition(&mut self, concept: usize) -> ZiaResult<()> {
+        match self
+            .snap_shot
+            .read_concept(&self.delta, concept)
+            .get_composition()
         {
-            None => Err(ZiaError::RedundantDefinitionRemoval),
+            None => Err(ZiaError::RedundantCompositionRemoval),
             Some((left, right)) => {
-                let concept_delta_array = self
-                    .snap_shot
-                    .read_concept(&self.delta, concept)
-                    .delete_definition(concept);
-                let concept_id_array = [concept, left, right];
-                (0..3).for_each(|index| {
-                    update_concept_delta(
-                        self.delta.concept.entry(concept_id_array[index]),
-                        &concept_delta_array[index],
-                        false,
-                    )
-                });
                 self.try_delete_concept(concept)?;
                 self.try_delete_concept(left)?;
                 self.try_delete_concept(right)
@@ -371,63 +751,42 @@ impl Context {
     fn remove_string(&mut self, string: &str) {
         let index = *(self
             .delta
-            .string
+            .string()
             .get(string)
             .and_then(|sd| match sd {
-                StringDelta::Update {
+                Change::Update {
                     after,
                     ..
                 } => Some(after),
-                StringDelta::Insert(index) => Some(index),
-                StringDelta::Remove(_) => None,
+                Change::Create(index) => Some(index),
+                Change::Remove(_) => None,
             })
             .expect("string already removed or doesn't exist"));
-        self.delta
-            .string
-            .insert(string.to_string(), StringDelta::Remove(index));
+        self.blindly_remove_concept(index);
     }
 
     fn blindly_remove_concept(&mut self, id: usize) {
-        let concept = self
-            .delta
-            .concept
-            .get(&id)
-            .and_then(|(cd, _, _)| match cd {
-                ConceptDelta::Insert(c) => Some(c),
-                ConceptDelta::Remove(_) => None,
-                ConceptDelta::Update(_) => self.snap_shot.get_concept(id),
-            })
-            .unwrap_or_else(|| {
-                self.snap_shot
-                    .get_concept(id)
-                    .expect("Concept will be already removed!")
-            })
-            .clone();
-        self.delta.concept.insert(
-            id,
-            (
-                ConceptDelta::Remove(concept),
-                self.snap_shot.has_variable(&self.delta, id),
-                false,
-            ),
+        self.delta.update_concept_delta(
+            &DirectConceptDelta::Remove(id).into(),
+            &mut self.cache,
         );
     }
 
     fn redefine(
         &mut self,
         concept: usize,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
-            self.snap_shot.read_concept(&self.delta, concept).get_definition()
+            self.snap_shot.read_concept(&self.delta, concept).get_composition()
         {
             self.relabel(left_concept, &left.to_string())?;
             self.relabel(right_concept, &right.to_string())
         } else {
             let left_concept = self.concept_from_ast(left)?;
             let right_concept = self.concept_from_ast(right)?;
-            self.insert_definition(concept, left_concept, right_concept, false)
+            self.insert_composition(concept, left_concept, right_concept)
         }
     }
 
@@ -448,25 +807,24 @@ impl Context {
     fn define_new_syntax(
         &mut self,
         syntax: &str,
-        left: &Rc<SyntaxTree>,
-        right: &Rc<SyntaxTree>,
+        left: &Arc<SyntaxTree>,
+        right: &Arc<SyntaxTree>,
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
-            .and_then(|l| {
-                right.get_concept().and_then(|r| {
-                    self.snap_shot.find_definition(&self.delta, l, r).map(
-                        |concept| {
-                            syntax
-                                .parse::<SyntaxTree>()
-                                .unwrap()
-                                .bind_concept(concept)
-                        },
+            .and_also(&right.get_concept())
+            .and_then(|(l, r)| {
+                self.context_search().find_composition(*l, *r).map(|concept| {
+                    let syntax = SyntaxTree::from(syntax);
+                    self.snap_shot.bind_concept_to_syntax(
+                        &self.delta,
+                        syntax,
+                        concept,
                     )
                 })
             })
-            .unwrap_or_else(|| syntax.parse::<SyntaxTree>().unwrap())
-            .bind_pair(left, right);
+            .unwrap_or_else(|| syntax.into())
+            .bind_pair(left.clone(), right.clone());
         self.concept_from_ast(&new_syntax_tree)?;
         Ok(())
     }
@@ -483,30 +841,30 @@ impl Context {
         } else {
             let syntax_concept = self.concept_from_ast(syntax)?;
             let normal_form_concept = self.concept_from_ast(normal_form)?;
-            self.update_reduction(syntax_concept, normal_form_concept, false)
+            self.update_reduction(syntax_concept, normal_form_concept)
         }
     }
 
     fn try_removing_reduction(&mut self, syntax: &SyntaxTree) -> ZiaResult<()> {
-        if let Some(c) = syntax.get_concept() {
+        syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
             self.delete_reduction(c)
-        } else {
-            Err(ZiaError::RedundantReduction)
-        }
+        })
     }
 
     fn delete_reduction(&mut self, concept_id: usize) -> ZiaResult<()> {
         self.snap_shot
             .read_concept(&self.delta, concept_id)
-            .remove_reduction(concept_id)
+            .remove_reduction()
             .map(|z| {
-                z.iter().for_each(|(id, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(*id),
-                        concept_delta,
-                        false,
-                    )
-                })
+                // update self.delta to include deletion of composition
+                // and invalidate cache
+                self.delta.update_concept_delta(
+                    &Arc::new(DirectConceptDelta::Reduce {
+                        change: Change::Remove(z),
+                        unreduced_id: concept_id,
+                    }),
+                    &mut self.cache,
+                );
             })
     }
 
@@ -520,18 +878,21 @@ impl Context {
         } else {
             let string = &ast.to_string();
             match ast.get_expansion() {
-                None => self.new_labelled_default(string),
+                None => {
+                    let label_id = self
+                        .snap_shot
+                        .concrete_concept_id(
+                            &self.delta,
+                            ConcreteConceptType::Label,
+                        )
+                        .ok_or(ZiaError::NoLabelConcept)?;
+                    Ok(self.new_labelled_concept(None, string, None, label_id))
+                },
                 Some((ref left, ref right)) => {
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
-                    let ls = left.to_string();
-                    let rs = right.to_string();
-                    let concept = self.find_or_insert_definition(
-                        leftc,
-                        rightc,
-                        is_variable(&ls) || is_variable(&rs),
-                        false,
-                    )?;
+                    let concept =
+                        self.find_or_insert_composition(leftc, rightc);
                     if !string.contains(' ') {
                         self.label(concept, string)?;
                     }
@@ -541,100 +902,142 @@ impl Context {
         }
     }
 
-    fn new_labelled_default(&mut self, string: &str) -> ZiaResult<usize> {
-        let new_default = self.new_default::<AbstractPart>(is_variable(string));
-        self.label(new_default, string)?;
-        Ok(new_default)
+    fn new_labelled_concept(
+        &mut self,
+        new_concept_id: Option<usize>,
+        string: &str,
+        concrete_type: Option<ConcreteConceptType>,
+        label_id: usize,
+    ) -> usize {
+        let new_concept_id = new_concept_id.unwrap_or_else(|| {
+            self.snap_shot.lowest_unoccupied_concept_id(&self.delta)
+        });
+        let new_concept_label_id = {
+            let new_concept_label_id = new_concept_id + 1;
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                new_concept_id: new_concept_label_id,
+                delta: NewConceptDelta::String(string.into()),
+            })
+            .into();
+            self.delta.update_concept_delta(&direct_delta, &mut self.cache);
+            new_concept_label_id
+        };
+        let composition_id = {
+            let composition_id =
+                self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                new_concept_id: composition_id,
+                delta: NewConceptDelta::ReducesTo {
+                    reduction: new_concept_label_id,
+                },
+            })
+            .into();
+            self.delta.update_concept_delta(&direct_delta, &mut self.cache);
+            composition_id
+        };
+        {
+            let direct_delta = DirectConceptDelta::New(NewDirectConceptDelta {
+                delta: if new_concept_id == label_id {
+                    NewConceptDelta::Double {
+                        composition_id,
+                        concrete_type,
+                    }
+                } else {
+                    NewConceptDelta::Right {
+                        composition_id,
+                        left_id: label_id,
+                        concrete_type,
+                    }
+                },
+                new_concept_id,
+            })
+            .into();
+            self.delta.update_concept_delta(&direct_delta, &mut self.cache);
+        };
+        new_concept_id
     }
 
     fn label(&mut self, concept: usize, string: &str) -> ZiaResult<()> {
-        let variable = is_variable(string);
-        let definition =
-            self.find_or_insert_definition(LABEL, concept, variable, variable)?;
+        let label_id = self
+            .concrete_concept_id(ConcreteConceptType::Label)
+            .ok_or(ZiaError::NoLabelConcept)?;
+        let composition = self.find_or_insert_composition(label_id, concept);
         let string_id = self.new_string(string);
-        self.update_reduction(definition, string_id, variable)
+        self.update_reduction(composition, string_id)
     }
 
-    fn new_string(&mut self, string: &str) -> usize {
-        let string_concept = string.to_string().into();
-        let (delta, index) = self.snap_shot.add_concept_delta(
-            &self.delta,
-            string_concept,
-            false,
+    fn new_string(&mut self, string: impl Into<String> + Clone) -> usize {
+        let index = self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+        self.delta.update_concept_delta(
+            &DirectConceptDelta::New(NewDirectConceptDelta {
+                delta: NewConceptDelta::String(string.into()),
+                new_concept_id: index,
+            })
+            .into(),
+            &mut self.cache,
         );
-        self.delta.combine(delta);
-        let string_delta = SnapShot::add_string_delta(index, string);
-        self.delta.combine(string_delta);
         index
     }
 
-    fn find_or_insert_definition(
+    fn context_search(&self) -> ContextSearch<S> {
+        ContextSearch::from((&self.snap_shot, &self.delta, &self.cache))
+    }
+
+    fn find_or_insert_composition(
         &mut self,
         lefthand: usize,
         righthand: usize,
-        variable: bool,
-        temporary: bool,
-    ) -> ZiaResult<usize> {
-        let pair =
-            self.snap_shot.find_definition(&self.delta, lefthand, righthand);
+    ) -> usize {
+        let pair = self.context_search().find_composition(lefthand, righthand);
         match pair {
             None => {
-                let definition = self.new_default::<AbstractPart>(variable);
-                self.insert_definition(
-                    definition, lefthand, righthand, temporary,
-                )?;
-                Ok(definition)
+                let new_concept_id =
+                    self.snap_shot.lowest_unoccupied_concept_id(&self.delta);
+                self.delta.update_concept_delta(
+                    &DirectConceptDelta::New(NewDirectConceptDelta {
+                        delta: NewConceptDelta::Composition(Composition {
+                            left_id: lefthand,
+                            right_id: righthand,
+                        }),
+                        new_concept_id,
+                    })
+                    .into(),
+                    &mut self.cache,
+                );
+                new_concept_id
             },
-            Some(def) => Ok(def),
+            Some(def) => def,
         }
     }
 
-    fn new_default<V: Default + Into<Concept>>(
+    fn insert_composition(
         &mut self,
-        variable: bool,
-    ) -> usize {
-        let concept: Concept = V::default().into();
-        let (delta, index) =
-            self.snap_shot.add_concept_delta(&self.delta, concept, variable);
-        self.delta.combine(delta);
-        index
-    }
-
-    fn insert_definition(
-        &mut self,
-        definition: usize,
+        composition: usize,
         lefthand: usize,
         righthand: usize,
-        temporary: bool,
     ) -> ZiaResult<()> {
-        if self.snap_shot.contains(&self.delta, lefthand, definition)
-            || self.snap_shot.contains(&self.delta, righthand, definition)
+        if self.snap_shot.contains(&self.delta, lefthand, composition)
+            || self.snap_shot.contains(&self.delta, righthand, composition)
         {
-            Err(ZiaError::InfiniteDefinition)
+            Err(ZiaError::InfiniteComposition)
         } else {
             self.snap_shot.check_reductions(
                 &self.delta,
-                definition,
+                composition,
                 lefthand,
             )?;
             self.snap_shot.check_reductions(
                 &self.delta,
-                definition,
+                composition,
                 righthand,
             )?;
-            let id_array = [definition, lefthand, righthand];
-            let concept_delta_array = self
-                .snap_shot
-                .read_concept(&self.delta, definition)
-                .set_definition(definition, lefthand, righthand)?;
-            concept_delta_array.iter().enumerate().for_each(
-                |(i, concept_delta)| {
-                    update_concept_delta(
-                        self.delta.concept.entry(id_array[i]),
-                        concept_delta,
-                        temporary,
-                    )
-                },
+            let composition_concept =
+                self.snap_shot.read_concept(&self.delta, composition);
+            self.delta.update_concept_delta(
+                &Arc::new(
+                    composition_concept.compose_delta(lefthand, righthand)?,
+                ),
+                &mut self.cache,
             );
             Ok(())
         }
@@ -644,59 +1047,51 @@ impl Context {
         &mut self,
         concept: usize,
         reduction: usize,
-        temporary: bool,
     ) -> ZiaResult<()> {
-        self.snap_shot
-            .get_normal_form(&self.delta, reduction)
-            .and_then(|n| {
-                if concept == n {
-                    Some(Err(ZiaError::CyclicReduction))
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_else(|| {
-                self.snap_shot
-                    .read_concept(&self.delta, concept)
-                    .get_reduction()
-                    .and_then(|r| {
-                        if r == reduction {
-                            Some(Err(ZiaError::RedundantReduction))
-                        } else {
-                            None
+        let maybe_normal_form =
+            self.snap_shot.get_normal_form(&self.delta, reduction);
+        if maybe_normal_form == Some(concept) {
+            Err(ZiaError::CyclicReduction)
+        } else {
+            self.snap_shot
+                .read_concept(&self.delta, concept)
+                .get_reduction()
+                .and_then(|r| {
+                    (r == reduction).then(|| Err(ZiaError::RedundantReduction))
+                })
+                .unwrap_or_else(|| {
+                    if reduction
+                        == self
+                            .snap_shot
+                            .get_reduction_of_composition(&self.delta, concept)
+                    {
+                        Err(ZiaError::RedundantReduction)
+                    } else {
+                        let change = maybe_normal_form.map_or_else(
+                            || Change::Create(reduction),
+                            |before| Change::Update {
+                                before,
+                                after: reduction,
+                            },
+                        );
+                        let delta = DirectConceptDelta::Reduce {
+                            unreduced_id: concept,
+                            change,
                         }
-                    })
-                    .unwrap_or_else(|| {
-                        if reduction
-                            == self.snap_shot.get_reduction_of_composition(
-                                &self.delta,
-                                concept,
-                            )
-                        {
-                            Err(ZiaError::RedundantReduction)
-                        } else {
-                            let concept_deltas = self
-                                .snap_shot
-                                .read_concept(&self.delta, concept)
-                                .reduce_to(concept, reduction)?;
-                            update_concept_delta(
-                                self.delta.concept.entry(concept),
-                                &concept_deltas[0],
-                                temporary,
-                            );
-                            update_concept_delta(
-                                self.delta.concept.entry(reduction),
-                                &concept_deltas[1],
-                                temporary,
-                            );
-                            Ok(())
-                        }
-                    })
-            })
+                        .into();
+                        self.delta
+                            .update_concept_delta(&delta, &mut self.cache);
+                        Ok(())
+                    }
+                })
+        }
     }
 }
 
-impl Default for Context {
+impl<S> Default for Context<S>
+where
+    S: Default,
+{
     #[must_use]
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
@@ -706,14 +1101,12 @@ impl Default for Context {
             Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
         };
         Self {
-            snap_shot: SnapShot::default(),
+            snap_shot: S::default(),
             #[cfg(not(target_arch = "wasm32"))]
             logger,
             delta: ContextDelta::default(),
+            cache: ContextCache::default(),
+            variable_labels: HashMap::new(),
         }
     }
-}
-
-pub fn is_variable(string: &str) -> bool {
-    string.starts_with('_') && string.ends_with('_')
 }

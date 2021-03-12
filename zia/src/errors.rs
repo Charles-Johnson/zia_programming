@@ -41,7 +41,7 @@ pub enum ZiaError {
     RedundantReduction,
     /// When specifying a definition that already exists.
     #[snafu(display("That definition already exists."))]
-    RedundantDefinition,
+    RedundantComposition,
     /// When refactoring a symbol that hasn't been used.
     #[snafu(display(
         "Relabelling something that doesn't yet exist has no effect."
@@ -51,10 +51,10 @@ pub enum ZiaError {
     #[snafu(display(
         "Removing a definition that doesn't exist is redundant."
     ))]
-    RedundantDefinitionRemoval,
+    RedundantCompositionRemoval,
     /// When defining an expanded expression.
     #[snafu(display("Cannot define expressions."))]
-    BadDefinition,
+    BadComposition,
     /// When the command would complete a cycle of chained reduction rules.
     #[snafu(display("Cannot allow a chain of reduction rules to loop."))]
     CyclicReduction,
@@ -78,7 +78,7 @@ pub enum ZiaError {
     #[snafu(display(
         "Cannot define a concept as an expression whose normal form contains itself."
     ))]
-    InfiniteDefinition,
+    InfiniteComposition,
     /// When a command contains a pair of parentheses with no syntax inside.
     #[snafu(display("Parentheses need to contain a symbol or expression."))]
     EmptyParentheses,
@@ -89,10 +89,10 @@ pub enum ZiaError {
     #[snafu(display(
         "Cannot define a used symbol as another used symbol or expression."
     ))]
-    DefinitionCollision,
+    CompositionCollision,
     /// When trying to define the composition of a concrete concept.
     #[snafu(display("Cannot set a definition of a concrete concept"))]
-    SettingDefinitionOfConcrete,
+    SettingCompositionOfConcrete,
     /// When trying to specify a reduction rule for a concrete concept.
     #[snafu(display("Cannot reduce a concrete concept"))]
     ConcreteReduction,
@@ -104,4 +104,8 @@ pub enum ZiaError {
         "Symbol was expected to be used to label a concept but isn't."
     ))]
     UnusedSymbol,
+    #[snafu(display(
+        "Tried to label a concept without a concept of a label."
+    ))]
+    NoLabelConcept,
 }

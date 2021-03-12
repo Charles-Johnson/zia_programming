@@ -40,9 +40,10 @@
 //! in parentheses will be alleviated by functionality to set the relative precedence and associativity
 //! of concepts.
 //!
-//! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `"label_of"`,
-//! `"->"`, `":="`, `"let"`, `"true"`, `"false"`, `"assoc"`, `"right"`, `"left"`, "prec", "deafult", ">" but the labels
-//! can be changed to different symbols for different languages or disciplines.
+//! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
+//! `->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>`, `=>` and
+//! `exists_such_that` but the labels can be changed to different symbols for different languages or
+//! disciplines.
 //!
 //! # Examples
 //!
@@ -52,12 +53,6 @@
 //!
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
-//!
-//! // Specify operator precedence for `let` and `->`.
-//! assert_eq!(context.execute("let default > prec ->"), "");
-//! assert_eq!(context.execute("let (prec ->) > prec let"), "");
-//! // Cannot yet infer partial order. Requires implication to express transitive property
-//! assert_eq!(context.execute("let default > prec let"), "");
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
 //! assert_eq!(context.execute("let a b -> c"), "");
@@ -84,7 +79,7 @@
 //! assert_eq!(context.execute("let a -> d"), "");
 //!
 //! // Try to specify the composition of a concept in terms of itself
-//! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteDefinition.to_string());
+//! assert_eq!(context.execute("let b := a b"), ZiaError::InfiniteComposition.to_string());
 //!
 //! // Try to specify the reduction of concept in terms of itself
 //! assert_eq!(context.execute("let c d -> (c d) e"), ZiaError::ExpandingReduction.to_string());
@@ -115,20 +110,11 @@
 //! assert_eq!(context.execute("assoc a"), "right");
 //!
 //! // Define patterns
-//! assert_eq!(context.execute("let _x_ and false -> false"), "");
-//! assert_eq!(context.execute("foo and false"), "false");
+//! assert_eq!(context.execute("let _x_ or true -> true"), "");
+//! assert_eq!(context.execute("false or true"), "true");
 //! ```
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate maplit;
-#[cfg(not(target_arch = "wasm32"))]
-#[macro_use]
-extern crate slog;
-#[cfg(not(target_arch = "wasm32"))]
-extern crate slog_term;
-extern crate snafu;
+mod and_also;
 
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
@@ -136,15 +122,22 @@ mod ast;
 /// The units that make up the context. Defined in terms of their relationship with other concepts.
 mod concepts;
 
-/// Integers that represent concrete concepts.
-mod constants;
-
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
+
+mod context_cache;
 
 mod context_delta;
 
 mod context_search;
+
+#[cfg(test)]
+mod context_test;
+
+#[cfg(test)]
+mod context_search_test;
+
+mod context_snap_shot;
 
 /// The trait for describing incremental changes in state.
 mod delta;
@@ -152,12 +145,19 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+mod parser;
+
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
-pub use context::Context;
+use crate::context::Context as GenericContext;
+use crate::context_snap_shot::ContextSnapShot;
 
-pub use errors::ZiaError;
+pub use crate::errors::ZiaError;
+
+use lazy_static::lazy_static;
+
+pub type Context = GenericContext<ContextSnapShot>;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]
