@@ -20,6 +20,7 @@ crate-type = ["lib"]
 path = "src/lib.rs"
 
 [dependencies]
+assert_matches = "1.5"
 bimap = "0.5"
 dashmap = "3.5.0"
 generic-array = "0.14.4"

@@ -11,7 +11,7 @@ pub fn parse_line(buffer: &str) -> ZiaResult<Vec<String>> {
             symbol: ")",
         });
     }
-    if token != "" {
+    if !token.is_empty() {
         tokens.push(token);
     }
     Ok(tokens)
@@ -57,7 +57,7 @@ fn push_token(
     token: &mut String,
     tokens: &mut Vec<String>,
 ) {
-    if (token != "") & (parenthesis_level == 0) {
+    if !token.is_empty() & (parenthesis_level == 0) {
         tokens.push(token.clone());
         *token = String::new();
     }

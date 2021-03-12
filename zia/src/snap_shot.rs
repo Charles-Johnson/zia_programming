@@ -36,14 +36,8 @@ pub trait Reader {
                             } => {
                                 debug_assert_eq!(*composition_id, id);
                                 match change {
-                                    Change::Create(Composition {
-                                        left_id,
-                                        right_id,
-                                    }) => {
-                                        let mut left =
-                                            self.read_concept(delta, *left_id);
-                                        let mut right =
-                                            self.read_concept(delta, *right_id);
+                                    Change::Create(comp) => {
+                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
                                         concept
                                             .as_mut()
                                             .unwrap()
@@ -53,50 +47,30 @@ pub trait Reader {
                                             .unwrap();
                                     },
                                     Change::Update {
-                                        before:
-                                            Composition {
-                                                left_id: bl,
-                                                right_id: br,
-                                            },
-                                        after:
-                                            Composition {
-                                                left_id: al,
-                                                right_id: ar,
-                                            },
+                                        before,
+                                        after,
                                     } => {
+                                        let [mut before_left, mut before_right] = self.concepts_from_composition(delta, *before);
+                                        let [mut after_left, mut after_right] = self.concepts_from_composition(delta, *after);
                                         concept
                                             .as_mut()
                                             .unwrap()
                                             .change_composition(
                                                 Change::Update {
                                                     before: [
-                                                        &mut self.read_concept(
-                                                            delta, *bl,
-                                                        ),
-                                                        &mut self.read_concept(
-                                                            delta, *br,
-                                                        ),
+                                                        &mut before_left,
+                                                        &mut before_right,
                                                     ],
                                                     after: [
-                                                        &mut self.read_concept(
-                                                            delta, *al,
-                                                        ),
-                                                        &mut self.read_concept(
-                                                            delta, *ar,
-                                                        ),
+                                                        &mut after_left,
+                                                        &mut after_right,
                                                     ],
                                                 },
                                             )
                                             .unwrap();
                                     },
-                                    Change::Remove(Composition {
-                                        left_id,
-                                        right_id,
-                                    }) => {
-                                        let mut left =
-                                            self.read_concept(delta, *left_id);
-                                        let mut right =
-                                            self.read_concept(delta, *right_id);
+                                    Change::Remove(comp) => {
+                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
                                         concept
                                             .as_mut()
                                             .unwrap()
@@ -134,6 +108,16 @@ pub trait Reader {
                     .unwrap_or_else(|| panic!("No concept with id = {}", id))
                     .clone()
             })
+    }
+    fn concepts_from_composition(
+        &self,
+        delta: &ContextDelta,
+        comp: Composition,
+    ) -> [Concept; 2] {
+        [
+            self.read_concept(delta, comp.left_id),
+            self.read_concept(delta, comp.right_id),
+        ]
     }
     fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta) -> usize;
     fn get_label(
@@ -291,16 +275,17 @@ pub trait Reader {
         outer_concept: usize,
         inner_concept: usize,
     ) -> ZiaResult<()> {
-        if let Some(r) = self.read_concept(delta, inner_concept).get_reduction()
-        {
-            if r == outer_concept || self.contains(delta, r, outer_concept) {
-                Err(ZiaError::InfiniteComposition)
-            } else {
-                self.check_reductions(delta, outer_concept, r)
-            }
-        } else {
-            Ok(())
-        }
+        self.read_concept(delta, inner_concept).get_reduction().map_or(
+            Ok(()),
+            |r| {
+                if r == outer_concept || self.contains(delta, r, outer_concept)
+                {
+                    Err(ZiaError::InfiniteComposition)
+                } else {
+                    self.check_reductions(delta, outer_concept, r)
+                }
+            },
+        )
     }
     fn get_reduction_or_reduction_of_composition(
         &self,

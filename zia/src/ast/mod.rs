@@ -33,11 +33,7 @@ pub struct SyntaxTree {
 
 impl Debug for SyntaxTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(s) = &self.syntax {
-            f.write_str(s)
-        } else {
-            Ok(())
-        }
+        self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
     }
 }
 
@@ -81,7 +77,7 @@ impl SyntaxNode {
         let mut free_variables = HashSet::<Arc<SyntaxTree>>::new();
         let mut binding_variables = HashSet::<Arc<SyntaxTree>>::new();
         let right_is_quantifier = match &right.node {
-            SyntaxNode::Branch {
+            Self::Branch {
                 free_variables: fv,
                 binding_variables: bv,
                 ..
@@ -90,15 +86,15 @@ impl SyntaxNode {
                 binding_variables.extend(bv.iter().cloned());
                 false
             },
-            SyntaxNode::Leaf(SyntaxLeaf::Variable) => {
+            Self::Leaf(SyntaxLeaf::Variable) => {
                 free_variables.insert(right.clone());
                 false
             },
-            SyntaxNode::Leaf(SyntaxLeaf::Constant) => false,
-            SyntaxNode::Leaf(SyntaxLeaf::Quantifier) => true,
+            Self::Leaf(SyntaxLeaf::Constant) => false,
+            Self::Leaf(SyntaxLeaf::Quantifier) => true,
         };
         match &left.node {
-            SyntaxNode::Branch {
+            Self::Branch {
                 free_variables: fv,
                 binding_variables: bv,
                 ..
@@ -108,14 +104,14 @@ impl SyntaxNode {
                 binding_variables.retain(|v| !fv.contains(v));
                 binding_variables.extend(bv.iter().cloned());
             },
-            SyntaxNode::Leaf(SyntaxLeaf::Variable) => {
+            Self::Leaf(SyntaxLeaf::Variable) => {
                 if right_is_quantifier {
                     binding_variables.insert(left.clone());
                 } else {
                     free_variables.insert(left.clone());
                 }
             },
-            SyntaxNode::Leaf(_) => {},
+            Self::Leaf(_) => {},
         }
         Self::Branch {
             left,
@@ -228,7 +224,7 @@ impl Hash for SyntaxTree {
 }
 
 impl SyntaxTree {
-    pub fn new_constant_concept(concept_id: usize) -> Self {
+    pub const fn new_constant_concept(concept_id: usize) -> Self {
         Self {
             syntax: None,
             concept: Some(concept_id),
@@ -236,7 +232,7 @@ impl SyntaxTree {
         }
     }
 
-    pub fn new_quantifier_concept(concept_id: usize) -> Self {
+    pub const fn new_quantifier_concept(concept_id: usize) -> Self {
         Self {
             syntax: None,
             concept: Some(concept_id),
@@ -256,7 +252,7 @@ impl SyntaxTree {
         }
     }
 
-    pub fn bind_nonquantifier_concept(mut self, concept: usize) -> Self {
+    pub const fn bind_nonquantifier_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self
     }

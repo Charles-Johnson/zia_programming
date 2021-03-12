@@ -29,6 +29,90 @@ pub struct ContextDelta {
 }
 
 impl ContextDelta {
+    fn update_new_concept_delta(&mut self, newdcd: &NewDirectConceptDelta) {
+        let new_concept_id = newdcd.new_concept_id;
+        self.insert_delta_for_new_concept(new_concept_id, newdcd.clone());
+        match &newdcd.delta {
+            NewConceptDelta::Variable => {},
+            NewConceptDelta::String(s) => {
+                self.string
+                    .entry(s.into())
+                    .and_modify(|v| match v {
+                        Change::Create(_)
+                        | Change::Update {
+                            ..
+                        } => panic!("String \"{}\" already exists", s),
+                        Change::Remove(id) => {
+                            *v = Change::Update {
+                                before: *id,
+                                after: new_concept_id,
+                            }
+                        },
+                    })
+                    .or_insert_with(|| Change::Create(new_concept_id));
+            },
+            NewConceptDelta::Composition(Composition {
+                left_id,
+                right_id,
+            }) => {
+                let cd =
+                    IndirectConceptDelta::LefthandOf(new_concept_id).into();
+                self.insert_delta_for_existing_concept(*left_id, cd);
+                let cd =
+                    IndirectConceptDelta::RighthandOf(new_concept_id).into();
+                self.insert_delta_for_existing_concept(*right_id, cd);
+            },
+            NewConceptDelta::Left {
+                composition_id,
+                right_id,
+                ..
+            } => {
+                let cd =
+                    IndirectConceptDelta::RighthandOf(*composition_id).into();
+                self.insert_delta_for_existing_concept(*right_id, cd);
+                let cd = IndirectConceptDelta::ComposedOf(Composition {
+                    left_id: new_concept_id,
+                    right_id: *right_id,
+                })
+                .into();
+                self.insert_delta_for_existing_concept(*composition_id, cd);
+            },
+            NewConceptDelta::Right {
+                composition_id,
+                left_id,
+                ..
+            } => {
+                let cd =
+                    IndirectConceptDelta::LefthandOf(*composition_id).into();
+                self.insert_delta_for_existing_concept(*left_id, cd);
+                let cd = IndirectConceptDelta::ComposedOf(Composition {
+                    left_id: *left_id,
+                    right_id: new_concept_id,
+                })
+                .into();
+                self.insert_delta_for_existing_concept(*composition_id, cd);
+            },
+            NewConceptDelta::Double {
+                composition_id,
+                ..
+            } => {
+                let cd = IndirectConceptDelta::ComposedOf(Composition {
+                    left_id: new_concept_id,
+                    right_id: new_concept_id,
+                })
+                .into();
+                self.insert_delta_for_existing_concept(*composition_id, cd);
+            },
+            NewConceptDelta::ReducesTo {
+                reduction,
+            } => {
+                let cd =
+                    IndirectConceptDelta::ReducesFrom(new_concept_id).into();
+                self.insert_delta_for_existing_concept(*reduction, cd);
+            },
+        }
+    }
+
     pub fn update_concept_delta(
         &mut self,
         concept_delta: &Arc<DirectConceptDelta>,
@@ -37,105 +121,7 @@ impl ContextDelta {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         match concept_delta.as_ref() {
             DirectConceptDelta::New(newdcd) => {
-                let new_concept_id = newdcd.new_concept_id;
-                self.insert_delta_for_new_concept(new_concept_id, dcd);
-                match &newdcd.delta {
-                    NewConceptDelta::Variable => {},
-                    NewConceptDelta::String(s) => {
-                        self.string
-                            .entry(s.into())
-                            .and_modify(|v| match v {
-                                Change::Create(_)
-                                | Change::Update {
-                                    ..
-                                } => panic!("String \"{}\" already exists", s),
-                                Change::Remove(id) => {
-                                    *v = Change::Update {
-                                        before: *id,
-                                        after: new_concept_id,
-                                    }
-                                },
-                            })
-                            .or_insert_with(|| Change::Create(new_concept_id));
-                    },
-                    NewConceptDelta::Composition(Composition {
-                        left_id,
-                        right_id,
-                    }) => {
-                        let cd =
-                            IndirectConceptDelta::LefthandOf(new_concept_id)
-                                .into();
-                        self.insert_delta_for_existing_concept(*left_id, cd);
-                        let cd =
-                            IndirectConceptDelta::RighthandOf(new_concept_id)
-                                .into();
-                        self.insert_delta_for_existing_concept(*right_id, cd);
-                    },
-                    NewConceptDelta::Left {
-                        composition_id,
-                        right_id,
-                        ..
-                    } => {
-                        let cd =
-                            IndirectConceptDelta::RighthandOf(*composition_id)
-                                .into();
-                        self.insert_delta_for_existing_concept(*right_id, cd);
-                        let cd =
-                            IndirectConceptDelta::ComposedOf(Composition {
-                                left_id: new_concept_id,
-                                right_id: *right_id,
-                            })
-                            .into();
-                        self.insert_delta_for_existing_concept(
-                            *composition_id,
-                            cd,
-                        );
-                    },
-                    NewConceptDelta::Right {
-                        composition_id,
-                        left_id,
-                        ..
-                    } => {
-                        let cd =
-                            IndirectConceptDelta::LefthandOf(*composition_id)
-                                .into();
-                        self.insert_delta_for_existing_concept(*left_id, cd);
-                        let cd =
-                            IndirectConceptDelta::ComposedOf(Composition {
-                                left_id: *left_id,
-                                right_id: new_concept_id,
-                            })
-                            .into();
-                        self.insert_delta_for_existing_concept(
-                            *composition_id,
-                            cd,
-                        );
-                    },
-                    NewConceptDelta::Double {
-                        composition_id,
-                        ..
-                    } => {
-                        let cd =
-                            IndirectConceptDelta::ComposedOf(Composition {
-                                left_id: new_concept_id,
-                                right_id: new_concept_id,
-                            })
-                            .into();
-                        self.insert_delta_for_existing_concept(
-                            *composition_id,
-                            cd,
-                        );
-                    },
-                    NewConceptDelta::ReducesTo {
-                        reduction,
-                        ..
-                    } => {
-                        let cd =
-                            IndirectConceptDelta::ReducesFrom(new_concept_id)
-                                .into();
-                        self.insert_delta_for_existing_concept(*reduction, cd);
-                    },
-                }
+                self.update_new_concept_delta(newdcd)
             },
             DirectConceptDelta::Compose {
                 composition_id,
@@ -220,7 +206,9 @@ impl ContextDelta {
         cache_to_invalidate.invalidate();
     }
 
-    pub fn concepts_to_apply_in_order(&self) -> &Vec<Arc<DirectConceptDelta>> {
+    pub const fn concepts_to_apply_in_order(
+        &self,
+    ) -> &Vec<Arc<DirectConceptDelta>> {
         &self.concepts_to_apply_in_order
     }
 
@@ -251,11 +239,11 @@ impl ContextDelta {
     fn insert_delta_for_new_concept(
         &mut self,
         concept_id: usize,
-        cd: ConceptDelta,
+        cd: NewDirectConceptDelta,
     ) {
         self.insert_delta_for_concept(
             concept_id,
-            cd,
+            ConceptDelta::Direct(Arc::new(DirectConceptDelta::New(cd))),
             |last_delta, concept_id: usize| {
                 match last_delta {
                     ConceptDelta::Direct(dcd)
@@ -354,8 +342,8 @@ pub enum ConceptDelta {
 }
 
 impl ConceptDelta {
-    pub fn try_direct(&self) -> Option<&Arc<DirectConceptDelta>> {
-        if let ConceptDelta::Direct(dcd) = &self {
+    pub const fn try_direct(&self) -> Option<&Arc<DirectConceptDelta>> {
+        if let Self::Direct(dcd) = &self {
             Some(dcd)
         } else {
             None
@@ -423,7 +411,6 @@ pub enum NewConceptDelta {
         concrete_type: Option<ConcreteConceptType>,
     },
     ReducesTo {
-        variable: bool,
         reduction: usize,
     },
 }
@@ -440,27 +427,21 @@ pub enum Change<T> {
 
 impl<T: Clone> Clone for Change<T> {
     fn clone(&self) -> Self {
-        self.map(T::clone)
-    }
-}
-
-impl<T> Change<T> {
-    pub fn map<U>(&self, mut f: impl FnMut(&T) -> U) -> Change<U> {
         match self {
-            Self::Create(x) => Change::Create(f(x)),
+            Self::Create(x) => Self::Create(x.clone()),
             Self::Update {
                 before,
                 after,
-            } => Change::Update {
-                before: f(before),
-                after: f(after),
+            } => Self::Update {
+                before: before.clone(),
+                after: after.clone(),
             },
-            Self::Remove(x) => Change::Remove(f(x)),
+            Self::Remove(x) => Self::Remove(x.clone()),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Composition {
     pub left_id: usize,
     pub right_id: usize,

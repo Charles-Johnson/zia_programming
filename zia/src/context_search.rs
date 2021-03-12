@@ -815,22 +815,23 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     }
 
     pub fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
-        if let Some(associativity_concept_id) =
-            self.concrete_concept_id(ConcreteConceptType::Associativity)
-        {
-            let assoc_of_ast =
-                self.combine(&self.to_ast(associativity_concept_id), ast);
-            let maybe_concrete_concept_type = self
-                .reduce(&assoc_of_ast)
-                .and_then(|(ast, _)| self.concrete_type_of_ast(&ast));
-            if Some(ConcreteConceptType::Left) == maybe_concrete_concept_type {
-                Associativity::Left
-            } else {
-                Associativity::Right
-            }
-        } else {
-            Associativity::Right
-        }
+        self.concrete_concept_id(ConcreteConceptType::Associativity).map_or(
+            Associativity::Right,
+            |associativity_concept_id| {
+                let assoc_of_ast =
+                    self.combine(&self.to_ast(associativity_concept_id), ast);
+                let maybe_concrete_concept_type = self
+                    .reduce(&assoc_of_ast)
+                    .and_then(|(ast, _)| self.concrete_type_of_ast(&ast));
+                if Some(ConcreteConceptType::Left)
+                    == maybe_concrete_concept_type
+                {
+                    Associativity::Left
+                } else {
+                    Associativity::Right
+                }
+            },
+        )
     }
 
     /// Expands syntax by definition of its associated concept.
@@ -955,46 +956,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     },
                     _ => Comparison::Incomparable,
                 },
-                match (&reason, &reversed_reason) {
-                    (Some(ReductionReason::Comparison(cr)), rr) => {
-                        match cr.as_ref() {
-                            ComparisonReason::Reduction {
-                                reason,
-                                reversed_reason,
-                            } if rr == reversed_reason => {
-                                ComparisonReason::Reduction {
-                                    reversed_reason: reversed_reason.clone(),
-                                    reason: reason.clone(),
-                                }
-                            },
-                            _ => ComparisonReason::Reduction {
-                                reason,
-                                reversed_reason,
-                            },
-                        }
-                    },
-                    (r, Some(ReductionReason::Comparison(cr))) => {
-                        match cr.as_ref() {
-                            ComparisonReason::Reduction {
-                                reason,
-                                reversed_reason,
-                            } if r == reversed_reason => {
-                                ComparisonReason::Reduction {
-                                    reversed_reason: reason.clone(),
-                                    reason: reversed_reason.clone(),
-                                }
-                            },
-                            _ => ComparisonReason::Reduction {
-                                reason,
-                                reversed_reason,
-                            },
-                        }
-                    },
-                    _ => ComparisonReason::Reduction {
-                        reason,
-                        reversed_reason,
-                    },
-                },
+                simplify_reasoning(reason, reversed_reason),
             )
         } else {
             (Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept)
@@ -1009,6 +971,46 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             syntax_evaluating: self.syntax_evaluating.clone(),
             variable_mask: self.variable_mask.clone(),
         }
+    }
+}
+
+fn simplify_reasoning(
+    reason: Option<ReductionReason>,
+    reversed_reason: Option<ReductionReason>,
+) -> ComparisonReason {
+    match (&reason, &reversed_reason) {
+        (Some(ReductionReason::Comparison(cr)), rr) => match cr.as_ref() {
+            ComparisonReason::Reduction {
+                reason: comparsion_reason,
+                reversed_reason: reversed_comparison_reason,
+            } if rr == reversed_comparison_reason => {
+                ComparisonReason::Reduction {
+                    reversed_reason: reversed_comparison_reason.clone(),
+                    reason: comparsion_reason.clone(),
+                }
+            },
+            _ => ComparisonReason::Reduction {
+                reason,
+                reversed_reason,
+            },
+        },
+        (r, Some(ReductionReason::Comparison(cr))) => match cr.as_ref() {
+            ComparisonReason::Reduction {
+                reason: reversed_comparison_reason,
+                reversed_reason: comparison_reason,
+            } if r == comparison_reason => ComparisonReason::Reduction {
+                reversed_reason: reversed_comparison_reason.clone(),
+                reason: comparison_reason.clone(),
+            },
+            _ => ComparisonReason::Reduction {
+                reason,
+                reversed_reason,
+            },
+        },
+        _ => ComparisonReason::Reduction {
+            reason,
+            reversed_reason,
+        },
     }
 }
 

@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    and_also::AndAlso,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta,
     context_delta::{
@@ -25,10 +24,12 @@ use crate::{
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
 };
+use assert_matches::assert_matches;
 use bimap::BiMap;
 use generic_array::{
     arr, functional::FunctionalSequence, ArrayLength, GenericArray,
 };
+use maplit::hashset;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Display,
@@ -98,30 +99,107 @@ impl Associativity {
 
 impl ContextSnapShot {
     fn write_concept(&mut self, id: usize) -> &mut Concept {
-        match self.concepts[id] {
-            Some(ref mut c) => c,
-            None => panic!("No concept with id = {}", id),
+        match self.concepts.get_mut(id) {
+            Some(Some(ref mut c)) => c,
+            _ => panic!("No concept with id = {}", id),
         }
     }
 
-    // TODO document why this is a safe abstraction or refactor `self.concepts` as a slotmap
-    fn write_concept_pair(
-        &mut self,
-        left: usize,
-        right: usize,
-    ) -> [&mut Concept; 2] {
-        let ptr = self.concepts.as_mut_ptr();
-        let (opt_l, opt_r) = unsafe {
-            let l = ptr.add(left).as_mut().expect("Null pointer");
-            let r = ptr.add(right).as_mut().expect("Null pointer");
-            (l, r)
-        };
-        let (l, r) =
-            opt_l.and_also_mut(opt_r).expect("some concepts are empty");
-        [l, r]
+    fn apply_new_concept(&mut self, ndcd: &NewDirectConceptDelta) {
+        let NewDirectConceptDelta {
+            new_concept_id,
+            delta,
+        } = ndcd;
+        match delta {
+            NewConceptDelta::Variable => {
+                self.concepts[*new_concept_id] =
+                    Some(Concept::make_variable(*new_concept_id))
+            },
+            NewConceptDelta::String(s) => {
+                self.string_map.insert(s.into(), *new_concept_id);
+                self.concepts[*new_concept_id] = Some(
+                    (SpecificPart::String(s.into()), *new_concept_id).into(),
+                );
+            },
+            NewConceptDelta::Composition(c) => {
+                let [left, right]: [&mut Concept; 2] = self
+                    .write_concepts(arr![usize; c.left_id, c.right_id])
+                    .into();
+                self.concepts[*new_concept_id] =
+                    Some(Concept::composition_of(*new_concept_id, left, right));
+            },
+            NewConceptDelta::Left {
+                composition_id,
+                right_id,
+                concrete_type,
+            } => {
+                let [right, composition]: [&mut Concept; 2] = self
+                    .write_concepts(arr![usize; *right_id, *composition_id])
+                    .into();
+                self.concepts[*new_concept_id] = Some(
+                    Concept::lefthand_of(
+                        *new_concept_id,
+                        right,
+                        composition,
+                        *concrete_type,
+                    )
+                    .unwrap(),
+                );
+                if let Some(cct) = concrete_type {
+                    self.concrete_concepts.insert(*new_concept_id, *cct);
+                }
+            },
+            NewConceptDelta::Double {
+                composition_id,
+                concrete_type,
+            } => {
+                let composition = self.write_concept(*composition_id);
+                debug_assert!(new_concept_id != composition_id);
+                self.concepts[*new_concept_id] = Some(Concept::double(
+                    *new_concept_id,
+                    composition,
+                    *concrete_type,
+                ));
+                if let Some(cct) = concrete_type {
+                    self.concrete_concepts.insert(*new_concept_id, *cct);
+                }
+            },
+            NewConceptDelta::Right {
+                composition_id,
+                left_id,
+                concrete_type,
+            } => {
+                let [left, composition]: [&mut Concept; 2] = self
+                    .write_concepts(arr![usize; *left_id, *composition_id])
+                    .into();
+                debug_assert!(new_concept_id != left_id);
+                debug_assert!(new_concept_id != composition_id);
+                self.concepts[*new_concept_id] = Some(
+                    Concept::righthand_of(
+                        *new_concept_id,
+                        left,
+                        composition,
+                        *concrete_type,
+                    )
+                    .unwrap(),
+                );
+                if let Some(cct) = concrete_type {
+                    self.concrete_concepts.insert(*new_concept_id, *cct);
+                }
+            },
+            NewConceptDelta::ReducesTo {
+                reduction,
+            } => {
+                debug_assert!(new_concept_id != reduction);
+                let reduction_concept = self.write_concept(*reduction);
+                self.concepts[*new_concept_id] = Some(Concept::reduction_to(
+                    *new_concept_id,
+                    reduction_concept,
+                ));
+            },
+        }
     }
 
-    // TODO document why this is a safe abstraction or refactor `self.concepts` as a slotmap
     fn write_concepts<
         'a,
         N: ArrayLength<usize> + ArrayLength<&'a mut Concept>,
@@ -129,6 +207,19 @@ impl ContextSnapShot {
         &'a mut self,
         ids: GenericArray<usize, N>,
     ) -> GenericArray<&'a mut Concept, N> {
+        assert_matches!(
+            ids.iter().try_fold(hashset! {}, |mut acc, id| {
+                if acc.contains(id) {
+                    Err("Duplicate concept ID") // Prevent multiple &mut to same element to avoid UB
+                } else if *id < self.concepts.len() {
+                    acc.insert(*id);
+                    Ok(acc)
+                } else {
+                    Err("Concept ID greater than largest stored ID") // Prevent buffer over-read for memory safety
+                }
+            }),
+            Ok(_)
+        );
         let ptr = self.concepts.as_mut_ptr();
         ids.map(|x| unsafe {
             ptr.add(x)
@@ -377,115 +468,7 @@ impl Apply for ContextSnapShot {
         }
         for concept_delta in delta.concepts_to_apply_in_order() {
             match concept_delta.as_ref() {
-                DirectConceptDelta::New(NewDirectConceptDelta {
-                    new_concept_id,
-                    delta,
-                }) => match delta {
-                    NewConceptDelta::Variable => {
-                        self.concepts[*new_concept_id] =
-                            Some(Concept::make_variable(*new_concept_id))
-                    },
-                    NewConceptDelta::String(s) => {
-                        self.string_map.insert(s.into(), *new_concept_id);
-                        self.concepts[*new_concept_id] = Some(
-                            (SpecificPart::String(s.into()), *new_concept_id)
-                                .into(),
-                        );
-                    },
-                    NewConceptDelta::Composition(c) => {
-                        let [left, right] =
-                            self.write_concept_pair(c.left_id, c.right_id);
-                        debug_assert!(*new_concept_id != c.left_id);
-                        debug_assert!(*new_concept_id != c.right_id);
-                        self.concepts[*new_concept_id] =
-                            Some(Concept::composition_of(
-                                *new_concept_id,
-                                left,
-                                right,
-                            ));
-                    },
-                    NewConceptDelta::Left {
-                        composition_id,
-                        right_id,
-                        concrete_type,
-                    } => {
-                        let [right, composition]: [&mut Concept; 2] = self
-                            .write_concepts(
-                                arr![usize; *right_id, *composition_id],
-                            )
-                            .into();
-                        debug_assert!(new_concept_id != right_id);
-                        debug_assert!(new_concept_id != composition_id);
-                        self.concepts[*new_concept_id] = Some(
-                            Concept::lefthand_of(
-                                *new_concept_id,
-                                right,
-                                composition,
-                                *concrete_type,
-                            )
-                            .unwrap(),
-                        );
-                        if let Some(cct) = concrete_type {
-                            self.concrete_concepts
-                                .insert(*new_concept_id, *cct);
-                        }
-                    },
-                    NewConceptDelta::Double {
-                        composition_id,
-                        concrete_type,
-                    } => {
-                        let composition = self.write_concept(*composition_id);
-                        debug_assert!(new_concept_id != composition_id);
-                        self.concepts[*new_concept_id] = Some(Concept::double(
-                            *new_concept_id,
-                            composition,
-                            *concrete_type,
-                        ));
-                        if let Some(cct) = concrete_type {
-                            self.concrete_concepts
-                                .insert(*new_concept_id, *cct);
-                        }
-                    },
-                    NewConceptDelta::Right {
-                        composition_id,
-                        left_id,
-                        concrete_type,
-                    } => {
-                        let [left, composition]: [&mut Concept; 2] = self
-                            .write_concepts(
-                                arr![usize; *left_id, *composition_id],
-                            )
-                            .into();
-                        debug_assert!(new_concept_id != left_id);
-                        debug_assert!(new_concept_id != composition_id);
-                        self.concepts[*new_concept_id] = Some(
-                            Concept::righthand_of(
-                                *new_concept_id,
-                                left,
-                                composition,
-                                *concrete_type,
-                            )
-                            .unwrap(),
-                        );
-                        if let Some(cct) = concrete_type {
-                            self.concrete_concepts
-                                .insert(*new_concept_id, *cct);
-                        }
-                    },
-                    NewConceptDelta::ReducesTo {
-                        reduction,
-                        variable,
-                    } => {
-                        debug_assert!(new_concept_id != reduction);
-                        let reduction_concept = self.write_concept(*reduction);
-                        self.concepts[*new_concept_id] =
-                            Some(Concept::reduction_to(
-                                *new_concept_id,
-                                reduction_concept,
-                                *variable,
-                            ));
-                    },
-                },
+                DirectConceptDelta::New(delta) => self.apply_new_concept(delta),
                 DirectConceptDelta::Compose {
                     change,
                     composition_id,

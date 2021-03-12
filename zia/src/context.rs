@@ -272,32 +272,39 @@ where
                 // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
                 let raw_syntax_of_token = SyntaxTree::from(token);
-                let (precedence_of_token, syntax_of_token) = if let Some(c) =
-                    self.snap_shot.concept_from_label(&self.delta, token)
-                {
-                    let syntax_of_token = self
-                        .snap_shot
-                        .bind_concept_to_syntax(
-                            &self.delta,
-                            raw_syntax_of_token,
-                            c,
-                        )
-                        .into();
-                    (
-                        context_search
-                            .concrete_ast(ConcreteConceptType::Precedence)
-                            .map(|ast| {
-                                context_search.combine(&ast, &syntax_of_token)
-                            }),
-                        syntax_of_token,
-                    )
-                } else {
-                    (
-                        context_search
-                            .concrete_ast(ConcreteConceptType::Default),
-                        raw_syntax_of_token.into(),
-                    )
-                };
+                let (precedence_of_token, syntax_of_token) = self
+                    .snap_shot
+                    .concept_from_label(&self.delta, token)
+                    .map_or_else(
+                        || {
+                            (
+                                context_search
+                                    .concrete_ast(ConcreteConceptType::Default),
+                                raw_syntax_of_token.clone().into(),
+                            )
+                        },
+                        |c| {
+                            let syntax_of_token = self
+                                .snap_shot
+                                .bind_concept_to_syntax(
+                                    &self.delta,
+                                    raw_syntax_of_token.clone(),
+                                    c,
+                                )
+                                .into();
+                            (
+                                context_search
+                                    .concrete_ast(
+                                        ConcreteConceptType::Precedence,
+                                    )
+                                    .map(|ast| {
+                                        context_search
+                                            .combine(&ast, &syntax_of_token)
+                                    }),
+                                syntax_of_token,
+                            )
+                        },
+                    );
                 // Compare current token's precedence with each currently assumed lowest syntax
                 for syntax in lowest_precedence_syntax.clone() {
                     let precedence_of_syntax = if syntax.get_concept().is_some()
@@ -637,12 +644,13 @@ where
                         .snap_shot
                         .read_concept(&self.delta, c)
                         .get_reduction();
-                    if let Some(r) = rightleft_reduction {
-                        let ast = self.context_search().to_ast(r);
-                        self.match_righthand_pair(left, &ast, rightright)
-                    } else {
-                        Err(ZiaError::CannotReduceFurther)
-                    }
+                    rightleft_reduction.map_or(
+                        Err(ZiaError::CannotReduceFurther),
+                        |r| {
+                            let ast = self.context_search().to_ast(r);
+                            self.match_righthand_pair(left, &ast, rightright)
+                        },
+                    )
                 },
             }
         })
@@ -838,11 +846,9 @@ where
     }
 
     fn try_removing_reduction(&mut self, syntax: &SyntaxTree) -> ZiaResult<()> {
-        if let Some(c) = syntax.get_concept() {
+        syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
             self.delete_reduction(c)
-        } else {
-            Err(ZiaError::RedundantReduction)
-        }
+        })
     }
 
     fn delete_reduction(&mut self, concept_id: usize) -> ZiaResult<()> {
@@ -886,7 +892,7 @@ where
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
                     let concept =
-                        self.find_or_insert_composition(leftc, rightc)?;
+                        self.find_or_insert_composition(leftc, rightc);
                     if !string.contains(' ') {
                         self.label(concept, string)?;
                     }
@@ -923,7 +929,6 @@ where
                 new_concept_id: composition_id,
                 delta: NewConceptDelta::ReducesTo {
                     reduction: new_concept_label_id,
-                    variable: false,
                 },
             })
             .into();
@@ -956,7 +961,7 @@ where
         let label_id = self
             .concrete_concept_id(ConcreteConceptType::Label)
             .ok_or(ZiaError::NoLabelConcept)?;
-        let composition = self.find_or_insert_composition(label_id, concept)?;
+        let composition = self.find_or_insert_composition(label_id, concept);
         let string_id = self.new_string(string);
         self.update_reduction(composition, string_id)
     }
@@ -982,7 +987,7 @@ where
         &mut self,
         lefthand: usize,
         righthand: usize,
-    ) -> ZiaResult<usize> {
+    ) -> usize {
         let pair = self.context_search().find_composition(lefthand, righthand);
         match pair {
             None => {
@@ -999,9 +1004,9 @@ where
                     .into(),
                     &mut self.cache,
                 );
-                Ok(new_concept_id)
+                new_concept_id
             },
-            Some(def) => Ok(def),
+            Some(def) => def,
         }
     }
 

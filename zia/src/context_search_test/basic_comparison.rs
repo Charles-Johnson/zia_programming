@@ -69,7 +69,6 @@ fn basic_comparison() {
             }
         )
     );
-    // TODO: find out why this test is non-deterministic
     assert_eq!(
         context_search.compare(&left_syntax, &another_syntax),
         (
