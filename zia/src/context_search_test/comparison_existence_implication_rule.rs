@@ -67,6 +67,8 @@ fn comparison_existence_implication_rule_test() {
             }
         )
     );
+    let d_syntax = context_search.to_ast(30);
+    assert_eq!(context_search.compare(&a_syntax, &d_syntax).0, Comparison::GreaterThan)
 }
 
 fn labels() -> HashMap<usize, &'static str> {
@@ -83,11 +85,12 @@ fn labels() -> HashMap<usize, &'static str> {
         22 => "b",
         23 => "c",
         28 => "assoc",
-        29 => "right"
+        29 => "right",
+        30 => "d"
     }
 }
 
-fn concepts() -> [Concept; 30] {
+fn concepts() -> [Concept; 33] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =
@@ -155,6 +158,12 @@ fn concepts() -> [Concept; 30] {
     b_greater_than_c.make_reduce_to(&mut true_concept);
     let assoc_concept = (ConcreteConceptType::Associativity, 28).into();
     let right_id_concept = (ConcreteConceptType::Right, 29).into();
+    let mut d = (SpecificPart::default(), 30).into();
+    let mut greater_than_d =
+        Concept::composition_of(31, &mut greater_than_concept, &mut d);
+    let mut c_greater_than_d =
+        Concept::composition_of(32, &mut c, &mut greater_than_d);
+    c_greater_than_d.make_reduce_to(&mut true_concept);
     [
         true_concept,
         greater_than_concept,
@@ -185,6 +194,9 @@ fn concepts() -> [Concept; 30] {
         greater_than_c,
         b_greater_than_c,
         assoc_concept,
-        right_id_concept
+        right_id_concept,
+        d,
+        greater_than_d,
+        c_greater_than_d
     ]
 }
