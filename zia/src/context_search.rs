@@ -35,7 +35,7 @@ use std::{
 #[derive(Debug)]
 pub struct ContextSearch<'a, S> {
     snap_shot: &'a S,
-    variable_mask: VariableMask,
+    variable_mask: Arc<VariableMaskList>,
     delta: &'a ContextDelta,
     caches: Arc<CacheList<'a>>,
     syntax_evaluating: HashSet<Arc<SyntaxTree>>,
@@ -158,7 +158,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 .get_reduction()
                 .and_then(|n| {
                     if self.is_leaf_variable(n) {
-                        self.variable_mask.get(&n).cloned()
+                        self.variable_mask.get(n).cloned()
                     } else {
                         Some(self.to_ast(n))
                     }
@@ -278,9 +278,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
         let maybe_subbed_r =
-            right.get_concept().and_then(|r| self.variable_mask.get(&r));
+            right.get_concept().and_then(|r| self.variable_mask.get(r));
         let maybe_subbed_l =
-            left.get_concept().and_then(|l| self.variable_mask.get(&l));
+            left.get_concept().and_then(|l| self.variable_mask.get(l));
         let cache = ContextCache::default();
         match (left_result, right_result) {
             (None, None) => self
@@ -289,7 +289,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 .find_map(|(generalisation, variable_mask)| {
                     let mut context_search = self.spawn(&cache);
                     // Stack overflow occurs if you remove this
-                    context_search.variable_mask.extend(variable_mask.clone());
+                    if let Err(_) = context_search
+                        .insert_variable_mask(variable_mask.clone())
+                    {
+                        return None;
+                    }
                     context_search.reduce_concept(*generalisation).map(
                         |(ast, reason)| {
                             (
@@ -379,20 +383,19 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         left: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> Vec<(usize, VariableMask)> {
-        let generalisation_candidates =
-            self.find_generalisations(&self.contract_pair(left, right));
+        let ast = &self.contract_pair(left, right);
+        let generalisation_candidates = self.find_generalisations(ast);
         debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
         let result = generalisation_candidates
             .par_iter()
             .filter_map(|gc| {
-                self.check_generalisation(&self.contract_pair(left, right), *gc)
-                    .and_then(|vm| {
-                        if vm.is_empty() {
-                            None
-                        } else {
-                            Some((*gc, vm))
-                        }
-                    })
+                self.check_generalisation(ast, *gc).and_then(|vm| {
+                    if vm.is_empty() {
+                        None
+                    } else {
+                        Some((*gc, vm))
+                    }
+                })
             })
             .collect();
         debug!(
@@ -530,7 +533,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn is_free_variable(&self, v: usize) -> bool {
         self.snap_shot.read_concept(self.delta, v).variable()
-            && self.variable_mask.get(&v).is_none()
+            && self
+                .variable_mask
+                .tail
+                .as_ref()
+                .map_or(true, |vml| vml.get(v).is_none()) // A hack required to prevent stack overflow
     }
 
     fn is_leaf_concept(&self, l: usize) -> bool {
@@ -570,70 +577,73 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     .get_concept()
                     .map_or(false, |c| self.is_free_variable(c)) =>
             {
-                let mut might_exist = false;
-                let cache = ContextCache::default();
-                let results: Vec<Option<(bool, ReductionReason)>> = (0..self
-                    .snap_shot
-                    .lowest_unoccupied_concept_id(self.delta))
-                    .into_par_iter()
-                    .map(|i| {
-                        if self.is_free_variable(i) {
-                            None
-                        } else {
-                            let mut context_search = self.spawn(&cache);
-                            let example = self.to_ast(i);
-                            let variable_concept = leftleft.get_concept().unwrap();
-                            context_search.variable_mask.insert(
-                                variable_concept,
-                                example.clone(),
-                            );
-                            let (truth_value, maybe_reason) = self
-                                .recursively_reduce(
-                                    &context_search.substitute(right, &hashmap! {variable_concept => example.clone()}),
-                                );
-                            match (self.concrete_type_of_ast(&truth_value), maybe_reason) {
-                                (Some(ConcreteConceptType::True), Some(reason)) =>
-                                {
-                                    Some((
-                                        true,
-                                        ReductionReason::Existence {
-                                            example,
-                                            reason: reason.into(),
-                                        },
-                                    ))
-                                },
-                                (Some(ConcreteConceptType::False), Some(reason)) =>
-                                {
-                                    Some((
-                                        false,
-                                        ReductionReason::NonExistence {
-                                            example,
-                                            reason: reason.into(),
-                                        },
-                                    ))
-                                },
-                                _ => None,
-                            }
-                        }
-                    })
-                    .collect();
-                for result in results {
-                    match result {
-                        Some((true, reason)) => {
-                            return self.concrete_ast(ConcreteConceptType::True).map(|ast| (ast, reason))
-                        },
-                        Some((false, _)) => (),
-                        _ => might_exist = true,
-                    };
-                }
-                if might_exist {
-                    None
-                } else {
-                    self.concrete_ast( ConcreteConceptType::False).map(|ast| (ast, ReductionReason::Absence))
-                }
+                let true_id = self
+                    .concrete_concept_id(ConcreteConceptType::True)
+                    .expect("true concept must exist");
+                let true_concept =
+                    self.snap_shot.read_concept(self.delta, true_id);
+                let truths = true_concept.find_what_reduces_to_it();
+                self.find_example(right, &truths.copied().collect()).map(
+                    |(example, reason)| {
+                        (
+                            self.to_ast(true_id),
+                            ReductionReason::Existence {
+                                example,
+                                reason,
+                            },
+                        )
+                    },
+                )
             }
             _ => None,
         })
+    }
+
+    fn find_example(
+        &self,
+        generalisation: &Arc<SyntaxTree>,
+        truths: &HashSet<usize>,
+    ) -> Option<(Arc<SyntaxTree>, Arc<ReductionReason>)> {
+        if generalisation.is_variable() {
+            if let Some((left, right)) = generalisation.get_expansion() {
+                match (left.is_variable(), right.is_variable()) {
+                    (true, true) => todo!("recurse until non variable is found so that examples can be recovered"),
+                    (true, false) => {
+                        let right_id = right.get_concept().unwrap();
+                        let right_concept = self.snap_shot.read_concept(self.delta, right_id);
+                        let examples = right_concept.get_lefthand_of();
+                        examples.iter().filter(|e| truths.contains(e)).next().map(|id| (
+                            self.to_ast(*id),
+                            Arc::new(ReductionReason::Explicit)
+                        ))
+                    },
+                    (false, true) => {
+                        let left_id = left.get_concept().unwrap();
+                        let left_concept = self.snap_shot.read_concept(self.delta, left_id);
+                        let examples = left_concept.get_lefthand_of();
+                        examples.iter().filter(|e| truths.contains(e)).next().map(|id| (
+                            self.to_ast(*id),
+                            Arc::new(ReductionReason::Explicit)
+                        ))
+                    },
+                    (false, false) => unreachable!("a variable's expansion must include at least one variable")
+                }
+            } else {
+                truths.iter().next().map(|c| {
+                    (self.to_ast(*c), Arc::new(ReductionReason::Explicit))
+                })
+            }
+        } else {
+            if let Some(c) = generalisation.get_concept() {
+                if truths.contains(&c) {
+                    return Some((
+                        generalisation.clone(),
+                        Arc::new(ReductionReason::Explicit),
+                    ));
+                }
+            }
+            None
+        }
     }
 
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -742,7 +752,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
     pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
-        self.variable_mask.get(&concept_id).cloned().unwrap_or_else(|| {
+        self.variable_mask.get(concept_id).cloned().unwrap_or_else(|| {
             self.caches.get_syntax_tree_or_else(concept_id, || {
                 let concept =
                     self.snap_shot.read_concept(self.delta, concept_id);
@@ -972,6 +982,18 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             variable_mask: self.variable_mask.clone(),
         }
     }
+
+    /// Error if `variable_mask` is already included
+    fn insert_variable_mask(
+        &mut self,
+        variable_mask: VariableMask,
+    ) -> Result<(), ()> {
+        self.variable_mask = Arc::new(
+            VariableMaskList::push(&self.variable_mask, variable_mask)
+                .ok_or(())?,
+        );
+        Ok(())
+    }
 }
 
 fn simplify_reasoning(
@@ -1041,7 +1063,7 @@ impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
         // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
             snap_shot,
-            variable_mask: hashmap! {},
+            variable_mask: VariableMaskList::from(hashmap! {}).into(),
             delta,
             caches: Arc::new(cache.into()),
             syntax_evaluating: hashset! {},
@@ -1052,3 +1074,40 @@ impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
 type ContextReferences<'a, S> = (&'a S, &'a ContextDelta, &'a ContextCache);
 
 type VariableMask = HashMap<usize, Arc<SyntaxTree>>;
+
+#[derive(Clone, PartialEq, Debug)]
+struct VariableMaskList {
+    head: VariableMask,
+    tail: Option<Arc<VariableMaskList>>,
+}
+
+impl From<VariableMask> for VariableMaskList {
+    fn from(head: VariableMask) -> Self {
+        Self {
+            head,
+            tail: None,
+        }
+    }
+}
+
+impl VariableMaskList {
+    /// returns None if `head` is equal to one of the nodes.
+    /// This prevents cycles in reduction evaluations
+    fn push(list: &Arc<Self>, head: VariableMask) -> Option<Self> {
+        (!list.contains(&head)).then(|| Self {
+            head,
+            tail: Some(list.clone()),
+        })
+    }
+
+    fn contains(&self, node: &VariableMask) -> bool {
+        &self.head == node
+            || self.tail.as_ref().map_or(false, |vml| vml.contains(node))
+    }
+
+    fn get(&self, concept_id: usize) -> Option<&Arc<SyntaxTree>> {
+        self.head
+            .get(&concept_id)
+            .or_else(|| self.tail.as_ref().and_then(|vml| vml.get(concept_id)))
+    }
+}
