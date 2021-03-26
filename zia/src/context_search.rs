@@ -612,7 +612,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         let right_id = right.get_concept().unwrap();
                         let right_concept = self.snap_shot.read_concept(self.delta, right_id);
                         let examples = right_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).next().map(|id| (
+                        examples.iter().filter(|e| truths.contains(e)).filter(|e| {
+                            let comp_concept = self.snap_shot.read_concept(self.delta, **e);
+                            let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
+                            self.check_generalisation(&self.to_ast(left_id), left.get_concept().unwrap()).is_some()
+                        }).next().map(|id| (
                             self.to_ast(*id),
                             Arc::new(ReductionReason::Explicit)
                         ))
@@ -621,7 +625,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         let left_id = left.get_concept().unwrap();
                         let left_concept = self.snap_shot.read_concept(self.delta, left_id);
                         let examples = left_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).next().map(|id| (
+                        examples.iter().filter(|e| truths.contains(e)).filter(|e| {
+                            let comp_concept = self.snap_shot.read_concept(self.delta, **e);
+                            let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
+                            self.check_generalisation(&self.to_ast(right_id), right.get_concept().unwrap()).is_some()
+                        }).next().map(|id| (
                             self.to_ast(*id),
                             Arc::new(ReductionReason::Explicit)
                         ))
