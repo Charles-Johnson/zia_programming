@@ -604,53 +604,86 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         generalisation: &Arc<SyntaxTree>,
         truths: &HashSet<usize>,
     ) -> Option<(Arc<SyntaxTree>, Arc<ReductionReason>)> {
+        self.find_examples(generalisation, truths)
+            .first()
+            .cloned()
+            .map(|(a, r, _)| (a, r))
+    }
+
+    fn find_examples(
+        &self,
+        generalisation: &Arc<SyntaxTree>,
+        truths: &HashSet<usize>,
+    ) -> Vec<(Arc<SyntaxTree>, Arc<ReductionReason>, VariableMask)> {
         if generalisation.is_variable() {
             if let Some((left, right)) = generalisation.get_expansion() {
                 match (left.is_variable(), right.is_variable()) {
-                    (true, true) => todo!("recurse until non variable is found so that examples can be recovered"),
+                    (true, true) => {
+                        let mut examples = vec![];
+                        for truth in truths {
+                            let truth_concept = self.snap_shot.read_concept(self.delta, *truth);
+                            if let Some((truth_left, truth_right)) = truth_concept.get_composition() {
+                                let left_examples = self.find_examples(&left, &hashset!{truth_left});
+                                let right_examples = self.find_examples(&right, &hashset!{truth_right});
+                                todo!("combine left examples with right examples with consideration for the variable masks");
+                            }
+                        }
+                        examples
+                    },
                     (true, false) => {
                         let right_id = right.get_concept().unwrap();
                         let right_concept = self.snap_shot.read_concept(self.delta, right_id);
                         let examples = right_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).filter(|e| {
-                            let comp_concept = self.snap_shot.read_concept(self.delta, **e);
+                        examples.iter().filter(|e| truths.contains(e)).filter_map(|e| {
+                            let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
-                            self.check_generalisation(&self.to_ast(left_id), left.get_concept().unwrap()).is_some()
-                        }).next().map(|id| (
-                            self.to_ast(*id),
-                            Arc::new(ReductionReason::Explicit)
-                        ))
+                            self.check_generalisation(&self.to_ast(left_id), left.get_concept().unwrap()).map(|vm| (*e, vm))
+                        }).map(|(id, vm)| (
+                            self.to_ast(id),
+                            Arc::new(ReductionReason::Explicit),
+                            vm
+                        )).collect()
                     },
                     (false, true) => {
                         let left_id = left.get_concept().unwrap();
                         let left_concept = self.snap_shot.read_concept(self.delta, left_id);
                         let examples = left_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).filter(|e| {
-                            let comp_concept = self.snap_shot.read_concept(self.delta, **e);
+                        examples.iter().filter(|e| truths.contains(e)).filter_map(|e| {
+                            let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
-                            self.check_generalisation(&self.to_ast(right_id), right.get_concept().unwrap()).is_some()
-                        }).next().map(|id| (
-                            self.to_ast(*id),
-                            Arc::new(ReductionReason::Explicit)
-                        ))
+                            // Should handle the case when `right` does not have a concept
+                            self.check_generalisation(&self.to_ast(right_id), right.get_concept().unwrap()).map(|vm| (*e, vm))
+                        }).map(|(id, vm)| (
+                            self.to_ast(id),
+                            Arc::new(ReductionReason::Explicit),
+                            vm
+                        )).collect()
                     },
                     (false, false) => unreachable!("a variable's expansion must include at least one variable")
                 }
             } else {
-                truths.iter().next().map(|c| {
-                    (self.to_ast(*c), Arc::new(ReductionReason::Explicit))
-                })
+                truths
+                    .iter()
+                    .map(|c| {
+                        (
+                            self.to_ast(*c),
+                            Arc::new(ReductionReason::Explicit),
+                            hashmap! {},
+                        )
+                    })
+                    .collect()
             }
         } else {
             if let Some(c) = generalisation.get_concept() {
                 if truths.contains(&c) {
-                    return Some((
+                    return vec![(
                         generalisation.clone(),
                         Arc::new(ReductionReason::Explicit),
-                    ));
+                        hashmap! {},
+                    )];
                 }
             }
-            None
+            vec![]
         }
     }
 
