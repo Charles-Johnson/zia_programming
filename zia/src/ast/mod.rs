@@ -14,11 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::{self, Debug},
     hash::{Hash, Hasher},
     sync::Arc,
 };
+
+use maplit::hashmap;
+
+use crate::and_also::AndAlso;
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone)]
@@ -311,6 +315,45 @@ impl SyntaxTree {
             } => !free_variables.is_empty() || !binding_variables.is_empty(),
             SyntaxNode::Leaf(SyntaxLeaf::Variable) => true,
             SyntaxNode::Leaf(_) => false,
+        }
+    }
+
+    pub fn check_example(
+        example: &Arc<Self>,
+        generalisation: &Arc<Self>,
+    ) -> Option<HashMap<Arc<Self>, Arc<Self>>> {
+        match (example.get_expansion(), generalisation.get_expansion()) {
+            (
+                Some((left_example, right_example)),
+                Some((left_gen, right_gen)),
+            ) => {
+                Self::check_example(&left_example, &left_gen)
+                    .and_also_move(Self::check_example(
+                        &right_example,
+                        &right_gen,
+                    ))
+                    .and_then(|(mut left_vm, right_vm)| {
+                        for (variable, substitution) in right_vm {
+                            if let Some(prev_sub) =
+                                left_vm.insert(variable, substitution.clone())
+                            {
+                                if prev_sub != substitution {
+                                    // not an example of generalisation because different values have to be substituted for the same variable
+                                    return None;
+                                }
+                            }
+                        }
+                        Some(left_vm)
+                    })
+            },
+            (Some(_), None) => generalisation
+                .is_variable()
+                .then(|| hashmap! {generalisation.clone() => example.clone()}),
+            (None, Some(_)) => None,
+            (None, None) => generalisation
+                .is_variable()
+                .then(|| hashmap! {generalisation.clone() => example.clone()})
+                .or_else(|| (example == generalisation).then(|| hashmap! {})),
         }
     }
 }

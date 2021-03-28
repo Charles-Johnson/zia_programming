@@ -434,6 +434,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             .into()
     }
 
+    /// Checks if the concepts in the composition of `generalisation` matches the corresponding nodes in `ast` or is a free variable
+    /// returns `None` if does not match otherwise returns a `HashMap` mapping free variable concept IDs to the matching nodes in `ast`
     fn check_generalisation(
         &self,
         ast: &Arc<SyntaxTree>,
@@ -614,7 +616,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         &self,
         generalisation: &Arc<SyntaxTree>,
         truths: &HashSet<usize>,
-    ) -> Vec<(Arc<SyntaxTree>, Arc<ReductionReason>, VariableMask)> {
+    ) -> Vec<(
+        Arc<SyntaxTree>,
+        Arc<ReductionReason>,
+        HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>,
+    )> {
         if generalisation.is_variable() {
             if let Some((left, right)) = generalisation.get_expansion() {
                 match (left.is_variable(), right.is_variable()) {
@@ -637,7 +643,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         examples.iter().filter(|e| truths.contains(e)).filter_map(|e| {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
-                            self.check_generalisation(&self.to_ast(left_id), left.get_concept().unwrap()).map(|vm| (*e, vm))
+                            SyntaxTree::check_example(&self.to_ast(left_id), &left).map(|vm| (*e, vm))
                         }).map(|(id, vm)| (
                             self.to_ast(id),
                             Arc::new(ReductionReason::Explicit),
@@ -652,7 +658,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
                             // Should handle the case when `right` does not have a concept
-                            self.check_generalisation(&self.to_ast(right_id), right.get_concept().unwrap()).map(|vm| (*e, vm))
+                            SyntaxTree::check_example(&self.to_ast(right_id), &right).map(|vm| (*e, vm))
                         }).map(|(id, vm)| (
                             self.to_ast(id),
                             Arc::new(ReductionReason::Explicit),
