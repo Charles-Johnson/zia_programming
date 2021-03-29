@@ -326,9 +326,9 @@ impl SyntaxTree {
             (
                 Some((left_example, right_example)),
                 Some((left_gen, right_gen)),
-            ) => Self::check_example(&left_example, &left_gen)
-                .and_also_move(Self::check_example(&right_example, &right_gen))
-                .and_then(|(mut left_vm, mut right_vm)| {
+            ) => left_example.check_example(&left_gen)
+                .and_also_move(right_example.check_example(&right_gen))
+                .and_then(|(left_vm, right_vm)| {
                     left_vm.consistent_merge(right_vm)
                 }),
             (Some(_), None) => generalisation
