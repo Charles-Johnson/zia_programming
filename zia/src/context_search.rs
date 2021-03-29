@@ -655,7 +655,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     (true, false) => {
                         let right_id = right.get_concept().unwrap();
                         let right_concept = self.snap_shot.read_concept(self.delta, right_id);
-                        let examples = right_concept.get_lefthand_of();
+                        let examples = right_concept.get_righthand_of();
                         examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
@@ -672,7 +672,6 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
-                            // Should handle the case when `right` does not have a concept
                             self.to_ast(right_id).check_example(&right).map(|vm| (*e, vm))
                         }).map(|(id, vm)| (
                             self.to_ast(id),

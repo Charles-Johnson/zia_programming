@@ -52,8 +52,9 @@ fn existence_inference_rule() {
                         .substitute(&context_search.to_ast(6), &variable_mask),
                     reason: ReductionReason::Existence {
                         reduction: context_search.to_ast(1),
-                        generalisation: context_search.to_ast(4),
-                        substitutions: hashmap!{context_search.to_ast(9) => context_search.to_ast(3)},
+                        generalisation: context_search
+                            .substitute(&context_search.to_ast(13), &variable_mask),
+                        substitutions: hashmap!{context_search.to_ast(11) => context_search.to_ast(3)},
                         reduction_reason: Arc::new(ReductionReason::Explicit)
                     }
                     .into()
