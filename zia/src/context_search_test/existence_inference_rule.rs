@@ -7,7 +7,7 @@ use crate::{
     snap_shot::{mock::MockSnapShot, Reader},
 };
 use maplit::hashmap;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 const CONCEPT_LEN: usize = 17;
 
@@ -51,8 +51,10 @@ fn existence_inference_rule() {
                     implication: context_search
                         .substitute(&context_search.to_ast(6), &variable_mask),
                     reason: ReductionReason::Existence {
-                        example: context_search.to_ast(3),
-                        reason: ReductionReason::Explicit.into()
+                        reduction: context_search.to_ast(1),
+                        generalisation: context_search.to_ast(4),
+                        substitutions: hashmap!{context_search.to_ast(9) => context_search.to_ast(3)},
+                        reduction_reason: Arc::new(ReductionReason::Explicit)
                     }
                     .into()
                 }

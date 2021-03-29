@@ -35,8 +35,10 @@ fn comparison_existence_implication_rule_test() {
                 &context_search.to_ast(20), &variable_mask
             ),
             reason: ReductionReason::Existence{
-                example: context_search.to_ast(22),
-                reason: ReductionReason::Recursive{
+                substitutions: hashmap!{context_search.to_ast(5) => context_search.to_ast(22)},
+                generalisation: context_search.to_ast(15),
+                reduction: true_syntax.clone(),
+                reduction_reason: ReductionReason::Recursive{
                     syntax: context_search.to_ast(11),
                     reason: ReductionReason::Explicit.into(),
                     from: ReductionReason::Partial(hashmap! {

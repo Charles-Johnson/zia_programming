@@ -7,7 +7,7 @@ use crate::{
     snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
 use maplit::hashmap;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 #[test]
 fn basic_existence() {
@@ -16,25 +16,25 @@ fn basic_existence() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let exists_such_that_syntax =
-        SyntaxTree::from("exists_such_that").bind_quantifier_concept(0);
-    let variable_syntax =
-        || SyntaxTree::from("_x_").bind_nonquantifier_concept(3);
-    let variable_exists_such_that_variable_is_true_syntax =
-        SyntaxTree::new_pair(
-            SyntaxTree::new_pair(variable_syntax(), exists_such_that_syntax),
-            variable_syntax(),
+    let exists_such_that_syntax = context_search.to_ast(0);
+    let variable_syntax = context_search.to_ast(3);
+    let variable_exists_such_that_variable_is_true_syntax = context_search
+        .combine(
+            &context_search.combine(&variable_syntax, &exists_such_that_syntax),
+            &variable_syntax,
         )
         .into();
-
+    let true_syntax = context_search.to_ast(1);
     assert_eq!(
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax),
         Some((
-            SyntaxTree::from("true").bind_nonquantifier_concept(1).into(),
+            true_syntax.clone(),
             ReductionReason::Existence {
-                example: context_search.to_ast(2),
-                reason: ReductionReason::Explicit.into(),
+                generalisation: variable_syntax.clone(),
+                substitutions: hashmap! {variable_syntax => context_search.to_ast(2)},
+                reduction: true_syntax,
+                reduction_reason: ReductionReason::Explicit.into(),
             }
         ))
     );
@@ -54,7 +54,7 @@ fn concepts() -> [Concept; 4] {
         (ConcreteConceptType::ExistsSuchThat, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut abstract_concept: Concept = (SpecificPart::default(), 2).into();
-    let variable_concept = (SpecificPart::variable(), 3).into();
+    let variable_concept: Concept = (SpecificPart::variable(), 3).into();
     abstract_concept.make_reduce_to(&mut true_concept);
     [exists_such_that_concept, true_concept, abstract_concept, variable_concept]
 }

@@ -18,6 +18,7 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType},
+    consistent_merge::ConsistentMerge,
     context_cache::{CacheList, ContextCache},
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
@@ -61,8 +62,10 @@ pub enum ReductionReason {
     },
     Partial(HashMap<Arc<SyntaxTree>, (Arc<SyntaxTree>, ReductionReason)>),
     Existence {
-        example: Arc<SyntaxTree>,
-        reason: Arc<ReductionReason>,
+        generalisation: Arc<SyntaxTree>,
+        substitutions: HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>,
+        reduction_reason: Arc<ReductionReason>,
+        reduction: Arc<SyntaxTree>,
     },
     NonExistence {
         example: Arc<SyntaxTree>,
@@ -586,12 +589,17 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     self.snap_shot.read_concept(self.delta, true_id);
                 let truths = true_concept.find_what_reduces_to_it();
                 self.find_example(right, &truths.copied().collect()).map(
-                    |(example, reason)| {
+                    |substitutions| {
+                        let true_syntax = self.to_ast(true_id);
                         (
-                            self.to_ast(true_id),
+                            true_syntax.clone(),
                             ReductionReason::Existence {
-                                example,
-                                reason,
+                                generalisation: right.clone(),
+                                substitutions,
+                                reduction_reason: Arc::new(
+                                    ReductionReason::Explicit,
+                                ), // Might not always be explicit
+                                reduction: true_syntax,
                             },
                         )
                     },
@@ -605,33 +613,41 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         &self,
         generalisation: &Arc<SyntaxTree>,
         truths: &HashSet<usize>,
-    ) -> Option<(Arc<SyntaxTree>, Arc<ReductionReason>)> {
+    ) -> Option<HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>> {
         self.find_examples(generalisation, truths)
-            .first()
-            .cloned()
-            .map(|(a, r, _)| (a, r))
+            .pop()
+            .map(|(_, substitutions)| substitutions)
     }
 
     fn find_examples(
         &self,
         generalisation: &Arc<SyntaxTree>,
-        truths: &HashSet<usize>,
-    ) -> Vec<(
-        Arc<SyntaxTree>,
-        Arc<ReductionReason>,
-        HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>,
-    )> {
+        equivalence_set: &HashSet<usize>, /* All concepts that are equal to generalisation */
+    ) -> Vec<(Arc<SyntaxTree>, HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>)> {
         if generalisation.is_variable() {
             if let Some((left, right)) = generalisation.get_expansion() {
                 match (left.is_variable(), right.is_variable()) {
                     (true, true) => {
                         let mut examples = vec![];
-                        for truth in truths {
-                            let truth_concept = self.snap_shot.read_concept(self.delta, *truth);
-                            if let Some((truth_left, truth_right)) = truth_concept.get_composition() {
-                                let left_examples = self.find_examples(&left, &hashset!{truth_left});
-                                let right_examples = self.find_examples(&right, &hashset!{truth_right});
-                                todo!("combine left examples with right examples with consideration for the variable masks");
+                        for equivalent_concept_id in equivalence_set {
+                            let equivalent_concept = self.snap_shot.read_concept(self.delta, *equivalent_concept_id);
+                            if let Some((equivalent_left_id, equivalent_right_id)) = equivalent_concept.get_composition() {
+                                let equivalent_left = self.snap_shot.read_concept(self.delta, equivalent_left_id);
+                                let equivalent_left_equivalence_set = equivalent_left.find_what_reduces_to_it().copied().collect();
+                                let left_examples = self.find_examples(&left, &equivalent_left_equivalence_set);
+                                let equivalent_right = self.snap_shot.read_concept(self.delta, equivalent_right_id);
+                                let equivalent_right_equivalence_set = equivalent_right.find_what_reduces_to_it().copied().collect();
+                                let right_examples = self.find_examples(&right, &equivalent_right_equivalence_set);
+                                for (left_example, left_vm) in &left_examples {
+                                    for (right_example, right_vm) in &right_examples {
+                                        if let Some(variable_mask) = left_vm.consistent_merge(right_vm) {
+                                            examples.push((
+                                                self.combine(&left_example, &right_example),
+                                                variable_mask
+                                            ))
+                                        }
+                                    }
+                                }
                             }
                         }
                         examples
@@ -640,13 +656,12 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         let right_id = right.get_concept().unwrap();
                         let right_concept = self.snap_shot.read_concept(self.delta, right_id);
                         let examples = right_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).filter_map(|e| {
+                        examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
-                            SyntaxTree::check_example(&self.to_ast(left_id), &left).map(|vm| (*e, vm))
+                            self.to_ast(left_id).check_example(&left).map(|vm| (*e, vm))
                         }).map(|(id, vm)| (
                             self.to_ast(id),
-                            Arc::new(ReductionReason::Explicit),
                             vm
                         )).collect()
                     },
@@ -654,39 +669,34 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         let left_id = left.get_concept().unwrap();
                         let left_concept = self.snap_shot.read_concept(self.delta, left_id);
                         let examples = left_concept.get_lefthand_of();
-                        examples.iter().filter(|e| truths.contains(e)).filter_map(|e| {
+                        examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
                             let comp_concept = self.snap_shot.read_concept(self.delta, *e);
                             let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
                             // Should handle the case when `right` does not have a concept
-                            SyntaxTree::check_example(&self.to_ast(right_id), &right).map(|vm| (*e, vm))
+                            self.to_ast(right_id).check_example(&right).map(|vm| (*e, vm))
                         }).map(|(id, vm)| (
                             self.to_ast(id),
-                            Arc::new(ReductionReason::Explicit),
                             vm
                         )).collect()
                     },
                     (false, false) => unreachable!("a variable's expansion must include at least one variable")
                 }
             } else {
-                truths
+                equivalence_set
                     .iter()
                     .map(|c| {
+                        let example = self.to_ast(*c);
                         (
-                            self.to_ast(*c),
-                            Arc::new(ReductionReason::Explicit),
-                            hashmap! {},
+                            example.clone(),
+                            hashmap! {generalisation.clone() => example},
                         )
                     })
                     .collect()
             }
         } else {
             if let Some(c) = generalisation.get_concept() {
-                if truths.contains(&c) {
-                    return vec![(
-                        generalisation.clone(),
-                        Arc::new(ReductionReason::Explicit),
-                        hashmap! {},
-                    )];
+                if equivalence_set.contains(&c) {
+                    return vec![(generalisation.clone(), hashmap! {})];
                 }
             }
             vec![]
