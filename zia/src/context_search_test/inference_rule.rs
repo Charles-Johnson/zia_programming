@@ -67,10 +67,9 @@ fn inference_rule() {
         &context_delta,
         &context_cache,
     ));
-    let example_syntax = SyntaxTree::new_pair(
-        SyntaxTree::new_constant_concept(7),
-        SyntaxTree::new_constant_concept(10),
-    );
+    let example_syntax = SyntaxTree::new_constant_concept(7)
+        .share()
+        .new_pair(SyntaxTree::new_constant_concept(10).into());
     let true_syntax = SyntaxTree::new_constant_concept(1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),

@@ -59,17 +59,22 @@ fn basic_rule() {
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
     let concrete_syntax =
         || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
-    let left_syntax = || SyntaxTree::from("left").bind_nonquantifier_concept(2);
+    let left_syntax =
+        SyntaxTree::from("left").bind_nonquantifier_concept(2).share();
     let right_left_syntax =
         SyntaxTree::from("right_left").bind_nonquantifier_concept(3);
-    let left_and_right_left_and_random_syntax = SyntaxTree::new_pair(
-        left_syntax(),
-        SyntaxTree::new_pair(right_left_syntax, SyntaxTree::from("random")),
-    )
-    .into();
+    let left_and_right_left_and_random_syntax = left_syntax
+        .clone()
+        .new_pair(
+            right_left_syntax
+                .share()
+                .new_pair(SyntaxTree::from("random").into())
+                .into(),
+        )
+        .into();
 
     assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(2), left_syntax().into());
+    assert_eq!(context_search.to_ast(2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
         generalisation: context_search.to_ast(1),

@@ -859,10 +859,11 @@ where
                 // update self.delta to include deletion of composition
                 // and invalidate cache
                 self.delta.update_concept_delta(
-                    &Arc::new(DirectConceptDelta::Reduce {
+                    &DirectConceptDelta::Reduce {
                         change: Change::Remove(z),
                         unreduced_id: concept_id,
-                    }),
+                    }
+                    .into(),
                     &mut self.cache,
                 );
             })

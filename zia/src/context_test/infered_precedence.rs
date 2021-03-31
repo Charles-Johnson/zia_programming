@@ -163,20 +163,24 @@ fn infered_precedence_test() {
         Context::<MockSnapShot>::new_test_case(&concepts(), &concept_labels());
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
-        Ok(SyntaxTree::new_pair(
-            SyntaxTree::from("let").bind_nonquantifier_concept(21),
-            SyntaxTree::new_pair(
-                SyntaxTree::new_pair(
-                    SyntaxTree::from("a"),
-                    SyntaxTree::from("b")
-                ),
-                SyntaxTree::new_pair(
-                    SyntaxTree::from("->").bind_nonquantifier_concept(22),
-                    SyntaxTree::from("c")
-                )
+        Ok(SyntaxTree::from("let")
+            .bind_nonquantifier_concept(21)
+            .share()
+            .new_pair(
+                SyntaxTree::from("a")
+                    .share()
+                    .new_pair(SyntaxTree::from("b").into())
+                    .share()
+                    .new_pair(
+                        SyntaxTree::from("->")
+                            .bind_nonquantifier_concept(22)
+                            .share()
+                            .new_pair(SyntaxTree::from("c").into())
+                            .into()
+                    )
+                    .into()
             )
-        )
-        .into())
+            .into())
     );
     assert_eq!(context.execute("default > (prec let)"), "true");
 }

@@ -7,7 +7,7 @@ use crate::{
     snap_shot::{mock::MockSnapShot, Reader},
 };
 use maplit::hashmap;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 const CONCEPT_LEN: usize = 17;
 
@@ -34,10 +34,10 @@ fn existence_inference_rule() {
         &context_delta,
         &context_cache,
     ));
-    let example_syntax = SyntaxTree::new_pair(
-        SyntaxTree::from("example").bind_nonquantifier_concept(7),
-        SyntaxTree::from("b").bind_nonquantifier_concept(10),
-    );
+    let example_syntax = SyntaxTree::from("example")
+        .bind_nonquantifier_concept(7)
+        .share()
+        .new_pair(SyntaxTree::from("b").bind_nonquantifier_concept(10).into());
     let true_syntax = SyntaxTree::from("true").bind_nonquantifier_concept(1);
     let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
@@ -55,7 +55,7 @@ fn existence_inference_rule() {
                         generalisation: context_search
                             .substitute(&context_search.to_ast(13), &variable_mask),
                         substitutions: hashmap!{context_search.to_ast(11) => context_search.to_ast(3)},
-                        reduction_reason: Arc::new(ReductionReason::Explicit)
+                        reduction_reason: ReductionReason::Explicit.into()
                     }
                     .into()
                 }

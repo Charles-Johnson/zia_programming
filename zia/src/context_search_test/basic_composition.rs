@@ -16,29 +16,28 @@ fn basic_composition() {
     let cache = ContextCache::default();
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
-    let left_syntax = SyntaxTree::from("b").bind_nonquantifier_concept(1);
-    let right_syntax = SyntaxTree::from("c").bind_nonquantifier_concept(2);
+    let left_syntax =
+        SyntaxTree::from("b").bind_nonquantifier_concept(1).share();
+    let right_syntax =
+        SyntaxTree::from("c").bind_nonquantifier_concept(2).share();
     let composite_syntax = SyntaxTree::from("a")
         .bind_nonquantifier_concept(0)
-        .bind_pair(left_syntax.clone(), right_syntax.clone());
-    let composite_syntax = || composite_syntax.clone();
-    let left_syntax = || left_syntax.clone();
-    let right_syntax = || right_syntax.clone();
+        .bind_pair(left_syntax.clone(), right_syntax.clone())
+        .share();
 
     assert_eq!(
-        context_search
-            .contract_pair(&left_syntax().into(), &right_syntax().into()),
-        composite_syntax().into()
+        context_search.contract_pair(&left_syntax, &right_syntax),
+        composite_syntax
     );
 
     assert_eq!(
         context_search.expand(&SyntaxTree::from("a").into()),
-        composite_syntax().into()
+        composite_syntax
     );
 
-    assert_eq!(context_search.to_ast(0), composite_syntax().into());
-    assert_eq!(context_search.to_ast(1), left_syntax().into());
-    assert_eq!(context_search.to_ast(2), right_syntax().into());
+    assert_eq!(context_search.to_ast(0), composite_syntax);
+    assert_eq!(context_search.to_ast(1), left_syntax);
+    assert_eq!(context_search.to_ast(2), right_syntax);
 }
 
 fn labels() -> HashMap<usize, &'static str> {

@@ -17,13 +17,14 @@ fn basic_rule() {
     let context_search =
         ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
     let concrete_syntax =
-        || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
-    let left_syntax = || SyntaxTree::from("left").bind_nonquantifier_concept(2);
+        SyntaxTree::from("concrete").bind_nonquantifier_concept(0).share();
+    let left_syntax =
+        SyntaxTree::from("left").bind_nonquantifier_concept(2).share();
     let left_and_random_syntax =
-        SyntaxTree::new_pair(left_syntax(), SyntaxTree::from("random")).into();
+        left_syntax.clone().new_pair(SyntaxTree::from("random").into()).into();
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(2), left_syntax().into());
+    assert_eq!(context_search.to_ast(0), concrete_syntax);
+    assert_eq!(context_search.to_ast(2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
         generalisation: context_search.to_ast(1),
@@ -33,12 +34,12 @@ fn basic_rule() {
 
     assert_eq!(
         context_search.reduce(&left_and_random_syntax),
-        Some((concrete_syntax().into(), reduction_reason.clone()))
+        Some((concrete_syntax.clone(), reduction_reason.clone()))
     );
 
     assert_eq!(
         context_search.recursively_reduce(&left_and_random_syntax),
-        (concrete_syntax().into(), Some(reduction_reason))
+        (concrete_syntax, Some(reduction_reason))
     );
 }
 

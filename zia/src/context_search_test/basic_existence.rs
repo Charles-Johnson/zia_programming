@@ -1,5 +1,4 @@
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_cache::ContextCache,
     context_delta::ContextDelta,
@@ -7,7 +6,7 @@ use crate::{
     snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
 use maplit::hashmap;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 #[test]
 fn basic_existence() {
