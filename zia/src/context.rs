@@ -28,7 +28,8 @@ use crate::{
     context_search::{Comparison, ContextSearch},
     context_snap_shot::Associativity,
     delta::Apply,
-    errors::{map_err_variant, ZiaError, ZiaResult},
+    errors::{ZiaError, ZiaResult},
+    map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
 };
@@ -522,40 +523,47 @@ where
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &Arc<SyntaxTree>) -> ZiaResult<String> {
         info!(self.logger, "call({})", ast);
-        match ast.get_concept().and_then(|c| {
-            self.snap_shot.read_concept(&self.delta, c).get_string()
-        }) {
-            Some(s) => Ok(s),
-            None => match ast.get_expansion() {
-                Some((ref left, ref right)) => map_err_variant(
-                    self.call_pair(left, right),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_reducing_then_call(ast),
-                            &ZiaError::CannotReduceFurther,
-                            || {
-                                Ok(self
-                                    .context_search()
-                                    .contract_pair(left, right)
-                                    .to_string())
-                            },
-                        )
-                    },
-                ),
-                None => map_err_variant(
-                    self.try_reducing_then_call(ast),
-                    &ZiaError::CannotReduceFurther,
-                    || {
-                        map_err_variant(
-                            self.try_expanding_then_call(ast),
-                            &ZiaError::CannotExpandFurther,
-                            || Ok(ast.to_string()),
-                        )
-                    },
-                ),
-            },
-        }
+        ast.get_concept()
+            .and_then(|c| {
+                self.snap_shot.read_concept(&self.delta, c).get_string()
+            })
+            .map_or_else(
+                || {
+                    #[allow(clippy::map_unwrap_or)]
+                    // because closures need unique access to self
+                    ast.get_expansion()
+                        .map(|(ref left, ref right)| {
+                            self.call_pair(left, right).map_err_variant(
+                                &ZiaError::CannotReduceFurther,
+                                || {
+                                    self.try_reducing_then_call(ast)
+                                        .map_err_variant(
+                                            &ZiaError::CannotReduceFurther,
+                                            || {
+                                                Ok(self
+                                                    .context_search()
+                                                    .contract_pair(left, right)
+                                                    .to_string())
+                                            },
+                                        )
+                                },
+                            )
+                        })
+                        .unwrap_or_else(|| {
+                            self.try_reducing_then_call(ast).map_err_variant(
+                                &ZiaError::CannotReduceFurther,
+                                || {
+                                    self.try_expanding_then_call(ast)
+                                        .map_err_variant(
+                                            &ZiaError::CannotExpandFurther,
+                                            || Ok(ast.to_string()),
+                                        )
+                                },
+                            )
+                        })
+                },
+                Ok,
+            )
     }
 
     fn concrete_type(&self, concept_id: usize) -> Option<ConcreteConceptType> {
@@ -814,14 +822,17 @@ where
             .get_concept()
             .and_also(&right.get_concept())
             .and_then(|(l, r)| {
-                self.context_search().find_composition(*l, *r).map(|concept| {
-                    let syntax = SyntaxTree::from(syntax);
-                    self.snap_shot.bind_concept_to_syntax(
-                        &self.delta,
-                        syntax,
-                        concept,
-                    )
-                })
+                self.snap_shot
+                    .read_concept(&self.delta, *l)
+                    .find_as_lefthand_in_composition_with_righthand(*r)
+                    .map(|concept| {
+                        let syntax = SyntaxTree::from(syntax);
+                        self.snap_shot.bind_concept_to_syntax(
+                            &self.delta,
+                            syntax,
+                            concept,
+                        )
+                    })
             })
             .unwrap_or_else(|| syntax.into())
             .bind_pair(left.clone(), right.clone());
@@ -942,6 +953,7 @@ where
                     NewConceptDelta::Double {
                         composition_id,
                         concrete_type,
+                        new_concept_id,
                     }
                 } else {
                     NewConceptDelta::Right {
@@ -989,7 +1001,10 @@ where
         lefthand: usize,
         righthand: usize,
     ) -> usize {
-        let pair = self.context_search().find_composition(lefthand, righthand);
+        let pair = self
+            .snap_shot
+            .read_concept(&self.delta, lefthand)
+            .find_as_lefthand_in_composition_with_righthand(righthand);
         match pair {
             None => {
                 let new_concept_id =

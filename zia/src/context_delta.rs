@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{concepts::ConcreteConceptType, context_cache::ContextCache};
+use crate::{
+    concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
+    context_cache::ContextCache,
+};
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::{self, Debug, Display, Formatter},
@@ -55,11 +58,17 @@ impl ContextDelta {
                 left_id,
                 right_id,
             }) => {
-                let cd =
-                    IndirectConceptDelta::LefthandOf(new_concept_id).into();
+                let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+                    composition: new_concept_id,
+                    righthand: *right_id,
+                })
+                .into();
                 self.insert_delta_for_existing_concept(*left_id, cd);
-                let cd =
-                    IndirectConceptDelta::RighthandOf(new_concept_id).into();
+                let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+                    composition: new_concept_id,
+                    lefthand: *left_id,
+                })
+                .into();
                 self.insert_delta_for_existing_concept(*right_id, cd);
             },
             NewConceptDelta::Left {
@@ -67,8 +76,11 @@ impl ContextDelta {
                 right_id,
                 ..
             } => {
-                let cd =
-                    IndirectConceptDelta::RighthandOf(*composition_id).into();
+                let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+                    composition: *composition_id,
+                    lefthand: new_concept_id,
+                })
+                .into();
                 self.insert_delta_for_existing_concept(*right_id, cd);
                 let cd = IndirectConceptDelta::ComposedOf(Composition {
                     left_id: new_concept_id,
@@ -82,8 +94,11 @@ impl ContextDelta {
                 left_id,
                 ..
             } => {
-                let cd =
-                    IndirectConceptDelta::LefthandOf(*composition_id).into();
+                let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+                    composition: *composition_id,
+                    righthand: new_concept_id,
+                })
+                .into();
                 self.insert_delta_for_existing_concept(*left_id, cd);
                 let cd = IndirectConceptDelta::ComposedOf(Composition {
                     left_id: *left_id,
@@ -159,11 +174,17 @@ impl ContextDelta {
                         left_id,
                         right_id,
                     } = after;
-                    let cd = IndirectConceptDelta::LefthandOf(*composition_id)
-                        .into();
+                    let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+                        composition: *composition_id,
+                        righthand: *right_id,
+                    })
+                    .into();
                     self.insert_delta_for_existing_concept(*left_id, cd);
-                    let cd = IndirectConceptDelta::RighthandOf(*composition_id)
-                        .into();
+                    let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+                        composition: *composition_id,
+                        lefthand: *left_id,
+                    })
+                    .into();
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
             },
@@ -361,8 +382,8 @@ impl From<IndirectConceptDelta> for ConceptDelta {
 // and not to decide the mutations to apply to Concepts
 #[derive(Clone, Debug)]
 pub enum IndirectConceptDelta {
-    LefthandOf(usize),
-    RighthandOf(usize),
+    LefthandOf(LefthandOf),
+    RighthandOf(RighthandOf),
     NoLongerLefthandOf(usize),
     NoLongerRighthandOf(usize),
     ReducesFrom(usize),
@@ -408,6 +429,7 @@ pub enum NewConceptDelta {
     /// Used for e.g. `let label_of label_of -> 'label_of'`
     Double {
         composition_id: usize,
+        new_concept_id: usize,
         concrete_type: Option<ConcreteConceptType>,
     },
     ReducesTo {

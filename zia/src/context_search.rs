@@ -63,15 +63,10 @@ pub enum ReductionReason {
     Partial(HashMap<Arc<SyntaxTree>, (Arc<SyntaxTree>, ReductionReason)>),
     Existence {
         generalisation: Arc<SyntaxTree>,
-        substitutions: HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>,
+        substitutions: SyntaxSubstitutions,
         reduction_reason: Arc<ReductionReason>,
         reduction: Arc<SyntaxTree>,
     },
-    NonExistence {
-        example: Arc<SyntaxTree>,
-        reason: Arc<ReductionReason>,
-    },
-    Absence,
     Recursive {
         syntax: Arc<SyntaxTree>,
         reason: Arc<ReductionReason>,
@@ -93,29 +88,29 @@ pub enum ReductionReason {
 impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     fn infer_reduction(&self, concept: &Concept) -> ReductionResult {
         debug!("infer_reduction({:#?})", concept);
-        concept.get_righthand_of().iter().find_map(|ro| {
-            let roc = self.snap_shot.read_concept(self.delta, *ro);
-            roc.get_composition().and_then(|(l, _)| self.is_concrete_type(ConcreteConceptType::Implication, l))
-                .and_then(|_| {
-                    roc.get_righthand_of().iter().find_map(|roro| {
-                        self.snap_shot
-                            .read_concept(self.delta, *roro)
-                            .get_composition()
-                            .and_then(|(condition_id, _)| {
-                                let condition = self.to_ast(condition_id);
-                                self.reduce(&condition)
-                                    .and_then(|(reduced_condition, reason)| {
-                                        reduced_condition.get_concept().and_then(|x| self.is_concrete_type(ConcreteConceptType::True, x))
-                                            .map(|x| (self.to_ast(x), ReductionReason::Inference{
-                                                implication: self.to_ast(*roro),
-                                                reason: reason.into()
-                                            }))
-                                    })
-                            })
-                    })
-                }
-            )
-        })
+        let implication_id =
+            self.concrete_concept_id(ConcreteConceptType::Implication)?;
+        let composition_id = concept
+            .find_as_righthand_in_composition_with_lefthand(implication_id)?;
+        let composition_concept =
+            self.snap_shot.read_concept(self.delta, composition_id);
+        let result = composition_concept.get_righthand_of().iter().find_map(
+            |(condition_id, implication_rule_id)| {
+                let condition = self.to_ast(*condition_id);
+                let (reduced_condition, reason) = self.reduce(&condition)?;
+                let x = reduced_condition.get_concept()?;
+                self.is_concrete_type(ConcreteConceptType::True, x).map(|x| {
+                    (
+                        self.to_ast(x),
+                        ReductionReason::Inference {
+                            implication: self.to_ast(*implication_rule_id),
+                            reason: reason.into(),
+                        },
+                    )
+                })
+            },
+        );
+        result
     }
 
     fn is_concrete_type(
@@ -157,16 +152,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
-            concept
-                .get_reduction()
-                .and_then(|n| {
-                    if self.is_leaf_variable(n) {
-                        self.variable_mask.get(n).cloned()
-                    } else {
-                        Some(self.to_ast(n))
-                    }
-                })
-                .map(|r| (r, ReductionReason::Explicit))
+            let n = concept.get_reduction()?;
+            if self.is_leaf_variable(n) {
+                self.variable_mask.get(n).cloned()
+            } else {
+                Some(self.to_ast(n))
+            }
+            .map(|r| (r, ReductionReason::Explicit))
         })
     }
 
@@ -180,15 +172,22 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         default_concept_id: usize,
     ) -> ReductionResult {
         let mut reduced_pair: ReductionResult = None;
-        if self.syntax_evaluating.contains(ast) || {
+        let mut operator_composition_check = || {
             let cache = ContextCache::default();
             let mut context_search = self.spawn(&cache);
             context_search.syntax_evaluating.insert(ast.clone());
             reduced_pair = context_search.reduce_pair(left, right);
-            let find = |c| self.find_composition(operator_id, c);
+            let operator_concept =
+                self.snap_shot.read_concept(self.delta, operator_id);
+            let find = |c| {
+                operator_concept
+                    .find_as_lefthand_in_composition_with_righthand(c)
+            };
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
-        } {
+        };
+        if self.syntax_evaluating.contains(ast) || operator_composition_check()
+        {
             Some((
                 self.to_ast(default_concept_id),
                 ReductionReason::Default {
@@ -208,40 +207,38 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 .get_concept()
                 .and_then(|c| self.reduce_concept(c))
                 .or_else(|| {
-                    ast.get_expansion().and_then(|(ref left, ref right)| {
-                        left.get_concept()
-                            .and_then(|lc| match self.concrete_type(lc) {
-                                Some(ConcreteConceptType::Precedence) => self
+                    let (ref left, ref right) = ast.get_expansion()?;
+                    left.get_concept()
+                        .and_then(|lc| match self.concrete_type(lc) {
+                            Some(ConcreteConceptType::Precedence) => {
+                                let default_concept_id = self
                                     .concrete_concept_id(
                                         ConcreteConceptType::Default,
-                                    )
-                                    .and_then(|default_concept_id| {
-                                        self.reduce_otherwise_default(
-                                            ast,
-                                            left,
-                                            right,
-                                            lc,
-                                            default_concept_id,
-                                        )
-                                    }),
-                                Some(ConcreteConceptType::Associativity) => {
-                                    self.concrete_concept_id(
+                                    )?;
+                                self.reduce_otherwise_default(
+                                    ast,
+                                    left,
+                                    right,
+                                    lc,
+                                    default_concept_id,
+                                )
+                            },
+                            Some(ConcreteConceptType::Associativity) => {
+                                let default_concept_id = self
+                                    .concrete_concept_id(
                                         ConcreteConceptType::Right,
-                                    )
-                                    .and_then(|default_concept_id| {
-                                        self.reduce_otherwise_default(
-                                            ast,
-                                            left,
-                                            right,
-                                            lc,
-                                            default_concept_id,
-                                        )
-                                    })
-                                },
-                                _ => None,
-                            })
-                            .or_else(|| self.reduce_pair(left, right))
-                    })
+                                    )?;
+                                self.reduce_otherwise_default(
+                                    ast,
+                                    left,
+                                    right,
+                                    lc,
+                                    default_concept_id,
+                                )
+                            },
+                            _ => None,
+                        })
+                        .or_else(|| self.reduce_pair(left, right))
                 });
             self.caches.insert_reduction(ast, &reduction_result);
             reduction_result
@@ -263,11 +260,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 )
             })
             .or_else(|| {
-                left.get_expansion().and_then(|(leftleft, leftright)| {
-                    self.reduce_by_expanded_left_branch(
-                        &leftleft, &leftright, right,
-                    )
-                })
+                let (leftleft, leftright) = left.get_expansion()?;
+                self.reduce_by_expanded_left_branch(
+                    &leftleft, &leftright, right,
+                )
             })
             .or_else(|| self.recursively_reduce_pair(left, right))
     }
@@ -292,11 +288,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 .find_map(|(generalisation, variable_mask)| {
                     let mut context_search = self.spawn(&cache);
                     // Stack overflow occurs if you remove this
-                    if let Err(_) = context_search
+                    context_search
                         .insert_variable_mask(variable_mask.clone())
-                    {
-                        return None;
-                    }
+                        .ok()?;
                     context_search.reduce_concept(*generalisation).map(
                         |(ast, reason)| {
                             (
@@ -420,17 +414,20 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             .get_concept()
             .and_also(&righthand.get_concept())
             .and_then(|(lc, rc)| {
-                self.find_composition(*lc, *rc).map(|def| {
-                    let syntax = SyntaxTree::from(
+                let left_concept = self.snap_shot.read_concept(self.delta, *lc);
+                left_concept
+                    .find_as_lefthand_in_composition_with_righthand(*rc)
+                    .map(|def| {
+                        let syntax = SyntaxTree::from(
+                            self.snap_shot
+                                .get_label(self.delta, def)
+                                .unwrap_or_else(|| {
+                                    self.display_joint(lefthand, righthand)
+                                }),
+                        );
                         self.snap_shot
-                            .get_label(self.delta, def)
-                            .unwrap_or_else(|| {
-                                self.display_joint(lefthand, righthand)
-                            }),
-                    );
-                    self.snap_shot
-                        .bind_concept_to_syntax(self.delta, syntax, def)
-                })
+                            .bind_concept_to_syntax(self.delta, syntax, def)
+                    })
             })
             .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
             .bind_pair(lefthand.clone(), righthand.clone())
@@ -451,43 +448,38 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     .read_concept(self.delta, generalisation)
                     .get_composition()
                 {
-                    ast.get_expansion().and_then(|(l, r)| {
-                        match (
-                            self.is_free_variable(gl),
-                            self.is_free_variable(gr),
-                        ) {
-                            (true, true) => self
-                                .check_generalisation(&l, gl)
-                                .and_also_move(
-                                    self.check_generalisation(&r, gr),
-                                )
-                                .and_then(|(lm, mut rm)| {
-                                    for (lmk, lmv) in lm {
-                                        if let Some(rmv) = rm.get(&lmk) {
-                                            if rmv != &lmv {
-                                                return None;
-                                            }
-                                        } else {
-                                            rm.insert(lmk, lmv);
+                    let (l, r) = ast.get_expansion()?;
+                    match (self.is_free_variable(gl), self.is_free_variable(gr))
+                    {
+                        (true, true) => self
+                            .check_generalisation(&l, gl)
+                            .and_also_move(self.check_generalisation(&r, gr))
+                            .and_then(|(lm, mut rm)| {
+                                for (lmk, lmv) in lm {
+                                    if let Some(rmv) = rm.get(&lmk) {
+                                        if rmv != &lmv {
+                                            return None;
                                         }
+                                    } else {
+                                        rm.insert(lmk, lmv);
                                     }
-                                    Some(rm)
-                                }),
-                            (true, false) if r.get_concept() == Some(gr) => {
-                                self.check_generalisation(&l, gl)
-                            },
-                            (false, true) if l.get_concept() == Some(gl) => {
-                                self.check_generalisation(&r, gr)
-                            },
-                            (false, false)
-                                if l.get_concept() == Some(gl)
-                                    && r.get_concept() == Some(gr) =>
-                            {
-                                Some(hashmap! {})
-                            },
-                            _ => None,
-                        }
-                    })
+                                }
+                                Some(rm)
+                            }),
+                        (true, false) if r.get_concept() == Some(gr) => {
+                            self.check_generalisation(&l, gl)
+                        },
+                        (false, true) if l.get_concept() == Some(gl) => {
+                            self.check_generalisation(&r, gr)
+                        },
+                        (false, false)
+                            if l.get_concept() == Some(gl)
+                                && r.get_concept() == Some(gr) =>
+                        {
+                            Some(hashmap! {})
+                        },
+                        _ => None,
+                    }
                 } else {
                     Some(hashmap! {generalisation => ast.clone()})
                 }
@@ -496,34 +488,38 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     }
 
     fn find_generalisations(&self, ast: &Arc<SyntaxTree>) -> HashSet<usize> {
-        let mut generalisations = HashSet::new();
+        let mut generalisations = HashSet::<usize>::new();
         if let Some((l, r)) = ast.get_expansion() {
             if let Some(c) = l.get_concept() {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, c)
-                        .get_lefthand_of(),
+                        .get_lefthand_of()
+                        .values(),
                 );
             }
             if let Some(c) = r.get_concept() {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, c)
-                        .get_righthand_of(),
+                        .get_righthand_of()
+                        .values(),
                 );
             }
             self.find_generalisations(&l).iter().for_each(|g| {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, *g)
-                        .get_lefthand_of(),
+                        .get_lefthand_of()
+                        .values(),
                 )
             });
             self.find_generalisations(&r).iter().for_each(|g| {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, *g)
-                        .get_righthand_of(),
+                        .get_righthand_of()
+                        .values(),
                 )
             });
             generalisations
@@ -576,7 +572,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         leftright: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ReductionResult {
-        self.concrete_type_of_ast(leftright).and_then(|cct| match cct {
+        let cct = self.concrete_type_of_ast(leftright)?;
+        match cct {
             ConcreteConceptType::ExistsSuchThat
                 if leftleft
                     .get_concept()
@@ -606,14 +603,14 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 )
             }
             _ => None,
-        })
+        }
     }
 
     fn find_example(
         &self,
         generalisation: &Arc<SyntaxTree>,
         truths: &HashSet<usize>,
-    ) -> Option<HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>> {
+    ) -> Option<SyntaxSubstitutions> {
         self.find_examples(generalisation, truths)
             .pop()
             .map(|(_, substitutions)| substitutions)
@@ -623,7 +620,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         &self,
         generalisation: &Arc<SyntaxTree>,
         equivalence_set: &HashSet<usize>, /* All concepts that are equal to generalisation */
-    ) -> Vec<(Arc<SyntaxTree>, HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>)> {
+    ) -> Vec<(Arc<SyntaxTree>, SyntaxSubstitutions)> {
         if generalisation.is_variable() {
             if let Some((left, right)) = generalisation.get_expansion() {
                 match (left.is_variable(), right.is_variable()) {
@@ -642,7 +639,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                                     for (right_example, right_vm) in &right_examples {
                                         if let Some(variable_mask) = left_vm.consistent_merge(right_vm) {
                                             examples.push((
-                                                self.combine(&left_example, &right_example),
+                                                self.combine(left_example, right_example),
                                                 variable_mask
                                             ))
                                         }
@@ -656,27 +653,17 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         let right_id = right.get_concept().unwrap();
                         let right_concept = self.snap_shot.read_concept(self.delta, right_id);
                         let examples = right_concept.get_righthand_of();
-                        examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
-                            let comp_concept = self.snap_shot.read_concept(self.delta, *e);
-                            let (left_id, _) = comp_concept.get_composition().expect("a concept is the lefthand of another concept without a composition");
-                            self.to_ast(left_id).check_example(&left).map(|vm| (*e, vm))
-                        }).map(|(id, vm)| (
-                            self.to_ast(id),
-                            vm
-                        )).collect()
+                        examples.iter().filter(|(_, composition)| equivalence_set.contains(composition)).filter_map(|(lefthand, composition)| {
+                            self.to_ast(*lefthand).check_example(&left).map(|vm| (self.to_ast(*composition), vm))
+                        }).collect()
                     },
                     (false, true) => {
                         let left_id = left.get_concept().unwrap();
                         let left_concept = self.snap_shot.read_concept(self.delta, left_id);
                         let examples = left_concept.get_lefthand_of();
-                        examples.iter().filter(|e| equivalence_set.contains(e)).filter_map(|e| {
-                            let comp_concept = self.snap_shot.read_concept(self.delta, *e);
-                            let (_, right_id) = comp_concept.get_composition().expect("a concept is the righthand of another concept without a composition");
-                            self.to_ast(right_id).check_example(&right).map(|vm| (*e, vm))
-                        }).map(|(id, vm)| (
-                            self.to_ast(id),
-                            vm
-                        )).collect()
+                        examples.iter().filter(|(_, composition)| equivalence_set.contains(composition)).filter_map(|(righthand, composition)| {
+                            self.to_ast(*righthand).check_example(&right).map(|vm| (self.to_ast(*composition), vm))
+                        }).collect()
                     },
                     (false, false) => unreachable!("a variable's expansion must include at least one variable")
                 }
@@ -709,7 +696,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         rightleft: &Arc<SyntaxTree>,
         rightright: &Arc<SyntaxTree>,
     ) -> ReductionResult {
-        self.concrete_type_of_ast(rightleft).and_then(|cct| match cct {
+        let cct = self.concrete_type_of_ast(rightleft)?;
+        match cct {
             ConcreteConceptType::GreaterThan => {
                 let (comparison, comparison_reason) =
                     self.compare(left, rightright);
@@ -734,19 +722,18 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     )
                 })
             },
-            ConcreteConceptType::Reduction => self
-                .determine_reduction_truth(left, rightright)
-                .and_then(|(x, reason)| {
-                    if x {
-                        self.concrete_ast(ConcreteConceptType::True)
-                            .map(|ast| (ast, reason))
-                    } else {
-                        self.concrete_ast(ConcreteConceptType::False)
-                            .map(|ast| (ast, reason))
-                    }
-                }),
+            ConcreteConceptType::Reduction => {
+                let (x, reason) =
+                    self.determine_reduction_truth(left, rightright)?;
+                self.concrete_ast(if x {
+                    ConcreteConceptType::True
+                } else {
+                    ConcreteConceptType::False
+                })
+                .map(|ast| (ast, reason))
+            },
             _ => None,
-        })
+        }
     }
 
     fn determine_reduction_truth(
@@ -845,11 +832,14 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
             .get_concept()
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
-                self.find_composition(*l, *r).map(|concept| {
-                    let syntax = self.join(ast, other);
-                    self.snap_shot
-                        .bind_concept_to_syntax(self.delta, syntax, concept)
-                })
+                let left_concept = self.snap_shot.read_concept(self.delta, *l);
+                left_concept
+                    .find_as_lefthand_in_composition_with_righthand(*r)
+                    .map(|concept| {
+                        let syntax = self.join(ast, other);
+                        self.snap_shot
+                            .bind_concept_to_syntax(self.delta, syntax, concept)
+                    })
             })
             .unwrap_or_else(|| self.join(ast, other));
         syntax.into()
@@ -918,12 +908,6 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         } else {
             ast.clone()
         }
-    }
-
-    pub fn find_composition(&self, left: usize, right: usize) -> Option<usize> {
-        let left_concept = self.snap_shot.read_concept(self.delta, left);
-        let right_concept = self.snap_shot.read_concept(self.delta, right);
-        left_concept.find_definition(&right_concept)
     }
 
     pub fn compare(
@@ -1167,3 +1151,5 @@ impl VariableMaskList {
             .or_else(|| self.tail.as_ref().and_then(|vml| vml.get(concept_id)))
     }
 }
+
+type SyntaxSubstitutions = HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>;

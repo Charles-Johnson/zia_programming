@@ -4,7 +4,7 @@ use std::{
     mem::swap,
 };
 
-pub(crate) trait ConsistentMerge: Sized {
+pub trait ConsistentMerge: Sized {
     type Output;
     fn consistent_merge(self, other: Self) -> Option<Self::Output>;
 }

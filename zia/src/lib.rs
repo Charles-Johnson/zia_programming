@@ -148,6 +148,8 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+mod map_err_variant;
+
 mod parser;
 
 mod snap_shot;

@@ -21,8 +21,11 @@ use crate::{
     },
     errors::{ZiaError, ZiaResult},
 };
-use maplit::hashset;
-use std::{collections::HashSet, fmt::Debug};
+use maplit::{hashmap, hashset};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
@@ -41,7 +44,7 @@ impl Debug for Concept {
         if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             let mut unorder_keys: Vec<&usize> =
-                self.concrete_part.lefthand_of.iter().collect();
+                self.concrete_part.lefthand_of.values().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -51,7 +54,7 @@ impl Debug for Concept {
         if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
             let mut unorder_keys: Vec<&usize> =
-                self.concrete_part.righthand_of.iter().collect();
+                self.concrete_part.righthand_of.values().collect();
             unorder_keys.sort();
             for key in unorder_keys {
                 string += &format!("{},", key);
@@ -170,11 +173,11 @@ impl Concept {
                     panic!("Concept isn't abstract");
                 }
             },
-            IndirectConceptDelta::LefthandOf(composition_id) => {
-                self.concrete_part.lefthand_of.insert(*composition_id);
+            IndirectConceptDelta::LefthandOf(lefthand_of) => {
+                lefthand_of.insert_into(&mut self.concrete_part.lefthand_of);
             },
-            IndirectConceptDelta::RighthandOf(composition_id) => {
-                self.concrete_part.righthand_of.insert(*composition_id);
+            IndirectConceptDelta::RighthandOf(righthand_of) => {
+                righthand_of.insert_into(&mut self.concrete_part.righthand_of);
             },
             IndirectConceptDelta::ReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.insert(*unreduced_id);
@@ -230,11 +233,11 @@ impl Concept {
         }
     }
 
-    pub const fn get_lefthand_of(&self) -> &HashSet<usize> {
+    pub const fn get_lefthand_of(&self) -> &HashMap<usize, usize> {
         &self.concrete_part.lefthand_of
     }
 
-    pub const fn get_righthand_of(&self) -> &HashSet<usize> {
+    pub const fn get_righthand_of(&self) -> &HashMap<usize, usize> {
         &self.concrete_part.righthand_of
     }
 
@@ -306,16 +309,18 @@ impl Concept {
         }
     }
 
-    pub fn find_definition(&self, right: &Self) -> Option<usize> {
-        let mut candidates = self
-            .concrete_part
-            .lefthand_of
-            .intersection(&right.concrete_part.righthand_of);
-        candidates.next().map(|index| {
-            candidates.next().map_or(*index, |_| {
-                panic!("Multiple definitions with the same lefthand and righthand pair exist.")
-            })
-        })
+    pub fn find_as_lefthand_in_composition_with_righthand(
+        &self,
+        right_id: usize,
+    ) -> Option<usize> {
+        self.concrete_part.lefthand_of.get(&right_id).copied()
+    }
+
+    pub fn find_as_righthand_in_composition_with_lefthand(
+        &self,
+        left_id: usize,
+    ) -> Option<usize> {
+        self.concrete_part.righthand_of.get(&left_id).copied()
     }
 
     pub const fn get_concrete_concept_type(
@@ -371,7 +376,11 @@ impl Concept {
                 MaybeComposition::Composition(_)
                 | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
                 MaybeComposition::Leaf(false) => {
-                    right.concrete_part.righthand_of.insert(composition.id);
+                    RighthandOf {
+                        composition: composition.id,
+                        lefthand: id,
+                    }
+                    .insert_into(&mut right.concrete_part.righthand_of);
                     let mut binding_variables = hashset! {};
                     let mut free_variables = hashset! {};
                     if right.get_concrete_concept_type()
@@ -395,7 +404,11 @@ impl Concept {
                         });
                     Ok(Self {
                         concrete_part: ConcreteConcept {
-                            lefthand_of: hashset! {composition.id},
+                            lefthand_of: LefthandOf {
+                                composition: composition.id,
+                                righthand: right.id,
+                            }
+                            .start_mapping(),
                             ..ConcreteConcept::default()
                         },
                         id,
@@ -427,7 +440,11 @@ impl Concept {
                 MaybeComposition::Composition(_)
                 | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
                 MaybeComposition::Leaf(false) => {
-                    left.concrete_part.lefthand_of.insert(composition.id);
+                    LefthandOf {
+                        composition: composition.id,
+                        righthand: id,
+                    }
+                    .insert_into(&mut left.concrete_part.lefthand_of);
                     let mut binding_variables = hashset! {};
                     let mut free_variables = hashset! {};
                     if concrete_concept_type
@@ -451,7 +468,11 @@ impl Concept {
                         });
                     Ok(Self {
                         concrete_part: ConcreteConcept {
-                            righthand_of: hashset! {composition.id},
+                            righthand_of: RighthandOf {
+                                composition: composition.id,
+                                lefthand: left.id,
+                            }
+                            .start_mapping(),
                             ..ConcreteConcept::default()
                         },
                         id,
@@ -479,8 +500,16 @@ impl Concept {
     ) -> Self {
         let concept = Self {
             concrete_part: ConcreteConcept {
-                lefthand_of: hashset! {composition.id},
-                righthand_of: hashset! {composition.id},
+                lefthand_of: LefthandOf {
+                    composition: composition.id,
+                    righthand: id,
+                }
+                .start_mapping(),
+                righthand_of: RighthandOf {
+                    composition: composition.id,
+                    lefthand: id,
+                }
+                .start_mapping(),
                 reduces_from: hashset! {},
             },
             id,
@@ -623,54 +652,12 @@ impl SpecificPart {
         left: &mut Concept,
         right: &mut Concept,
     ) -> Self {
-        left.concrete_part.lefthand_of.insert(composition_id);
-        right.concrete_part.righthand_of.insert(composition_id);
-        let mut free_variables = hashset! {};
-        let mut binding_variables = hashset! {};
-        let right_is_quantifier = match &right.specific_part {
-            Self::Abstract(ap) => {
-                match &ap.composition {
-                    MaybeComposition::Composition(cp) => {
-                        free_variables.extend(&cp.free_variables);
-                        binding_variables.extend(&cp.binding_variables);
-                    },
-                    MaybeComposition::Leaf(true) => {
-                        free_variables.insert(right.id);
-                    },
-                    MaybeComposition::Leaf(false) => {},
-                }
-                false
-            },
-            Self::Concrete(cct) => cct == &ConcreteConceptType::ExistsSuchThat,
-            Self::String(_) => false,
-        };
-        if let Self::Abstract(ap) = &left.specific_part {
-            match &ap.composition {
-                MaybeComposition::Composition(cp) => {
-                    free_variables
-                        .retain(|v| !cp.binding_variables.contains(v));
-                    free_variables.extend(&cp.free_variables);
-                    binding_variables
-                        .retain(|v| !cp.free_variables.contains(v));
-                    binding_variables.extend(&cp.binding_variables);
-                },
-                MaybeComposition::Leaf(true) => {
-                    if right_is_quantifier {
-                        binding_variables.insert(left.id);
-                    } else {
-                        free_variables.insert(left.id);
-                    }
-                },
-                MaybeComposition::Leaf(false) => {},
-            }
-        }
         Self::Abstract(AbstractPart {
-            composition: MaybeComposition::Composition(CompositePart {
-                lefthand: left.id,
-                righthand: right.id,
-                free_variables,
-                binding_variables,
-            }),
+            composition: MaybeComposition::composition_of(
+                composition_id,
+                left,
+                right,
+            ),
             ..AbstractPart::default()
         })
     }
@@ -755,8 +742,16 @@ impl MaybeComposition {
         left: &mut Concept,
         right: &mut Concept,
     ) -> Self {
-        left.concrete_part.lefthand_of.insert(composition_id);
-        right.concrete_part.righthand_of.insert(composition_id);
+        LefthandOf {
+            composition: composition_id,
+            righthand: right.id,
+        }
+        .insert_into(&mut left.concrete_part.lefthand_of);
+        RighthandOf {
+            composition: composition_id,
+            lefthand: left.id,
+        }
+        .insert_into(&mut right.concrete_part.righthand_of);
         let mut free_variables = hashset! {};
         let mut binding_variables = hashset! {};
         let right_is_quantifier = match &right.specific_part {
@@ -843,10 +838,10 @@ impl Default for AbstractPart {
 
 #[derive(Clone, PartialEq, Default)]
 pub struct ConcreteConcept {
-    /// Set of all indices of the concepts which have this concept as the lefthand of their composition
-    lefthand_of: HashSet<usize>,
-    /// Set of all indices of the concepts which have this concept as the righthand of their composition
-    righthand_of: HashSet<usize>,
+    /// Maps each concept that is the righthand of a composition with the current concept being the lefthand to that composition's concept
+    lefthand_of: HashMap<usize, usize>,
+    /// Maps each concept that is the lefthand of a composition with the current concept being the righthand to that composition's concept
+    righthand_of: HashMap<usize, usize>,
     /// Set of all indices of the concepts which reduce to this concept.
     reduces_from: HashSet<usize>,
 }
@@ -862,26 +857,81 @@ impl From<&NewConceptDelta> for ConcreteConcept {
             | NewConceptDelta::String(_) => Self::default(),
             NewConceptDelta::Double {
                 composition_id,
+                new_concept_id,
                 ..
             } => Self {
-                lefthand_of: hashset! {*composition_id},
-                righthand_of: hashset! {*composition_id},
+                lefthand_of: LefthandOf {
+                    composition: *composition_id,
+                    righthand: *new_concept_id,
+                }
+                .start_mapping(),
+                righthand_of: RighthandOf {
+                    composition: *composition_id,
+                    lefthand: *new_concept_id,
+                }
+                .start_mapping(),
                 ..Self::default()
             },
             NewConceptDelta::Left {
                 composition_id,
+                right_id,
                 ..
             } => Self {
-                lefthand_of: hashset! {*composition_id},
+                lefthand_of: LefthandOf {
+                    composition: *composition_id,
+                    righthand: *right_id,
+                }
+                .start_mapping(),
                 ..Self::default()
             },
             NewConceptDelta::Right {
                 composition_id,
+                left_id,
                 ..
             } => Self {
-                righthand_of: hashset! {*composition_id},
+                righthand_of: RighthandOf {
+                    composition: *composition_id,
+                    lefthand: *left_id,
+                }
+                .start_mapping(),
                 ..Self::default()
             },
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub struct LefthandOf {
+    pub composition: usize,
+    pub righthand: usize,
+}
+
+impl LefthandOf {
+    fn start_mapping(&self) -> HashMap<usize, usize> {
+        hashmap! {self.righthand => self.composition}
+    }
+
+    fn insert_into(&self, map: &mut HashMap<usize, usize>) {
+        if let Some(prev_comp) = map.insert(self.righthand, self.composition) {
+            debug_assert_eq!(self.composition, prev_comp, "at most one concept can be the composition of a given pair of concepts");
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RighthandOf {
+    pub composition: usize,
+    pub lefthand: usize,
+}
+
+impl RighthandOf {
+    fn start_mapping(&self) -> HashMap<usize, usize> {
+        hashmap! {self.lefthand => self.composition}
+    }
+
+    fn insert_into(&self, map: &mut HashMap<usize, usize>) {
+        if let Some(prev_comp) = map.insert(self.lefthand, self.composition) {
+            debug_assert_eq!(self.composition, prev_comp, "at most one concept can be the composition of a given pair of concepts");
         }
     }
 }

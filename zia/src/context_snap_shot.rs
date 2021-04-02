@@ -152,6 +152,7 @@ impl ContextSnapShot {
             NewConceptDelta::Double {
                 composition_id,
                 concrete_type,
+                ..
             } => {
                 let composition = self.write_concept(*composition_id);
                 debug_assert!(new_concept_id != composition_id);
@@ -392,15 +393,17 @@ impl SnapShotReader for ContextSnapShot {
         delta: &ContextDelta,
         concept: usize,
     ) -> Option<String> {
-        match self.get_concept_of_label(delta, concept) {
-            None => self
-                .read_concept(delta, concept)
-                .get_reduction()
-                .and_then(|r| self.get_label(delta, r)),
-            Some(d) => self
-                .get_normal_form(delta, d)
-                .and_then(|n| self.read_concept(delta, n).get_string()),
-        }
+        self.get_concept_of_label(delta, concept).map_or_else(
+            || {
+                self.read_concept(delta, concept)
+                    .get_reduction()
+                    .and_then(|r| self.get_label(delta, r))
+            },
+            |d| {
+                self.get_normal_form(delta, d)
+                    .and_then(|n| self.read_concept(delta, n).get_string())
+            },
+        )
     }
 
     fn concrete_concept_id(
