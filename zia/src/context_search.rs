@@ -576,10 +576,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         leftright: &Arc<SyntaxTree>,
         right: &Arc<SyntaxTree>,
     ) -> ReductionResult {
-        let cct = self.concrete_type_of_ast(dbg!(leftright))?;
+        let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
-                if dbg!(leftleft).is_leaf_variable() =>
+                if leftleft.is_leaf_variable() =>
             {
                 let true_id = self
                     .concrete_concept_id(ConcreteConceptType::True)
@@ -609,7 +609,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         generalisation: &Arc<SyntaxTree>,
         truths: &HashSet<usize>,
     ) -> Option<Substitutions> {
-        self.find_examples(dbg!(generalisation), truths).pop()
+        self.find_examples(generalisation, truths).pop()
     }
 
     // TODO Lazily compute the concepts that are equivalent to a given normal form
