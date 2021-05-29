@@ -154,7 +154,7 @@ impl PartialEq for SyntaxNode {
     }
 }
 
-impl PartialEq<SyntaxTree> for SyntaxTree {
+impl PartialEq<Self> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Self) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -167,7 +167,7 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
     }
 }
 
-impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
+impl PartialEq<Arc<Self>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Arc<Self>) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -227,6 +227,10 @@ impl SyntaxTree {
         Arc::new(self)
     }
 
+    pub const fn is_leaf_variable(&self) -> bool {
+        matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
+    }
+
     pub const fn new_constant_concept(concept_id: usize) -> Self {
         Self {
             syntax: None,
@@ -243,7 +247,6 @@ impl SyntaxTree {
         }
     }
 
-    #[cfg(test)]
     pub fn new_pair(self: Arc<Self>, right: Arc<Self>) -> Self {
         Self {
             syntax: None,
@@ -252,9 +255,21 @@ impl SyntaxTree {
         }
     }
 
+    pub const fn new_leaf_variable(concept_id: usize) -> Self {
+        Self {
+            syntax: None,
+            concept: Some(concept_id),
+            node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
+        }
+    }
+
     pub const fn bind_nonquantifier_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self
+    }
+
+    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: usize) {
+        self.concept = Some(concept);
     }
 
     pub fn bind_quantifier_concept(mut self, concept: usize) -> Self {
@@ -284,6 +299,19 @@ impl SyntaxTree {
         } = &self.node
         {
             Some((left.clone(), right.clone()))
+        } else {
+            None
+        }
+    }
+
+    pub fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
+        if let SyntaxNode::Branch {
+            left,
+            right,
+            ..
+        } = &mut self.node
+        {
+            Some((Arc::make_mut(left), Arc::make_mut(right)))
         } else {
             None
         }

@@ -80,7 +80,7 @@ impl From<&NewDirectConceptDelta> for Concept {
     fn from(ndcd: &NewDirectConceptDelta) -> Self {
         Self {
             id: ndcd.new_concept_id,
-            concrete_part: (&ndcd.delta).into(),
+            concrete_part: ndcd.into(),
             specific_part: (&ndcd.delta).into(),
         }
     }
@@ -114,8 +114,10 @@ impl Concept {
                         },
                         after,
                     },
-                    MaybeComposition::Leaf(false) => Change::Create(after),
-                    MaybeComposition::Leaf(true) => {
+                    MaybeComposition::Leaf(LeafCharacter::Constant) => {
+                        Change::Create(after)
+                    },
+                    MaybeComposition::Leaf(_) => {
                         panic!("Not sure what you are trying to do here ...")
                     },
                 },
@@ -126,12 +128,27 @@ impl Concept {
         }
     }
 
-    pub fn make_variable(id: usize) -> Self {
+    pub fn make_free_variable(id: usize) -> Self {
         Self {
             id,
             concrete_part: ConcreteConcept::default(),
             specific_part: SpecificPart::Abstract(AbstractPart {
-                composition: MaybeComposition::Leaf(true),
+                composition: MaybeComposition::Leaf(
+                    LeafCharacter::FreeVariable,
+                ),
+                ..AbstractPart::default()
+            }),
+        }
+    }
+
+    pub fn make_bound_variable(id: usize) -> Self {
+        Self {
+            id,
+            concrete_part: ConcreteConcept::default(),
+            specific_part: SpecificPart::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(
+                    LeafCharacter::BoundVariable,
+                ),
                 ..AbstractPart::default()
             }),
         }
@@ -194,7 +211,9 @@ impl Concept {
         }
     }
 
-    pub fn variable(&self) -> bool {
+    /// Either a free variable or a concept that is composed of at least one free variable
+    /// without a quantifying operator like `exists_such_that`
+    pub fn free_variable(&self) -> bool {
         if let SpecificPart::Abstract(AbstractPart {
             composition,
             ..
@@ -203,12 +222,58 @@ impl Concept {
             match composition {
                 MaybeComposition::Composition(CompositePart {
                     free_variables,
+                    ..
+                }) => !free_variables.is_empty(),
+                MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
+                MaybeComposition::Leaf(LeafCharacter::Constant)
+                | MaybeComposition::Leaf(LeafCharacter::BoundVariable) => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Either a bounded variable or a concept that is composed of at least one bounded variable
+    /// without a quantifying operator like `exists_such_that`
+    pub fn bounded_variable(&self) -> bool {
+        if let SpecificPart::Abstract(AbstractPart {
+            composition,
+            ..
+        }) = &self.specific_part
+        {
+            match composition {
+                MaybeComposition::Composition(CompositePart {
                     binding_variables,
                     ..
+                }) => !binding_variables.is_empty(),
+                MaybeComposition::Leaf(LeafCharacter::BoundVariable) => true,
+                MaybeComposition::Leaf(LeafCharacter::Constant)
+                | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Either a free or bounded variable or a concept that is composed of at least one bounded or free variable
+    /// without a quantifying operator like `exists_such_that`
+    pub fn anonymous_variable(&self) -> bool {
+        if let SpecificPart::Abstract(AbstractPart {
+            composition,
+            ..
+        }) = &self.specific_part
+        {
+            match composition {
+                MaybeComposition::Composition(CompositePart {
+                    binding_variables,
+                    free_variables,
+                    ..
                 }) => {
-                    !free_variables.is_empty() || !binding_variables.is_empty()
+                    !binding_variables.is_empty() | !free_variables.is_empty()
                 },
-                MaybeComposition::Leaf(is_variable) => *is_variable,
+                MaybeComposition::Leaf(LeafCharacter::BoundVariable)
+                | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
+                MaybeComposition::Leaf(LeafCharacter::Constant) => false,
             }
         } else {
             false
@@ -239,6 +304,13 @@ impl Concept {
 
     pub const fn get_righthand_of(&self) -> &HashMap<usize, usize> {
         &self.concrete_part.righthand_of
+    }
+
+    pub const fn get_hand_of(&self, hand: Hand) -> &HashMap<usize, usize> {
+        match hand {
+            Hand::Left => self.get_lefthand_of(),
+            Hand::Right => self.get_righthand_of(),
+        }
     }
 
     /// Gets the index of the concept that `self` may reduce to.
@@ -272,7 +344,6 @@ impl Concept {
         &mut self,
         change: Change<[&mut Self; 2]>,
     ) -> ZiaResult<()> {
-        let variable = self.variable();
         match &mut self.specific_part {
             SpecificPart::Abstract(c) => {
                 match change {
@@ -300,7 +371,8 @@ impl Concept {
                             .concrete_part
                             .righthand_of
                             .remove(&self.id);
-                        c.composition = MaybeComposition::Leaf(variable);
+                        c.composition =
+                            MaybeComposition::Leaf(LeafCharacter::Constant);
                     },
                 }
                 Ok(())
@@ -372,57 +444,58 @@ impl Concept {
         concrete_concept_type: Option<ConcreteConceptType>,
     ) -> ZiaResult<Self> {
         if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
-            match ap.composition {
-                MaybeComposition::Composition(_)
-                | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
-                MaybeComposition::Leaf(false) => {
-                    RighthandOf {
-                        composition: composition.id,
-                        lefthand: id,
-                    }
-                    .insert_into(&mut right.concrete_part.righthand_of);
-                    let mut binding_variables = hashset! {};
-                    let mut free_variables = hashset! {};
-                    if right.get_concrete_concept_type()
-                        == Some(ConcreteConceptType::ExistsSuchThat)
-                    {
-                        binding_variables.insert(id);
-                    } else if let SpecificPart::Abstract(AbstractPart {
-                        composition: MaybeComposition::Composition(cp),
-                        ..
-                    }) = &right.specific_part
-                    {
-                        binding_variables = cp.binding_variables.clone();
-                        free_variables = cp.free_variables.clone();
-                    };
-                    ap.composition =
-                        MaybeComposition::Composition(CompositePart {
-                            binding_variables,
-                            free_variables,
-                            lefthand: id,
+            if let MaybeComposition::Leaf(LeafCharacter::Constant) =
+                ap.composition
+            {
+                RighthandOf {
+                    composition: composition.id,
+                    lefthand: id,
+                }
+                .insert_into(&mut right.concrete_part.righthand_of);
+                let mut binding_variables = hashset! {};
+                let mut free_variables = hashset! {};
+                if right.get_concrete_concept_type()
+                    == Some(ConcreteConceptType::ExistsSuchThat)
+                {
+                    binding_variables.insert(id);
+                } else if let SpecificPart::Abstract(AbstractPart {
+                    composition: MaybeComposition::Composition(cp),
+                    ..
+                }) = &right.specific_part
+                {
+                    binding_variables = cp.binding_variables.clone();
+                    free_variables = cp.free_variables.clone();
+                };
+                ap.composition = MaybeComposition::Composition(CompositePart {
+                    binding_variables,
+                    free_variables,
+                    lefthand: id,
+                    righthand: right.id,
+                });
+                Ok(Self {
+                    concrete_part: ConcreteConcept {
+                        lefthand_of: LefthandOf {
+                            composition: composition.id,
                             righthand: right.id,
-                        });
-                    Ok(Self {
-                        concrete_part: ConcreteConcept {
-                            lefthand_of: LefthandOf {
-                                composition: composition.id,
-                                righthand: right.id,
-                            }
-                            .start_mapping(),
-                            ..ConcreteConcept::default()
+                        }
+                        .start_mapping(),
+                        ..ConcreteConcept::default()
+                    },
+                    id,
+                    specific_part: concrete_concept_type.map_or_else(
+                        || {
+                            SpecificPart::Abstract(AbstractPart {
+                                composition: MaybeComposition::Leaf(
+                                    LeafCharacter::Constant,
+                                ),
+                                ..AbstractPart::default()
+                            })
                         },
-                        id,
-                        specific_part: concrete_concept_type.map_or_else(
-                            || {
-                                SpecificPart::Abstract(AbstractPart {
-                                    composition: MaybeComposition::Leaf(false),
-                                    ..AbstractPart::default()
-                                })
-                            },
-                            SpecificPart::Concrete,
-                        ),
-                    })
-                },
+                        SpecificPart::Concrete,
+                    ),
+                })
+            } else {
+                Err(ZiaError::BadComposition)
             }
         } else {
             Err(ZiaError::SettingCompositionOfConcrete)
@@ -436,57 +509,58 @@ impl Concept {
         concrete_concept_type: Option<ConcreteConceptType>,
     ) -> ZiaResult<Self> {
         if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
-            match ap.composition {
-                MaybeComposition::Composition(_)
-                | MaybeComposition::Leaf(true) => Err(ZiaError::BadComposition),
-                MaybeComposition::Leaf(false) => {
-                    LefthandOf {
-                        composition: composition.id,
-                        righthand: id,
-                    }
-                    .insert_into(&mut left.concrete_part.lefthand_of);
-                    let mut binding_variables = hashset! {};
-                    let mut free_variables = hashset! {};
-                    if concrete_concept_type
-                        == Some(ConcreteConceptType::ExistsSuchThat)
-                    {
-                        binding_variables.insert(left.id);
-                    } else if let SpecificPart::Abstract(AbstractPart {
-                        composition: MaybeComposition::Composition(cp),
-                        ..
-                    }) = &left.specific_part
-                    {
-                        binding_variables = cp.binding_variables.clone();
-                        free_variables = cp.free_variables.clone();
-                    };
-                    ap.composition =
-                        MaybeComposition::Composition(CompositePart {
-                            binding_variables,
-                            free_variables,
+            if let MaybeComposition::Leaf(LeafCharacter::Constant) =
+                ap.composition
+            {
+                LefthandOf {
+                    composition: composition.id,
+                    righthand: id,
+                }
+                .insert_into(&mut left.concrete_part.lefthand_of);
+                let mut binding_variables = hashset! {};
+                let mut free_variables = hashset! {};
+                if concrete_concept_type
+                    == Some(ConcreteConceptType::ExistsSuchThat)
+                {
+                    binding_variables.insert(left.id);
+                } else if let SpecificPart::Abstract(AbstractPart {
+                    composition: MaybeComposition::Composition(cp),
+                    ..
+                }) = &left.specific_part
+                {
+                    binding_variables = cp.binding_variables.clone();
+                    free_variables = cp.free_variables.clone();
+                };
+                ap.composition = MaybeComposition::Composition(CompositePart {
+                    binding_variables,
+                    free_variables,
+                    lefthand: left.id,
+                    righthand: id,
+                });
+                Ok(Self {
+                    concrete_part: ConcreteConcept {
+                        righthand_of: RighthandOf {
+                            composition: composition.id,
                             lefthand: left.id,
-                            righthand: id,
-                        });
-                    Ok(Self {
-                        concrete_part: ConcreteConcept {
-                            righthand_of: RighthandOf {
-                                composition: composition.id,
-                                lefthand: left.id,
-                            }
-                            .start_mapping(),
-                            ..ConcreteConcept::default()
+                        }
+                        .start_mapping(),
+                        ..ConcreteConcept::default()
+                    },
+                    id,
+                    specific_part: concrete_concept_type.map_or_else(
+                        || {
+                            SpecificPart::Abstract(AbstractPart {
+                                composition: MaybeComposition::Leaf(
+                                    LeafCharacter::Constant,
+                                ),
+                                ..AbstractPart::default()
+                            })
                         },
-                        id,
-                        specific_part: concrete_concept_type.map_or_else(
-                            || {
-                                SpecificPart::Abstract(AbstractPart {
-                                    composition: MaybeComposition::Leaf(false),
-                                    ..AbstractPart::default()
-                                })
-                            },
-                            SpecificPart::Concrete,
-                        ),
-                    })
-                },
+                        SpecificPart::Concrete,
+                    ),
+                })
+            } else {
+                Err(ZiaError::BadComposition)
             }
         } else {
             Err(ZiaError::SettingCompositionOfConcrete)
@@ -516,7 +590,9 @@ impl Concept {
             specific_part: concrete_concept_type.map_or_else(
                 || {
                     SpecificPart::Abstract(AbstractPart {
-                        composition: MaybeComposition::Leaf(false),
+                        composition: MaybeComposition::Leaf(
+                            LeafCharacter::Constant,
+                        ),
                         reduces_to: None,
                     })
                 },
@@ -545,7 +621,7 @@ impl Concept {
             concrete_part: ConcreteConcept::default(),
             id,
             specific_part: SpecificPart::Abstract(AbstractPart {
-                composition: MaybeComposition::Leaf(false),
+                composition: MaybeComposition::Leaf(LeafCharacter::Constant),
                 reduces_to: Some(reduction.id),
             }),
         };
@@ -563,6 +639,12 @@ pub enum SpecificPart {
     Abstract(AbstractPart),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
+}
+
+#[derive(Clone, Copy)]
+pub enum Hand {
+    Left,
+    Right,
 }
 
 #[derive(Copy, Debug, Clone, PartialEq, Eq, Hash)]
@@ -592,8 +674,16 @@ impl From<ConcreteConceptType> for SpecificPart {
 impl From<&NewConceptDelta> for SpecificPart {
     fn from(delta: &NewConceptDelta) -> Self {
         match delta {
-            NewConceptDelta::Variable => Self::Abstract(AbstractPart {
-                composition: MaybeComposition::Leaf(true),
+            NewConceptDelta::BoundVariable => Self::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(
+                    LeafCharacter::BoundVariable,
+                ),
+                reduces_to: None,
+            }),
+            NewConceptDelta::FreeVariable => Self::Abstract(AbstractPart {
+                composition: MaybeComposition::Leaf(
+                    LeafCharacter::FreeVariable,
+                ),
                 reduces_to: None,
             }),
             NewConceptDelta::Composition(Composition {
@@ -622,7 +712,9 @@ impl From<&NewConceptDelta> for SpecificPart {
             } => concrete_type.map_or_else(
                 || {
                     Self::Abstract(AbstractPart {
-                        composition: MaybeComposition::Leaf(false),
+                        composition: MaybeComposition::Leaf(
+                            LeafCharacter::Constant,
+                        ),
                         reduces_to: None,
                     })
                 },
@@ -632,7 +724,7 @@ impl From<&NewConceptDelta> for SpecificPart {
             NewConceptDelta::ReducesTo {
                 reduction,
             } => Self::Abstract(AbstractPart {
-                composition: MaybeComposition::Leaf(false),
+                composition: MaybeComposition::Leaf(LeafCharacter::Constant),
                 reduces_to: Some(*reduction),
             }),
         }
@@ -640,9 +732,16 @@ impl From<&NewConceptDelta> for SpecificPart {
 }
 
 impl SpecificPart {
-    pub const fn variable() -> Self {
+    pub const fn free_variable() -> Self {
         Self::Abstract(AbstractPart {
-            composition: MaybeComposition::Leaf(true),
+            composition: MaybeComposition::Leaf(LeafCharacter::FreeVariable),
+            reduces_to: None,
+        })
+    }
+
+    pub const fn bound_variable() -> Self {
+        Self::Abstract(AbstractPart {
+            composition: MaybeComposition::Leaf(LeafCharacter::BoundVariable),
             reduces_to: None,
         })
     }
@@ -733,7 +832,14 @@ pub struct CompositePart {
 pub enum MaybeComposition {
     Composition(CompositePart),
     // true if concept is variable
-    Leaf(bool),
+    Leaf(LeafCharacter),
+}
+
+#[derive(Clone, PartialEq)]
+pub enum LeafCharacter {
+    Constant,      // Has a constant meaning regardless of the context search
+    FreeVariable, /* Can substitute consistently with any other concept within a context search when finding generalisations */
+    BoundVariable, /* Cannot be substituted for when finding generalisations, instead used to find examples that satisfy a property */
 }
 
 impl MaybeComposition {
@@ -754,24 +860,20 @@ impl MaybeComposition {
         .insert_into(&mut right.concrete_part.righthand_of);
         let mut free_variables = hashset! {};
         let mut binding_variables = hashset! {};
-        let right_is_quantifier = match &right.specific_part {
-            SpecificPart::Abstract(ap) => {
-                match &ap.composition {
-                    Self::Composition(cp) => {
-                        free_variables.extend(&cp.free_variables);
-                        binding_variables.extend(&cp.binding_variables);
-                    },
-                    Self::Leaf(true) => {
-                        free_variables.insert(right.id);
-                    },
-                    Self::Leaf(false) => {},
-                }
-                false
-            },
-            SpecificPart::Concrete(cct) => {
-                cct == &ConcreteConceptType::ExistsSuchThat
-            },
-            SpecificPart::String(_) => false,
+        if let SpecificPart::Abstract(ap) = &right.specific_part {
+            match &ap.composition {
+                Self::Composition(cp) => {
+                    free_variables.extend(&cp.free_variables);
+                    binding_variables.extend(&cp.binding_variables);
+                },
+                Self::Leaf(LeafCharacter::FreeVariable) => {
+                    free_variables.insert(right.id);
+                },
+                Self::Leaf(LeafCharacter::BoundVariable) => {
+                    binding_variables.insert(right.id);
+                },
+                Self::Leaf(LeafCharacter::Constant) => {},
+            }
         };
         if let SpecificPart::Abstract(ap) = &left.specific_part {
             match &ap.composition {
@@ -783,14 +885,13 @@ impl MaybeComposition {
                         .retain(|v| !cp.free_variables.contains(v));
                     binding_variables.extend(&cp.binding_variables);
                 },
-                Self::Leaf(true) => {
-                    if right_is_quantifier {
-                        binding_variables.insert(left.id);
-                    } else {
-                        free_variables.insert(left.id);
-                    }
+                Self::Leaf(LeafCharacter::FreeVariable) => {
+                    free_variables.insert(right.id);
                 },
-                Self::Leaf(false) => {},
+                Self::Leaf(LeafCharacter::BoundVariable) => {
+                    binding_variables.insert(right.id);
+                },
+                Self::Leaf(LeafCharacter::Constant) => {},
             }
         }
         Self::Composition(CompositePart {
@@ -830,7 +931,7 @@ impl Default for AbstractPart {
     /// The default concept doesn't have a composition and doesn't further reduce.
     fn default() -> Self {
         Self {
-            composition: MaybeComposition::Leaf(false),
+            composition: MaybeComposition::Leaf(LeafCharacter::Constant),
             reduces_to: None,
         }
     }
@@ -846,10 +947,11 @@ pub struct ConcreteConcept {
     reduces_from: HashSet<usize>,
 }
 
-impl From<&NewConceptDelta> for ConcreteConcept {
-    fn from(delta: &NewConceptDelta) -> Self {
-        match delta {
-            NewConceptDelta::Variable
+impl From<&NewDirectConceptDelta> for ConcreteConcept {
+    fn from(delta: &NewDirectConceptDelta) -> Self {
+        match delta.delta {
+            NewConceptDelta::FreeVariable
+            | NewConceptDelta::BoundVariable
             | NewConceptDelta::Composition(_)
             | NewConceptDelta::ReducesTo {
                 ..
@@ -857,17 +959,16 @@ impl From<&NewConceptDelta> for ConcreteConcept {
             | NewConceptDelta::String(_) => Self::default(),
             NewConceptDelta::Double {
                 composition_id,
-                new_concept_id,
                 ..
             } => Self {
                 lefthand_of: LefthandOf {
-                    composition: *composition_id,
-                    righthand: *new_concept_id,
+                    composition: composition_id,
+                    righthand: delta.new_concept_id,
                 }
                 .start_mapping(),
                 righthand_of: RighthandOf {
-                    composition: *composition_id,
-                    lefthand: *new_concept_id,
+                    composition: composition_id,
+                    lefthand: delta.new_concept_id,
                 }
                 .start_mapping(),
                 ..Self::default()
@@ -878,8 +979,8 @@ impl From<&NewConceptDelta> for ConcreteConcept {
                 ..
             } => Self {
                 lefthand_of: LefthandOf {
-                    composition: *composition_id,
-                    righthand: *right_id,
+                    composition: composition_id,
+                    righthand: right_id,
                 }
                 .start_mapping(),
                 ..Self::default()
@@ -890,8 +991,8 @@ impl From<&NewConceptDelta> for ConcreteConcept {
                 ..
             } => Self {
                 righthand_of: RighthandOf {
-                    composition: *composition_id,
-                    lefthand: *left_id,
+                    composition: composition_id,
+                    lefthand: left_id,
                 }
                 .start_mapping(),
                 ..Self::default()

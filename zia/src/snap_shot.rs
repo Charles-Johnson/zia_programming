@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, ConcreteConceptType},
     context_delta::{
         Change, Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
+        NewDirectConceptDelta,
     },
     errors::{ZiaError, ZiaResult},
 };
@@ -20,10 +21,12 @@ pub trait Reader {
                 for cd in cds {
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
-                            DirectConceptDelta::New(ndcd) => {
+                            DirectConceptDelta::New(delta) => {
                                 debug_assert!(concept.is_none());
-                                debug_assert_eq!(ndcd.new_concept_id, id);
-                                concept = Some(ndcd.into());
+                                concept = Some((&NewDirectConceptDelta{
+                                    delta: delta.clone(),
+                                    new_concept_id: id
+                                }).into());
                             },
                             DirectConceptDelta::Remove(concept_id) => {
                                 debug_assert_eq!(*concept_id, id);
@@ -148,24 +151,18 @@ pub trait Reader {
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept(
+    fn new_syntax_from_concept_that_has_no_label_or_composition(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
+        concept: &Concept,
     ) -> SyntaxTree {
-        let quantifier = self.concrete_concept_type(delta, concept)
+        let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);
-        if let Some(s) = self.get_label(delta, concept) {
-            let syntax = SyntaxTree::from(s);
-            if quantifier {
-                syntax.bind_quantifier_concept(concept)
-            } else {
-                syntax.bind_nonquantifier_concept(concept)
-            }
-        } else if quantifier {
-            SyntaxTree::new_quantifier_concept(concept)
+        if quantifier {
+            SyntaxTree::new_quantifier_concept(concept.id())
+        } else if concept.anonymous_variable() {
+            SyntaxTree::new_leaf_variable(concept.id())
         } else {
-            SyntaxTree::new_constant_concept(concept)
+            SyntaxTree::new_constant_concept(concept.id())
         }
     }
     fn concept_from_label(

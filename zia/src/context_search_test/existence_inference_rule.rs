@@ -6,7 +6,7 @@ use crate::{
     context_search::{ContextSearch, ReductionReason},
     snap_shot::{mock::MockSnapShot, Reader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 const CONCEPT_LEN: usize = 17;
@@ -29,19 +29,19 @@ fn existence_inference_rule() {
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = hashset! {};
     let context_search = ContextSearch::from((
         &context_snap_shot,
         &context_delta,
         &context_cache,
+        &bound_variables,
     ));
-    let example_syntax = SyntaxTree::from("example")
-        .bind_nonquantifier_concept(7)
-        .share()
-        .new_pair(SyntaxTree::from("b").bind_nonquantifier_concept(10).into());
+    let example_syntax =
+        context_search.to_ast(7).new_pair(context_search.to_ast(10)).share();
     let true_syntax = SyntaxTree::from("true").bind_nonquantifier_concept(1);
     let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
-        context_search.reduce(&example_syntax.into()),
+        context_search.reduce(&example_syntax),
         Some((
             true_syntax.into(),
             ReductionReason::Rule {
@@ -50,12 +50,10 @@ fn existence_inference_rule() {
                 reason: ReductionReason::Inference {
                     implication: context_search
                         .substitute(&context_search.to_ast(6), &variable_mask),
-                    reason: ReductionReason::Existence {
-                        reduction: context_search.to_ast(1),
+                    reason: ReductionReason::Existence{
                         generalisation: context_search
                             .substitute(&context_search.to_ast(13), &variable_mask),
                         substitutions: hashmap!{context_search.to_ast(11) => context_search.to_ast(3)},
-                        reduction_reason: ReductionReason::Explicit.into()
                     }
                     .into()
                 }
@@ -70,9 +68,9 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
     let mut example_concept = (SpecificPart::default(), 7).into();
-    let mut free_variable_concept = (SpecificPart::variable(), 9).into();
+    let mut free_variable_concept = (SpecificPart::free_variable(), 9).into();
     let mut concept_b = (SpecificPart::default(), 10).into();
-    let mut bound_variable = (SpecificPart::variable(), 11).into();
+    let mut bound_variable = (SpecificPart::bound_variable(), 11).into();
     let mut exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 14).into();
     let mut bound_variable_composed_with_free_variable =

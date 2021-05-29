@@ -7,7 +7,7 @@ use crate::{
     },
     snap_shot::{mock::MockSnapShot, Reader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 #[test]
@@ -15,14 +15,15 @@ fn comparison_existence_implication_rule_test() {
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = hashset! {};
     let context_search = ContextSearch::from((
         &context_snap_shot,
         &context_delta,
         &context_cache,
+        &bound_variables,
     ));
     let a_syntax = context_search.to_ast(21);
     let c_syntax = context_search.to_ast(23);
-    let true_syntax = context_search.to_ast(0);
     let variable_mask = hashmap! {
         4 => a_syntax.clone(), // x=a
         6 => c_syntax.clone() //z=c
@@ -36,16 +37,7 @@ fn comparison_existence_implication_rule_test() {
             ),
             reason: ReductionReason::Existence{
                 substitutions: hashmap!{context_search.to_ast(5) => context_search.to_ast(22)},
-                generalisation: context_search.to_ast(15),
-                reduction: true_syntax.clone(),
-                reduction_reason: ReductionReason::Recursive{
-                    syntax: context_search.to_ast(11),
-                    reason: ReductionReason::Explicit.into(),
-                    from: ReductionReason::Partial(hashmap! {
-                        context_search.to_ast(25) => (true_syntax.clone(), ReductionReason::Explicit),
-                        context_search.to_ast(27) => (true_syntax, ReductionReason::Explicit)
-                    }).into()
-                }.into()
+                generalisation: context_search.substitute(&context_search.to_ast(15), &variable_mask),
             }.into()
         }.into()
     });
@@ -69,11 +61,11 @@ fn comparison_existence_implication_rule_test() {
             }
         )
     );
-    let d_syntax = context_search.to_ast(30);
-    assert_eq!(
-        context_search.compare(&a_syntax, &d_syntax).0,
-        Comparison::GreaterThan
-    )
+    // let d_syntax = context_search.to_ast(28);
+    // assert_eq!(
+    //     context_search.compare(&a_syntax, &d_syntax).0,
+    //     Comparison::GreaterThan
+    // )
 }
 
 fn labels() -> HashMap<usize, &'static str> {
@@ -89,21 +81,19 @@ fn labels() -> HashMap<usize, &'static str> {
         21 => "a",
         22 => "b",
         23 => "c",
-        28 => "assoc",
-        29 => "right",
-        30 => "d"
+        28 => "d"
     }
 }
 
-fn concepts() -> [Concept; 33] {
+fn concepts() -> [Concept; 31] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 2).into();
     let mut implication_concept = (ConcreteConceptType::Implication, 3).into();
-    let mut x = (SpecificPart::variable(), 4).into();
-    let mut y = (SpecificPart::variable(), 5).into();
-    let mut z = (SpecificPart::variable(), 6).into();
+    let mut x = (SpecificPart::free_variable(), 4).into();
+    let mut y = (SpecificPart::bound_variable(), 5).into();
+    let mut z = (SpecificPart::free_variable(), 6).into();
     let mut greater_than_z =
         Concept::composition_of(7, &mut greater_than_concept, &mut z);
     let mut y_greater_than_z =
@@ -161,13 +151,11 @@ fn concepts() -> [Concept; 33] {
     let mut b_greater_than_c =
         Concept::composition_of(27, &mut b, &mut greater_than_c);
     b_greater_than_c.make_reduce_to(&mut true_concept);
-    let assoc_concept = (ConcreteConceptType::Associativity, 28).into();
-    let right_id_concept = (ConcreteConceptType::Right, 29).into();
-    let mut d = (SpecificPart::default(), 30).into();
+    let mut d = (SpecificPart::default(), 28).into();
     let mut greater_than_d =
-        Concept::composition_of(31, &mut greater_than_concept, &mut d);
+        Concept::composition_of(29, &mut greater_than_concept, &mut d);
     let mut c_greater_than_d =
-        Concept::composition_of(32, &mut c, &mut greater_than_d);
+        Concept::composition_of(30, &mut c, &mut greater_than_d);
     c_greater_than_d.make_reduce_to(&mut true_concept);
     [
         true_concept,
@@ -198,8 +186,6 @@ fn concepts() -> [Concept; 33] {
         a_greater_than_b,
         greater_than_c,
         b_greater_than_c,
-        assoc_concept,
-        right_id_concept,
         d,
         greater_than_d,
         c_greater_than_d

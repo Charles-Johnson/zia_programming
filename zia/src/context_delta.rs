@@ -17,6 +17,7 @@
 use crate::{
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
+    snap_shot::Reader,
 };
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -27,16 +28,22 @@ use std::{
 #[derive(Clone, Default)]
 pub struct ContextDelta {
     string: HashMap<String, Change<usize>>,
-    concepts_to_apply_in_order: Vec<Arc<DirectConceptDelta>>,
+    concepts_to_apply_in_order: Vec<(usize, Arc<DirectConceptDelta>)>,
     concept: HashMap<usize, Vec<ConceptDelta>>,
 }
 
 impl ContextDelta {
-    fn update_new_concept_delta(&mut self, newdcd: &NewDirectConceptDelta) {
-        let new_concept_id = newdcd.new_concept_id;
-        self.insert_delta_for_new_concept(new_concept_id, newdcd.clone());
-        match &newdcd.delta {
-            NewConceptDelta::Variable => {},
+    fn update_new_concept_delta(
+        &mut self,
+        delta: &NewConceptDelta,
+        snapshot: &impl Reader,
+    ) -> usize {
+        let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
+        self.insert_delta_for_new_concept(new_concept_id, delta.clone());
+        match delta {
+            NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {
+                // Nothing extra needed because nothing else refers to the variable concept yet
+            },
             NewConceptDelta::String(s) => {
                 self.string
                     .entry(s.into())
@@ -125,18 +132,20 @@ impl ContextDelta {
                     IndirectConceptDelta::ReducesFrom(new_concept_id).into();
                 self.insert_delta_for_existing_concept(*reduction, cd);
             },
-        }
+        };
+        new_concept_id
     }
 
     pub fn update_concept_delta(
         &mut self,
         concept_delta: &Arc<DirectConceptDelta>,
         cache_to_invalidate: &mut ContextCache,
-    ) {
+        snapshot: &impl Reader,
+    ) -> usize {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
-        match concept_delta.as_ref() {
-            DirectConceptDelta::New(newdcd) => {
-                self.update_new_concept_delta(newdcd)
+        let concept_id = match concept_delta.as_ref() {
+            DirectConceptDelta::New(delta) => {
+                self.update_new_concept_delta(delta, snapshot)
             },
             DirectConceptDelta::Compose {
                 composition_id,
@@ -187,6 +196,7 @@ impl ContextDelta {
                     .into();
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
+                *composition_id
             },
             DirectConceptDelta::Reduce {
                 unreduced_id,
@@ -215,21 +225,25 @@ impl ContextDelta {
                         IndirectConceptDelta::ReducesFrom(*unreduced_id).into();
                     self.insert_delta_for_existing_concept(*after, cd);
                 }
+                *unreduced_id
             },
             DirectConceptDelta::Remove(concept_id_to_remove) => {
                 self.insert_delta_for_existing_concept(
                     *concept_id_to_remove,
                     dcd,
                 );
+                *concept_id_to_remove
             },
         };
-        self.concepts_to_apply_in_order.push(concept_delta.clone());
+        self.concepts_to_apply_in_order
+            .push((concept_id, concept_delta.clone()));
         cache_to_invalidate.invalidate();
+        concept_id
     }
 
     pub const fn concepts_to_apply_in_order(
         &self,
-    ) -> &Vec<Arc<DirectConceptDelta>> {
+    ) -> &Vec<(usize, Arc<DirectConceptDelta>)> {
         &self.concepts_to_apply_in_order
     }
 
@@ -260,7 +274,7 @@ impl ContextDelta {
     fn insert_delta_for_new_concept(
         &mut self,
         concept_id: usize,
-        cd: NewDirectConceptDelta,
+        cd: NewConceptDelta,
     ) {
         self.insert_delta_for_concept(
             concept_id,
@@ -393,7 +407,7 @@ pub enum IndirectConceptDelta {
 
 #[derive(Clone, Debug)]
 pub enum DirectConceptDelta {
-    New(NewDirectConceptDelta),
+    New(NewConceptDelta),
     Compose {
         composition_id: usize,
         change: Change<Composition>,
@@ -415,7 +429,8 @@ pub struct NewDirectConceptDelta {
 pub enum NewConceptDelta {
     String(String),
     Composition(Composition),
-    Variable,
+    FreeVariable,
+    BoundVariable,
     Left {
         composition_id: usize,
         right_id: usize,
@@ -429,7 +444,6 @@ pub enum NewConceptDelta {
     /// Used for e.g. `let label_of label_of -> 'label_of'`
     Double {
         composition_id: usize,
-        new_concept_id: usize,
         concrete_type: Option<ConcreteConceptType>,
     },
     ReducesTo {

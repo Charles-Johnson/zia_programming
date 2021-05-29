@@ -15,9 +15,9 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
     let mut exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 2).into();
     let mut implication_concept = (ConcreteConceptType::Implication, 3).into();
-    let mut x = (SpecificPart::variable(), 4).into();
-    let mut y = (SpecificPart::variable(), 5).into();
-    let mut z = (SpecificPart::variable(), 6).into();
+    let mut x = (SpecificPart::free_variable(), 4).into();
+    let mut y = (SpecificPart::bound_variable(), 5).into();
+    let mut z = (SpecificPart::free_variable(), 6).into();
     let mut greater_than_z =
         Concept::composition_of(7, &mut greater_than_concept, &mut z);
     let mut y_greater_than_z =

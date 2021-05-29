@@ -93,4 +93,8 @@ pub enum ZiaError {
         "Tried to label a concept without a concept of a label."
     ))]
     NoLabelConcept,
+    #[snafu(display(
+        "Cannot quantify over compound expressions or constant concepts"
+    ))]
+    CanOnlyQuantifyOverVariables,
 }

@@ -6,7 +6,7 @@ use crate::{
     context_search::{ContextSearch, ReductionReason},
     snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 #[test]
@@ -14,8 +14,13 @@ fn basic_reduction() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search =
-        ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
+    let bound_variables = hashset! {};
+    let context_search = ContextSearch::<MockSnapShot>::from((
+        &snapshot,
+        &delta,
+        &cache,
+        &bound_variables,
+    ));
     let abstract_syntax =
         || SyntaxTree::from("abstract").bind_nonquantifier_concept(1);
     let concrete_syntax =
