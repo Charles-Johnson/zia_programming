@@ -6,7 +6,7 @@ use crate::{
     context_search::{ContextSearch, ReductionReason},
     snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 const CONCEPT_LENGTH: usize = 8;
@@ -15,7 +15,8 @@ fn concepts() -> [Concept; CONCEPT_LENGTH] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_left_concept = (SpecificPart::default(), 3).into();
-    let mut right_right_concept_variable = (SpecificPart::variable(), 4).into();
+    let mut right_right_concept_variable =
+        (SpecificPart::free_variable(), 4).into();
     let mut right_composite_concept = Concept::composition_of(
         5,
         &mut right_left_concept,
@@ -55,21 +56,31 @@ fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search =
-        ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
+    let bound_variable_syntax = hashset! {};
+    let context_search = ContextSearch::<MockSnapShot>::from((
+        &snapshot,
+        &delta,
+        &cache,
+        &bound_variable_syntax,
+    ));
     let concrete_syntax =
         || SyntaxTree::from("concrete").bind_nonquantifier_concept(0);
-    let left_syntax = || SyntaxTree::from("left").bind_nonquantifier_concept(2);
+    let left_syntax =
+        SyntaxTree::from("left").bind_nonquantifier_concept(2).share();
     let right_left_syntax =
         SyntaxTree::from("right_left").bind_nonquantifier_concept(3);
-    let left_and_right_left_and_random_syntax = SyntaxTree::new_pair(
-        left_syntax(),
-        SyntaxTree::new_pair(right_left_syntax, SyntaxTree::from("random")),
-    )
-    .into();
+    let left_and_right_left_and_random_syntax = left_syntax
+        .clone()
+        .new_pair(
+            right_left_syntax
+                .share()
+                .new_pair(SyntaxTree::from("random").into())
+                .into(),
+        )
+        .into();
 
     assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(2), left_syntax().into());
+    assert_eq!(context_search.to_ast(2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
         generalisation: context_search.to_ast(1),

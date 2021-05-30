@@ -6,7 +6,7 @@ use crate::{
     context_search::{ContextSearch, ReductionReason},
     snap_shot::{mock::MockSnapShot, Reader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 fn concepts() -> [Concept; 15] {
@@ -14,7 +14,7 @@ fn concepts() -> [Concept; 15] {
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
     let mut example_concept = (SpecificPart::default(), 7).into();
-    let mut variable_concept = (SpecificPart::variable(), 9).into();
+    let mut variable_concept = (SpecificPart::free_variable(), 9).into();
     let mut concept_b = (SpecificPart::default(), 10).into();
     let mut cause_concept =
         Concept::composition_of(4, &mut concept_a, &mut variable_concept);
@@ -62,15 +62,16 @@ fn inference_rule() {
     let context_cache = ContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from((
         &context_snap_shot,
         &context_delta,
         &context_cache,
+        &bound_variable_syntax,
     ));
-    let example_syntax = SyntaxTree::new_pair(
-        SyntaxTree::new_constant_concept(7),
-        SyntaxTree::new_constant_concept(10),
-    );
+    let example_syntax = SyntaxTree::new_constant_concept(7)
+        .share()
+        .new_pair(SyntaxTree::new_constant_concept(10).into());
     let true_syntax = SyntaxTree::new_constant_concept(1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()),

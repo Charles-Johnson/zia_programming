@@ -18,21 +18,6 @@ use snafu::Snafu;
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
-pub fn map_err_variant<T, E, F>(
-    result: Result<T, E>,
-    error_variant: &E,
-    result_on_error: F,
-) -> Result<T, E>
-where
-    F: FnOnce() -> Result<T, E>,
-    E: PartialEq + Clone,
-{
-    match result {
-        Err(ref err) if err == error_variant => result_on_error(),
-        _ => result,
-    }
-}
-
 /// All the expected ways a Zia command could be invalid.
 #[derive(Debug, PartialEq, Clone, Snafu)]
 pub enum ZiaError {
@@ -108,4 +93,8 @@ pub enum ZiaError {
         "Tried to label a concept without a concept of a label."
     ))]
     NoLabelConcept,
+    #[snafu(display(
+        "Cannot quantify over compound expressions or constant concepts"
+    ))]
+    CanOnlyQuantifyOverVariables,
 }

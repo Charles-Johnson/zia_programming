@@ -63,11 +63,11 @@ fn basic_precedence() {
         context.ast_from_expression("c b a"),
         Ok(SyntaxTree::from("(c b) a")
             .bind_pair(
-                SyntaxTree::new_pair(
-                    SyntaxTree::from("c"),
-                    SyntaxTree::from("b")
-                ),
-                SyntaxTree::from("a").bind_nonquantifier_concept(4)
+                SyntaxTree::from("c")
+                    .share()
+                    .new_pair(SyntaxTree::from("b").into())
+                    .into(),
+                SyntaxTree::from("a").bind_nonquantifier_concept(4).into()
             )
             .into())
     );

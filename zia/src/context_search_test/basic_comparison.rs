@@ -7,7 +7,7 @@ use crate::{
     },
     snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
 };
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 #[test]
@@ -15,8 +15,13 @@ fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let context_search =
-        ContextSearch::<MockSnapShot>::from((&snapshot, &delta, &cache));
+    let bound_variables = hashset! {};
+    let context_search = ContextSearch::<MockSnapShot>::from((
+        &snapshot,
+        &delta,
+        &cache,
+        &bound_variables,
+    ));
     let left_syntax = context_search.to_ast(1);
     let right_syntax = context_search.to_ast(2);
     let another_syntax = context_search.to_ast(8);

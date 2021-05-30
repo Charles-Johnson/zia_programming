@@ -14,11 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::{self, Debug},
     hash::{Hash, Hasher},
     sync::Arc,
 };
+
+use maplit::hashmap;
+
+use crate::{and_also::AndAlso, consistent_merge::ConsistentMerge};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone)]
@@ -68,12 +72,7 @@ struct SyntaxExpansion {
 }
 
 impl SyntaxNode {
-    fn new_pair(
-        left: impl Into<Arc<SyntaxTree>>,
-        right: impl Into<Arc<SyntaxTree>>,
-    ) -> Self {
-        let left: Arc<_> = left.into();
-        let right: Arc<_> = right.into();
+    fn new_pair(left: Arc<SyntaxTree>, right: Arc<SyntaxTree>) -> Self {
         let mut free_variables = HashSet::<Arc<SyntaxTree>>::new();
         let mut binding_variables = HashSet::<Arc<SyntaxTree>>::new();
         let right_is_quantifier = match &right.node {
@@ -155,7 +154,7 @@ impl PartialEq for SyntaxNode {
     }
 }
 
-impl PartialEq<SyntaxTree> for SyntaxTree {
+impl PartialEq<Self> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Self) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -168,7 +167,7 @@ impl PartialEq<SyntaxTree> for SyntaxTree {
     }
 }
 
-impl PartialEq<Arc<SyntaxTree>> for SyntaxTree {
+impl PartialEq<Arc<Self>> for SyntaxTree {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Arc<Self>) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -224,6 +223,14 @@ impl Hash for SyntaxTree {
 }
 
 impl SyntaxTree {
+    pub fn share(self) -> Arc<Self> {
+        Arc::new(self)
+    }
+
+    pub const fn is_leaf_variable(&self) -> bool {
+        matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
+    }
+
     pub const fn new_constant_concept(concept_id: usize) -> Self {
         Self {
             syntax: None,
@@ -240,21 +247,29 @@ impl SyntaxTree {
         }
     }
 
-    #[cfg(test)]
-    pub fn new_pair(
-        left: impl Into<Arc<SyntaxTree>>,
-        right: impl Into<Arc<SyntaxTree>>,
-    ) -> Self {
+    pub fn new_pair(self: Arc<Self>, right: Arc<Self>) -> Self {
         Self {
             syntax: None,
             concept: None,
-            node: SyntaxNode::new_pair(left, right),
+            node: SyntaxNode::new_pair(self, right),
+        }
+    }
+
+    pub const fn new_leaf_variable(concept_id: usize) -> Self {
+        Self {
+            syntax: None,
+            concept: Some(concept_id),
+            node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
         }
     }
 
     pub const fn bind_nonquantifier_concept(mut self, concept: usize) -> Self {
         self.concept = Some(concept);
         self
+    }
+
+    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: usize) {
+        self.concept = Some(concept);
     }
 
     pub fn bind_quantifier_concept(mut self, concept: usize) -> Self {
@@ -289,11 +304,20 @@ impl SyntaxTree {
         }
     }
 
-    pub fn bind_pair(
-        mut self,
-        left: impl Into<Arc<Self>>,
-        right: impl Into<Arc<Self>>,
-    ) -> Self {
+    pub fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
+        if let SyntaxNode::Branch {
+            left,
+            right,
+            ..
+        } = &mut self.node
+        {
+            Some((Arc::make_mut(left), Arc::make_mut(right)))
+        } else {
+            None
+        }
+    }
+
+    pub fn bind_pair(mut self, left: Arc<Self>, right: Arc<Self>) -> Self {
         self.node = SyntaxNode::new_pair(left, right);
         self
     }
@@ -311,6 +335,31 @@ impl SyntaxTree {
             } => !free_variables.is_empty() || !binding_variables.is_empty(),
             SyntaxNode::Leaf(SyntaxLeaf::Variable) => true,
             SyntaxNode::Leaf(_) => false,
+        }
+    }
+
+    pub fn check_example(
+        self: &Arc<Self>,
+        generalisation: &Arc<Self>,
+    ) -> Option<HashMap<Arc<Self>, Arc<Self>>> {
+        match (self.get_expansion(), generalisation.get_expansion()) {
+            (
+                Some((left_example, right_example)),
+                Some((left_gen, right_gen)),
+            ) => left_example
+                .check_example(&left_gen)
+                .and_also_move(right_example.check_example(&right_gen))
+                .and_then(|(left_vm, right_vm)| {
+                    left_vm.consistent_merge(right_vm)
+                }),
+            (Some(_), None) => generalisation
+                .is_variable()
+                .then(|| hashmap! {generalisation.clone() => self.clone()}),
+            (None, Some(_)) => None,
+            (None, None) => generalisation
+                .is_variable()
+                .then(|| hashmap! {generalisation.clone() => self.clone()})
+                .or_else(|| (self == generalisation).then(|| hashmap! {})),
         }
     }
 }

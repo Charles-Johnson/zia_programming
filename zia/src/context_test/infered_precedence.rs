@@ -15,9 +15,9 @@ fn concepts() -> [Concept; CONCEPT_LEN] {
     let mut exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 2).into();
     let mut implication_concept = (ConcreteConceptType::Implication, 3).into();
-    let mut x = (SpecificPart::variable(), 4).into();
-    let mut y = (SpecificPart::variable(), 5).into();
-    let mut z = (SpecificPart::variable(), 6).into();
+    let mut x = (SpecificPart::free_variable(), 4).into();
+    let mut y = (SpecificPart::bound_variable(), 5).into();
+    let mut z = (SpecificPart::free_variable(), 6).into();
     let mut greater_than_z =
         Concept::composition_of(7, &mut greater_than_concept, &mut z);
     let mut y_greater_than_z =
@@ -163,20 +163,24 @@ fn infered_precedence_test() {
         Context::<MockSnapShot>::new_test_case(&concepts(), &concept_labels());
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
-        Ok(SyntaxTree::new_pair(
-            SyntaxTree::from("let").bind_nonquantifier_concept(21),
-            SyntaxTree::new_pair(
-                SyntaxTree::new_pair(
-                    SyntaxTree::from("a"),
-                    SyntaxTree::from("b")
-                ),
-                SyntaxTree::new_pair(
-                    SyntaxTree::from("->").bind_nonquantifier_concept(22),
-                    SyntaxTree::from("c")
-                )
+        Ok(SyntaxTree::from("let")
+            .bind_nonquantifier_concept(21)
+            .share()
+            .new_pair(
+                SyntaxTree::from("a")
+                    .share()
+                    .new_pair(SyntaxTree::from("b").into())
+                    .share()
+                    .new_pair(
+                        SyntaxTree::from("->")
+                            .bind_nonquantifier_concept(22)
+                            .share()
+                            .new_pair(SyntaxTree::from("c").into())
+                            .into()
+                    )
+                    .into()
             )
-        )
-        .into())
+            .into())
     );
     assert_eq!(context.execute("default > (prec let)"), "true");
 }

@@ -3,6 +3,7 @@ use crate::{
     concepts::{Concept, ConcreteConceptType},
     context_delta::{
         Change, Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
+        NewDirectConceptDelta,
     },
     errors::{ZiaError, ZiaResult},
 };
@@ -20,10 +21,12 @@ pub trait Reader {
                 for cd in cds {
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
-                            DirectConceptDelta::New(ndcd) => {
+                            DirectConceptDelta::New(delta) => {
                                 debug_assert!(concept.is_none());
-                                debug_assert_eq!(ndcd.new_concept_id, id);
-                                concept = Some(ndcd.into());
+                                concept = Some((&NewDirectConceptDelta{
+                                    delta: delta.clone(),
+                                    new_concept_id: id
+                                }).into());
                             },
                             DirectConceptDelta::Remove(concept_id) => {
                                 debug_assert_eq!(*concept_id, id);
@@ -148,24 +151,18 @@ pub trait Reader {
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept(
+    fn new_syntax_from_concept_that_has_no_label_or_composition(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
+        concept: &Concept,
     ) -> SyntaxTree {
-        let quantifier = self.concrete_concept_type(delta, concept)
+        let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);
-        if let Some(s) = self.get_label(delta, concept) {
-            let syntax = SyntaxTree::from(s);
-            if quantifier {
-                syntax.bind_quantifier_concept(concept)
-            } else {
-                syntax.bind_nonquantifier_concept(concept)
-            }
-        } else if quantifier {
-            SyntaxTree::new_quantifier_concept(concept)
+        if quantifier {
+            SyntaxTree::new_quantifier_concept(concept.id())
+        } else if concept.anonymous_variable() {
+            SyntaxTree::new_leaf_variable(concept.id())
         } else {
-            SyntaxTree::new_constant_concept(concept)
+            SyntaxTree::new_constant_concept(concept.id())
         }
     }
     fn concept_from_label(
@@ -182,10 +179,11 @@ pub trait Reader {
             .get_composition()
             .and_then(|(left, right)| {
                 self.get_reduction_or_reduction_of_composition(delta, left)
-                    .find_definition(
-                        &self.get_reduction_or_reduction_of_composition(
+                    .find_as_lefthand_in_composition_with_righthand(
+                        self.get_reduction_or_reduction_of_composition(
                             delta, right,
-                        ),
+                        )
+                        .id(),
                     )
             })
             .unwrap_or(concept)
@@ -206,19 +204,10 @@ pub trait Reader {
         delta: &ContextDelta,
         con: usize,
     ) -> bool {
-        self.read_concept(delta, con)
-            .get_righthand_of()
-            .iter()
-            .find_map(|concept| {
-                self.read_concept(delta, *concept).get_composition().filter(
-                    |(left, _)| {
-                        Some(*left)
-                            != self.concrete_concept_id(
-                                delta,
-                                ConcreteConceptType::Label,
-                            )
-                    },
-                )
+        self.concrete_concept_id(delta, ConcreteConceptType::Label)
+            .and_then(|label_id| {
+                self.read_concept(delta, con)
+                    .find_as_righthand_in_composition_with_lefthand(label_id)
             })
             .is_none()
     }
@@ -236,21 +225,11 @@ pub trait Reader {
         delta: &ContextDelta,
         concept: usize,
     ) -> Option<usize> {
-        let maybe_label_concept_id =
-            self.concrete_concept_id(delta, ConcreteConceptType::Label);
+        let label_concept_id =
+            self.concrete_concept_id(delta, ConcreteConceptType::Label)?;
+
         self.read_concept(delta, concept)
-            .get_righthand_of()
-            .iter()
-            .find(|candidate| {
-                maybe_label_concept_id
-                    == Some(
-                        self.read_concept(delta, **candidate)
-                            .get_composition()
-                            .expect("Candidate should have a definition!")
-                            .0,
-                    )
-            })
-            .cloned()
+            .find_as_righthand_in_composition_with_lefthand(label_concept_id)
     }
     fn contains(
         &self,

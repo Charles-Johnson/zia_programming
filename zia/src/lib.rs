@@ -122,6 +122,9 @@ mod ast;
 /// The units that make up the context. Defined in terms of their relationship with other concepts.
 mod concepts;
 
+/// Merges two hashmaps only if they are consistent (same key, if exists, has same value)
+mod consistent_merge;
+
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
@@ -144,6 +147,8 @@ mod delta;
 
 /// The errors that the users could make when making commands.
 mod errors;
+
+mod map_err_variant;
 
 mod parser;
 
