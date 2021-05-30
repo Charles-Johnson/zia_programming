@@ -18,7 +18,6 @@ use crate::{
     and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType, Hand},
-    consistent_merge::ConsistentMerge,
     context_cache::{ContextCache, ReductionCache},
     context_delta::ContextDelta,
     context_snap_shot::Associativity,
@@ -85,6 +84,15 @@ pub enum ReductionReason {
 }
 
 type Substitutions = HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>;
+
+fn substitute(syntax: &mut SyntaxTree, substitutions: &Substitutions) {
+    if let Some(substitution) = substitutions.get(syntax) {
+        *syntax = substitution.as_ref().clone();
+    } else if let Some((left, right)) = syntax.get_expansion_mut() {
+        substitute(left, substitutions);
+        substitute(right, substitutions);
+    }
+}
 
 impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     fn infer_reduction(&self, concept: &Concept) -> ReductionResult {
@@ -636,11 +644,12 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             .snap_shot
                             .read_concept(self.delta, equivalent_left_id);
                         // TODO handle case when a concept implicitly reduces to `equivalent_left`
-                        let equivalent_left_equivalence_set =
+                        let mut equivalent_left_equivalence_set: HashSet<usize> =
                             equivalent_left
                                 .find_what_reduces_to_it()
                                 .copied()
                                 .collect();
+                        equivalent_left_equivalence_set.insert(equivalent_left_id);
                         let left_examples = self.find_examples(
                             &left,
                             &equivalent_left_equivalence_set,
@@ -661,11 +670,35 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             &right,
                             &equivalent_right_equivalence_set,
                         );
-                        left_examples.iter().flat_map(|left_example| {
-                            right_examples.iter().filter_map(move |right_example| {
-                                right_example.consistent_merge(left_example)
-                            })
-                        }).collect::<Vec<_>>()
+                        left_examples.into_iter().flat_map(|left_example| {
+                            let mut right_clone = right.clone();
+                            let mut mutable_right = Arc::make_mut(&mut right_clone);
+                            substitute(&mut mutable_right, &left_example);
+                            if self.contains_bound_variable_syntax(&right_clone) {
+                                self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
+                                    right_example.extend(left_example.iter().map(|(k, v)| (k.clone(), v.clone())));
+                                    right_example
+                                }).collect::<Vec<_>>()
+                            } else if self.recursively_reduce(&right_clone).0.get_concept().map_or(false, |id| equivalent_right_equivalence_set.contains(&id)) {
+                                vec![left_example]
+                            } else {
+                                vec![]
+                            }
+                        }).chain(right_examples.into_iter().flat_map(|right_example| {
+                            let mut left_clone = left.clone();
+                            let mut mutable_left = Arc::make_mut(&mut left_clone);
+                            substitute(&mut mutable_left, &right_example);
+                            if self.contains_bound_variable_syntax(&left_clone) {
+                                self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
+                                    left_example.extend(right_example.iter().map(|(k, v)| (k.clone(), v.clone())));
+                                    left_example
+                                }).collect::<Vec<_>>()
+                            } else if self.recursively_reduce(&left_clone).0.get_concept().map_or(false, |id| equivalent_left_equivalence_set.contains(&id)) {
+                                vec![right_example]
+                            } else {
+                                vec![]
+                            }
+                        })).collect::<Vec<_>>()
                     }).collect()
                 },
                 (true, false) => self.find_examples_of_half_generalisation(

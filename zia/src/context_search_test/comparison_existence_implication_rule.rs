@@ -61,11 +61,11 @@ fn comparison_existence_implication_rule_test() {
             }
         )
     );
-    // let d_syntax = context_search.to_ast(28);
-    // assert_eq!(
-    //     context_search.compare(&a_syntax, &d_syntax).0,
-    //     Comparison::GreaterThan
-    // )
+    let d_syntax = context_search.to_ast(28);
+    assert_eq!(
+        context_search.compare(&a_syntax, &d_syntax).0,
+        Comparison::GreaterThan
+    )
 }
 
 fn labels() -> HashMap<usize, &'static str> {
