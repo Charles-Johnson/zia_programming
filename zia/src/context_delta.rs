@@ -19,12 +19,18 @@ use crate::{
     context_cache::ContextCache,
     snap_shot::Reader,
 };
-use std::{collections::{hash_map::Entry, HashMap}, fmt::{self, Debug, Display, Formatter}, hash::Hash, sync::Arc};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fmt::{self, Debug, Display, Formatter},
+    hash::Hash,
+    sync::Arc,
+};
 
 #[derive(Clone)]
 pub struct ContextDelta<ConceptId: Clone + Display> {
     string: HashMap<String, Change<ConceptId>>,
-    concepts_to_apply_in_order: Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)>,
+    concepts_to_apply_in_order:
+        Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)>,
     concept: HashMap<ConceptId, Vec<ConceptDelta<ConceptId>>>,
 }
 
@@ -33,7 +39,7 @@ impl<ConceptId: Copy + Display> Default for ContextDelta<ConceptId> {
         Self {
             string: HashMap::new(),
             concepts_to_apply_in_order: vec![],
-            concept: HashMap::new()
+            concept: HashMap::new(),
         }
     }
 }
@@ -42,14 +48,14 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     fn update_new_concept_delta(
         &mut self,
         delta: &NewConceptDelta<ConceptId>,
-        snapshot: &impl Reader<ConceptId=ConceptId>,
+        snapshot: &impl Reader<ConceptId = ConceptId>,
     ) -> ConceptId {
         let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
         self.insert_delta_for_new_concept(new_concept_id, delta.clone());
         match delta {
             NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {
                 // Nothing extra needed because nothing else refers to the variable concept yet
-            },
+            }
             NewConceptDelta::String(s) => {
                 self.string
                     .entry(s.into())
@@ -63,10 +69,10 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                                 before: *id,
                                 after: new_concept_id,
                             }
-                        },
+                        }
                     })
                     .or_insert_with(|| Change::Create(new_concept_id));
-            },
+            }
             NewConceptDelta::Composition(Composition {
                 left_id,
                 right_id,
@@ -83,7 +89,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                 })
                 .into();
                 self.insert_delta_for_existing_concept(*right_id, cd);
-            },
+            }
             NewConceptDelta::Left {
                 composition_id,
                 right_id,
@@ -101,7 +107,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                 })
                 .into();
                 self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
+            }
             NewConceptDelta::Right {
                 composition_id,
                 left_id,
@@ -119,7 +125,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                 })
                 .into();
                 self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
+            }
             NewConceptDelta::Double {
                 composition_id,
                 ..
@@ -130,14 +136,14 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                 })
                 .into();
                 self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
+            }
             NewConceptDelta::ReducesTo {
                 reduction,
             } => {
                 let cd =
                     IndirectConceptDelta::ReducesFrom(new_concept_id).into();
                 self.insert_delta_for_existing_concept(*reduction, cd);
-            },
+            }
         };
         new_concept_id
     }
@@ -146,13 +152,13 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
         &mut self,
         concept_delta: &Arc<DirectConceptDelta<ConceptId>>,
         cache_to_invalidate: &mut ContextCache<ConceptId>,
-        snapshot: &impl Reader<ConceptId=ConceptId>,
+        snapshot: &impl Reader<ConceptId = ConceptId>,
     ) -> ConceptId {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
                 self.update_new_concept_delta(delta, snapshot)
-            },
+            }
             DirectConceptDelta::Compose {
                 composition_id,
                 change,
@@ -203,7 +209,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
                 *composition_id
-            },
+            }
             DirectConceptDelta::Reduce {
                 unreduced_id,
                 change,
@@ -232,14 +238,14 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                     self.insert_delta_for_existing_concept(*after, cd);
                 }
                 *unreduced_id
-            },
+            }
             DirectConceptDelta::Remove(concept_id_to_remove) => {
                 self.insert_delta_for_existing_concept(
                     *concept_id_to_remove,
                     dcd,
                 );
                 *concept_id_to_remove
-            },
+            }
         };
         self.concepts_to_apply_in_order
             .push((concept_id, concept_delta.clone()));
@@ -291,7 +297,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                         if matches!(
                             dcd.as_ref(),
                             &DirectConceptDelta::Remove(_)
-                        ) => {},
+                        ) => {}
                     _ => panic!("Concept {} already exists", concept_id),
                 };
             },
@@ -312,10 +318,10 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                     .expect("Vector must include at least one element");
                 sanity_check(last_delta, concept_id);
                 e.get_mut().push(cd);
-            },
+            }
             Entry::Vacant(e) => {
                 e.insert(vec![cd]);
-            },
+            }
         };
     }
 
@@ -328,7 +334,9 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     }
 }
 
-impl<ConceptId: Clone + Debug + Display + Eq + Hash> Debug for ContextDelta<ConceptId> {
+impl<ConceptId: Clone + Debug + Display + Eq + Hash> Debug
+    for ContextDelta<ConceptId>
+{
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,

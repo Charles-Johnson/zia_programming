@@ -55,7 +55,8 @@ fn concepts() -> [Concept<usize>; 3] {
     let exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut abstract_concept: Concept<usize> = (SpecificPart::default(), 2).into();
+    let mut abstract_concept: Concept<usize> =
+        (SpecificPart::default(), 2).into();
     abstract_concept.make_reduce_to(&mut true_concept);
     [exists_such_that_concept, true_concept, abstract_concept]
 }

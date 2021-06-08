@@ -72,9 +72,13 @@ struct SyntaxExpansion<ConceptId> {
 }
 
 impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
-    fn new_pair(left: Arc<SyntaxTree<ConceptId>>, right: Arc<SyntaxTree<ConceptId>>) -> Self {
+    fn new_pair(
+        left: Arc<SyntaxTree<ConceptId>>,
+        right: Arc<SyntaxTree<ConceptId>>,
+    ) -> Self {
         let mut free_variables = HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
-        let mut binding_variables = HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
+        let mut binding_variables =
+            HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
         let right_is_quantifier = match &right.node {
             Self::Branch {
                 free_variables: fv,
@@ -84,11 +88,11 @@ impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.extend(bv.iter().cloned());
                 false
-            },
+            }
             Self::Leaf(SyntaxLeaf::Variable) => {
                 free_variables.insert(right.clone());
                 false
-            },
+            }
             Self::Leaf(SyntaxLeaf::Constant) => false,
             Self::Leaf(SyntaxLeaf::Quantifier) => true,
         };
@@ -102,15 +106,15 @@ impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.retain(|v| !fv.contains(v));
                 binding_variables.extend(bv.iter().cloned());
-            },
+            }
             Self::Leaf(SyntaxLeaf::Variable) => {
                 if right_is_quantifier {
                     binding_variables.insert(left.clone());
                 } else {
                     free_variables.insert(left.clone());
                 }
-            },
-            Self::Leaf(_) => {},
+            }
+            Self::Leaf(_) => {}
         }
         Self::Branch {
             left,
@@ -178,7 +182,9 @@ impl<ConceptId: PartialEq> PartialEq<Arc<Self>> for SyntaxTree<ConceptId> {
     }
 }
 
-impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display for SyntaxTree<ConceptId> {
+impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display
+    for SyntaxTree<ConceptId>
+{
     /// Displays the same as the inside of an `SyntaxTree` variant.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

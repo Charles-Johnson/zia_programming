@@ -22,7 +22,11 @@ use crate::{
     errors::{ZiaError, ZiaResult},
 };
 use maplit::{hashmap, hashset};
-use std::{collections::{HashMap, HashSet}, fmt::{Debug, Display}, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
@@ -64,7 +68,9 @@ impl<Id: Copy + Display + Hash + Eq> Debug for Concept<Id> {
     }
 }
 
-impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>> for Concept<Id> {
+impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>>
+    for Concept<Id>
+{
     fn from(ndcd: &NewDirectConceptDelta<Id>) -> Self {
         Self {
             id: ndcd.new_concept_id,
@@ -104,10 +110,10 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     },
                     MaybeComposition::Leaf(LeafCharacter::Constant) => {
                         Change::Create(after)
-                    },
+                    }
                     MaybeComposition::Leaf(_) => {
                         panic!("Not sure what you are trying to do here ...")
-                    },
+                    }
                 },
                 composition_id: self.id,
             })
@@ -142,7 +148,10 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
         }
     }
 
-    pub fn change_reduction(&mut self, change: Change<Id>) where Id: PartialEq + Debug{
+    pub fn change_reduction(&mut self, change: Change<Id>)
+    where
+        Id: PartialEq + Debug,
+    {
         if let SpecificPart::Abstract(ap) = &mut self.specific_part {
             match change {
                 Change::Create(reduced_concept_id)
@@ -151,11 +160,11 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 } => {
                     ap.reduces_to = Some(reduced_concept_id);
-                },
+                }
                 Change::Remove(reduced_concept_id) => {
                     debug_assert_eq!(Some(reduced_concept_id), ap.reduces_to);
                     ap.reduces_to = None;
-                },
+                }
             }
         }
     }
@@ -177,25 +186,25 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                 } else {
                     panic!("Concept isn't abstract");
                 }
-            },
+            }
             IndirectConceptDelta::LefthandOf(lefthand_of) => {
                 lefthand_of.insert_into(&mut self.concrete_part.lefthand_of);
-            },
+            }
             IndirectConceptDelta::RighthandOf(righthand_of) => {
                 righthand_of.insert_into(&mut self.concrete_part.righthand_of);
-            },
+            }
             IndirectConceptDelta::ReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.insert(*unreduced_id);
-            },
+            }
             IndirectConceptDelta::NoLongerLefthandOf(composition_id) => {
                 self.concrete_part.lefthand_of.remove(composition_id);
-            },
+            }
             IndirectConceptDelta::NoLongerRighthandOf(composition_id) => {
                 self.concrete_part.righthand_of.remove(composition_id);
-            },
+            }
             IndirectConceptDelta::NoLongerReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.remove(unreduced_id);
-            },
+            }
         }
     }
 
@@ -258,7 +267,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 }) => {
                     !binding_variables.is_empty() | !free_variables.is_empty()
-                },
+                }
                 MaybeComposition::Leaf(LeafCharacter::BoundVariable)
                 | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
                 MaybeComposition::Leaf(LeafCharacter::Constant) => false,
@@ -323,7 +332,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                 } else {
                     None
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -339,7 +348,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                         c.composition = MaybeComposition::composition_of(
                             self.id, left, right,
                         );
-                    },
+                    }
                     Change::Update {
                         after: [left, right],
                         before: [before_left, before_right],
@@ -352,7 +361,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                         c.composition = MaybeComposition::composition_of(
                             self.id, left, right,
                         );
-                    },
+                    }
                     Change::Remove([before_left, before_right]) => {
                         before_left.concrete_part.lefthand_of.remove(&self.id);
                         before_right
@@ -361,10 +370,10 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                             .remove(&self.id);
                         c.composition =
                             MaybeComposition::Leaf(LeafCharacter::Constant);
-                    },
+                    }
                 }
                 Ok(())
-            },
+            }
             _ => Err(ZiaError::SettingCompositionOfConcrete),
         }
     }
@@ -383,9 +392,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
         self.concrete_part.righthand_of.get(&left_id).cloned()
     }
 
-    pub fn get_concrete_concept_type(
-        &self,
-    ) -> Option<ConcreteConceptType> {
+    pub fn get_concrete_concept_type(&self) -> Option<ConcreteConceptType> {
         match &self.specific_part {
             SpecificPart::Concrete(cc) => Some(*cc),
             _ => None,
@@ -413,11 +420,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
         }
     }
 
-    pub fn composition_of(
-        id: Id,
-        left: &mut Self,
-        right: &mut Self,
-    ) -> Self {
+    pub fn composition_of(id: Id, left: &mut Self, right: &mut Self) -> Self {
         Self {
             id,
             specific_part: SpecificPart::composition_of(id, left, right),
@@ -659,7 +662,7 @@ impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {
     }
 }
 
-impl<Id: Copy +  Eq + Hash> From<&NewConceptDelta<Id>> for SpecificPart<Id> {
+impl<Id: Copy + Eq + Hash> From<&NewConceptDelta<Id>> for SpecificPart<Id> {
     fn from(delta: &NewConceptDelta<Id>) -> Self {
         match delta {
             NewConceptDelta::BoundVariable => Self::Abstract(AbstractPart {
@@ -738,7 +741,7 @@ impl<Id: Copy + Debug + Eq + Hash> SpecificPart<Id> {
         composition_id: Id,
         left: &mut Concept<Id>,
         right: &mut Concept<Id>,
-    ) -> Self{
+    ) -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::composition_of(
                 composition_id,
@@ -853,14 +856,14 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 Self::Composition(cp) => {
                     free_variables.extend(&cp.free_variables);
                     binding_variables.extend(&cp.binding_variables);
-                },
+                }
                 Self::Leaf(LeafCharacter::FreeVariable) => {
                     free_variables.insert(right.id);
-                },
+                }
                 Self::Leaf(LeafCharacter::BoundVariable) => {
                     binding_variables.insert(right.id);
-                },
-                Self::Leaf(LeafCharacter::Constant) => {},
+                }
+                Self::Leaf(LeafCharacter::Constant) => {}
             }
         };
         if let SpecificPart::Abstract(ap) = &left.specific_part {
@@ -872,14 +875,14 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                     binding_variables
                         .retain(|v| !cp.free_variables.contains(v));
                     binding_variables.extend(&cp.binding_variables);
-                },
+                }
                 Self::Leaf(LeafCharacter::FreeVariable) => {
                     free_variables.insert(right.id);
-                },
+                }
                 Self::Leaf(LeafCharacter::BoundVariable) => {
                     binding_variables.insert(right.id);
-                },
-                Self::Leaf(LeafCharacter::Constant) => {},
+                }
+                Self::Leaf(LeafCharacter::Constant) => {}
             }
         }
         Self::Composition(CompositePart {
@@ -938,14 +941,16 @@ pub struct ConcreteConcept<Id: Eq + Hash> {
 impl<Id: Eq + Hash> Default for ConcreteConcept<Id> {
     fn default() -> Self {
         Self {
-            lefthand_of: hashmap!{},
-            righthand_of: hashmap!{},
-            reduces_from: hashset!{}
+            lefthand_of: hashmap! {},
+            righthand_of: hashmap! {},
+            reduces_from: hashset! {},
         }
     }
 }
 
-impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>> for ConcreteConcept<Id> {
+impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>>
+    for ConcreteConcept<Id>
+{
     fn from(delta: &NewDirectConceptDelta<Id>) -> Self {
         match delta.delta {
             NewConceptDelta::FreeVariable
@@ -1028,7 +1033,10 @@ impl<Id: Copy + Eq + Hash> RighthandOf<Id> {
         hashmap! {self.lefthand => self.composition}
     }
 
-    fn insert_into(&self, map: &mut HashMap<Id, Id>) where Id: Debug{
+    fn insert_into(&self, map: &mut HashMap<Id, Id>)
+    where
+        Id: Debug,
+    {
         if let Some(prev_comp) = map.insert(self.lefthand, self.composition) {
             debug_assert_eq!(self.composition, prev_comp, "at most one concept can be the composition of a given pair of concepts");
         }

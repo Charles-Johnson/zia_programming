@@ -34,7 +34,12 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};
-use std::{collections::{HashMap, HashSet}, default::Default, fmt::Debug, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    default::Default,
+    fmt::Debug,
+    sync::Arc,
+};
 
 #[derive(Clone)]
 pub struct Context<S: SnapShotReader> {
@@ -57,7 +62,11 @@ pub struct TokenSubsequence<ConceptId> {
 
 impl<S: SnapShotReader> Context<S>
 where
-    S: SnapShotReader + Default + Sync + Apply<Delta = ContextDelta<S::ConceptId>> + Debug,
+    S: SnapShotReader
+        + Default
+        + Sync
+        + Apply<Delta = ContextDelta<S::ConceptId>>
+        + Debug,
     S::ConceptId: Default,
 {
     #[must_use]
@@ -119,7 +128,10 @@ where
         string
     }
 
-    pub fn create_variable_concepts(&mut self, ast: &mut SyntaxTree<S::ConceptId>) {
+    pub fn create_variable_concepts(
+        &mut self,
+        ast: &mut SyntaxTree<S::ConceptId>,
+    ) {
         if let Some((left, right)) = ast.get_expansion_mut() {
             self.create_variable_concepts(left);
             self.create_variable_concepts(right);
@@ -149,12 +161,18 @@ where
         }
     }
 
-    pub fn ast_from_expression(&mut self, s: &str) -> ParsingResult<S::ConceptId> {
+    pub fn ast_from_expression(
+        &mut self,
+        s: &str,
+    ) -> ParsingResult<S::ConceptId> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(&tokens)
     }
 
-    fn ast_from_tokens(&mut self, tokens: &[String]) -> ParsingResult<S::ConceptId> {
+    fn ast_from_tokens(
+        &mut self,
+        tokens: &[String],
+    ) -> ParsingResult<S::ConceptId> {
         info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
@@ -179,7 +197,7 @@ where
                             } else {
                                 Err(ZiaError::AmbiguousExpression)
                             }
-                        },
+                        }
                         (x, None) => Ok(Some(x)),
                     })?;
                 info!(
@@ -212,7 +230,7 @@ where
                                 self.ast_from_tokens(&tokens[..lp_indices[0]])?;
                             Ok(self.context_search().combine(&head, &tail))
                         }
-                    },
+                    }
                     Some(Associativity::Left) => lp_indices
                         .iter()
                         .try_fold((None, None), |state, lp_index| {
@@ -227,7 +245,7 @@ where
                         .ok_or(ZiaError::AmbiguousExpression),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
-            },
+            }
         }
     }
 
@@ -262,7 +280,7 @@ where
                         };
                         self.context_search()
                             .combine(&rest_of_syntax, &edge_syntax)
-                    },
+                    }
                     Associativity::Right => {
                         let rest_of_syntax = if slice.len() < 3 {
                             self.ast_from_token(&slice[1])?
@@ -271,7 +289,7 @@ where
                         };
                         self.context_search()
                             .combine(&edge_syntax, &rest_of_syntax)
-                    },
+                    }
                 }
             }
         } else {
@@ -284,10 +302,10 @@ where
                 Some(e) => match assoc {
                     Associativity::Left => {
                         self.context_search().combine(&e, &lp_with_the_rest)
-                    },
+                    }
                     Associativity::Right => {
                         self.context_search().combine(&lp_with_the_rest, &e)
-                    },
+                    }
                 },
             }),
             Some(lp_index),
@@ -303,7 +321,11 @@ where
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
-            (Vec::<Arc<SyntaxTree<S::ConceptId>>>::new(), Vec::<usize>::new(), None),
+            (
+                Vec::<Arc<SyntaxTree<S::ConceptId>>>::new(),
+                Vec::<usize>::new(),
+                None,
+            ),
             |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
              token| {
                 // Increment index
@@ -366,7 +388,7 @@ where
                                 vec![this_index.unwrap()],
                                 this_index,
                             ))
-                        },
+                        }
                         // syntax of token has a higher precedence than some previous lowest precendence syntax
                         // keep existing lowest precedence syntax as-is
                         Comparison::LessThan => {
@@ -375,7 +397,7 @@ where
                                 lp_indices,
                                 this_index,
                             ))
-                        },
+                        }
                         // syntax of token has at least an equal precedence as the previous lowest precedence syntax
                         // include syntax is lowest precedence syntax list
                         Comparison::EqualTo
@@ -387,7 +409,7 @@ where
                                 lp_indices,
                                 this_index,
                             ));
-                        },
+                        }
                         // Cannot determine if token has higher or lower precedence than this syntax
                         // Check other syntax with lowest precedence
                         Comparison::Incomparable
@@ -411,7 +433,11 @@ where
         result
     }
 
-    fn ast_from_pair(&mut self, left: &str, right: &str) -> ParsingResult<S::ConceptId> {
+    fn ast_from_pair(
+        &mut self,
+        left: &str,
+        right: &str,
+    ) -> ParsingResult<S::ConceptId> {
         let lefthand = self.ast_from_token(left)?;
         let righthand = self.ast_from_token(right)?;
         if let Some(ConcreteConceptType::ExistsSuchThat) =
@@ -424,7 +450,10 @@ where
         Ok(self.context_search().combine(&lefthand, &righthand))
     }
 
-    fn concrete_concept_id(&self, cct: ConcreteConceptType) -> Option<S::ConceptId> {
+    fn concrete_concept_id(
+        &self,
+        cct: ConcreteConceptType,
+    ) -> Option<S::ConceptId> {
         self.snap_shot.concrete_concept_id(&self.delta, cct)
     }
 
@@ -524,7 +553,10 @@ where
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &Arc<SyntaxTree<S::ConceptId>>) -> ZiaResult<String> {
+    fn call(
+        &mut self,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ZiaResult<String> {
         info!(self.logger, "call({})", ast);
         ast.get_concept()
             .and_then(|c| {
@@ -569,7 +601,10 @@ where
             )
     }
 
-    fn concrete_type(&self, concept_id: S::ConceptId) -> Option<ConcreteConceptType> {
+    fn concrete_type(
+        &self,
+        concept_id: S::ConceptId,
+    ) -> Option<ConcreteConceptType> {
         self.snap_shot.concrete_concept_type(&self.delta, concept_id)
     }
 
@@ -648,10 +683,10 @@ where
             match self.concrete_type(c) {
                 Some(ConcreteConceptType::Reduction) => {
                     self.execute_reduction(left, rightright)
-                },
+                }
                 Some(ConcreteConceptType::Define) => {
                     self.execute_composition(left, rightright)
-                },
+                }
                 _ => {
                     let rightleft_reduction = self
                         .snap_shot
@@ -664,7 +699,7 @@ where
                             self.match_righthand_pair(left, &ast, rightright)
                         },
                     )
-                },
+                }
             }
         })
     }
@@ -704,32 +739,35 @@ where
                     } else {
                         self.relabel(b, &new.to_string())
                     }
-                },
+                }
                 (None, None, Some((ref left, ref right))) => {
                     self.define_new_syntax(&new.to_string(), left, right)
-                },
+                }
                 (Some(a), Some(b), None) => {
                     if a == b {
                         self.cleanly_delete_composition(a)
                     } else {
                         Err(ZiaError::CompositionCollision)
                     }
-                },
+                }
                 (Some(a), Some(b), Some(_)) => {
                     if a == b {
                         Err(ZiaError::RedundantComposition)
                     } else {
                         Err(ZiaError::CompositionCollision)
                     }
-                },
+                }
                 (Some(a), None, Some((ref left, ref right))) => {
                     self.redefine(a, left, right)
-                },
+                }
             }
         }
     }
 
-    fn cleanly_delete_composition(&mut self, concept: S::ConceptId) -> ZiaResult<()> {
+    fn cleanly_delete_composition(
+        &mut self,
+        concept: S::ConceptId,
+    ) -> ZiaResult<()> {
         match self
             .snap_shot
             .read_concept(&self.delta, concept)
@@ -740,7 +778,7 @@ where
                 self.try_delete_concept(concept)?;
                 self.try_delete_concept(left)?;
                 self.try_delete_concept(right)
-            },
+            }
         }
     }
 
@@ -804,7 +842,11 @@ where
         }
     }
 
-    fn relabel(&mut self, concept: S::ConceptId, new_label: &str) -> ZiaResult<()> {
+    fn relabel(
+        &mut self,
+        concept: S::ConceptId,
+        new_label: &str,
+    ) -> ZiaResult<()> {
         self.unlabel(concept)?;
         self.label(concept, new_label)
     }
@@ -862,7 +904,10 @@ where
         }
     }
 
-    fn try_removing_reduction(&mut self, syntax: &SyntaxTree<S::ConceptId>) -> ZiaResult<()> {
+    fn try_removing_reduction(
+        &mut self,
+        syntax: &SyntaxTree<S::ConceptId>,
+    ) -> ZiaResult<()> {
         syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
             self.delete_reduction(c)
         })
@@ -887,7 +932,10 @@ where
             })
     }
 
-    fn concept_from_ast(&mut self, ast: &SyntaxTree<S::ConceptId>) -> ZiaResult<S::ConceptId> {
+    fn concept_from_ast(
+        &mut self,
+        ast: &SyntaxTree<S::ConceptId>,
+    ) -> ZiaResult<S::ConceptId> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
         } else if let Some(c) =
@@ -906,7 +954,7 @@ where
                         )
                         .ok_or(ZiaError::NoLabelConcept)?;
                     Ok(self.new_labelled_concept(string, None, Some(label_id)))
-                },
+                }
                 Some((ref left, ref right)) => {
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
@@ -916,7 +964,7 @@ where
                         self.label(concept, string)?;
                     }
                     Ok(concept)
-                },
+                }
             }
         }
     }
@@ -983,7 +1031,10 @@ where
         self.update_reduction(composition, string_id)
     }
 
-    fn new_string(&mut self, string: impl Into<String> + Clone) -> S::ConceptId {
+    fn new_string(
+        &mut self,
+        string: impl Into<String> + Clone,
+    ) -> S::ConceptId {
         self.delta.update_concept_delta(
             &DirectConceptDelta::New(NewConceptDelta::String(string.into()))
                 .into(),

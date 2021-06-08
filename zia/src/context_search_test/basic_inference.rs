@@ -50,7 +50,8 @@ fn labels() -> HashMap<usize, &'static str> {
 fn concepts() -> [Concept<usize>; 10] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut condition_concept: Concept<usize> = (SpecificPart::default(), 2).into();
+    let mut condition_concept: Concept<usize> =
+        (SpecificPart::default(), 2).into();
     let mut result_concept = (SpecificPart::default(), 3).into();
     condition_concept.make_reduce_to(&mut true_concept);
     let mut implies_result_concept = Concept::composition_of(

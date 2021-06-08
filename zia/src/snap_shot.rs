@@ -9,12 +9,22 @@ use crate::{
 };
 #[cfg(test)]
 use std::collections::HashMap;
-use std::{fmt::{Display, Debug}, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 pub trait Reader {
     type ConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
-    fn get_concept(&self, concept_id: Self::ConceptId) -> Option<&Concept<Self::ConceptId>>;
-    fn read_concept(&self, delta: &ContextDelta<Self::ConceptId>, id: Self::ConceptId) -> Concept<Self::ConceptId> {
+    fn get_concept(
+        &self,
+        concept_id: Self::ConceptId,
+    ) -> Option<&Concept<Self::ConceptId>>;
+    fn read_concept(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        id: Self::ConceptId,
+    ) -> Concept<Self::ConceptId> {
         delta
             .concept()
             .get(&id)
@@ -124,13 +134,20 @@ pub trait Reader {
             self.read_concept(delta, comp.right_id),
         ]
     }
-    fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta<Self::ConceptId>) -> Self::ConceptId;
+    fn lowest_unoccupied_concept_id(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+    ) -> Self::ConceptId;
     fn get_label(
         &self,
         delta: &ContextDelta<Self::ConceptId>,
         concept_id: Self::ConceptId,
     ) -> Option<String>;
-    fn ast_from_symbol(&self, delta: &ContextDelta<Self::ConceptId>, s: &str) -> SyntaxTree<Self::ConceptId> {
+    fn ast_from_symbol(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        s: &str,
+    ) -> SyntaxTree<Self::ConceptId> {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
             |concept| {
@@ -190,7 +207,11 @@ pub trait Reader {
             })
             .unwrap_or(concept)
     }
-    fn is_disconnected(&self, delta: &ContextDelta<Self::ConceptId>, concept: Self::ConceptId) -> bool {
+    fn is_disconnected(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
             && self.read_concept(delta, concept).get_composition().is_none()
             && self.read_concept(delta, concept).get_lefthand_of().is_empty()
@@ -345,7 +366,10 @@ pub mod mock {
             }
         }
 
-        fn get_concept(&self, concept_id: usize) -> Option<&Concept<Self::ConceptId>> {
+        fn get_concept(
+            &self,
+            concept_id: usize,
+        ) -> Option<&Concept<Self::ConceptId>> {
             self.concepts.get(concept_id)
         }
 

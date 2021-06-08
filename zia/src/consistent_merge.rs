@@ -25,10 +25,10 @@ impl<K: Eq + Hash, V: PartialEq> ConsistentMerge for HashMap<K, V> {
                         // inconsistent
                         return None;
                     }
-                },
+                }
                 Entry::Vacant(e) => {
                     e.insert(value);
-                },
+                }
             }
         }
         Some(large)
@@ -53,10 +53,10 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> ConsistentMerge
                         // inconsistent
                         return None;
                     }
-                },
+                }
                 Entry::Vacant(e) => {
                     e.insert(value.clone());
-                },
+                }
             }
         }
         Some(large)

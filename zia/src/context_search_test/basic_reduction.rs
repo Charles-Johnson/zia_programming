@@ -63,7 +63,8 @@ fn labels() -> HashMap<usize, &'static str> {
 
 fn concepts() -> [Concept<usize>; 2] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
-    let mut abstract_concept: Concept<usize> = (SpecificPart::default(), 1).into();
+    let mut abstract_concept: Concept<usize> =
+        (SpecificPart::default(), 1).into();
     abstract_concept.make_reduce_to(&mut concrete_concept);
     [concrete_concept, abstract_concept]
 }

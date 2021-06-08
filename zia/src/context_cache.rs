@@ -3,7 +3,11 @@ use crate::{
 };
 use dashmap::DashMap;
 use log::debug;
-use std::{fmt::{Debug, Display}, hash::Hash, sync::Arc};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+    sync::Arc,
+};
 
 #[derive(Debug, Clone)]
 pub struct ReductionCacheList<ConceptId: Eq + Hash> {
@@ -15,12 +19,14 @@ impl<ConceptId: Eq + Hash> Default for ReductionCacheList<ConceptId> {
     fn default() -> Self {
         Self {
             head: Arc::new(ReductionCache::default()),
-            tail: None
+            tail: None,
         }
     }
 }
 
-impl<'a, ConceptId: Clone + Eq + Hash> From<Arc<ReductionCache<ConceptId>>> for ReductionCacheList<ConceptId> {
+impl<'a, ConceptId: Clone + Eq + Hash> From<Arc<ReductionCache<ConceptId>>>
+    for ReductionCacheList<ConceptId>
+{
     fn from(head: Arc<ReductionCache<ConceptId>>) -> Self {
         Self {
             head,
@@ -30,7 +36,10 @@ impl<'a, ConceptId: Clone + Eq + Hash> From<Arc<ReductionCache<ConceptId>>> for 
 }
 
 impl<ConceptId: Copy + Debug + Eq + Hash> ReductionCacheList<ConceptId> {
-    pub fn spawn(self: &Arc<Self>, cache: Arc<ReductionCache<ConceptId>>) -> Arc<Self> {
+    pub fn spawn(
+        self: &Arc<Self>,
+        cache: Arc<ReductionCache<ConceptId>>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             head: cache,
             tail: Some(self.clone()),
@@ -69,7 +78,8 @@ impl<ConceptId: Copy + Debug + Eq + Hash> ReductionCacheList<ConceptId> {
 pub struct ContextCache<ConceptId: Eq + Hash> {
     pub reductions: Arc<ReductionCacheList<ConceptId>>,
     syntax_trees: Arc<DashMap<ConceptId, Arc<SyntaxTree<ConceptId>>>>,
-    contains_bound_variable_syntax: Arc<DashMap<Arc<SyntaxTree<ConceptId>>, bool>>,
+    contains_bound_variable_syntax:
+        Arc<DashMap<Arc<SyntaxTree<ConceptId>>, bool>>,
 }
 
 impl<ConceptId: Eq + Hash> Default for ContextCache<ConceptId> {
@@ -77,12 +87,13 @@ impl<ConceptId: Eq + Hash> Default for ContextCache<ConceptId> {
         Self {
             reductions: Arc::new(ReductionCacheList::default()),
             syntax_trees: Arc::new(DashMap::default()),
-            contains_bound_variable_syntax: Arc::new(DashMap::default())
+            contains_bound_variable_syntax: Arc::new(DashMap::default()),
         }
     }
 }
 
-pub type ReductionCache<ConceptId> = DashMap<Arc<SyntaxTree<ConceptId>>, ReductionResult<ConceptId>>;
+pub type ReductionCache<ConceptId> =
+    DashMap<Arc<SyntaxTree<ConceptId>>, ReductionResult<ConceptId>>;
 
 impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextCache<ConceptId> {
     pub fn invalidate(&mut self) {
@@ -119,7 +130,9 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextCache<ConceptId> {
         &self,
         concept: &Concept<ConceptId>,
         syntax_tree: &Arc<SyntaxTree<ConceptId>>,
-    ) where ConceptId: Eq + Hash {
+    ) where
+        ConceptId: Eq + Hash,
+    {
         if !concept.anonymous_variable() {
             self.syntax_trees.insert(concept.id(), syntax_tree.clone());
         }

@@ -32,7 +32,8 @@ fn concepts() -> [Concept<usize>; 11] {
         );
     precedence_of_abstract_concept_is_below_default
         .make_reduce_to(&mut true_concept);
-    let assoc_concept: Concept<_> = (ConcreteConceptType::Associativity, 8).into();
+    let assoc_concept: Concept<_> =
+        (ConcreteConceptType::Associativity, 8).into();
     let left_concept: Concept<_> = (ConcreteConceptType::Left, 9).into();
     let right_concept: Concept<_> = (ConcreteConceptType::Right, 10).into();
     [
