@@ -9,7 +9,7 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn concepts() -> [Concept; 15] {
+fn concepts() -> [Concept<usize>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();

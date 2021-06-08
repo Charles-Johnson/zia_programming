@@ -7,7 +7,7 @@ use crate::{
 use maplit::hashmap;
 use std::collections::HashMap;
 
-fn concepts() -> [Concept; 11] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut precedence_concept = (ConcreteConceptType::Precedence, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut default_concept = (ConcreteConceptType::Default, 2).into();
@@ -32,9 +32,9 @@ fn concepts() -> [Concept; 11] {
         );
     precedence_of_abstract_concept_is_below_default
         .make_reduce_to(&mut true_concept);
-    let assoc_concept: Concept = (ConcreteConceptType::Associativity, 8).into();
-    let left_concept: Concept = (ConcreteConceptType::Left, 9).into();
-    let right_concept: Concept = (ConcreteConceptType::Right, 10).into();
+    let assoc_concept: Concept<_> = (ConcreteConceptType::Associativity, 8).into();
+    let left_concept: Concept<_> = (ConcreteConceptType::Left, 9).into();
+    let right_concept: Concept<_> = (ConcreteConceptType::Right, 10).into();
     [
         precedence_concept,
         greater_than_concept,

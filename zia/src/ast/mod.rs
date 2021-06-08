@@ -26,29 +26,29 @@ use crate::{and_also::AndAlso, consistent_merge::ConsistentMerge};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 #[derive(Clone)]
-pub struct SyntaxTree {
+pub struct SyntaxTree<ConceptId> {
     /// The root of this syntax tree, represented as a `String`.
     syntax: Option<String>,
     /// Index of the concept that the syntax may represent.
-    concept: Option<usize>,
+    concept: Option<ConceptId>,
     ///
-    node: SyntaxNode,
+    node: SyntaxNode<ConceptId>,
 }
 
-impl Debug for SyntaxTree {
+impl<ConceptId> Debug for SyntaxTree<ConceptId> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
     }
 }
 
 #[derive(Clone, Debug)]
-enum SyntaxNode {
+enum SyntaxNode<ConceptId> {
     /// This syntax tree may branch to two subtrees
     Branch {
-        left: Arc<SyntaxTree>,
-        right: Arc<SyntaxTree>,
-        free_variables: HashSet<Arc<SyntaxTree>>,
-        binding_variables: HashSet<Arc<SyntaxTree>>,
+        left: Arc<SyntaxTree<ConceptId>>,
+        right: Arc<SyntaxTree<ConceptId>>,
+        free_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
+        binding_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
     },
     /// or have no descendants
     Leaf(SyntaxLeaf),
@@ -62,19 +62,19 @@ enum SyntaxLeaf {
 }
 
 #[derive(Clone, Debug)]
-struct SyntaxExpansion {
-    left: Arc<SyntaxTree>,
-    right: Arc<SyntaxTree>,
+struct SyntaxExpansion<ConceptId> {
+    left: Arc<SyntaxTree<ConceptId>>,
+    right: Arc<SyntaxTree<ConceptId>>,
     /// The variables that aren't bound by any quantifiers
-    free_variables: HashSet<Arc<SyntaxTree>>,
+    free_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
     /// The variables that bind the equivalent free variable via quantifiers
-    binding_variables: HashSet<Arc<SyntaxTree>>,
+    binding_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
 }
 
-impl SyntaxNode {
-    fn new_pair(left: Arc<SyntaxTree>, right: Arc<SyntaxTree>) -> Self {
-        let mut free_variables = HashSet::<Arc<SyntaxTree>>::new();
-        let mut binding_variables = HashSet::<Arc<SyntaxTree>>::new();
+impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
+    fn new_pair(left: Arc<SyntaxTree<ConceptId>>, right: Arc<SyntaxTree<ConceptId>>) -> Self {
+        let mut free_variables = HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
+        let mut binding_variables = HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
         let right_is_quantifier = match &right.node {
             Self::Branch {
                 free_variables: fv,
@@ -122,7 +122,7 @@ impl SyntaxNode {
 }
 
 // the variables fields can be derived from left and right so no need to check them for equality
-impl PartialEq for SyntaxNode {
+impl<ConceptId: PartialEq> PartialEq for SyntaxNode<ConceptId> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
@@ -154,7 +154,7 @@ impl PartialEq for SyntaxNode {
     }
 }
 
-impl PartialEq<Self> for SyntaxTree {
+impl<ConceptId: PartialEq> PartialEq<Self> for SyntaxTree<ConceptId> {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Self) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -167,7 +167,7 @@ impl PartialEq<Self> for SyntaxTree {
     }
 }
 
-impl PartialEq<Arc<Self>> for SyntaxTree {
+impl<ConceptId: PartialEq> PartialEq<Arc<Self>> for SyntaxTree<ConceptId> {
     /// `SyntaxTree`s are equal if the syntax they represent is the same.
     fn eq(&self, other: &Arc<Self>) -> bool {
         if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -178,7 +178,7 @@ impl PartialEq<Arc<Self>> for SyntaxTree {
     }
 }
 
-impl fmt::Display for SyntaxTree {
+impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display for SyntaxTree<ConceptId> {
     /// Displays the same as the inside of an `SyntaxTree` variant.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -194,7 +194,7 @@ impl fmt::Display for SyntaxTree {
     }
 }
 
-impl<S> From<S> for SyntaxTree
+impl<S, ConceptId> From<S> for SyntaxTree<ConceptId>
 where
     S: Into<String>,
 {
@@ -213,25 +213,25 @@ where
     }
 }
 
-impl Eq for SyntaxTree {}
+impl<ConceptId: PartialEq> Eq for SyntaxTree<ConceptId> {}
 
-impl Hash for SyntaxTree {
+impl<ConceptId: Hash> Hash for SyntaxTree<ConceptId> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.syntax.hash(state);
         self.concept.hash(state);
     }
 }
 
-impl SyntaxTree {
+impl<ConceptId: Copy + Debug + Eq + Hash> SyntaxTree<ConceptId> {
     pub fn share(self) -> Arc<Self> {
         Arc::new(self)
     }
 
-    pub const fn is_leaf_variable(&self) -> bool {
+    pub fn is_leaf_variable(&self) -> bool {
         matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
     }
 
-    pub const fn new_constant_concept(concept_id: usize) -> Self {
+    pub fn new_constant_concept(concept_id: ConceptId) -> Self {
         Self {
             syntax: None,
             concept: Some(concept_id),
@@ -239,7 +239,7 @@ impl SyntaxTree {
         }
     }
 
-    pub const fn new_quantifier_concept(concept_id: usize) -> Self {
+    pub fn new_quantifier_concept(concept_id: ConceptId) -> Self {
         Self {
             syntax: None,
             concept: Some(concept_id),
@@ -255,7 +255,7 @@ impl SyntaxTree {
         }
     }
 
-    pub const fn new_leaf_variable(concept_id: usize) -> Self {
+    pub fn new_leaf_variable(concept_id: ConceptId) -> Self {
         Self {
             syntax: None,
             concept: Some(concept_id),
@@ -263,16 +263,16 @@ impl SyntaxTree {
         }
     }
 
-    pub const fn bind_nonquantifier_concept(mut self, concept: usize) -> Self {
+    pub fn bind_nonquantifier_concept(mut self, concept: ConceptId) -> Self {
         self.concept = Some(concept);
         self
     }
 
-    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: usize) {
+    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId) {
         self.concept = Some(concept);
     }
 
-    pub fn bind_quantifier_concept(mut self, concept: usize) -> Self {
+    pub fn bind_quantifier_concept(mut self, concept: ConceptId) -> Self {
         debug_assert_eq!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Constant));
         self.concept = Some(concept);
         self.node = SyntaxNode::Leaf(SyntaxLeaf::Quantifier);
@@ -322,7 +322,7 @@ impl SyntaxTree {
         self
     }
 
-    pub const fn get_concept(&self) -> Option<usize> {
+    pub fn get_concept(&self) -> Option<ConceptId> {
         self.concept
     }
 

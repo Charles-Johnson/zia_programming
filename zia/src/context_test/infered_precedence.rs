@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 const CONCEPT_LEN: usize = 36;
 
-fn concepts() -> [Concept; CONCEPT_LEN] {
+fn concepts() -> [Concept<usize>; CONCEPT_LEN] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 const CONCEPT_LENGTH: usize = 8;
 
-fn concepts() -> [Concept; CONCEPT_LENGTH] {
+fn concepts() -> [Concept<usize>; CONCEPT_LENGTH] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_left_concept = (SpecificPart::default(), 3).into();

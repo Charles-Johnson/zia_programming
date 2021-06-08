@@ -55,7 +55,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept; 4] {
+fn concepts() -> [Concept<usize>; 4] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_concept_variable = (SpecificPart::free_variable(), 3).into();

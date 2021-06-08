@@ -43,7 +43,7 @@ pub struct ContextSnapShot {
     string_map: HashMap<String, usize>,
     /// Concepts may be stored at an index of this vector as `Some(T)`. If that concept is removed
     /// from the context, `None` will be left at its index.
-    concepts: Vec<Option<Concept>>,
+    concepts: Vec<Option<Concept<usize>>>,
     /// Keeps track of indices of the `concepts` field that have `None`.
     gaps: Vec<usize>,
     concrete_concepts: BiMap<usize, ConcreteConceptType>,
@@ -98,14 +98,14 @@ impl Associativity {
 }
 
 impl ContextSnapShot {
-    fn write_concept(&mut self, id: usize) -> &mut Concept {
+    fn write_concept(&mut self, id: usize) -> &mut Concept<usize> {
         match self.concepts.get_mut(id) {
             Some(Some(ref mut c)) => c,
             _ => panic!("No concept with id = {}", id),
         }
     }
 
-    fn apply_new_concept(&mut self, ndcd: &NewDirectConceptDelta) {
+    fn apply_new_concept(&mut self, ndcd: &NewDirectConceptDelta<usize>) {
         let NewDirectConceptDelta {
             new_concept_id,
             delta,
@@ -126,7 +126,7 @@ impl ContextSnapShot {
                 );
             },
             NewConceptDelta::Composition(c) => {
-                let [left, right]: [&mut Concept; 2] = self
+                let [left, right]: [&mut Concept<usize>; 2] = self
                     .write_concepts(arr![usize; c.left_id, c.right_id])
                     .into();
                 self.concepts[*new_concept_id] =
@@ -137,7 +137,7 @@ impl ContextSnapShot {
                 right_id,
                 concrete_type,
             } => {
-                let [right, composition]: [&mut Concept; 2] = self
+                let [right, composition]: [&mut Concept<usize>; 2] = self
                     .write_concepts(arr![usize; *right_id, *composition_id])
                     .into();
                 self.concepts[*new_concept_id] = Some(
@@ -174,7 +174,7 @@ impl ContextSnapShot {
                 left_id,
                 concrete_type,
             } => {
-                let [left, composition]: [&mut Concept; 2] = self
+                let [left, composition]: [&mut Concept<usize>; 2] = self
                     .write_concepts(arr![usize; *left_id, *composition_id])
                     .into();
                 debug_assert!(new_concept_id != left_id);
@@ -207,11 +207,11 @@ impl ContextSnapShot {
 
     fn write_concepts<
         'a,
-        N: ArrayLength<usize> + ArrayLength<&'a mut Concept>,
+        N: ArrayLength<usize> + ArrayLength<&'a mut Concept<usize>>,
     >(
         &'a mut self,
         ids: GenericArray<usize, N>,
-    ) -> GenericArray<&'a mut Concept, N> {
+    ) -> GenericArray<&'a mut Concept<usize>, N> {
         assert_matches!(
             ids.iter().try_fold(hashset! {}, |mut acc, id| {
                 if acc.contains(id) {
@@ -235,7 +235,7 @@ impl ContextSnapShot {
         })
     }
 
-    fn concept_len(&self, delta: &ContextDelta) -> usize {
+    fn concept_len(&self, delta: &ContextDelta<usize>) -> usize {
         let mut length = self.concepts.len();
         for (id, cdv) in delta.concept() {
             for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
@@ -259,7 +259,7 @@ impl ContextSnapShot {
 
     fn get_string_concept(
         &self,
-        delta: &ContextDelta,
+        delta: &ContextDelta<usize>,
         s: &str,
     ) -> Option<usize> {
         delta
@@ -285,7 +285,7 @@ impl ContextSnapShot {
             .cloned()
     }
 
-    fn get_labellee(&self, delta: &ContextDelta, c: usize) -> Option<usize> {
+    fn get_labellee(&self, delta: &ContextDelta<usize>, c: usize) -> Option<usize> {
         let concept = self.read_concept(delta, c);
         let mut candidates: VecDeque<usize> =
             concept.find_what_reduces_to_it().copied().collect();
@@ -310,23 +310,24 @@ impl ContextSnapShot {
 }
 
 impl SnapShotReader for ContextSnapShot {
+    type ConceptId = usize;
     fn concept_from_label(
         &self,
-        delta: &ContextDelta,
+        delta: &ContextDelta<Self::ConceptId>,
         s: &str,
     ) -> Option<usize> {
         self.get_string_concept(delta, s)
             .and_then(|c| self.get_labellee(delta, c))
     }
 
-    fn get_concept(&self, id: usize) -> Option<&Concept> {
+    fn get_concept(&self, id: usize) -> Option<&Concept<Self::ConceptId>> {
         match self.concepts.get(id) {
             Some(Some(c)) => Some(c),
             _ => None,
         }
     }
 
-    fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta) -> usize {
+    fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta<Self::ConceptId>) -> usize {
         let mut added_gaps = Vec::<usize>::new();
         let mut removed_gaps = HashSet::<usize>::new();
         let mut new_concept_length = self.concepts.len();
@@ -389,8 +390,8 @@ impl SnapShotReader for ContextSnapShot {
 
     fn get_label(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
             || {
@@ -407,7 +408,7 @@ impl SnapShotReader for ContextSnapShot {
 
     fn concrete_concept_id(
         &self,
-        delta: &ContextDelta,
+        delta: &ContextDelta<Self::ConceptId>,
         cc: ConcreteConceptType,
     ) -> Option<usize> {
         let mut id = None;
@@ -432,23 +433,23 @@ impl SnapShotReader for ContextSnapShot {
 
     fn concrete_concept_type(
         &self,
-        delta: &ContextDelta,
-        concept_id: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()
     }
 
     #[cfg(test)]
-    fn new_test_case(_: &[Concept], _: &HashMap<usize, &'static str>) -> Self {
+    fn new_test_case(_: &[Concept<Self::ConceptId>], _: &HashMap<usize, &'static str>) -> Self {
         unimplemented!()
     }
 }
 
 impl Apply for ContextSnapShot {
-    type Delta = ContextDelta;
+    type Delta = ContextDelta<usize>;
 
     #[allow(clippy::clippy::too_many_lines)]
-    fn apply(&mut self, delta: ContextDelta) {
+    fn apply(&mut self, delta: ContextDelta<usize>) {
         delta.string().iter().for_each(|(s, sd)| match sd {
             context_delta::Change::Update {
                 after,
@@ -485,7 +486,7 @@ impl Apply for ContextSnapShot {
                             left_id,
                             right_id,
                         }) => {
-                            let [composition, left, right]: [&mut Concept; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
+                            let [composition, left, right]: [&mut Concept<usize>; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
                             composition
                                 .change_composition(Change::Create([
                                     left, right,
@@ -504,7 +505,7 @@ impl Apply for ContextSnapShot {
                                     right_id: after_right_id,
                                 },
                         } => {
-                            let [composition, before_left, before_right, after_left, after_right]: [&mut Concept; 5] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id, *after_left_id, *after_right_id]).into();
+                            let [composition, before_left, before_right, after_left, after_right]: [&mut Concept<usize>; 5] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id, *after_left_id, *after_right_id]).into();
                             composition
                                 .change_composition(Change::Update {
                                     before: [before_left, before_right],
@@ -516,7 +517,7 @@ impl Apply for ContextSnapShot {
                             left_id,
                             right_id,
                         }) => {
-                            let [composition, left, right]: [&mut Concept; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
+                            let [composition, left, right]: [&mut Concept<usize>; 3] = self.write_concepts(arr![usize; *composition_id, *left_id, *right_id]).into();
                             composition
                                 .change_composition(Change::Remove([
                                     left, right,
@@ -532,14 +533,14 @@ impl Apply for ContextSnapShot {
                     debug_assert_eq!(concept_id, unreduced_id);
                     match change {
                         Change::Create(reduced_id) => {
-                            let [unreduced_concept, reduced_concept]: [&mut Concept; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
+                            let [unreduced_concept, reduced_concept]: [&mut Concept<usize>; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
                             unreduced_concept.make_reduce_to(reduced_concept);
                         },
                         Change::Update {
                             before: before_reduced_id,
                             after: after_reduced_id,
                         } => {
-                            let [unreduced_concept, before_reduced_concept, after_reduced_concept]: [&mut Concept; 3] = self.write_concepts(arr![usize; *unreduced_id, *before_reduced_id, *after_reduced_id]).into();
+                            let [unreduced_concept, before_reduced_concept, after_reduced_concept]: [&mut Concept<usize>; 3] = self.write_concepts(arr![usize; *unreduced_id, *before_reduced_id, *after_reduced_id]).into();
                             unreduced_concept.make_no_longer_reduce_to(
                                 before_reduced_concept,
                             );
@@ -547,7 +548,7 @@ impl Apply for ContextSnapShot {
                                 .make_reduce_to(after_reduced_concept);
                         },
                         Change::Remove(reduced_id) => {
-                            let [unreduced_concept, reduced_concept]: [&mut Concept; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
+                            let [unreduced_concept, reduced_concept]: [&mut Concept<usize>; 2] = self.write_concepts(arr![usize; *unreduced_id, *reduced_id]).into();
                             unreduced_concept
                                 .make_no_longer_reduce_to(reduced_concept);
                         },
@@ -558,7 +559,7 @@ impl Apply for ContextSnapShot {
         }
     }
 
-    fn diff(&self, _other: Self) -> ContextDelta {
+    fn diff(&self, _other: Self) -> ContextDelta<usize> {
         ContextDelta::default()
     }
 }

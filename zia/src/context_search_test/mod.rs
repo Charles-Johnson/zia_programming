@@ -11,7 +11,7 @@ mod nested_composition_rule;
 
 use crate::concepts::Concept;
 
-pub fn check_order(concepts: &[Concept]) -> Vec<Concept> {
+pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<usize>> {
     concepts
         .iter()
         .enumerate()
@@ -19,5 +19,5 @@ pub fn check_order(concepts: &[Concept]) -> Vec<Concept> {
             assert_eq!(i, c.id());
             c.clone()
         })
-        .collect::<Vec<Concept>>()
+        .collect::<Vec<Concept<usize>>>()
 }

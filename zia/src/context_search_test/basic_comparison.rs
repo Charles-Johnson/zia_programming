@@ -99,7 +99,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept; 11] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 0).into();
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();

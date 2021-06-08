@@ -63,7 +63,7 @@ fn existence_inference_rule() {
     );
 }
 
-fn concepts() -> [Concept; CONCEPT_LEN] {
+fn concepts() -> [Concept<usize>; CONCEPT_LEN] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();

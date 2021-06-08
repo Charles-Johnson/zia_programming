@@ -53,7 +53,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept; 3] {
+fn concepts() -> [Concept<usize>; 3] {
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();
     let composite_concept =
