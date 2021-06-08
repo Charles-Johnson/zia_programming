@@ -116,6 +116,8 @@
 
 mod and_also;
 
+mod associativity;
+
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 

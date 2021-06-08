@@ -18,6 +18,7 @@
 use crate::concepts::Concept;
 use crate::{
     and_also::AndAlso,
+    associativity::Associativity,
     ast::SyntaxTree,
     concepts::ConcreteConceptType,
     context_cache::ContextCache,
@@ -25,7 +26,6 @@ use crate::{
         Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
     },
     context_search::{Comparison, ContextSearch},
-    context_snap_shot::Associativity,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
     map_err_variant::MapErrVariant,

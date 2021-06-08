@@ -16,11 +16,11 @@
 
 use crate::{
     and_also::AndAlso,
+    associativity::Associativity,
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType, Hand},
     context_cache::{ContextCache, ReductionCache},
     context_delta::ContextDelta,
-    context_snap_shot::Associativity,
     snap_shot::Reader as SnapShotReader,
 };
 use log::debug;
