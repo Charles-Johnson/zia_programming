@@ -311,11 +311,6 @@ pub trait Reader {
         delta: &ContextDelta<Self::ConceptId>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType>;
-    #[cfg(test)]
-    fn new_test_case(
-        concepts: &[Concept<Self::ConceptId>],
-        concept_labels: &HashMap<usize, &'static str>,
-    ) -> Self;
 }
 
 #[cfg(test)]
@@ -336,15 +331,10 @@ pub mod mock {
         concept_labels: BiMap<usize, &'static str>,
         concepts: Vec<Concept<usize>>,
     }
-    impl Apply for MockSnapShot {
-        type Delta = ContextDelta<usize>;
 
-        fn apply(&mut self, _: Self::Delta) {}
-    }
-    impl Reader for MockSnapShot {
-        type ConceptId = usize;
-        fn new_test_case(
-            concepts: &[Concept<Self::ConceptId>],
+    impl MockSnapShot {
+        pub fn new_test_case(
+            concepts: &[Concept<usize>],
             concept_labels: &HashMap<usize, &'static str>,
         ) -> Self {
             Self {
@@ -361,6 +351,15 @@ pub mod mock {
                     .collect(),
             }
         }
+    }
+
+    impl Apply for MockSnapShot {
+        type Delta = ContextDelta<usize>;
+
+        fn apply(&mut self, _: Self::Delta) {}
+    }
+    impl Reader for MockSnapShot {
+        type ConceptId = usize;
 
         fn get_concept(
             &self,

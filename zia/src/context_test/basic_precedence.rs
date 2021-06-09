@@ -57,8 +57,8 @@ fn labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn basic_precedence() {
-    let mut context =
-        Context::<MockSnapShot>::new_test_case(&concepts(), &labels());
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let mut context: Context<_> = snapshot.into();
 
     assert_eq!(
         context.ast_from_expression("c b a"),

@@ -399,14 +399,6 @@ impl SnapShotReader for ContextSnapShot {
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()
     }
-
-    #[cfg(test)]
-    fn new_test_case(
-        _: &[Concept<Self::ConceptId>],
-        _: &HashMap<Self::ConceptId, &'static str>,
-    ) -> Self {
-        unimplemented!()
-    }
 }
 
 impl Apply for ContextSnapShot {

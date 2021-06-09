@@ -78,28 +78,6 @@ where
         cont
     }
 
-    #[cfg(test)]
-    pub fn new_test_case(
-        concepts: &[Concept<S::ConceptId>],
-        concept_labels: &HashMap<usize, &'static str>,
-    ) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let logger = {
-            let plain =
-                slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
-        };
-        Self {
-            snap_shot: S::new_test_case(concepts, concept_labels),
-            #[cfg(not(target_arch = "wasm32"))]
-            logger,
-            delta: ContextDelta::default(),
-            cache: ContextCache::default(),
-            new_variable_concepts_by_label: HashMap::new(),
-            bounded_variable_syntax: HashSet::new(),
-        }
-    }
-
     pub fn execute(&mut self, command: &str) -> String {
         let string = self.execute_without_closing_scope(command);
         self.new_variable_concepts_by_label = HashMap::new();
@@ -1179,6 +1157,15 @@ where
             cache: ContextCache::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
+        }
+    }
+}
+
+impl<S: SnapShotReader + Default> From<S> for Context<S> {
+    fn from(snap_shot: S) -> Self {
+        Self {
+            snap_shot,
+            ..Self::default()
         }
     }
 }

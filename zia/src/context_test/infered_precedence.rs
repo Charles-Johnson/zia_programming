@@ -159,8 +159,8 @@ fn concept_labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn infered_precedence_test() {
-    let mut context =
-        Context::<MockSnapShot>::new_test_case(&concepts(), &concept_labels());
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());
+    let mut context: Context<MockSnapShot> = snapshot.into();
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
         Ok(SyntaxTree::from("let")
