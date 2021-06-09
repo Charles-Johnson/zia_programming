@@ -17,5 +17,4 @@
 pub trait Apply {
     type Delta;
     fn apply(&mut self, _: Self::Delta);
-    fn diff(&self, _: Self) -> Self::Delta;
 }

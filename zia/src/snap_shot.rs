@@ -340,10 +340,6 @@ pub mod mock {
         type Delta = ContextDelta<usize>;
 
         fn apply(&mut self, _: Self::Delta) {}
-
-        fn diff(&self, _: Self) -> Self::Delta {
-            ContextDelta::default()
-        }
     }
     impl Reader for MockSnapShot {
         type ConceptId = usize;

@@ -522,8 +522,4 @@ impl Apply for ContextSnapShot {
             }
         }
     }
-
-    fn diff(&self, _other: Self) -> ContextDelta<ConceptId> {
-        ContextDelta::default()
-    }
 }
