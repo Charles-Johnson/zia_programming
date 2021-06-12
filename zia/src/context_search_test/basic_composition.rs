@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::ContextSearch,
-    snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
+    mock_snap_shot::MockSnapShot,
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;

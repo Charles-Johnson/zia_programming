@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context::Context,
-    snap_shot::mock::MockSnapShot,
+    mock_snap_shot::MockSnapShot,
 };
 use maplit::hashmap;
 use std::collections::HashMap;

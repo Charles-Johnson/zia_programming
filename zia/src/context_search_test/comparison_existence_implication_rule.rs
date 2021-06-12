@@ -5,7 +5,7 @@ use crate::{
     context_search::{
         Comparison, ComparisonReason, ContextSearch, ReductionReason,
     },
-    snap_shot::{mock::MockSnapShot, Reader},
+    mock_snap_shot::MockSnapShot,
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;

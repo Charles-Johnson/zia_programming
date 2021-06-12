@@ -152,6 +152,9 @@ mod errors;
 
 mod map_err_variant;
 
+#[cfg(test)]
+mod mock_snap_shot;
+
 mod parser;
 
 mod snap_shot;
