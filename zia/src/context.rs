@@ -14,10 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#[cfg(test)]
-use crate::concepts::Concept;
 use crate::{
     and_also::AndAlso,
+    associativity::Associativity,
     ast::SyntaxTree,
     concepts::ConcreteConceptType,
     context_cache::ContextCache,
@@ -25,7 +24,6 @@ use crate::{
         Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
     },
     context_search::{Comparison, ContextSearch},
-    context_snap_shot::Associativity,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
     map_err_variant::MapErrVariant,
@@ -60,7 +58,7 @@ pub struct TokenSubsequence<ConceptId> {
     pub positions: Vec<usize>,
 }
 
-impl<S: SnapShotReader> Context<S>
+impl<S> Context<S>
 where
     S: SnapShotReader
         + Default
@@ -76,28 +74,6 @@ where
         #[cfg(not(target_arch = "wasm32"))]
         info!(cont.logger, "Setup a new context");
         cont
-    }
-
-    #[cfg(test)]
-    pub fn new_test_case(
-        concepts: &[Concept<S::ConceptId>],
-        concept_labels: &HashMap<usize, &'static str>,
-    ) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let logger = {
-            let plain =
-                slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
-        };
-        Self {
-            snap_shot: S::new_test_case(concepts, concept_labels),
-            #[cfg(not(target_arch = "wasm32"))]
-            logger,
-            delta: ContextDelta::default(),
-            cache: ContextCache::default(),
-            new_variable_concepts_by_label: HashMap::new(),
-            bounded_variable_syntax: HashSet::new(),
-        }
     }
 
     pub fn execute(&mut self, command: &str) -> String {
@@ -211,16 +187,19 @@ where
                         let tail = lp_indices
                             .iter()
                             .rev()
-                            .try_fold((None, None), |state, lp_index| {
-                                self.associativity_try_fold_handler(
-                                    tokens,
-                                    state,
-                                    *lp_index,
-                                    &Associativity::Right,
-                                )
-                            })?
-                            .0
-                            .unwrap(); // Already checked that lp_indices is non-empty;
+                            .try_fold(
+                                Err(ZiaError::AmbiguousExpression),
+                                |state, lp_index| {
+                                    Ok(Ok(self
+                                        .associativity_try_fold_handler(
+                                            tokens,
+                                            state.ok(),
+                                            *lp_index,
+                                            &Associativity::Right,
+                                        )?))
+                                },
+                            )??
+                            .0;
                         #[cfg(not(target_arch = "wasm32"))]
                         info!(
                             self.logger,
@@ -236,16 +215,19 @@ where
                     },
                     Some(Associativity::Left) => lp_indices
                         .iter()
-                        .try_fold((None, None), |state, lp_index| {
-                            self.associativity_try_fold_handler(
+                        .try_fold(None, |state, lp_index| {
+                            Some(self.associativity_try_fold_handler(
                                 tokens,
                                 state,
                                 *lp_index,
                                 &Associativity::Left,
-                            )
+                            ))
+                            .transpose()
                         })?
-                        .0
-                        .ok_or(ZiaError::AmbiguousExpression),
+                        .map_or(
+                            Err(ZiaError::AmbiguousExpression),
+                            |(syntax, _)| Ok(syntax),
+                        ),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
             },
@@ -255,11 +237,16 @@ where
     fn associativity_try_fold_handler(
         &mut self,
         tokens: &[String],
-        state: (Option<Arc<SyntaxTree<S::ConceptId>>>, Option<usize>),
+        state: Option<(Arc<SyntaxTree<S::ConceptId>>, usize)>,
         lp_index: usize,
         assoc: &Associativity,
-    ) -> ZiaResult<(Option<Arc<SyntaxTree<S::ConceptId>>>, Option<usize>)> {
-        let prev_lp_index = state.1;
+    ) -> ZiaResult<(Arc<SyntaxTree<S::ConceptId>>, usize)> {
+        let mut prev_lp_index = None;
+        let mut edge = None;
+        if let Some((e, pli)) = state {
+            edge = Some(e);
+            prev_lp_index = Some(pli);
+        }
         let slice = assoc.slice_tokens(tokens, prev_lp_index, lp_index);
         // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
         if slice.is_empty() {
@@ -298,9 +285,8 @@ where
         } else {
             self.ast_from_tokens(slice)?
         };
-        let edge = state.0;
         Ok((
-            Some(match edge {
+            match edge {
                 None => lp_with_the_rest,
                 Some(e) => match assoc {
                     Associativity::Left => {
@@ -310,12 +296,13 @@ where
                         self.context_search().combine(&lp_with_the_rest, &e)
                     },
                 },
-            }),
-            Some(lp_index),
+            },
+            lp_index,
         ))
     }
 
     /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
+    #[allow(clippy::too_many_lines)]
     pub fn lowest_precedence_info(
         &self,
         tokens: &[String],
@@ -1189,6 +1176,15 @@ where
             cache: ContextCache::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
+        }
+    }
+}
+
+impl<S: SnapShotReader + Default> From<S> for Context<S> {
+    fn from(snap_shot: S) -> Self {
+        Self {
+            snap_shot,
+            ..Self::default()
         }
     }
 }

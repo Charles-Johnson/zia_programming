@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -38,7 +38,7 @@ fn basic_inference() {
     );
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "implication",
         1 => "true",
@@ -47,10 +47,10 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<usize>; 10] {
+fn concepts() -> [Concept<ConceptId>; 10] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut condition_concept: Concept<usize> =
+    let mut condition_concept: Concept<ConceptId> =
         (SpecificPart::default(), 2).into();
     let mut result_concept = (SpecificPart::default(), 3).into();
     condition_concept.make_reduce_to(&mut true_concept);

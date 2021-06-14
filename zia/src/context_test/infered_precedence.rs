@@ -2,14 +2,12 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context::Context,
-    snap_shot::mock::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::hashmap;
 use std::collections::HashMap;
 
-const CONCEPT_LEN: usize = 36;
-
-fn concepts() -> [Concept<usize>; CONCEPT_LEN] {
+fn concepts() -> [Concept<ConceptId>; 36] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =
@@ -137,7 +135,7 @@ fn concepts() -> [Concept<usize>; CONCEPT_LEN] {
         ]
 }
 
-fn concept_labels() -> HashMap<usize, &'static str> {
+fn concept_labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "true",
         1 => ">",
@@ -159,8 +157,8 @@ fn concept_labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn infered_precedence_test() {
-    let mut context =
-        Context::<MockSnapShot>::new_test_case(&concepts(), &concept_labels());
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());
+    let mut context: Context<MockSnapShot> = snapshot.into();
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
         Ok(SyntaxTree::from("let")

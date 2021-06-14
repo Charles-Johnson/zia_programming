@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -43,7 +43,7 @@ fn basic_existence() {
     );
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "exists_such_that",
         1 => "true",
@@ -51,11 +51,11 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<usize>; 3] {
+fn concepts() -> [Concept<ConceptId>; 3] {
     let exists_such_that_concept =
         (ConcreteConceptType::ExistsSuchThat, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut abstract_concept: Concept<usize> =
+    let mut abstract_concept: Concept<ConceptId> =
         (SpecificPart::default(), 2).into();
     abstract_concept.make_reduce_to(&mut true_concept);
     [exists_such_that_concept, true_concept, abstract_concept]

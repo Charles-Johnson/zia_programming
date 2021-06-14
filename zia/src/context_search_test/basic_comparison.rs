@@ -5,7 +5,7 @@ use crate::{
     context_search::{
         Comparison, ComparisonReason, ContextSearch, ReductionReason,
     },
-    snap_shot::{mock::MockSnapShot, Reader as SnapShotReader},
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -86,7 +86,7 @@ fn basic_comparison() {
     )
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => ">",
         1 => "2",
@@ -99,7 +99,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<usize>; 11] {
+fn concepts() -> [Concept<ConceptId>; 11] {
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 0).into();
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();
