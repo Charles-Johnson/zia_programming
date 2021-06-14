@@ -7,12 +7,22 @@ use crate::{
     },
     errors::{ZiaError, ZiaResult},
 };
-#[cfg(test)]
-use std::collections::HashMap;
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 pub trait Reader {
-    fn get_concept(&self, concept_id: usize) -> Option<&Concept>;
-    fn read_concept(&self, delta: &ContextDelta, id: usize) -> Concept {
+    type ConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
+    fn get_concept(
+        &self,
+        concept_id: Self::ConceptId,
+    ) -> Option<&Concept<Self::ConceptId>>;
+    fn read_concept(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        id: Self::ConceptId,
+    ) -> Concept<Self::ConceptId> {
         delta
             .concept()
             .get(&id)
@@ -114,21 +124,28 @@ pub trait Reader {
     }
     fn concepts_from_composition(
         &self,
-        delta: &ContextDelta,
-        comp: Composition,
-    ) -> [Concept; 2] {
+        delta: &ContextDelta<Self::ConceptId>,
+        comp: Composition<Self::ConceptId>,
+    ) -> [Concept<Self::ConceptId>; 2] {
         [
             self.read_concept(delta, comp.left_id),
             self.read_concept(delta, comp.right_id),
         ]
     }
-    fn lowest_unoccupied_concept_id(&self, delta: &ContextDelta) -> usize;
+    fn lowest_unoccupied_concept_id(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+    ) -> Self::ConceptId;
     fn get_label(
         &self,
-        delta: &ContextDelta,
-        concept_id: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept_id: Self::ConceptId,
     ) -> Option<String>;
-    fn ast_from_symbol(&self, delta: &ContextDelta, s: &str) -> SyntaxTree {
+    fn ast_from_symbol(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        s: &str,
+    ) -> SyntaxTree<Self::ConceptId> {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
             |concept| {
@@ -139,10 +156,10 @@ pub trait Reader {
     }
     fn bind_concept_to_syntax(
         &self,
-        delta: &ContextDelta,
-        syntax: SyntaxTree,
-        concept: usize,
-    ) -> SyntaxTree {
+        delta: &ContextDelta<Self::ConceptId>,
+        syntax: SyntaxTree<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> SyntaxTree<Self::ConceptId> {
         if self.concrete_concept_type(delta, concept)
             == Some(ConcreteConceptType::ExistsSuchThat)
         {
@@ -153,8 +170,8 @@ pub trait Reader {
     }
     fn new_syntax_from_concept_that_has_no_label_or_composition(
         &self,
-        concept: &Concept,
-    ) -> SyntaxTree {
+        concept: &Concept<Self::ConceptId>,
+    ) -> SyntaxTree<Self::ConceptId> {
         let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);
         if quantifier {
@@ -167,14 +184,14 @@ pub trait Reader {
     }
     fn concept_from_label(
         &self,
-        delta: &ContextDelta,
+        delta: &ContextDelta<Self::ConceptId>,
         s: &str,
-    ) -> Option<usize>;
+    ) -> Option<Self::ConceptId>;
     fn get_reduction_of_composition(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> usize {
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> Self::ConceptId {
         self.read_concept(delta, concept)
             .get_composition()
             .and_then(|(left, right)| {
@@ -188,7 +205,11 @@ pub trait Reader {
             })
             .unwrap_or(concept)
     }
-    fn is_disconnected(&self, delta: &ContextDelta, concept: usize) -> bool {
+    fn is_disconnected(
+        &self,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
             && self.read_concept(delta, concept).get_composition().is_none()
             && self.read_concept(delta, concept).get_lefthand_of().is_empty()
@@ -201,8 +222,8 @@ pub trait Reader {
     }
     fn righthand_of_without_label_is_empty(
         &self,
-        delta: &ContextDelta,
-        con: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        con: Self::ConceptId,
     ) -> bool {
         self.concrete_concept_id(delta, ConcreteConceptType::Label)
             .and_then(|label_id| {
@@ -213,18 +234,18 @@ pub trait Reader {
     }
     fn get_normal_form(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Option<usize> {
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> Option<Self::ConceptId> {
         self.read_concept(delta, concept)
             .get_reduction()
             .map(|n| self.get_normal_form(delta, n).unwrap_or(n))
     }
     fn get_concept_of_label(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Option<usize> {
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> Option<Self::ConceptId> {
         let label_concept_id =
             self.concrete_concept_id(delta, ConcreteConceptType::Label)?;
 
@@ -233,9 +254,9 @@ pub trait Reader {
     }
     fn contains(
         &self,
-        delta: &ContextDelta,
-        outer: usize,
-        inner: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        outer: Self::ConceptId,
+        inner: Self::ConceptId,
     ) -> bool {
         if let Some((left, right)) =
             self.read_concept(delta, outer).get_composition()
@@ -250,9 +271,9 @@ pub trait Reader {
     }
     fn check_reductions(
         &self,
-        delta: &ContextDelta,
-        outer_concept: usize,
-        inner_concept: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        outer_concept: Self::ConceptId,
+        inner_concept: Self::ConceptId,
     ) -> ZiaResult<()> {
         self.read_concept(delta, inner_concept).get_reduction().map_or(
             Ok(()),
@@ -268,9 +289,9 @@ pub trait Reader {
     }
     fn get_reduction_or_reduction_of_composition(
         &self,
-        delta: &ContextDelta,
-        concept: usize,
-    ) -> Concept {
+        delta: &ContextDelta<Self::ConceptId>,
+        concept: Self::ConceptId,
+    ) -> Concept<Self::ConceptId> {
         self.read_concept(
             delta,
             self.read_concept(delta, concept).get_reduction().unwrap_or_else(
@@ -280,109 +301,12 @@ pub trait Reader {
     }
     fn concrete_concept_id(
         &self,
-        delta: &ContextDelta,
+        delta: &ContextDelta<Self::ConceptId>,
         cc: ConcreteConceptType,
-    ) -> Option<usize>;
+    ) -> Option<Self::ConceptId>;
     fn concrete_concept_type(
         &self,
-        delta: &ContextDelta,
-        concept_id: usize,
+        delta: &ContextDelta<Self::ConceptId>,
+        concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType>;
-    #[cfg(test)]
-    fn new_test_case(
-        concepts: &[Concept],
-        concept_labels: &HashMap<usize, &'static str>,
-    ) -> Self;
-}
-
-#[cfg(test)]
-pub mod mock {
-    use super::Reader;
-    use crate::{
-        concepts::{Concept, ConcreteConceptType},
-        context_delta::ContextDelta,
-        context_search_test::check_order,
-        delta::Apply,
-    };
-    use bimap::BiMap;
-    use std::collections::HashMap;
-
-    #[derive(Debug, Default)]
-    pub struct MockSnapShot {
-        concrete_concepts: BiMap<usize, ConcreteConceptType>,
-        concept_labels: BiMap<usize, &'static str>,
-        concepts: Vec<Concept>,
-    }
-    impl Apply for MockSnapShot {
-        type Delta = ContextDelta;
-
-        fn apply(&mut self, _: Self::Delta) {}
-
-        fn diff(&self, _: Self) -> Self::Delta {
-            ContextDelta::default()
-        }
-    }
-    impl Reader for MockSnapShot {
-        fn new_test_case(
-            concepts: &[Concept],
-            concept_labels: &HashMap<usize, &'static str>,
-        ) -> Self {
-            Self {
-                concepts: check_order(concepts),
-                concept_labels: concept_labels
-                    .iter()
-                    .map(|(l, r)| (*l, *r))
-                    .collect(),
-                concrete_concepts: concepts
-                    .iter()
-                    .filter_map(|c| {
-                        c.get_concrete_concept_type().map(|cc| (c.id(), cc))
-                    })
-                    .collect(),
-            }
-        }
-
-        fn get_concept(&self, concept_id: usize) -> Option<&Concept> {
-            self.concepts.get(concept_id)
-        }
-
-        fn lowest_unoccupied_concept_id(
-            &self,
-            _: &crate::context_delta::ContextDelta,
-        ) -> usize {
-            self.concepts.len()
-        }
-
-        fn get_label(
-            &self,
-            _: &ContextDelta,
-            concept_id: usize,
-        ) -> Option<String> {
-            self.concept_labels.get_by_left(&concept_id).map(|s| s.to_string())
-        }
-
-        fn concept_from_label(
-            &self,
-            _: &ContextDelta,
-            s: &str,
-        ) -> Option<usize> {
-            self.concept_labels.get_by_right(&s).cloned()
-        }
-
-        fn concrete_concept_id(
-            &self,
-            _: &ContextDelta,
-            cc: ConcreteConceptType,
-        ) -> Option<usize> {
-            self.concrete_concepts.get_by_right(&cc).cloned()
-        }
-
-        fn concrete_concept_type(
-            &self,
-            _: &ContextDelta,
-            concept_id: usize,
-        ) -> Option<ConcreteConceptType> {
-            self.concrete_concepts.get_by_left(&concept_id).cloned()
-        }
-    }
 }

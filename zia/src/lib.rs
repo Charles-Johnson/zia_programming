@@ -116,6 +116,8 @@
 
 mod and_also;
 
+mod associativity;
+
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 
@@ -149,6 +151,9 @@ mod delta;
 mod errors;
 
 mod map_err_variant;
+
+#[cfg(test)]
+mod mock_snap_shot;
 
 mod parser;
 

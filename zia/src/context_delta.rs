@@ -22,22 +22,34 @@ use crate::{
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::{self, Debug, Display, Formatter},
+    hash::Hash,
     sync::Arc,
 };
 
-#[derive(Clone, Default)]
-pub struct ContextDelta {
-    string: HashMap<String, Change<usize>>,
-    concepts_to_apply_in_order: Vec<(usize, Arc<DirectConceptDelta>)>,
-    concept: HashMap<usize, Vec<ConceptDelta>>,
+#[derive(Clone)]
+pub struct ContextDelta<ConceptId: Clone + Display> {
+    string: HashMap<String, Change<ConceptId>>,
+    concepts_to_apply_in_order:
+        Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)>,
+    concept: HashMap<ConceptId, Vec<ConceptDelta<ConceptId>>>,
 }
 
-impl ContextDelta {
+impl<ConceptId: Copy + Display> Default for ContextDelta<ConceptId> {
+    fn default() -> Self {
+        Self {
+            string: HashMap::new(),
+            concepts_to_apply_in_order: vec![],
+            concept: HashMap::new(),
+        }
+    }
+}
+
+impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     fn update_new_concept_delta(
         &mut self,
-        delta: &NewConceptDelta,
-        snapshot: &impl Reader,
-    ) -> usize {
+        delta: &NewConceptDelta<ConceptId>,
+        snapshot: &impl Reader<ConceptId = ConceptId>,
+    ) -> ConceptId {
         let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
         self.insert_delta_for_new_concept(new_concept_id, delta.clone());
         match delta {
@@ -138,10 +150,10 @@ impl ContextDelta {
 
     pub fn update_concept_delta(
         &mut self,
-        concept_delta: &Arc<DirectConceptDelta>,
-        cache_to_invalidate: &mut ContextCache,
-        snapshot: &impl Reader,
-    ) -> usize {
+        concept_delta: &Arc<DirectConceptDelta<ConceptId>>,
+        cache_to_invalidate: &mut ContextCache<ConceptId>,
+        snapshot: &impl Reader<ConceptId = ConceptId>,
+    ) -> ConceptId {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
@@ -241,21 +253,21 @@ impl ContextDelta {
         concept_id
     }
 
-    pub const fn concepts_to_apply_in_order(
+    pub fn concepts_to_apply_in_order(
         &self,
-    ) -> &Vec<(usize, Arc<DirectConceptDelta>)> {
+    ) -> &Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)> {
         &self.concepts_to_apply_in_order
     }
 
     fn insert_delta_for_existing_concept(
         &mut self,
-        concept_id: usize,
-        cd: ConceptDelta,
+        concept_id: ConceptId,
+        cd: ConceptDelta<ConceptId>,
     ) {
         self.insert_delta_for_concept(
             concept_id,
             cd,
-            |last_delta, concept_id: usize| {
+            |last_delta, concept_id: ConceptId| {
                 match last_delta {
                     ConceptDelta::Direct(dcd)
                         if matches!(
@@ -273,13 +285,13 @@ impl ContextDelta {
 
     fn insert_delta_for_new_concept(
         &mut self,
-        concept_id: usize,
-        cd: NewConceptDelta,
+        concept_id: ConceptId,
+        cd: NewConceptDelta<ConceptId>,
     ) {
         self.insert_delta_for_concept(
             concept_id,
             ConceptDelta::Direct(Arc::new(DirectConceptDelta::New(cd))),
-            |last_delta, concept_id: usize| {
+            |last_delta, concept_id: ConceptId| {
                 match last_delta {
                     ConceptDelta::Direct(dcd)
                         if matches!(
@@ -294,9 +306,9 @@ impl ContextDelta {
 
     fn insert_delta_for_concept(
         &mut self,
-        concept_id: usize,
-        cd: ConceptDelta,
-        sanity_check: impl Fn(&ConceptDelta, usize),
+        concept_id: ConceptId,
+        cd: ConceptDelta<ConceptId>,
+        sanity_check: impl Fn(&ConceptDelta<ConceptId>, ConceptId),
     ) {
         match self.concept.entry(concept_id) {
             Entry::Occupied(mut e) => {
@@ -313,16 +325,18 @@ impl ContextDelta {
         };
     }
 
-    pub const fn string(&self) -> &HashMap<String, Change<usize>> {
+    pub fn string(&self) -> &HashMap<String, Change<ConceptId>> {
         &self.string
     }
 
-    pub const fn concept(&self) -> &HashMap<usize, Vec<ConceptDelta>> {
+    pub fn concept(&self) -> &HashMap<ConceptId, Vec<ConceptDelta<ConceptId>>> {
         &self.concept
     }
 }
 
-impl Debug for ContextDelta {
+impl<ConceptId: Clone + Debug + Display + Eq + Hash> Debug
+    for ContextDelta<ConceptId>
+{
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,
@@ -340,9 +354,7 @@ impl Debug for ContextDelta {
         }
         if !self.concept.is_empty() {
             string += "    concept: {\n";
-            let mut unsorted_keys: Vec<&usize> = self.concept.keys().collect();
-            unsorted_keys.sort();
-            for key in unsorted_keys {
+            for key in self.concept.keys() {
                 for cd in self.concept.get(key).unwrap() {
                     string += &format!("\t{}: {:#?},\n", key, cd);
                 }
@@ -371,13 +383,13 @@ impl<T: Clone + Display> Debug for Change<T> {
 }
 
 #[derive(Clone)]
-pub enum ConceptDelta {
-    Direct(Arc<DirectConceptDelta>),
-    Indirect(IndirectConceptDelta),
+pub enum ConceptDelta<Id: Clone + Display> {
+    Direct(Arc<DirectConceptDelta<Id>>),
+    Indirect(IndirectConceptDelta<Id>),
 }
 
-impl ConceptDelta {
-    pub const fn try_direct(&self) -> Option<&Arc<DirectConceptDelta>> {
+impl<Id: Clone + Display> ConceptDelta<Id> {
+    pub fn try_direct(&self) -> Option<&Arc<DirectConceptDelta<Id>>> {
         if let Self::Direct(dcd) = &self {
             Some(dcd)
         } else {
@@ -386,8 +398,8 @@ impl ConceptDelta {
     }
 }
 
-impl From<IndirectConceptDelta> for ConceptDelta {
-    fn from(icd: IndirectConceptDelta) -> Self {
+impl<Id: Clone + Display> From<IndirectConceptDelta<Id>> for ConceptDelta<Id> {
+    fn from(icd: IndirectConceptDelta<Id>) -> Self {
         Self::Indirect(icd)
     }
 }
@@ -395,59 +407,59 @@ impl From<IndirectConceptDelta> for ConceptDelta {
 // Only used by snapshot to calculate the Concept given the deltas
 // and not to decide the mutations to apply to Concepts
 #[derive(Clone, Debug)]
-pub enum IndirectConceptDelta {
-    LefthandOf(LefthandOf),
-    RighthandOf(RighthandOf),
-    NoLongerLefthandOf(usize),
-    NoLongerRighthandOf(usize),
-    ReducesFrom(usize),
-    NoLongerReducesFrom(usize),
-    ComposedOf(Composition),
+pub enum IndirectConceptDelta<Id> {
+    LefthandOf(LefthandOf<Id>),
+    RighthandOf(RighthandOf<Id>),
+    NoLongerLefthandOf(Id),
+    NoLongerRighthandOf(Id),
+    ReducesFrom(Id),
+    NoLongerReducesFrom(Id),
+    ComposedOf(Composition<Id>),
 }
 
 #[derive(Clone, Debug)]
-pub enum DirectConceptDelta {
-    New(NewConceptDelta),
+pub enum DirectConceptDelta<Id: Clone + Display> {
+    New(NewConceptDelta<Id>),
     Compose {
-        composition_id: usize,
-        change: Change<Composition>,
+        composition_id: Id,
+        change: Change<Composition<Id>>,
     },
     Reduce {
-        unreduced_id: usize,
-        change: Change<usize>,
+        unreduced_id: Id,
+        change: Change<Id>,
     },
-    Remove(usize),
+    Remove(Id),
 }
 
 #[derive(Clone, Debug)]
-pub struct NewDirectConceptDelta {
-    pub delta: NewConceptDelta,
-    pub new_concept_id: usize,
+pub struct NewDirectConceptDelta<Id> {
+    pub delta: NewConceptDelta<Id>,
+    pub new_concept_id: Id,
 }
 
 #[derive(Clone, Debug)]
-pub enum NewConceptDelta {
+pub enum NewConceptDelta<Id> {
     String(String),
-    Composition(Composition),
+    Composition(Composition<Id>),
     FreeVariable,
     BoundVariable,
     Left {
-        composition_id: usize,
-        right_id: usize,
+        composition_id: Id,
+        right_id: Id,
         concrete_type: Option<ConcreteConceptType>,
     },
     Right {
-        composition_id: usize,
-        left_id: usize,
+        composition_id: Id,
+        left_id: Id,
         concrete_type: Option<ConcreteConceptType>,
     },
     /// Used for e.g. `let label_of label_of -> 'label_of'`
     Double {
-        composition_id: usize,
+        composition_id: Id,
         concrete_type: Option<ConcreteConceptType>,
     },
     ReducesTo {
-        reduction: usize,
+        reduction: Id,
     },
 }
 
@@ -478,18 +490,18 @@ impl<T: Clone> Clone for Change<T> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Composition {
-    pub left_id: usize,
-    pub right_id: usize,
+pub struct Composition<Id> {
+    pub left_id: Id,
+    pub right_id: Id,
 }
 
-impl Display for Composition {
+impl<Id: Display> Display for Composition<Id> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("({}, {})", self.left_id, self.right_id))
     }
 }
 
-impl Debug for ConceptDelta {
+impl<Id: Clone + Debug + Display> Debug for ConceptDelta<Id> {
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,

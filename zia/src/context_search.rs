@@ -16,11 +16,11 @@
 
 use crate::{
     and_also::AndAlso,
+    associativity::Associativity,
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType, Hand},
     context_cache::{ContextCache, ReductionCache},
     context_delta::ContextDelta,
-    context_snap_shot::Associativity,
     snap_shot::Reader as SnapShotReader,
 };
 use log::debug;
@@ -29,63 +29,71 @@ use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
+    hash::Hash,
     sync::Arc,
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<'a, S> {
+pub struct ContextSearch<'a, S: SnapShotReader> {
     snap_shot: &'a S,
-    variable_mask: Arc<VariableMaskList>,
-    delta: &'a ContextDelta,
-    caches: ContextCache,
-    syntax_evaluating: HashSet<Arc<SyntaxTree>>,
-    bound_variable_syntax: Arc<HashSet<Arc<SyntaxTree>>>,
+    variable_mask: Arc<VariableMaskList<S::ConceptId>>,
+    delta: &'a ContextDelta<S::ConceptId>,
+    caches: ContextCache<S::ConceptId>,
+    syntax_evaluating: HashSet<Arc<SyntaxTree<S::ConceptId>>>,
+    bound_variable_syntax: Arc<HashSet<Arc<SyntaxTree<S::ConceptId>>>>,
 }
 
-pub type ReductionResult = Option<(Arc<SyntaxTree>, ReductionReason)>;
+pub type ReductionResult<ConceptId> = Option<Reduction<ConceptId>>;
+
+type Reduction<ConceptId> =
+    (Arc<SyntaxTree<ConceptId>>, ReductionReason<ConceptId>);
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum ReductionReason {
-    Comparison(Arc<ComparisonReason>),
+pub enum ReductionReason<ConceptId: Eq + Hash> {
+    Comparison(Arc<ComparisonReason<ConceptId>>),
     Explicit,
     Rule {
-        generalisation: Arc<SyntaxTree>,
-        variable_mask: VariableMask,
-        reason: Arc<ReductionReason>,
+        generalisation: Arc<SyntaxTree<ConceptId>>,
+        variable_mask: VariableMask<ConceptId>,
+        reason: Arc<ReductionReason<ConceptId>>,
     },
     Inference {
-        implication: Arc<SyntaxTree>,
-        reason: Arc<ReductionReason>,
+        implication: Arc<SyntaxTree<ConceptId>>,
+        reason: Arc<ReductionReason<ConceptId>>,
     },
     Default {
-        operator: usize,
+        operator: ConceptId,
     },
-    Partial(HashMap<Arc<SyntaxTree>, (Arc<SyntaxTree>, ReductionReason)>),
+    Partial(HashMap<Arc<SyntaxTree<ConceptId>>, Reduction<ConceptId>>),
     Existence {
-        substitutions: Substitutions,
-        generalisation: Arc<SyntaxTree>,
+        substitutions: Substitutions<ConceptId>,
+        generalisation: Arc<SyntaxTree<ConceptId>>,
     },
     Recursive {
-        syntax: Arc<SyntaxTree>,
-        reason: Arc<ReductionReason>,
-        from: Arc<ReductionReason>,
+        syntax: Arc<SyntaxTree<ConceptId>>,
+        reason: Arc<ReductionReason<ConceptId>>,
+        from: Arc<ReductionReason<ConceptId>>,
     },
     SyntaxCannotReduceToItself,
     LeftReducesToRight {
-        reason: Arc<ReductionReason>,
-        left: Arc<SyntaxTree>,
-        right: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason<ConceptId>>,
+        left: Arc<SyntaxTree<ConceptId>>,
+        right: Arc<SyntaxTree<ConceptId>>,
     },
     RightReducesToLeft {
-        reason: Arc<ReductionReason>,
-        left: Arc<SyntaxTree>,
-        right: Arc<SyntaxTree>,
+        reason: Arc<ReductionReason<ConceptId>>,
+        left: Arc<SyntaxTree<ConceptId>>,
+        right: Arc<SyntaxTree<ConceptId>>,
     },
 }
 
-type Substitutions = HashMap<Arc<SyntaxTree>, Arc<SyntaxTree>>;
+type Substitutions<ConceptId> =
+    HashMap<Arc<SyntaxTree<ConceptId>>, Arc<SyntaxTree<ConceptId>>>;
 
-fn substitute(syntax: &mut SyntaxTree, substitutions: &Substitutions) {
+fn substitute<ConceptId: Copy + Debug + Eq + Hash + Clone>(
+    syntax: &mut SyntaxTree<ConceptId>,
+    substitutions: &Substitutions<ConceptId>,
+) {
     if let Some(substitution) = substitutions.get(syntax) {
         *syntax = substitution.as_ref().clone();
     } else if let Some((left, right)) = syntax.get_expansion_mut() {
@@ -95,7 +103,10 @@ fn substitute(syntax: &mut SyntaxTree, substitutions: &Substitutions) {
 }
 
 impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
-    fn infer_reduction(&self, concept: &Concept) -> ReductionResult {
+    fn infer_reduction(
+        &self,
+        concept: &Concept<S::ConceptId>,
+    ) -> ReductionResult<S::ConceptId> {
         debug!("infer_reduction({:#?})", concept);
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
@@ -125,8 +136,8 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     fn is_concrete_type(
         &self,
         cct: ConcreteConceptType,
-        concept_id: usize,
-    ) -> Option<usize> {
+        concept_id: S::ConceptId,
+    ) -> Option<S::ConceptId> {
         if Some(cct) == self.concrete_type(concept_id) {
             Some(concept_id)
         } else {
@@ -134,30 +145,39 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         }
     }
 
-    fn concrete_type(&self, concept_id: usize) -> Option<ConcreteConceptType> {
+    fn concrete_type(
+        &self,
+        concept_id: S::ConceptId,
+    ) -> Option<ConcreteConceptType> {
         self.snap_shot.concrete_concept_type(self.delta, concept_id)
     }
 
     fn concrete_type_of_ast(
         &self,
-        ast: &Arc<SyntaxTree>,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> Option<ConcreteConceptType> {
         ast.get_concept().and_then(|c| self.concrete_type(c))
     }
 
-    fn concrete_concept_id(&self, cct: ConcreteConceptType) -> Option<usize> {
+    fn concrete_concept_id(
+        &self,
+        cct: ConcreteConceptType,
+    ) -> Option<S::ConceptId> {
         self.snap_shot.concrete_concept_id(self.delta, cct)
     }
 
     pub fn concrete_ast(
         &self,
         cct: ConcreteConceptType,
-    ) -> Option<Arc<SyntaxTree>> {
+    ) -> Option<Arc<SyntaxTree<S::ConceptId>>> {
         self.concrete_concept_id(cct).map(|id| self.to_ast(id))
     }
 
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(&self, id: usize) -> ReductionResult {
+    fn reduce_concept(
+        &self,
+        id: S::ConceptId,
+    ) -> ReductionResult<S::ConceptId> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
@@ -174,13 +194,13 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept
     fn reduce_otherwise_default(
         &self,
-        ast: &Arc<SyntaxTree>,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-        operator_id: usize,
-        default_concept_id: usize,
-    ) -> ReductionResult {
-        let mut reduced_pair: ReductionResult = None;
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+        operator_id: S::ConceptId,
+        default_concept_id: S::ConceptId,
+    ) -> ReductionResult<S::ConceptId> {
+        let mut reduced_pair: ReductionResult<S::ConceptId> = None;
         let mut operator_composition_check = || {
             let cache = ReductionCache::default().into();
             let mut context_search = self.spawn(&cache);
@@ -209,7 +229,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(&self, ast: &Arc<SyntaxTree>) -> ReductionResult {
+    pub fn reduce(
+        &self,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ReductionResult<S::ConceptId> {
         debug!("reduce({})", ast.to_string());
         self.caches.reductions.get_reduction_or_else(ast, || {
             let reduction_result = ast
@@ -257,9 +280,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     // Reduces a syntax tree based on the properties of the left and right branches
     fn reduce_pair(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> ReductionResult {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ReductionResult<S::ConceptId> {
         debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
         right
             .get_expansion()
@@ -279,9 +302,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn recursively_reduce_pair(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> ReductionResult {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ReductionResult<S::ConceptId> {
         debug!("recursively_reduce_pair({}, {})", left, right);
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
@@ -366,9 +389,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     pub fn substitute(
         &self,
-        ast: &Arc<SyntaxTree>,
-        variable_mask: &VariableMask,
-    ) -> Arc<SyntaxTree> {
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        variable_mask: &VariableMask<S::ConceptId>,
+    ) -> Arc<SyntaxTree<S::ConceptId>> {
         ast.get_concept()
             .and_then(|c| variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
@@ -386,9 +409,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn filter_generalisations_for_pair(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> Vec<(usize, VariableMask)> {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Vec<(S::ConceptId, VariableMask<S::ConceptId>)> {
         let ast = &self.contract_pair(left, right);
         let generalisation_candidates = self.find_generalisations(ast);
         debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
@@ -416,9 +439,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
     pub fn contract_pair(
         &self,
-        lefthand: &Arc<SyntaxTree>,
-        righthand: &Arc<SyntaxTree>,
-    ) -> Arc<SyntaxTree> {
+        lefthand: &Arc<SyntaxTree<S::ConceptId>>,
+        righthand: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Arc<SyntaxTree<S::ConceptId>> {
         lefthand
             .get_concept()
             .and_also(&righthand.get_concept())
@@ -447,9 +470,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     /// returns `None` if does not match otherwise returns a `HashMap` mapping free variable concept IDs to the matching nodes in `ast`
     fn check_generalisation(
         &self,
-        ast: &Arc<SyntaxTree>,
-        generalisation: usize,
-    ) -> Option<VariableMask> {
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        generalisation: S::ConceptId,
+    ) -> Option<VariableMask<S::ConceptId>> {
         (self.is_free_variable(generalisation)
             && !self.bound_variable_syntax.contains(ast)
             && !ast.get_concept().map_or(false, |c| {
@@ -499,8 +522,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         .flatten()
     }
 
-    fn find_generalisations(&self, ast: &Arc<SyntaxTree>) -> HashSet<usize> {
-        let mut generalisations = HashSet::<usize>::new();
+    fn find_generalisations(
+        &self,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> HashSet<S::ConceptId> {
+        let mut generalisations = HashSet::<S::ConceptId>::new();
         if let Some((l, r)) = ast.get_expansion() {
             if let Some(c) = l.get_concept() {
                 generalisations.extend(
@@ -540,11 +566,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         }
     }
 
-    fn is_leaf_variable(&self, lv: usize) -> bool {
+    fn is_leaf_variable(&self, lv: S::ConceptId) -> bool {
         self.is_free_variable(lv) && self.is_leaf_concept(lv)
     }
 
-    fn is_free_variable(&self, v: usize) -> bool {
+    fn is_free_variable(&self, v: S::ConceptId) -> bool {
         self.snap_shot.read_concept(self.delta, v).free_variable()
             && self
                 .variable_mask
@@ -553,17 +579,17 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 .map_or(true, |vml| vml.get(v).is_none()) // A hack required to prevent stack overflow
     }
 
-    fn is_leaf_concept(&self, l: usize) -> bool {
+    fn is_leaf_concept(&self, l: S::ConceptId) -> bool {
         self.snap_shot.read_concept(self.delta, l).get_composition().is_none()
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     pub fn recursively_reduce(
         &self,
-        ast: &Arc<SyntaxTree>,
-    ) -> (Arc<SyntaxTree>, Option<ReductionReason>) {
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> MaybeReducedSyntaxWithReason<S::ConceptId> {
         debug!("recursively_reduce({})", ast);
-        let mut maybe_reason: Option<ReductionReason> = None;
+        let mut maybe_reason: Option<ReductionReason<S::ConceptId>> = None;
         let mut reduced_ast = ast.clone();
         while let Some((ref a, ref reason)) = self.reduce(&reduced_ast) {
             maybe_reason = Some(maybe_reason.map_or(reason.clone(), |from| {
@@ -580,10 +606,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn reduce_by_expanded_left_branch(
         &self,
-        leftleft: &Arc<SyntaxTree>,
-        leftright: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> ReductionResult {
+        leftleft: &Arc<SyntaxTree<S::ConceptId>>,
+        leftright: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ReductionResult<S::ConceptId> {
         let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
@@ -614,9 +640,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn find_example(
         &self,
-        generalisation: &Arc<SyntaxTree>,
-        truths: &HashSet<usize>,
-    ) -> Option<Substitutions> {
+        generalisation: &Arc<SyntaxTree<S::ConceptId>>,
+        truths: &HashSet<S::ConceptId>,
+    ) -> Option<Substitutions<S::ConceptId>> {
         self.find_examples(generalisation, truths).pop()
     }
 
@@ -625,9 +651,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     fn find_examples(
         &self,
         // needs to contain bounded variables
-        generalisation: &Arc<SyntaxTree>,
-        equivalence_set: &HashSet<usize>, /* All concepts that are equal to generalisation */
-    ) -> Vec<Substitutions> {
+        generalisation: &Arc<SyntaxTree<S::ConceptId>>,
+        equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */
+    ) -> Vec<Substitutions<S::ConceptId>> {
         if let Some((left, right)) = generalisation.get_expansion() {
             match (
                 self.contains_bound_variable_syntax(&left),
@@ -644,7 +670,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             .snap_shot
                             .read_concept(self.delta, equivalent_left_id);
                         // TODO handle case when a concept implicitly reduces to `equivalent_left`
-                        let mut equivalent_left_equivalence_set: HashSet<usize> =
+                        let mut equivalent_left_equivalence_set: HashSet<S::ConceptId> =
                             equivalent_left
                                 .find_what_reduces_to_it()
                                 .copied()
@@ -659,7 +685,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             .read_concept(self.delta, equivalent_right_id);
                         // TODO handle case when a concept implicitly reduces to `equivalent_right`
                         let mut equivalent_right_equivalence_set: HashSet<
-                            usize,
+                            S::ConceptId,
                         > = equivalent_right
                             .find_what_reduces_to_it()
                             .copied()
@@ -729,11 +755,11 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn find_examples_of_half_generalisation(
         &self,
-        generalisated_part: &Arc<SyntaxTree>,
-        non_generalised_part: &Arc<SyntaxTree>,
-        equivalence_set_of_composition: &HashSet<usize>,
+        generalisated_part: &Arc<SyntaxTree<S::ConceptId>>,
+        non_generalised_part: &Arc<SyntaxTree<S::ConceptId>>,
+        equivalence_set_of_composition: &HashSet<S::ConceptId>,
         non_generalised_hand: Hand,
-    ) -> Vec<Substitutions> {
+    ) -> Vec<Substitutions<S::ConceptId>> {
         if let Some(non_generalised_id) = non_generalised_part.get_concept() {
             let non_generalised_concept =
                 self.snap_shot.read_concept(self.delta, non_generalised_id);
@@ -775,10 +801,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
     fn reduce_by_expanded_right_branch(
         &self,
-        left: &Arc<SyntaxTree>,
-        rightleft: &Arc<SyntaxTree>,
-        rightright: &Arc<SyntaxTree>,
-    ) -> ReductionResult {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        rightleft: &Arc<SyntaxTree<S::ConceptId>>,
+        rightright: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> ReductionResult<S::ConceptId> {
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
             ConcreteConceptType::GreaterThan => {
@@ -821,9 +847,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn determine_reduction_truth(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> Option<(bool, ReductionReason)> {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Option<(bool, ReductionReason<S::ConceptId>)> {
         if left == right {
             Some((false, ReductionReason::SyntaxCannotReduceToItself))
         } else {
@@ -858,9 +884,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn determine_evidence_of_reduction(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> Option<ReductionReason> {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Option<ReductionReason<S::ConceptId>> {
         self.reduce(left).and_then(|(reduced_left, reason)| {
             if &reduced_left == right {
                 Some(reason)
@@ -877,7 +903,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     }
 
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
-    pub fn to_ast(&self, concept_id: usize) -> Arc<SyntaxTree> {
+    pub fn to_ast(
+        &self,
+        concept_id: S::ConceptId,
+    ) -> Arc<SyntaxTree<S::ConceptId>> {
         self.variable_mask.get(concept_id).cloned().unwrap_or_else(|| {
             self.caches.get_syntax_tree_or_else(concept_id, || {
                 let concept =
@@ -908,9 +937,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     pub fn combine(
         &self,
-        ast: &Arc<SyntaxTree>,
-        other: &Arc<SyntaxTree>,
-    ) -> Arc<SyntaxTree> {
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        other: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Arc<SyntaxTree<S::ConceptId>> {
         let syntax = ast
             .get_concept()
             .and_also(&other.get_concept())
@@ -930,17 +959,17 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     fn join(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
-    ) -> SyntaxTree {
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> SyntaxTree<S::ConceptId> {
         SyntaxTree::from(self.display_joint(left, right))
             .bind_pair(left.clone(), right.clone())
     }
 
     fn display_joint(
         &self,
-        left: &Arc<SyntaxTree>,
-        right: &Arc<SyntaxTree>,
+        left: &Arc<SyntaxTree<S::ConceptId>>,
+        right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> String {
         let left_string = left.get_expansion().map_or_else(
             || left.to_string(),
@@ -953,7 +982,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         left_string + " " + &right_string
     }
 
-    pub fn get_associativity(&self, ast: &Arc<SyntaxTree>) -> Associativity {
+    pub fn get_associativity(
+        &self,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Associativity {
         self.concrete_concept_id(ConcreteConceptType::Associativity).map_or(
             Associativity::Right,
             |associativity_concept_id| {
@@ -974,7 +1006,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     }
 
     /// Expands syntax by definition of its associated concept.
-    pub fn expand(&self, ast: &Arc<SyntaxTree>) -> Arc<SyntaxTree> {
+    pub fn expand(
+        &self,
+        ast: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> Arc<SyntaxTree<S::ConceptId>> {
         if let Some(con) = ast.get_concept() {
             if let Some((left, right)) =
                 self.snap_shot.read_concept(self.delta, con).get_composition()
@@ -995,9 +1030,9 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 
     pub fn compare(
         &self,
-        some_syntax: &Arc<SyntaxTree>,
-        another_syntax: &Arc<SyntaxTree>,
-    ) -> (Comparison, ComparisonReason) {
+        some_syntax: &Arc<SyntaxTree<S::ConceptId>>,
+        another_syntax: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> (Comparison, ComparisonReason<S::ConceptId>) {
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
@@ -1098,7 +1133,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         }
     }
 
-    pub fn spawn(&self, cache: &Arc<ReductionCache>) -> Self {
+    pub fn spawn(&self, cache: &Arc<ReductionCache<S::ConceptId>>) -> Self {
         Self {
             bound_variable_syntax: self.bound_variable_syntax.clone(),
             caches: self.caches.spawn(cache),
@@ -1112,7 +1147,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     /// Error if `variable_mask` is already included
     fn insert_variable_mask(
         &mut self,
-        variable_mask: VariableMask,
+        variable_mask: VariableMask<S::ConceptId>,
     ) -> Result<(), ()> {
         self.variable_mask = Arc::new(
             VariableMaskList::push(&self.variable_mask, variable_mask)
@@ -1121,7 +1156,10 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
         Ok(())
     }
 
-    fn contains_bound_variable_syntax(&self, syntax: &Arc<SyntaxTree>) -> bool {
+    fn contains_bound_variable_syntax(
+        &self,
+        syntax: &Arc<SyntaxTree<S::ConceptId>>,
+    ) -> bool {
         self.caches.remember_if_contains_bound_variable_syntax_or_else(
             syntax,
             || {
@@ -1144,22 +1182,25 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Example {
-    generalisation: Arc<SyntaxTree>,
-    substitutions: HashMap<Arc<SyntaxTree>, Match>,
+pub struct Example<ConceptId: Eq + Hash> {
+    generalisation: Arc<SyntaxTree<ConceptId>>,
+    substitutions: HashMap<Arc<SyntaxTree<ConceptId>>, Match<ConceptId>>,
 }
+
+type MaybeReducedSyntaxWithReason<ConceptId> =
+    (Arc<SyntaxTree<ConceptId>>, Option<ReductionReason<ConceptId>>);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Match {
-    value: Arc<SyntaxTree>,
-    reduction: Arc<SyntaxTree>,
-    reason: ReductionReason,
+pub struct Match<ConceptId: Eq + Hash> {
+    value: Arc<SyntaxTree<ConceptId>>,
+    reduction: Arc<SyntaxTree<ConceptId>>,
+    reason: ReductionReason<ConceptId>,
 }
 
-fn simplify_reasoning(
-    reason: Option<ReductionReason>,
-    reversed_reason: Option<ReductionReason>,
-) -> ComparisonReason {
+fn simplify_reasoning<ConceptId: Eq + Hash + Clone>(
+    reason: Option<ReductionReason<ConceptId>>,
+    reversed_reason: Option<ReductionReason<ConceptId>>,
+) -> ComparisonReason<ConceptId> {
     match (&reason, &reversed_reason) {
         (Some(ReductionReason::Comparison(cr)), rr) => match cr.as_ref() {
             ComparisonReason::Reduction {
@@ -1207,20 +1248,23 @@ pub enum Comparison {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum ComparisonReason {
+pub enum ComparisonReason<ConceptId: Eq + Hash> {
     SameSyntax,
     Reduction {
-        reason: Option<ReductionReason>,
-        reversed_reason: Option<ReductionReason>,
+        reason: Option<ReductionReason<ConceptId>>,
+        reversed_reason: Option<ReductionReason<ConceptId>>,
     },
     NoGreaterThanConcept,
 }
 
-impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
+impl<'a, S: SnapShotReader> From<ContextReferences<'a, S, S::ConceptId>>
+    for ContextSearch<'a, S>
+{
     fn from(
         (snap_shot, delta, cache, bound_variable_syntax): ContextReferences<
             'a,
             S,
+            S::ConceptId,
         >,
     ) -> ContextSearch<'a, S> {
         // simple_logger::init().unwrap_or(());
@@ -1235,19 +1279,25 @@ impl<'a, S> From<ContextReferences<'a, S>> for ContextSearch<'a, S> {
     }
 }
 
-type ContextReferences<'a, S> =
-    (&'a S, &'a ContextDelta, &'a ContextCache, &'a HashSet<Arc<SyntaxTree>>);
+type ContextReferences<'a, S, ConceptId> = (
+    &'a S,
+    &'a ContextDelta<ConceptId>,
+    &'a ContextCache<ConceptId>,
+    &'a HashSet<Arc<SyntaxTree<ConceptId>>>,
+);
 
-type VariableMask = HashMap<usize, Arc<SyntaxTree>>;
+type VariableMask<ConceptId> = HashMap<ConceptId, Arc<SyntaxTree<ConceptId>>>;
 
 #[derive(Clone, PartialEq, Debug)]
-struct VariableMaskList {
-    head: VariableMask,
-    tail: Option<Arc<VariableMaskList>>,
+struct VariableMaskList<ConceptId: Eq + Hash> {
+    head: VariableMask<ConceptId>,
+    tail: Option<Arc<VariableMaskList<ConceptId>>>,
 }
 
-impl From<VariableMask> for VariableMaskList {
-    fn from(head: VariableMask) -> Self {
+impl<ConceptId: Eq + Hash> From<VariableMask<ConceptId>>
+    for VariableMaskList<ConceptId>
+{
+    fn from(head: VariableMask<ConceptId>) -> Self {
         Self {
             head,
             tail: None,
@@ -1255,22 +1305,25 @@ impl From<VariableMask> for VariableMaskList {
     }
 }
 
-impl VariableMaskList {
+impl<ConceptId: Eq + Hash> VariableMaskList<ConceptId> {
     /// returns None if `head` is equal to one of the nodes.
     /// This prevents cycles in reduction evaluations
-    fn push(list: &Arc<Self>, head: VariableMask) -> Option<Self> {
+    fn push(list: &Arc<Self>, head: VariableMask<ConceptId>) -> Option<Self> {
         (!list.contains(&head)).then(|| Self {
             head,
             tail: Some(list.clone()),
         })
     }
 
-    fn contains(&self, node: &VariableMask) -> bool {
+    fn contains(&self, node: &VariableMask<ConceptId>) -> bool {
         &self.head == node
             || self.tail.as_ref().map_or(false, |vml| vml.contains(node))
     }
 
-    fn get(&self, concept_id: usize) -> Option<&Arc<SyntaxTree>> {
+    fn get(
+        &self,
+        concept_id: ConceptId,
+    ) -> Option<&Arc<SyntaxTree<ConceptId>>> {
         self.head
             .get(&concept_id)
             .or_else(|| self.tail.as_ref().and_then(|vml| vml.get(concept_id)))

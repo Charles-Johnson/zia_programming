@@ -24,18 +24,19 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
+    fmt::{Debug, Display},
+    hash::Hash,
 };
 
 /// Data type for any type of concept.
 #[derive(Clone, PartialEq)]
-pub struct Concept {
-    id: usize,
-    concrete_part: ConcreteConcept,
-    specific_part: SpecificPart,
+pub struct Concept<Id: Eq + Hash> {
+    id: Id,
+    concrete_part: ConcreteConcept<Id>,
+    specific_part: SpecificPart<Id>,
 }
 
-impl Debug for Concept {
+impl<Id: Copy + Display + Hash + Eq> Debug for Concept<Id> {
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,
@@ -43,30 +44,21 @@ impl Debug for Concept {
         let mut string = "{".to_string();
         if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
-            let mut unorder_keys: Vec<&usize> =
-                self.concrete_part.lefthand_of.values().collect();
-            unorder_keys.sort();
-            for key in unorder_keys {
+            for key in self.concrete_part.lefthand_of.values() {
                 string += &format!("{},", key);
             }
             string += "},";
         }
         if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
-            let mut unorder_keys: Vec<&usize> =
-                self.concrete_part.righthand_of.values().collect();
-            unorder_keys.sort();
-            for key in unorder_keys {
+            for key in self.concrete_part.righthand_of.values() {
                 string += &format!("{},", key);
             }
             string += "},";
         }
         if !self.concrete_part.reduces_from.is_empty() {
             string += " reduces_from: {";
-            let mut unorder_keys: Vec<&usize> =
-                self.concrete_part.reduces_from.iter().collect();
-            unorder_keys.sort();
-            for key in unorder_keys {
+            for key in &self.concrete_part.reduces_from {
                 string += &format!("{},", key);
             }
             string += "},";
@@ -76,8 +68,10 @@ impl Debug for Concept {
     }
 }
 
-impl From<&NewDirectConceptDelta> for Concept {
-    fn from(ndcd: &NewDirectConceptDelta) -> Self {
+impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>>
+    for Concept<Id>
+{
+    fn from(ndcd: &NewDirectConceptDelta<Id>) -> Self {
         Self {
             id: ndcd.new_concept_id,
             concrete_part: ndcd.into(),
@@ -86,16 +80,16 @@ impl From<&NewDirectConceptDelta> for Concept {
     }
 }
 
-impl Concept {
-    pub const fn id(&self) -> usize {
+impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
+    pub fn id(&self) -> Id {
         self.id
     }
 
     pub fn compose_delta(
         &self,
-        left_id: usize,
-        right_id: usize,
-    ) -> ZiaResult<DirectConceptDelta> {
+        left_id: Id,
+        right_id: Id,
+    ) -> ZiaResult<DirectConceptDelta<Id>> {
         let after = Composition {
             left_id,
             right_id,
@@ -128,7 +122,7 @@ impl Concept {
         }
     }
 
-    pub fn make_free_variable(id: usize) -> Self {
+    pub fn make_free_variable(id: Id) -> Self {
         Self {
             id,
             concrete_part: ConcreteConcept::default(),
@@ -141,7 +135,7 @@ impl Concept {
         }
     }
 
-    pub fn make_bound_variable(id: usize) -> Self {
+    pub fn make_bound_variable(id: Id) -> Self {
         Self {
             id,
             concrete_part: ConcreteConcept::default(),
@@ -154,7 +148,10 @@ impl Concept {
         }
     }
 
-    pub fn change_reduction(&mut self, change: Change<usize>) {
+    pub fn change_reduction(&mut self, change: Change<Id>)
+    where
+        Id: PartialEq + Debug,
+    {
         if let SpecificPart::Abstract(ap) = &mut self.specific_part {
             match change {
                 Change::Create(reduced_concept_id)
@@ -172,7 +169,7 @@ impl Concept {
         }
     }
 
-    pub fn apply_indirect(&mut self, delta: &IndirectConceptDelta) {
+    pub fn apply_indirect(&mut self, delta: &IndirectConceptDelta<Id>) {
         match delta {
             IndirectConceptDelta::ComposedOf(Composition {
                 left_id,
@@ -280,13 +277,13 @@ impl Concept {
         }
     }
 
-    pub fn remove_reduction(&self) -> ZiaResult<usize> {
+    pub fn remove_reduction(&self) -> ZiaResult<Id> {
         self.get_reduction().ok_or(ZiaError::RedundantReduction)
     }
 
     pub fn find_what_reduces_to_it(
         &self,
-    ) -> std::collections::hash_set::Iter<usize> {
+    ) -> std::collections::hash_set::Iter<Id> {
         self.concrete_part.reduces_from.iter()
     }
 
@@ -298,15 +295,15 @@ impl Concept {
         }
     }
 
-    pub const fn get_lefthand_of(&self) -> &HashMap<usize, usize> {
+    pub fn get_lefthand_of(&self) -> &HashMap<Id, Id> {
         &self.concrete_part.lefthand_of
     }
 
-    pub const fn get_righthand_of(&self) -> &HashMap<usize, usize> {
+    pub fn get_righthand_of(&self) -> &HashMap<Id, Id> {
         &self.concrete_part.righthand_of
     }
 
-    pub const fn get_hand_of(&self, hand: Hand) -> &HashMap<usize, usize> {
+    pub fn get_hand_of(&self, hand: Hand) -> &HashMap<Id, Id> {
         match hand {
             Hand::Left => self.get_lefthand_of(),
             Hand::Right => self.get_righthand_of(),
@@ -314,7 +311,7 @@ impl Concept {
     }
 
     /// Gets the index of the concept that `self` may reduce to.
-    pub const fn get_reduction(&self) -> Option<usize> {
+    pub fn get_reduction(&self) -> Option<Id> {
         match self.specific_part {
             SpecificPart::Abstract(ref c) => c.reduces_to,
             _ => None,
@@ -322,7 +319,7 @@ impl Concept {
     }
 
     /// If concept is abstract and has a composition returns the indices of the left and right concepts that compose it as `Some((left, right))`. Otherwise returns `None`.
-    pub const fn get_composition(&self) -> Option<(usize, usize)> {
+    pub fn get_composition(&self) -> Option<(Id, Id)> {
         match self.specific_part {
             SpecificPart::Abstract(ref c) => {
                 if let MaybeComposition::Composition(CompositePart {
@@ -383,21 +380,19 @@ impl Concept {
 
     pub fn find_as_lefthand_in_composition_with_righthand(
         &self,
-        right_id: usize,
-    ) -> Option<usize> {
-        self.concrete_part.lefthand_of.get(&right_id).copied()
+        right_id: Id,
+    ) -> Option<Id> {
+        self.concrete_part.lefthand_of.get(&right_id).cloned()
     }
 
     pub fn find_as_righthand_in_composition_with_lefthand(
         &self,
-        left_id: usize,
-    ) -> Option<usize> {
-        self.concrete_part.righthand_of.get(&left_id).copied()
+        left_id: Id,
+    ) -> Option<Id> {
+        self.concrete_part.righthand_of.get(&left_id).cloned()
     }
 
-    pub const fn get_concrete_concept_type(
-        &self,
-    ) -> Option<ConcreteConceptType> {
+    pub fn get_concrete_concept_type(&self) -> Option<ConcreteConceptType> {
         match &self.specific_part {
             SpecificPart::Concrete(cc) => Some(*cc),
             _ => None,
@@ -425,11 +420,7 @@ impl Concept {
         }
     }
 
-    pub fn composition_of(
-        id: usize,
-        left: &mut Self,
-        right: &mut Self,
-    ) -> Self {
+    pub fn composition_of(id: Id, left: &mut Self, right: &mut Self) -> Self {
         Self {
             id,
             specific_part: SpecificPart::composition_of(id, left, right),
@@ -438,7 +429,7 @@ impl Concept {
     }
 
     pub fn lefthand_of(
-        id: usize,
+        id: Id,
         right: &mut Self,
         composition: &mut Self,
         concrete_concept_type: Option<ConcreteConceptType>,
@@ -503,7 +494,7 @@ impl Concept {
     }
 
     pub fn righthand_of(
-        id: usize,
+        id: Id,
         left: &mut Self,
         composition: &mut Self,
         concrete_concept_type: Option<ConcreteConceptType>,
@@ -568,7 +559,7 @@ impl Concept {
     }
 
     pub fn double(
-        id: usize,
+        id: Id,
         composition: &mut Self,
         concrete_concept_type: Option<ConcreteConceptType>,
     ) -> Self {
@@ -616,7 +607,7 @@ impl Concept {
         concept
     }
 
-    pub fn reduction_to(id: usize, reduction: &mut Self) -> Self {
+    pub fn reduction_to(id: Id, reduction: &mut Self) -> Self {
         let new_concept = Self {
             concrete_part: ConcreteConcept::default(),
             id,
@@ -631,12 +622,12 @@ impl Concept {
 }
 
 #[derive(Clone, PartialEq)]
-pub enum SpecificPart {
+pub enum SpecificPart<Id: Eq + Hash> {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete(ConcreteConceptType),
     /// An abstract concept can reduce to any other concept (whose normal form isn't the former
     /// concept) and can be defined as the composition of any two concepts.
-    Abstract(AbstractPart),
+    Abstract(AbstractPart<Id>),
     /// A string concept is associated with a `String` value by the `MaybeString` trait.
     String(String),
 }
@@ -665,14 +656,14 @@ pub enum ConcreteConceptType {
     ExistsSuchThat,
 }
 
-impl From<ConcreteConceptType> for SpecificPart {
+impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {
     fn from(cc: ConcreteConceptType) -> Self {
         Self::Concrete(cc)
     }
 }
 
-impl From<&NewConceptDelta> for SpecificPart {
-    fn from(delta: &NewConceptDelta) -> Self {
+impl<Id: Copy + Eq + Hash> From<&NewConceptDelta<Id>> for SpecificPart<Id> {
+    fn from(delta: &NewConceptDelta<Id>) -> Self {
         match delta {
             NewConceptDelta::BoundVariable => Self::Abstract(AbstractPart {
                 composition: MaybeComposition::Leaf(
@@ -731,15 +722,15 @@ impl From<&NewConceptDelta> for SpecificPart {
     }
 }
 
-impl SpecificPart {
-    pub const fn free_variable() -> Self {
+impl<Id: Copy + Debug + Eq + Hash> SpecificPart<Id> {
+    pub fn free_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::FreeVariable),
             reduces_to: None,
         })
     }
 
-    pub const fn bound_variable() -> Self {
+    pub fn bound_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::BoundVariable),
             reduces_to: None,
@@ -747,9 +738,9 @@ impl SpecificPart {
     }
 
     fn composition_of(
-        composition_id: usize,
-        left: &mut Concept,
-        right: &mut Concept,
+        composition_id: Id,
+        left: &mut Concept<Id>,
+        right: &mut Concept<Id>,
     ) -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::composition_of(
@@ -762,13 +753,13 @@ impl SpecificPart {
     }
 }
 
-impl Default for SpecificPart {
+impl<Id: Eq + Hash> Default for SpecificPart<Id> {
     fn default() -> Self {
         Self::Abstract(AbstractPart::default())
     }
 }
 
-impl Debug for SpecificPart {
+impl<Id: Copy + Display + Eq + Hash> Debug for SpecificPart<Id> {
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,
@@ -785,14 +776,14 @@ pub fn format_string(s: &str) -> String {
     format!("\"{}\"", s)
 }
 
-impl From<(AbstractPart, usize)> for Concept {
-    fn from((ap, id): (AbstractPart, usize)) -> Self {
+impl<Id: Eq + Hash> From<(AbstractPart<Id>, Id)> for Concept<Id> {
+    fn from((ap, id): (AbstractPart<Id>, Id)) -> Self {
         (SpecificPart::Abstract(ap), id).into()
     }
 }
 
-impl<T: Into<SpecificPart>> From<(T, usize)> for Concept {
-    fn from((sp, id): (T, usize)) -> Self {
+impl<Id: Eq + Hash, T: Into<SpecificPart<Id>>> From<(T, Id)> for Concept<Id> {
+    fn from((sp, id): (T, Id)) -> Self {
         Self {
             id,
             concrete_part: ConcreteConcept::default(),
@@ -801,36 +792,36 @@ impl<T: Into<SpecificPart>> From<(T, usize)> for Concept {
     }
 }
 
-impl From<(String, usize)> for Concept {
-    fn from((string, id): (String, usize)) -> Self {
+impl<Id: Eq + Hash> From<(String, Id)> for Concept<Id> {
+    fn from((string, id): (String, Id)) -> Self {
         (SpecificPart::String(string), id).into()
     }
 }
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
 #[derive(Clone, PartialEq)]
-pub struct AbstractPart {
+pub struct AbstractPart<Id: Eq + Hash> {
     /// The concept may be defined as a composition of two other concepts.
-    composition: MaybeComposition,
+    composition: MaybeComposition<Id>,
     /// The concept may reduce to another concept.
-    reduces_to: Option<usize>,
+    reduces_to: Option<Id>,
 }
 
 #[derive(Clone, PartialEq)]
-pub struct CompositePart {
+pub struct CompositePart<Id: Eq + Hash> {
     /// concept id for lefthand part of the composition
-    lefthand: usize,
+    lefthand: Id,
     /// concept id for righthand part of the composition
-    righthand: usize,
+    righthand: Id,
     /// The concept's composition might contain free variables
-    free_variables: HashSet<usize>,
+    free_variables: HashSet<Id>,
     /// The concept's composition might contain binding variables
-    binding_variables: HashSet<usize>,
+    binding_variables: HashSet<Id>,
 }
 
 #[derive(Clone, PartialEq)]
-pub enum MaybeComposition {
-    Composition(CompositePart),
+pub enum MaybeComposition<Id: Eq + Hash> {
+    Composition(CompositePart<Id>),
     // true if concept is variable
     Leaf(LeafCharacter),
 }
@@ -842,11 +833,11 @@ pub enum LeafCharacter {
     BoundVariable, /* Cannot be substituted for when finding generalisations, instead used to find examples that satisfy a property */
 }
 
-impl MaybeComposition {
+impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
     fn composition_of(
-        composition_id: usize,
-        left: &mut Concept,
-        right: &mut Concept,
+        composition_id: Id,
+        left: &mut Concept<Id>,
+        right: &mut Concept<Id>,
     ) -> Self {
         LefthandOf {
             composition: composition_id,
@@ -903,7 +894,7 @@ impl MaybeComposition {
     }
 }
 
-impl Debug for AbstractPart {
+impl<Id: Copy + Display + Eq + Hash> Debug for AbstractPart<Id> {
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter,
@@ -927,7 +918,7 @@ impl Debug for AbstractPart {
     }
 }
 
-impl Default for AbstractPart {
+impl<Id: Eq + Hash> Default for AbstractPart<Id> {
     /// The default concept doesn't have a composition and doesn't further reduce.
     fn default() -> Self {
         Self {
@@ -937,18 +928,30 @@ impl Default for AbstractPart {
     }
 }
 
-#[derive(Clone, PartialEq, Default)]
-pub struct ConcreteConcept {
+#[derive(Clone, PartialEq)]
+pub struct ConcreteConcept<Id: Eq + Hash> {
     /// Maps each concept that is the righthand of a composition with the current concept being the lefthand to that composition's concept
-    lefthand_of: HashMap<usize, usize>,
+    lefthand_of: HashMap<Id, Id>,
     /// Maps each concept that is the lefthand of a composition with the current concept being the righthand to that composition's concept
-    righthand_of: HashMap<usize, usize>,
+    righthand_of: HashMap<Id, Id>,
     /// Set of all indices of the concepts which reduce to this concept.
-    reduces_from: HashSet<usize>,
+    reduces_from: HashSet<Id>,
 }
 
-impl From<&NewDirectConceptDelta> for ConcreteConcept {
-    fn from(delta: &NewDirectConceptDelta) -> Self {
+impl<Id: Eq + Hash> Default for ConcreteConcept<Id> {
+    fn default() -> Self {
+        Self {
+            lefthand_of: hashmap! {},
+            righthand_of: hashmap! {},
+            reduces_from: hashset! {},
+        }
+    }
+}
+
+impl<Id: Copy + Debug + Eq + Hash> From<&NewDirectConceptDelta<Id>>
+    for ConcreteConcept<Id>
+{
+    fn from(delta: &NewDirectConceptDelta<Id>) -> Self {
         match delta.delta {
             NewConceptDelta::FreeVariable
             | NewConceptDelta::BoundVariable
@@ -1002,17 +1005,17 @@ impl From<&NewDirectConceptDelta> for ConcreteConcept {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub struct LefthandOf {
-    pub composition: usize,
-    pub righthand: usize,
+pub struct LefthandOf<Id> {
+    pub composition: Id,
+    pub righthand: Id,
 }
 
-impl LefthandOf {
-    fn start_mapping(&self) -> HashMap<usize, usize> {
+impl<Id: Copy + Eq + Hash + Debug> LefthandOf<Id> {
+    fn start_mapping(&self) -> HashMap<Id, Id> {
         hashmap! {self.righthand => self.composition}
     }
 
-    fn insert_into(&self, map: &mut HashMap<usize, usize>) {
+    fn insert_into(&self, map: &mut HashMap<Id, Id>) {
         if let Some(prev_comp) = map.insert(self.righthand, self.composition) {
             debug_assert_eq!(self.composition, prev_comp, "at most one concept can be the composition of a given pair of concepts");
         }
@@ -1020,17 +1023,20 @@ impl LefthandOf {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RighthandOf {
-    pub composition: usize,
-    pub lefthand: usize,
+pub struct RighthandOf<Id> {
+    pub composition: Id,
+    pub lefthand: Id,
 }
 
-impl RighthandOf {
-    fn start_mapping(&self) -> HashMap<usize, usize> {
+impl<Id: Copy + Eq + Hash> RighthandOf<Id> {
+    fn start_mapping(&self) -> HashMap<Id, Id> {
         hashmap! {self.lefthand => self.composition}
     }
 
-    fn insert_into(&self, map: &mut HashMap<usize, usize>) {
+    fn insert_into(&self, map: &mut HashMap<Id, Id>)
+    where
+        Id: Debug,
+    {
         if let Some(prev_comp) = map.insert(self.lefthand, self.composition) {
             debug_assert_eq!(self.composition, prev_comp, "at most one concept can be the composition of a given pair of concepts");
         }
