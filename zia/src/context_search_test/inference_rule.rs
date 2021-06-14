@@ -4,12 +4,12 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<usize>; 15] {
+fn concepts() -> [Concept<ConceptId>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
@@ -53,7 +53,7 @@ fn concepts() -> [Concept<usize>; 15] {
     ]
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {}
 }
 

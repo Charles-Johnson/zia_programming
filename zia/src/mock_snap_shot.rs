@@ -8,17 +8,19 @@ use crate::{
 use bimap::BiMap;
 use std::collections::HashMap;
 
+pub type ConceptId = usize;
+
 #[derive(Debug, Default)]
 pub struct MockSnapShot {
-    concrete_concepts: BiMap<usize, ConcreteConceptType>,
-    concept_labels: BiMap<usize, &'static str>,
-    concepts: Vec<Concept<usize>>,
+    concrete_concepts: BiMap<ConceptId, ConcreteConceptType>,
+    concept_labels: BiMap<ConceptId, &'static str>,
+    concepts: Vec<Concept<ConceptId>>,
 }
 
 impl MockSnapShot {
     pub fn new_test_case(
-        concepts: &[Concept<usize>],
-        concept_labels: &HashMap<usize, &'static str>,
+        concepts: &[Concept<ConceptId>],
+        concept_labels: &HashMap<ConceptId, &'static str>,
     ) -> Self {
         Self {
             concepts: check_order(concepts),
@@ -37,16 +39,16 @@ impl MockSnapShot {
 }
 
 impl Apply for MockSnapShot {
-    type Delta = ContextDelta<usize>;
+    type Delta = ContextDelta<ConceptId>;
 
     fn apply(&mut self, _: Self::Delta) {}
 }
 impl Reader for MockSnapShot {
-    type ConceptId = usize;
+    type ConceptId = ConceptId;
 
     fn get_concept(
         &self,
-        concept_id: usize,
+        concept_id: Self::ConceptId,
     ) -> Option<&Concept<Self::ConceptId>> {
         self.concepts.get(concept_id)
     }
@@ -54,7 +56,7 @@ impl Reader for MockSnapShot {
     fn lowest_unoccupied_concept_id(
         &self,
         _: &ContextDelta<Self::ConceptId>,
-    ) -> usize {
+    ) -> Self::ConceptId {
         self.concepts.len()
     }
 
@@ -70,7 +72,7 @@ impl Reader for MockSnapShot {
         &self,
         _: &ContextDelta<Self::ConceptId>,
         s: &str,
-    ) -> Option<usize> {
+    ) -> Option<Self::ConceptId> {
         self.concept_labels.get_by_right(&s).cloned()
     }
 
@@ -78,7 +80,7 @@ impl Reader for MockSnapShot {
         &self,
         _: &ContextDelta<Self::ConceptId>,
         cc: ConcreteConceptType,
-    ) -> Option<usize> {
+    ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).cloned()
     }
 

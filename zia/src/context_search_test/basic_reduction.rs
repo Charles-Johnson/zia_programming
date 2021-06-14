@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -54,16 +54,16 @@ fn basic_reduction() {
     assert_eq!(context_search.to_ast(1), abstract_syntax().into());
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "concrete",
         1 => "abstract",
     }
 }
 
-fn concepts() -> [Concept<usize>; 2] {
+fn concepts() -> [Concept<ConceptId>; 2] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
-    let mut abstract_concept: Concept<usize> =
+    let mut abstract_concept: Concept<ConceptId> =
         (SpecificPart::default(), 1).into();
     abstract_concept.make_reduce_to(&mut concrete_concept);
     [concrete_concept, abstract_concept]

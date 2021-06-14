@@ -9,9 +9,9 @@ mod existence_inference_rule;
 mod inference_rule;
 mod nested_composition_rule;
 
-use crate::concepts::Concept;
+use crate::{concepts::Concept, mock_snap_shot::ConceptId};
 
-pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<usize>> {
+pub fn check_order(concepts: &[Concept<ConceptId>]) -> Vec<Concept<ConceptId>> {
     concepts
         .iter()
         .enumerate()
@@ -19,5 +19,5 @@ pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<usize>> {
             assert_eq!(i, c.id());
             c.clone()
         })
-        .collect::<Vec<Concept<usize>>>()
+        .collect::<Vec<Concept<ConceptId>>>()
 }

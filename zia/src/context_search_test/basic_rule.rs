@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -48,14 +48,14 @@ fn basic_rule() {
     );
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "concrete",
         2 => "left",
     }
 }
 
-fn concepts() -> [Concept<usize>; 4] {
+fn concepts() -> [Concept<ConceptId>; 4] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_concept_variable = (SpecificPart::free_variable(), 3).into();

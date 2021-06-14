@@ -4,7 +4,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::ContextSearch,
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ fn basic_composition() {
     assert_eq!(context_search.to_ast(2), right_syntax);
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "a",
         1 => "b",
@@ -53,7 +53,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<usize>; 3] {
+fn concepts() -> [Concept<ConceptId>; 3] {
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();
     let composite_concept =

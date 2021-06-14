@@ -4,14 +4,12 @@ use crate::{
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextSearch, ReductionReason},
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-const CONCEPT_LEN: usize = 17;
-
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "=>",
         1 => "true",
@@ -63,7 +61,7 @@ fn existence_inference_rule() {
     );
 }
 
-fn concepts() -> [Concept<usize>; CONCEPT_LEN] {
+fn concepts() -> [Concept<ConceptId>; 17] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();

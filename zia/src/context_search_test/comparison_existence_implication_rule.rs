@@ -5,7 +5,7 @@ use crate::{
     context_search::{
         Comparison, ComparisonReason, ContextSearch, ReductionReason,
     },
-    mock_snap_shot::MockSnapShot,
+    mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -68,7 +68,7 @@ fn comparison_existence_implication_rule_test() {
     )
 }
 
-fn labels() -> HashMap<usize, &'static str> {
+fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {
         0 => "true",
         1 => ">",
@@ -85,7 +85,7 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<usize>; 31] {
+fn concepts() -> [Concept<ConceptId>; 31] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =
