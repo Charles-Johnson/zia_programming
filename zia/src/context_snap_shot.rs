@@ -65,24 +65,24 @@ impl ContextSnapShot {
             NewConceptDelta::FreeVariable => {
                 self.concepts[*new_concept_id] =
                     Some(Concept::make_free_variable(*new_concept_id))
-            }
+            },
             NewConceptDelta::BoundVariable => {
                 self.concepts[*new_concept_id] =
                     Some(Concept::make_bound_variable(*new_concept_id))
-            }
+            },
             NewConceptDelta::String(s) => {
                 self.string_map.insert(s.into(), *new_concept_id);
                 self.concepts[*new_concept_id] = Some(
                     (SpecificPart::String(s.into()), *new_concept_id).into(),
                 );
-            }
+            },
             NewConceptDelta::Composition(c) => {
                 let [left, right]: [&mut Concept<ConceptId>; 2] = self
                     .write_concepts(arr![ConceptId; c.left_id, c.right_id])
                     .into();
                 self.concepts[*new_concept_id] =
                     Some(Concept::composition_of(*new_concept_id, left, right));
-            }
+            },
             NewConceptDelta::Left {
                 composition_id,
                 right_id,
@@ -103,7 +103,7 @@ impl ContextSnapShot {
                 if let Some(cct) = concrete_type {
                     self.concrete_concepts.insert(*new_concept_id, *cct);
                 }
-            }
+            },
             NewConceptDelta::Double {
                 composition_id,
                 concrete_type,
@@ -119,7 +119,7 @@ impl ContextSnapShot {
                 if let Some(cct) = concrete_type {
                     self.concrete_concepts.insert(*new_concept_id, *cct);
                 }
-            }
+            },
             NewConceptDelta::Right {
                 composition_id,
                 left_id,
@@ -142,7 +142,7 @@ impl ContextSnapShot {
                 if let Some(cct) = concrete_type {
                     self.concrete_concepts.insert(*new_concept_id, *cct);
                 }
-            }
+            },
             NewConceptDelta::ReducesTo {
                 reduction,
             } => {
@@ -152,7 +152,7 @@ impl ContextSnapShot {
                     *new_concept_id,
                     reduction_concept,
                 ));
-            }
+            },
         }
     }
 
@@ -225,12 +225,12 @@ impl ContextSnapShot {
                     } => {
                         debug_assert_eq!(self.string_map.get(s), Some(before));
                         Some(after)
-                    }
+                    },
                     context_delta::Change::Create(concept) => Some(concept),
                     context_delta::Change::Remove(before) => {
                         debug_assert_eq!(self.string_map.get(s), Some(before));
                         None
-                    }
+                    },
                 },
             )
             .cloned()
@@ -266,6 +266,7 @@ impl ContextSnapShot {
 
 impl SnapShotReader for ContextSnapShot {
     type ConceptId = ConceptId;
+
     fn concept_from_label(
         &self,
         delta: &ContextDelta<Self::ConceptId>,
@@ -308,11 +309,11 @@ impl SnapShotReader for ContextSnapShot {
                         ..
                     } => {
                         removed_gaps.insert(*id);
-                    }
+                    },
                     DirectConceptDelta::Remove(_) => {
                         added_gaps.push(*id);
                         removed_gaps.remove(id);
-                    }
+                    },
                     _ => (),
                 }
             }
@@ -329,7 +330,7 @@ impl SnapShotReader for ContextSnapShot {
                     if removed_gaps.contains(&id) {
                         continue;
                     }
-                }
+                },
                 (None, Some(gi)) => {
                     if removed_gaps.contains(&self.gaps[gi]) {
                         if gi == 0 {
@@ -339,11 +340,11 @@ impl SnapShotReader for ContextSnapShot {
                         gap_index = Some(gi - 1);
                         continue;
                     }
-                }
+                },
                 (None, None) => {
                     index = new_concept_length;
                     break;
-                }
+                },
             };
         }
         index
@@ -384,7 +385,7 @@ impl SnapShotReader for ContextSnapShot {
                     DirectConceptDelta::Remove(concept_id) => {
                         debug_assert_eq!(Some(Some(*concept_id)), id);
                         id = Some(None)
-                    }
+                    },
                     _ => (),
                 }
             }
@@ -413,12 +414,12 @@ impl Apply for ContextSnapShot {
             } => {
                 debug_assert_eq!(self.string_map.get(s), Some(before));
                 self.string_map.insert(s.to_string(), *after);
-            }
+            },
             context_delta::Change::Create(id) => self.add_string(*id, s),
             context_delta::Change::Remove(before) => {
                 debug_assert_eq!(self.string_map.get(s), Some(before));
                 self.remove_string(s)
-            }
+            },
         });
         let concept_len = self.concept_len(&delta);
         if concept_len > self.concepts.len() {
@@ -431,7 +432,7 @@ impl Apply for ContextSnapShot {
                         delta: delta.clone(),
                         new_concept_id: *concept_id,
                     })
-                }
+                },
                 DirectConceptDelta::Compose {
                     change,
                     composition_id,
@@ -448,7 +449,7 @@ impl Apply for ContextSnapShot {
                                     left, right,
                                 ]))
                                 .unwrap();
-                        }
+                        },
                         Change::Update {
                             before:
                                 Composition {
@@ -468,7 +469,7 @@ impl Apply for ContextSnapShot {
                                     after: [after_left, after_right],
                                 })
                                 .unwrap();
-                        }
+                        },
                         Change::Remove(Composition {
                             left_id,
                             right_id,
@@ -479,9 +480,9 @@ impl Apply for ContextSnapShot {
                                     left, right,
                                 ]))
                                 .unwrap();
-                        }
+                        },
                     }
-                }
+                },
                 DirectConceptDelta::Reduce {
                     change,
                     unreduced_id,
@@ -491,7 +492,7 @@ impl Apply for ContextSnapShot {
                         Change::Create(reduced_id) => {
                             let [unreduced_concept, reduced_concept]: [&mut Concept<ConceptId>; 2] = self.write_concepts(arr![ConceptId; *unreduced_id, *reduced_id]).into();
                             unreduced_concept.make_reduce_to(reduced_concept);
-                        }
+                        },
                         Change::Update {
                             before: before_reduced_id,
                             after: after_reduced_id,
@@ -502,14 +503,14 @@ impl Apply for ContextSnapShot {
                             );
                             unreduced_concept
                                 .make_reduce_to(after_reduced_concept);
-                        }
+                        },
                         Change::Remove(reduced_id) => {
                             let [unreduced_concept, reduced_concept]: [&mut Concept<ConceptId>; 2] = self.write_concepts(arr![ConceptId; *unreduced_id, *reduced_id]).into();
                             unreduced_concept
                                 .make_no_longer_reduce_to(reduced_concept);
-                        }
+                        },
                     }
-                }
+                },
                 DirectConceptDelta::Remove(_) => todo!(),
             }
         }

@@ -88,11 +88,11 @@ impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.extend(bv.iter().cloned());
                 false
-            }
+            },
             Self::Leaf(SyntaxLeaf::Variable) => {
                 free_variables.insert(right.clone());
                 false
-            }
+            },
             Self::Leaf(SyntaxLeaf::Constant) => false,
             Self::Leaf(SyntaxLeaf::Quantifier) => true,
         };
@@ -106,15 +106,15 @@ impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
                 free_variables.extend(fv.iter().cloned());
                 binding_variables.retain(|v| !fv.contains(v));
                 binding_variables.extend(bv.iter().cloned());
-            }
+            },
             Self::Leaf(SyntaxLeaf::Variable) => {
                 if right_is_quantifier {
                     binding_variables.insert(left.clone());
                 } else {
                     free_variables.insert(left.clone());
                 }
-            }
-            Self::Leaf(_) => {}
+            },
+            Self::Leaf(_) => {},
         }
         Self::Branch {
             left,

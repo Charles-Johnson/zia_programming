@@ -27,7 +27,7 @@ fn parse_letter(
         '(' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level + 1)
-        }
+        },
         ')' => {
             if parenthesis_level > 0 {
                 parenthesis_level -= 1;
@@ -38,16 +38,16 @@ fn parse_letter(
                     symbol: "(",
                 })
             }
-        }
+        },
         ' ' => {
             push_token(letter, parenthesis_level, token, tokens);
             Ok(parenthesis_level)
-        }
+        },
         '\n' | '\r' => Ok(parenthesis_level),
         _ => {
             token.push(letter);
             Ok(parenthesis_level)
-        }
+        },
     }
 }
 

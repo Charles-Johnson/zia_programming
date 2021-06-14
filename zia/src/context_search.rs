@@ -257,7 +257,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                                     lc,
                                     default_concept_id,
                                 )
-                            }
+                            },
                             Some(ConcreteConceptType::Associativity) => {
                                 let default_concept_id = self
                                     .concrete_concept_id(
@@ -270,7 +270,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                                     lc,
                                     default_concept_id,
                                 )
-                            }
+                            },
                             _ => None,
                         })
                         .or_else(|| self.reduce_pair(left, right))
@@ -372,15 +372,15 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     ) => {
                         l_hm.extend(r_hm);
                         ReductionReason::Partial(l_hm)
-                    }
+                    },
                     (ReductionReason::Partial(mut hm), _) => {
                         hm.insert(right.clone(), (right_ast, right_reason));
                         ReductionReason::Partial(hm)
-                    }
+                    },
                     (_, ReductionReason::Partial(mut hm)) => {
                         hm.insert(left.clone(), (left_ast, left_reason));
                         ReductionReason::Partial(hm)
-                    }
+                    },
                     _ => ReductionReason::Partial(hashmap! {
                         left.clone() => (left_ast, left_reason),
                         right.clone() => (right_ast, right_reason)
@@ -506,16 +506,16 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         }),
                     (true, false) if r.get_concept() == Some(gr) => {
                         self.check_generalisation(&l, gl)
-                    }
+                    },
                     (false, true) if l.get_concept() == Some(gl) => {
                         self.check_generalisation(&r, gr)
-                    }
+                    },
                     (false, false)
                         if l.get_concept() == Some(gl)
                             && r.get_concept() == Some(gr) =>
                     {
                         Some(hashmap! {})
-                    }
+                    },
                     _ => None,
                 }
             } else {
@@ -730,7 +730,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                             }
                         })).collect::<Vec<_>>()
                     }).collect()
-                }
+                },
                 (true, false) => self.find_examples_of_half_generalisation(
                     &left,
                     &right,
@@ -817,12 +817,12 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                 match comparison {
                     Comparison::GreaterThan => {
                         self.concrete_ast(ConcreteConceptType::True)
-                    }
+                    },
                     Comparison::EqualTo
                     | Comparison::LessThan
                     | Comparison::LessThanOrEqualTo => {
                         self.concrete_ast(ConcreteConceptType::False)
-                    }
+                    },
                     Comparison::GreaterThanOrEqualTo
                     | Comparison::Incomparable => None,
                 }
@@ -834,7 +834,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         )),
                     )
                 })
-            }
+            },
             ConcreteConceptType::Reduction => {
                 let (x, reason) =
                     self.determine_reduction_truth(left, rightright)?;
@@ -844,7 +844,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                     ConcreteConceptType::False
                 })
                 .map(|ast| (ast, reason))
-            }
+            },
             _ => None,
         }
     }
@@ -1115,19 +1115,19 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
                         Some(ConcreteConceptType::True),
                     ) => {
                         panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
-                    }
+                    },
                     (Some(ConcreteConceptType::True), _) => {
                         Comparison::GreaterThan
-                    }
+                    },
                     (_, Some(ConcreteConceptType::True)) => {
                         Comparison::LessThan
-                    }
+                    },
                     (Some(ConcreteConceptType::False), _) => {
                         Comparison::LessThanOrEqualTo
-                    }
+                    },
                     (_, Some(ConcreteConceptType::False)) => {
                         Comparison::GreaterThanOrEqualTo
-                    }
+                    },
                     _ => Comparison::Incomparable,
                 },
                 simplify_reasoning(reason, reversed_reason),
@@ -1212,7 +1212,7 @@ fn simplify_reasoning<ConceptId: Eq + Hash + Clone>(
                     reversed_reason: reversed_comparison_reason.clone(),
                     reason: comparsion_reason.clone(),
                 }
-            }
+            },
             _ => ComparisonReason::Reduction {
                 reason,
                 reversed_reason,
