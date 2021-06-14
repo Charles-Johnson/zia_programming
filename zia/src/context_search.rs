@@ -43,8 +43,10 @@ pub struct ContextSearch<'a, S: SnapShotReader> {
     bound_variable_syntax: Arc<HashSet<Arc<SyntaxTree<S::ConceptId>>>>,
 }
 
-pub type ReductionResult<ConceptId> =
-    Option<(Arc<SyntaxTree<ConceptId>>, ReductionReason<ConceptId>)>;
+pub type ReductionResult<ConceptId> = Option<Reduction<ConceptId>>;
+
+type Reduction<ConceptId> =
+    (Arc<SyntaxTree<ConceptId>>, ReductionReason<ConceptId>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum ReductionReason<ConceptId: Eq + Hash> {
@@ -62,12 +64,7 @@ pub enum ReductionReason<ConceptId: Eq + Hash> {
     Default {
         operator: ConceptId,
     },
-    Partial(
-        HashMap<
-            Arc<SyntaxTree<ConceptId>>,
-            (Arc<SyntaxTree<ConceptId>>, ReductionReason<ConceptId>),
-        >,
-    ),
+    Partial(HashMap<Arc<SyntaxTree<ConceptId>>, Reduction<ConceptId>>),
     Existence {
         substitutions: Substitutions<ConceptId>,
         generalisation: Arc<SyntaxTree<ConceptId>>,
@@ -590,8 +587,7 @@ impl<'a, S: SnapShotReader + Sync + std::fmt::Debug> ContextSearch<'a, S> {
     pub fn recursively_reduce(
         &self,
         ast: &Arc<SyntaxTree<S::ConceptId>>,
-    ) -> (Arc<SyntaxTree<S::ConceptId>>, Option<ReductionReason<S::ConceptId>>)
-    {
+    ) -> MaybeReducedSyntaxWithReason<S::ConceptId> {
         debug!("recursively_reduce({})", ast);
         let mut maybe_reason: Option<ReductionReason<S::ConceptId>> = None;
         let mut reduced_ast = ast.clone();
@@ -1190,6 +1186,9 @@ pub struct Example<ConceptId: Eq + Hash> {
     generalisation: Arc<SyntaxTree<ConceptId>>,
     substitutions: HashMap<Arc<SyntaxTree<ConceptId>>, Match<ConceptId>>,
 }
+
+type MaybeReducedSyntaxWithReason<ConceptId> =
+    (Arc<SyntaxTree<ConceptId>>, Option<ReductionReason<ConceptId>>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Match<ConceptId: Eq + Hash> {

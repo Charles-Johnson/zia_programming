@@ -58,7 +58,7 @@ pub struct TokenSubsequence<ConceptId> {
     pub positions: Vec<usize>,
 }
 
-impl<S: SnapShotReader> Context<S>
+impl<S> Context<S>
 where
     S: SnapShotReader
         + Default
@@ -185,16 +185,19 @@ where
                         let tail = lp_indices
                             .iter()
                             .rev()
-                            .try_fold((None, None), |state, lp_index| {
-                                self.associativity_try_fold_handler(
-                                    tokens,
-                                    state,
-                                    *lp_index,
-                                    &Associativity::Right,
-                                )
-                            })?
-                            .0
-                            .unwrap(); // Already checked that lp_indices is non-empty;
+                            .try_fold(
+                                Err(ZiaError::AmbiguousExpression),
+                                |state, lp_index| {
+                                    Ok(Ok(self
+                                        .associativity_try_fold_handler(
+                                            tokens,
+                                            state.ok(),
+                                            *lp_index,
+                                            &Associativity::Right,
+                                        )?))
+                                },
+                            )??
+                            .0;
                         info!(
                             self.logger,
                             "ast_from_tokens({:#?}): tail = {}", tokens, tail
@@ -209,16 +212,19 @@ where
                     },
                     Some(Associativity::Left) => lp_indices
                         .iter()
-                        .try_fold((None, None), |state, lp_index| {
-                            self.associativity_try_fold_handler(
+                        .try_fold(None, |state, lp_index| {
+                            Some(self.associativity_try_fold_handler(
                                 tokens,
                                 state,
                                 *lp_index,
                                 &Associativity::Left,
-                            )
+                            ))
+                            .transpose()
                         })?
-                        .0
-                        .ok_or(ZiaError::AmbiguousExpression),
+                        .map_or(
+                            Err(ZiaError::AmbiguousExpression),
+                            |(syntax, _)| Ok(syntax),
+                        ),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
             },
@@ -228,11 +234,16 @@ where
     fn associativity_try_fold_handler(
         &mut self,
         tokens: &[String],
-        state: (Option<Arc<SyntaxTree<S::ConceptId>>>, Option<usize>),
+        state: Option<(Arc<SyntaxTree<S::ConceptId>>, usize)>,
         lp_index: usize,
         assoc: &Associativity,
-    ) -> ZiaResult<(Option<Arc<SyntaxTree<S::ConceptId>>>, Option<usize>)> {
-        let prev_lp_index = state.1;
+    ) -> ZiaResult<(Arc<SyntaxTree<S::ConceptId>>, usize)> {
+        let mut prev_lp_index = None;
+        let mut edge = None;
+        if let Some((e, pli)) = state {
+            edge = Some(e);
+            prev_lp_index = Some(pli);
+        }
         let slice = assoc.slice_tokens(tokens, prev_lp_index, lp_index);
         // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
         if slice.is_empty() {
@@ -271,9 +282,8 @@ where
         } else {
             self.ast_from_tokens(slice)?
         };
-        let edge = state.0;
         Ok((
-            Some(match edge {
+            match edge {
                 None => lp_with_the_rest,
                 Some(e) => match assoc {
                     Associativity::Left => {
@@ -283,12 +293,13 @@ where
                         self.context_search().combine(&lp_with_the_rest, &e)
                     },
                 },
-            }),
-            Some(lp_index),
+            },
+            lp_index,
         ))
     }
 
     /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
+    #[allow(clippy::too_many_lines)]
     pub fn lowest_precedence_info(
         &self,
         tokens: &[String],
