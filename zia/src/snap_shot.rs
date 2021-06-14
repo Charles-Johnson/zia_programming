@@ -347,6 +347,7 @@ pub mod mock {
     }
     impl Reader for MockSnapShot {
         type ConceptId = usize;
+
         fn new_test_case(
             concepts: &[Concept<Self::ConceptId>],
             concept_labels: &HashMap<usize, &'static str>,

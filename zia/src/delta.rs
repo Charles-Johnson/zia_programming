@@ -93,7 +93,7 @@ where
                 } else {
                     panic!("Deltas do not align")
                 }
-            }
+            },
         }
     }
 }

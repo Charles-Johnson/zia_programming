@@ -173,6 +173,7 @@ where
         &mut self,
         tokens: &[String],
     ) -> ParsingResult<S::ConceptId> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
@@ -197,9 +198,10 @@ where
                             } else {
                                 Err(ZiaError::AmbiguousExpression)
                             }
-                        }
+                        },
                         (x, None) => Ok(Some(x)),
                     })?;
+                #[cfg(not(target_arch = "wasm32"))]
                 info!(
                     self.logger,
                     "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
@@ -219,6 +221,7 @@ where
                             })?
                             .0
                             .unwrap(); // Already checked that lp_indices is non-empty;
+                        #[cfg(not(target_arch = "wasm32"))]
                         info!(
                             self.logger,
                             "ast_from_tokens({:#?}): tail = {}", tokens, tail
@@ -230,7 +233,7 @@ where
                                 self.ast_from_tokens(&tokens[..lp_indices[0]])?;
                             Ok(self.context_search().combine(&head, &tail))
                         }
-                    }
+                    },
                     Some(Associativity::Left) => lp_indices
                         .iter()
                         .try_fold((None, None), |state, lp_index| {
@@ -245,7 +248,7 @@ where
                         .ok_or(ZiaError::AmbiguousExpression),
                     None => Err(ZiaError::AmbiguousExpression),
                 }
-            }
+            },
         }
     }
 
@@ -280,7 +283,7 @@ where
                         };
                         self.context_search()
                             .combine(&rest_of_syntax, &edge_syntax)
-                    }
+                    },
                     Associativity::Right => {
                         let rest_of_syntax = if slice.len() < 3 {
                             self.ast_from_token(&slice[1])?
@@ -289,7 +292,7 @@ where
                         };
                         self.context_search()
                             .combine(&edge_syntax, &rest_of_syntax)
-                    }
+                    },
                 }
             }
         } else {
@@ -302,10 +305,10 @@ where
                 Some(e) => match assoc {
                     Associativity::Left => {
                         self.context_search().combine(&e, &lp_with_the_rest)
-                    }
+                    },
                     Associativity::Right => {
                         self.context_search().combine(&lp_with_the_rest, &e)
-                    }
+                    },
                 },
             }),
             Some(lp_index),
@@ -317,6 +320,7 @@ where
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence<S::ConceptId>> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "lowest_precedence_info({:#?})", tokens);
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
@@ -388,7 +392,7 @@ where
                                 vec![this_index.unwrap()],
                                 this_index,
                             ))
-                        }
+                        },
                         // syntax of token has a higher precedence than some previous lowest precendence syntax
                         // keep existing lowest precedence syntax as-is
                         Comparison::LessThan => {
@@ -397,7 +401,7 @@ where
                                 lp_indices,
                                 this_index,
                             ))
-                        }
+                        },
                         // syntax of token has at least an equal precedence as the previous lowest precedence syntax
                         // include syntax is lowest precedence syntax list
                         Comparison::EqualTo
@@ -409,7 +413,7 @@ where
                                 lp_indices,
                                 this_index,
                             ));
-                        }
+                        },
                         // Cannot determine if token has higher or lower precedence than this syntax
                         // Check other syntax with lowest precedence
                         Comparison::Incomparable
@@ -426,6 +430,7 @@ where
             syntax,
             positions,
         });
+        #[cfg(not(target_arch = "wasm32"))]
         info!(
             self.logger,
             "lowest_precedence_info({:#?}) -> {:#?}", tokens, result
@@ -514,6 +519,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
@@ -543,6 +549,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "try_reducing_then_call({})", ast);
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
@@ -557,6 +564,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "call({})", ast);
         ast.get_concept()
             .and_then(|c| {
@@ -621,6 +629,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "call_pair({}, {})", left, right);
         self.concrete_type_of_ast(left)
             .and_then(|cct| match cct {
@@ -664,6 +673,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> Option<ZiaResult<()>> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute_let({}, {})", left, right);
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
@@ -683,10 +693,10 @@ where
             match self.concrete_type(c) {
                 Some(ConcreteConceptType::Reduction) => {
                     self.execute_reduction(left, rightright)
-                }
+                },
                 Some(ConcreteConceptType::Define) => {
                     self.execute_composition(left, rightright)
-                }
+                },
                 _ => {
                     let rightleft_reduction = self
                         .snap_shot
@@ -699,7 +709,7 @@ where
                             self.match_righthand_pair(left, &ast, rightright)
                         },
                     )
-                }
+                },
             }
         })
     }
@@ -739,27 +749,27 @@ where
                     } else {
                         self.relabel(b, &new.to_string())
                     }
-                }
+                },
                 (None, None, Some((ref left, ref right))) => {
                     self.define_new_syntax(&new.to_string(), left, right)
-                }
+                },
                 (Some(a), Some(b), None) => {
                     if a == b {
                         self.cleanly_delete_composition(a)
                     } else {
                         Err(ZiaError::CompositionCollision)
                     }
-                }
+                },
                 (Some(a), Some(b), Some(_)) => {
                     if a == b {
                         Err(ZiaError::RedundantComposition)
                     } else {
                         Err(ZiaError::CompositionCollision)
                     }
-                }
+                },
                 (Some(a), None, Some((ref left, ref right))) => {
                     self.redefine(a, left, right)
-                }
+                },
             }
         }
     }
@@ -778,7 +788,7 @@ where
                 self.try_delete_concept(concept)?;
                 self.try_delete_concept(left)?;
                 self.try_delete_concept(right)
-            }
+            },
         }
     }
 
@@ -954,7 +964,7 @@ where
                         )
                         .ok_or(ZiaError::NoLabelConcept)?;
                     Ok(self.new_labelled_concept(string, None, Some(label_id)))
-                }
+                },
                 Some((ref left, ref right)) => {
                     let leftc = self.concept_from_ast(left)?;
                     let rightc = self.concept_from_ast(right)?;
@@ -964,7 +974,7 @@ where
                         self.label(concept, string)?;
                     }
                     Ok(concept)
-                }
+                },
             }
         }
     }
