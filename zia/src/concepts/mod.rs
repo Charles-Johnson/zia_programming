@@ -110,10 +110,10 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     },
                     MaybeComposition::Leaf(LeafCharacter::Constant) => {
                         Change::Create(after)
-                    }
+                    },
                     MaybeComposition::Leaf(_) => {
                         panic!("Not sure what you are trying to do here ...")
-                    }
+                    },
                 },
                 composition_id: self.id,
             })
@@ -160,11 +160,11 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 } => {
                     ap.reduces_to = Some(reduced_concept_id);
-                }
+                },
                 Change::Remove(reduced_concept_id) => {
                     debug_assert_eq!(Some(reduced_concept_id), ap.reduces_to);
                     ap.reduces_to = None;
-                }
+                },
             }
         }
     }
@@ -186,25 +186,25 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                 } else {
                     panic!("Concept isn't abstract");
                 }
-            }
+            },
             IndirectConceptDelta::LefthandOf(lefthand_of) => {
                 lefthand_of.insert_into(&mut self.concrete_part.lefthand_of);
-            }
+            },
             IndirectConceptDelta::RighthandOf(righthand_of) => {
                 righthand_of.insert_into(&mut self.concrete_part.righthand_of);
-            }
+            },
             IndirectConceptDelta::ReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.insert(*unreduced_id);
-            }
+            },
             IndirectConceptDelta::NoLongerLefthandOf(composition_id) => {
                 self.concrete_part.lefthand_of.remove(composition_id);
-            }
+            },
             IndirectConceptDelta::NoLongerRighthandOf(composition_id) => {
                 self.concrete_part.righthand_of.remove(composition_id);
-            }
+            },
             IndirectConceptDelta::NoLongerReducesFrom(unreduced_id) => {
                 self.concrete_part.reduces_from.remove(unreduced_id);
-            }
+            },
         }
     }
 
@@ -267,7 +267,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 }) => {
                     !binding_variables.is_empty() | !free_variables.is_empty()
-                }
+                },
                 MaybeComposition::Leaf(LeafCharacter::BoundVariable)
                 | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
                 MaybeComposition::Leaf(LeafCharacter::Constant) => false,
@@ -332,7 +332,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                 } else {
                     None
                 }
-            }
+            },
             _ => None,
         }
     }
@@ -348,7 +348,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                         c.composition = MaybeComposition::composition_of(
                             self.id, left, right,
                         );
-                    }
+                    },
                     Change::Update {
                         after: [left, right],
                         before: [before_left, before_right],
@@ -361,7 +361,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                         c.composition = MaybeComposition::composition_of(
                             self.id, left, right,
                         );
-                    }
+                    },
                     Change::Remove([before_left, before_right]) => {
                         before_left.concrete_part.lefthand_of.remove(&self.id);
                         before_right
@@ -370,10 +370,10 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                             .remove(&self.id);
                         c.composition =
                             MaybeComposition::Leaf(LeafCharacter::Constant);
-                    }
+                    },
                 }
                 Ok(())
-            }
+            },
             _ => Err(ZiaError::SettingCompositionOfConcrete),
         }
     }
@@ -856,14 +856,14 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 Self::Composition(cp) => {
                     free_variables.extend(&cp.free_variables);
                     binding_variables.extend(&cp.binding_variables);
-                }
+                },
                 Self::Leaf(LeafCharacter::FreeVariable) => {
                     free_variables.insert(right.id);
-                }
+                },
                 Self::Leaf(LeafCharacter::BoundVariable) => {
                     binding_variables.insert(right.id);
-                }
-                Self::Leaf(LeafCharacter::Constant) => {}
+                },
+                Self::Leaf(LeafCharacter::Constant) => {},
             }
         };
         if let SpecificPart::Abstract(ap) = &left.specific_part {
@@ -875,14 +875,14 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                     binding_variables
                         .retain(|v| !cp.free_variables.contains(v));
                     binding_variables.extend(&cp.binding_variables);
-                }
+                },
                 Self::Leaf(LeafCharacter::FreeVariable) => {
                     free_variables.insert(right.id);
-                }
+                },
                 Self::Leaf(LeafCharacter::BoundVariable) => {
                     binding_variables.insert(right.id);
-                }
-                Self::Leaf(LeafCharacter::Constant) => {}
+                },
+                Self::Leaf(LeafCharacter::Constant) => {},
             }
         }
         Self::Composition(CompositePart {
