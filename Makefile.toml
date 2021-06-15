@@ -41,6 +41,5 @@ args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clipp
 
 [tasks.wasm_check]
 description = "check web assembly"
-target = "wasm32-unknown-unknown"
 command = "cargo"
 args = ["check", "-p", "zia", "--target", "wasm32-unknown-unknown"]

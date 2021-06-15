@@ -16,25 +16,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install nightly Rust and rustfmt
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          components: rustfmt
-
       - name: Install stable Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-
-      - name: Install cargo-make
-        uses: davidB/rust-cargo-make@v1
-
-      - name: Run tests
-        run: cargo make --no-workspace verify_only
-        working-directory: ./
       
       - name: Release test_zia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}

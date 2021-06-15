@@ -28,6 +28,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          target: wasm32-unknown-unknown
 
       - name: Install cargo-make
         uses: davidB/rust-cargo-make@v1
