@@ -3,11 +3,11 @@
 
 [tasks.verify]
 description = "Format, lint with Clippy and run tests"
-dependencies = ["fmt", "clippy", "test"]
+dependencies = ["fmt", "clippy", "test", "wasm_check"]
 
 [tasks.verify_only]
 description = "Like `verify`, but fails if the code isn't formatted. Primarily for CI."
-dependencies = ["fmt_check", "clippy", "test"]
+dependencies = ["fmt_check", "clippy", "test", "wasm_check"]
 
 # ---- TEST ----
 
@@ -38,3 +38,8 @@ clear = true
 install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
 command = "cargo"
 args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::filter_map"]
+
+[tasks.wasm_check]
+description = "check web assembly"
+command = "cargo"
+args = ["check", "-p", "zia", "--target", "wasm32-unknown-unknown"]

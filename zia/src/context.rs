@@ -149,6 +149,7 @@ where
         &mut self,
         tokens: &[String],
     ) -> ParsingResult<S::ConceptId> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
@@ -176,6 +177,7 @@ where
                         },
                         (x, None) => Ok(Some(x)),
                     })?;
+                #[cfg(not(target_arch = "wasm32"))]
                 info!(
                     self.logger,
                     "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
@@ -198,6 +200,7 @@ where
                                 },
                             )??
                             .0;
+                        #[cfg(not(target_arch = "wasm32"))]
                         info!(
                             self.logger,
                             "ast_from_tokens({:#?}): tail = {}", tokens, tail
@@ -304,6 +307,7 @@ where
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence<S::ConceptId>> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "lowest_precedence_info({:#?})", tokens);
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
@@ -413,6 +417,7 @@ where
             syntax,
             positions,
         });
+        #[cfg(not(target_arch = "wasm32"))]
         info!(
             self.logger,
             "lowest_precedence_info({:#?}) -> {:#?}", tokens, result
@@ -501,6 +506,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
@@ -530,6 +536,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "try_reducing_then_call({})", ast);
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
@@ -544,6 +551,7 @@ where
         &mut self,
         ast: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "call({})", ast);
         ast.get_concept()
             .and_then(|c| {
@@ -608,6 +616,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> ZiaResult<String> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "call_pair({}, {})", left, right);
         self.concrete_type_of_ast(left)
             .and_then(|cct| match cct {
@@ -651,6 +660,7 @@ where
         left: &Arc<SyntaxTree<S::ConceptId>>,
         right: &Arc<SyntaxTree<S::ConceptId>>,
     ) -> Option<ZiaResult<()>> {
+        #[cfg(not(target_arch = "wasm32"))]
         info!(self.logger, "execute_let({}, {})", left, right);
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
