@@ -1,13 +1,15 @@
 use crate::{
-    ast::SyntaxTree,
+    ast::{MultiThreadedSyntaxTree, SyntaxTree},
     concepts::{Concept, SpecificPart},
     context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::ContextSearch,
+    context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
+
+type Syntax = MultiThreadedSyntaxTree<ConceptId>;
 
 #[test]
 fn basic_composition() {
@@ -15,17 +17,16 @@ fn basic_composition() {
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::<MockSnapShot>::from((
-        &snapshot,
-        &delta,
-        &cache,
-        &bound_variables,
-    ));
-    let left_syntax =
-        SyntaxTree::from("b").bind_nonquantifier_concept(1).share();
-    let right_syntax =
-        SyntaxTree::from("c").bind_nonquantifier_concept(2).share();
-    let composite_syntax = SyntaxTree::from("a")
+    let context_search =
+        ContextSearch::<MockSnapShot, Syntax>::from(ContextReferences {
+            snap_shot: &snapshot,
+            delta: &delta,
+            cache: &cache,
+            bound_variable_syntax: &bound_variables,
+        });
+    let left_syntax = Syntax::from("b").bind_nonquantifier_concept(1).share();
+    let right_syntax = Syntax::from("c").bind_nonquantifier_concept(2).share();
+    let composite_syntax = Syntax::from("a")
         .bind_nonquantifier_concept(0)
         .bind_pair(left_syntax.clone(), right_syntax.clone())
         .share();
@@ -36,7 +37,7 @@ fn basic_composition() {
     );
 
     assert_eq!(
-        context_search.expand(&SyntaxTree::from("a").into()),
+        context_search.expand(&Syntax::from("a").into()),
         composite_syntax
     );
 

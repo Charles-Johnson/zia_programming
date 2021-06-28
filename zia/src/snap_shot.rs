@@ -141,25 +141,31 @@ pub trait Reader {
         delta: &ContextDelta<Self::ConceptId>,
         concept_id: Self::ConceptId,
     ) -> Option<String>;
-    fn ast_from_symbol(
+    fn ast_from_symbol<Syntax>(
         &self,
         delta: &ContextDelta<Self::ConceptId>,
         s: &str,
-    ) -> SyntaxTree<Self::ConceptId> {
+    ) -> Syntax
+    where
+        Syntax: SyntaxTree<Self::ConceptId>,
+    {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
             |concept| {
-                let syntax = SyntaxTree::from(s);
+                let syntax = Syntax::from(s);
                 self.bind_concept_to_syntax(delta, syntax, concept)
             },
         )
     }
-    fn bind_concept_to_syntax(
+    fn bind_concept_to_syntax<Syntax>(
         &self,
         delta: &ContextDelta<Self::ConceptId>,
-        syntax: SyntaxTree<Self::ConceptId>,
+        syntax: Syntax,
         concept: Self::ConceptId,
-    ) -> SyntaxTree<Self::ConceptId> {
+    ) -> Syntax
+    where
+        Syntax: SyntaxTree<Self::ConceptId>,
+    {
         if self.concrete_concept_type(delta, concept)
             == Some(ConcreteConceptType::ExistsSuchThat)
         {
@@ -168,10 +174,13 @@ pub trait Reader {
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept_that_has_no_label_or_composition(
+    fn new_syntax_from_concept_that_has_no_label_or_composition<Syntax>(
         &self,
         concept: &Concept<Self::ConceptId>,
-    ) -> SyntaxTree<Self::ConceptId> {
+    ) -> Syntax
+    where
+        Syntax: SyntaxTree<Self::ConceptId>,
+    {
         let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);
         if quantifier {

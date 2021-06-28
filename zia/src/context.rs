@@ -23,7 +23,10 @@ use crate::{
     context_delta::{
         Change, Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
     },
-    context_search::{Comparison, ContextSearch},
+    context_search::{
+        Comparison, ContextReferences, ContextSearch,
+        Iteration as ContextSearchIteration,
+    },
     delta::Apply,
     errors::{ZiaError, ZiaResult},
     map_err_variant::MapErrVariant,
@@ -40,25 +43,29 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct Context<S: SnapShotReader> {
+pub struct Context<S, Syntax>
+where
+    S: SnapShotReader,
+    Syntax: SyntaxTree<S::ConceptId>,
+    for<'a> ContextSearch<'a, S, Syntax>:
+        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
+{
     snap_shot: S,
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta<S::ConceptId>,
-    cache: ContextCache<S::ConceptId>,
+    cache: ContextCache<S::ConceptId, Syntax>,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
-    bounded_variable_syntax: HashSet<Arc<SyntaxTree<S::ConceptId>>>,
+    bounded_variable_syntax: HashSet<Syntax::SharedSyntax>,
 }
 
-type ParsingResult<ConceptId> = ZiaResult<Arc<SyntaxTree<ConceptId>>>;
-
 #[derive(Debug, PartialEq)]
-pub struct TokenSubsequence<ConceptId> {
-    pub syntax: Vec<Arc<SyntaxTree<ConceptId>>>,
+pub struct TokenSubsequence<SharedSyntax> {
+    pub syntax: Vec<SharedSyntax>,
     pub positions: Vec<usize>,
 }
 
-impl<S> Context<S>
+impl<S, Syntax> Context<S, Syntax>
 where
     S: SnapShotReader
         + Default
@@ -66,6 +73,9 @@ where
         + Apply<Delta = ContextDelta<S::ConceptId>>
         + Debug,
     S::ConceptId: Default,
+    Syntax: SyntaxTree<S::ConceptId>,
+    for<'a> ContextSearch<'a, S, Syntax>:
+        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
     #[must_use]
     pub fn new() -> Self {
@@ -89,7 +99,7 @@ where
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
-                self.create_variable_concepts(Arc::make_mut(&mut a));
+                self.create_variable_concepts(Syntax::make_mut(&mut a));
                 #[cfg(not(target_arch = "wasm32"))]
                 info!(
                     self.logger,
@@ -104,10 +114,7 @@ where
         string
     }
 
-    pub fn create_variable_concepts(
-        &mut self,
-        ast: &mut SyntaxTree<S::ConceptId>,
-    ) {
+    pub fn create_variable_concepts(&mut self, ast: &mut Syntax) {
         if let Some((left, right)) = ast.get_expansion_mut() {
             self.create_variable_concepts(left);
             self.create_variable_concepts(right);
@@ -140,7 +147,7 @@ where
     pub fn ast_from_expression(
         &mut self,
         s: &str,
-    ) -> ParsingResult<S::ConceptId> {
+    ) -> ZiaResult<Syntax::SharedSyntax> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(&tokens)
     }
@@ -148,12 +155,12 @@ where
     fn ast_from_tokens(
         &mut self,
         tokens: &[String],
-    ) -> ParsingResult<S::ConceptId> {
+    ) -> ZiaResult<Syntax::SharedSyntax> {
         info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
-            2 => self.ast_from_pair(&tokens[0], &tokens[1]),
+            2 => self.ast_from_pair(&tokens[0], &tokens[1]).map(Syntax::share),
             _ => {
                 let TokenSubsequence {
                     syntax: lp_syntax,
@@ -207,7 +214,10 @@ where
                         } else {
                             let head =
                                 self.ast_from_tokens(&tokens[..lp_indices[0]])?;
-                            Ok(self.context_search().combine(&head, &tail))
+                            Ok(self
+                                .context_search()
+                                .combine(&head, &tail)
+                                .share())
                         }
                     },
                     Some(Associativity::Left) => lp_indices
@@ -234,10 +244,10 @@ where
     fn associativity_try_fold_handler(
         &mut self,
         tokens: &[String],
-        state: Option<(Arc<SyntaxTree<S::ConceptId>>, usize)>,
+        state: Option<(Syntax::SharedSyntax, usize)>,
         lp_index: usize,
         assoc: &Associativity,
-    ) -> ZiaResult<(Arc<SyntaxTree<S::ConceptId>>, usize)> {
+    ) -> ZiaResult<(Syntax::SharedSyntax, usize)> {
         let mut prev_lp_index = None;
         let mut edge = None;
         if let Some((e, pli)) = state {
@@ -278,6 +288,7 @@ where
                             .combine(&edge_syntax, &rest_of_syntax)
                     },
                 }
+                .share()
             }
         } else {
             self.ast_from_tokens(slice)?
@@ -292,7 +303,8 @@ where
                     Associativity::Right => {
                         self.context_search().combine(&lp_with_the_rest, &e)
                     },
-                },
+                }
+                .share(),
             },
             lp_index,
         ))
@@ -303,21 +315,17 @@ where
     pub fn lowest_precedence_info(
         &self,
         tokens: &[String],
-    ) -> ZiaResult<TokenSubsequence<S::ConceptId>> {
+    ) -> ZiaResult<TokenSubsequence<Syntax::SharedSyntax>> {
         info!(self.logger, "lowest_precedence_info({:#?})", tokens);
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
-            (
-                Vec::<Arc<SyntaxTree<S::ConceptId>>>::new(),
-                Vec::<usize>::new(),
-                None,
-            ),
+            (Vec::<Syntax::SharedSyntax>::new(), Vec::<usize>::new(), None),
             |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
              token| {
                 // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                let raw_syntax_of_token = SyntaxTree::from(token);
+                let raw_syntax_of_token = Syntax::from(token).share();
                 let (precedence_of_token, syntax_of_token) = self
                     .snap_shot
                     .concept_from_label(&self.delta, token)
@@ -326,7 +334,7 @@ where
                             (
                                 context_search
                                     .concrete_ast(ConcreteConceptType::Default),
-                                raw_syntax_of_token.clone().into(),
+                                raw_syntax_of_token.clone(),
                             )
                         },
                         |c| {
@@ -334,10 +342,10 @@ where
                                 .snap_shot
                                 .bind_concept_to_syntax(
                                     &self.delta,
-                                    raw_syntax_of_token.clone(),
+                                    raw_syntax_of_token.as_ref().clone(),
                                     c,
                                 )
-                                .into();
+                                .share();
                             (
                                 context_search
                                     .concrete_ast(
@@ -346,18 +354,21 @@ where
                                     .map(|ast| {
                                         context_search
                                             .combine(&ast, &syntax_of_token)
+                                            .share()
                                     }),
                                 syntax_of_token,
                             )
                         },
                     );
                 // Compare current token's precedence with each currently assumed lowest syntax
-                for syntax in lowest_precedence_syntax.clone() {
+                for syntax in &lowest_precedence_syntax {
                     let precedence_of_syntax = if syntax.get_concept().is_some()
                     {
                         context_search
                             .concrete_ast(ConcreteConceptType::Precedence)
-                            .map(|ast| context_search.combine(&ast, &syntax))
+                            .map(|ast| {
+                                context_search.combine(&ast, syntax).share()
+                            })
                     } else {
                         context_search
                             .concrete_ast(ConcreteConceptType::Default)
@@ -420,11 +431,7 @@ where
         result
     }
 
-    fn ast_from_pair(
-        &mut self,
-        left: &str,
-        right: &str,
-    ) -> ParsingResult<S::ConceptId> {
+    fn ast_from_pair(&mut self, left: &str, right: &str) -> ZiaResult<Syntax> {
         let lefthand = self.ast_from_token(left)?;
         let righthand = self.ast_from_token(right)?;
         if let Some(ConcreteConceptType::ExistsSuchThat) =
@@ -444,12 +451,12 @@ where
         self.snap_shot.concrete_concept_id(&self.delta, cct)
     }
 
-    fn ast_from_token(&mut self, t: &str) -> ParsingResult<S::ConceptId> {
+    fn ast_from_token(&mut self, t: &str) -> ZiaResult<Syntax::SharedSyntax> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
-            let ast = self.snap_shot.ast_from_symbol(&self.delta, t);
-            Ok(ast.into())
+            let ast = self.snap_shot.ast_from_symbol::<Syntax>(&self.delta, t);
+            Ok(ast.share())
         }
     }
 
@@ -498,8 +505,8 @@ where
 
     fn reduce_and_call_pair(
         &mut self,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        right: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        right: &Syntax::SharedSyntax,
     ) -> ZiaResult<String> {
         info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
         let reduced_left = self.context_search().reduce(left);
@@ -515,7 +522,7 @@ where
     /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
     fn try_expanding_then_call(
         &mut self,
-        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        ast: &Syntax::SharedSyntax,
     ) -> ZiaResult<String> {
         let expansion = &self.context_search().expand(ast);
         if expansion == ast {
@@ -528,7 +535,7 @@ where
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
-        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        ast: &Syntax::SharedSyntax,
     ) -> ZiaResult<String> {
         info!(self.logger, "try_reducing_then_call({})", ast);
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
@@ -540,10 +547,7 @@ where
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(
-        &mut self,
-        ast: &Arc<SyntaxTree<S::ConceptId>>,
-    ) -> ZiaResult<String> {
+    fn call(&mut self, ast: &Syntax::SharedSyntax) -> ZiaResult<String> {
         info!(self.logger, "call({})", ast);
         ast.get_concept()
             .and_then(|c| {
@@ -597,7 +601,7 @@ where
 
     fn concrete_type_of_ast(
         &self,
-        ast: &Arc<SyntaxTree<S::ConceptId>>,
+        ast: &Syntax::SharedSyntax,
     ) -> Option<ConcreteConceptType> {
         ast.get_concept().and_then(|c| self.concrete_type(c))
     }
@@ -605,8 +609,8 @@ where
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        right: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        right: &Syntax::SharedSyntax,
     ) -> ZiaResult<String> {
         info!(self.logger, "call_pair({}, {})", left, right);
         self.concrete_type_of_ast(left)
@@ -648,8 +652,8 @@ where
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn execute_let(
         &mut self,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        right: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        right: &Syntax::SharedSyntax,
     ) -> Option<ZiaResult<()>> {
         info!(self.logger, "execute_let({}, {})", left, right);
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
@@ -662,9 +666,9 @@ where
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &mut self,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        rightleft: &Arc<SyntaxTree<S::ConceptId>>,
-        rightright: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        rightleft: &Syntax::SharedSyntax,
+        rightright: &Syntax::SharedSyntax,
     ) -> ZiaResult<()> {
         rightleft.get_concept().map_or(Err(ZiaError::UnusedSymbol), |c| {
             match self.concrete_type(c) {
@@ -694,8 +698,8 @@ where
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteComposition)`. Otherwise `define` is called.
     fn execute_composition(
         &mut self,
-        new: &Arc<SyntaxTree<S::ConceptId>>,
-        old: &Arc<SyntaxTree<S::ConceptId>>,
+        new: &Syntax::SharedSyntax,
+        old: &Syntax::SharedSyntax,
     ) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteComposition)
@@ -707,8 +711,8 @@ where
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
-        new: &Arc<SyntaxTree<S::ConceptId>>,
-        old: &Arc<SyntaxTree<S::ConceptId>>,
+        new: &Syntax::SharedSyntax,
+        old: &Syntax::SharedSyntax,
     ) -> ZiaResult<()> {
         if new.get_expansion().is_some() {
             Err(ZiaError::BadComposition)
@@ -814,8 +818,8 @@ where
     fn redefine(
         &mut self,
         concept: S::ConceptId,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        right: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        right: &Syntax::SharedSyntax,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.snap_shot.read_concept(&self.delta, concept).get_composition()
@@ -850,8 +854,8 @@ where
     fn define_new_syntax(
         &mut self,
         syntax: &str,
-        left: &Arc<SyntaxTree<S::ConceptId>>,
-        right: &Arc<SyntaxTree<S::ConceptId>>,
+        left: &Syntax::SharedSyntax,
+        right: &Syntax::SharedSyntax,
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
@@ -861,7 +865,7 @@ where
                     .read_concept(&self.delta, *l)
                     .find_as_lefthand_in_composition_with_righthand(*r)
                     .map(|concept| {
-                        let syntax = SyntaxTree::from(syntax);
+                        let syntax = Syntax::from(syntax);
                         self.snap_shot.bind_concept_to_syntax(
                             &self.delta,
                             syntax,
@@ -877,8 +881,8 @@ where
 
     fn execute_reduction(
         &mut self,
-        syntax: &SyntaxTree<S::ConceptId>,
-        normal_form: &SyntaxTree<S::ConceptId>,
+        syntax: &Syntax,
+        normal_form: &Syntax,
     ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
@@ -891,10 +895,7 @@ where
         }
     }
 
-    fn try_removing_reduction(
-        &mut self,
-        syntax: &SyntaxTree<S::ConceptId>,
-    ) -> ZiaResult<()> {
+    fn try_removing_reduction(&mut self, syntax: &Syntax) -> ZiaResult<()> {
         syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
             self.delete_reduction(c)
         })
@@ -919,10 +920,7 @@ where
             })
     }
 
-    fn concept_from_ast(
-        &mut self,
-        ast: &SyntaxTree<S::ConceptId>,
-    ) -> ZiaResult<S::ConceptId> {
+    fn concept_from_ast(&mut self, ast: &Syntax) -> ZiaResult<S::ConceptId> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
         } else if let Some(c) =
@@ -1030,13 +1028,13 @@ where
         )
     }
 
-    fn context_search(&self) -> ContextSearch<S> {
-        ContextSearch::from((
-            &self.snap_shot,
-            &self.delta,
-            &self.cache,
-            &self.bounded_variable_syntax,
-        ))
+    fn context_search(&self) -> ContextSearch<S, Syntax> {
+        ContextSearch::from(ContextReferences {
+            snap_shot: &self.snap_shot,
+            delta: &self.delta,
+            cache: &self.cache,
+            bound_variable_syntax: &self.bounded_variable_syntax,
+        })
     }
 
     fn find_or_insert_composition(
@@ -1146,9 +1144,12 @@ where
     }
 }
 
-impl<S: SnapShotReader> Default for Context<S>
+impl<S, Syntax> Default for Context<S, Syntax>
 where
-    S: Default,
+    S: Default + SnapShotReader,
+    Syntax: SyntaxTree<S::ConceptId>,
+    for<'a> ContextSearch<'a, S, Syntax>:
+        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
     #[must_use]
     fn default() -> Self {
@@ -1170,7 +1171,14 @@ where
     }
 }
 
-impl<S: SnapShotReader + Default> From<S> for Context<S> {
+impl<S, Syntax> From<S> for Context<S, Syntax>
+where
+    S: Default + SnapShotReader,
+    Syntax: SyntaxTree<S::ConceptId>,
+    S::ConceptId: Default,
+    for<'a> ContextSearch<'a, S, Syntax>:
+        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
+{
     fn from(snap_shot: S) -> Self {
         Self {
             snap_shot,

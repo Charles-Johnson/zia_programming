@@ -1,9 +1,9 @@
 use crate::{
-    ast::SyntaxTree,
+    ast::{MultiThreadedSyntaxTree, SyntaxTree},
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::{ContextSearch, ReductionReason},
+    context_search::{ContextReferences, ContextSearch, ReductionReason},
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
@@ -22,21 +22,24 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
+type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+
 #[test]
 fn existence_inference_rule() {
-    let context_cache = ContextCache::default();
+    let context_cache = ContextCache::<ConceptId, Syntax>::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::from((
-        &context_snap_shot,
-        &context_delta,
-        &context_cache,
-        &bound_variables,
-    ));
+    let context_search = ContextSearch::from(ContextReferences {
+        snap_shot: &context_snap_shot,
+        delta: &context_delta,
+        cache: &context_cache,
+        bound_variable_syntax: &bound_variables,
+    });
     let example_syntax =
-        context_search.to_ast(7).new_pair(context_search.to_ast(10)).share();
-    let true_syntax = SyntaxTree::from("true").bind_nonquantifier_concept(1);
+        Syntax::new_pair(context_search.to_ast(7), context_search.to_ast(10))
+            .share();
+    let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
     let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
         context_search.reduce(&example_syntax),

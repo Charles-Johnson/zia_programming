@@ -15,6 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
     snap_shot::Reader,
@@ -45,11 +46,15 @@ impl<ConceptId: Copy + Display> Default for ContextDelta<ConceptId> {
 }
 
 impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
-    fn update_new_concept_delta(
+    fn update_new_concept_delta<Syntax, R>(
         &mut self,
         delta: &NewConceptDelta<ConceptId>,
-        snapshot: &impl Reader<ConceptId = ConceptId>,
-    ) -> ConceptId {
+        snapshot: &R,
+    ) -> ConceptId
+    where
+        Syntax: SyntaxTree<ConceptId> + SyntaxTree<R::ConceptId>,
+        R: Reader<ConceptId = ConceptId>,
+    {
         let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
         self.insert_delta_for_new_concept(new_concept_id, delta.clone());
         match delta {
@@ -148,16 +153,20 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
         new_concept_id
     }
 
-    pub fn update_concept_delta(
+    pub fn update_concept_delta<Syntax, R>(
         &mut self,
         concept_delta: &Arc<DirectConceptDelta<ConceptId>>,
-        cache_to_invalidate: &mut ContextCache<ConceptId>,
-        snapshot: &impl Reader<ConceptId = ConceptId>,
-    ) -> ConceptId {
+        cache_to_invalidate: &mut ContextCache<ConceptId, Syntax>,
+        snapshot: &R,
+    ) -> ConceptId
+    where
+        Syntax: SyntaxTree<R::ConceptId> + SyntaxTree<ConceptId>,
+        R: Reader<ConceptId = ConceptId>,
+    {
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
-                self.update_new_concept_delta(delta, snapshot)
+                self.update_new_concept_delta::<Syntax, R>(delta, snapshot)
             },
             DirectConceptDelta::Compose {
                 composition_id,

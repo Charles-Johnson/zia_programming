@@ -163,11 +163,17 @@ mod snap_shot;
 use crate::context::Context as GenericContext;
 use crate::context_snap_shot::ContextSnapShot;
 
+use crate::ast::{MultiThreadedSyntaxTree, SingleThreadedSyntaxTree};
+
 pub use crate::errors::ZiaError;
 
 use lazy_static::lazy_static;
 
-pub type Context = GenericContext<ContextSnapShot>;
+pub type SingleThreadedContext =
+    GenericContext<ContextSnapShot, SingleThreadedSyntaxTree<usize>>;
+
+pub type Context =
+    GenericContext<ContextSnapShot, MultiThreadedSyntaxTree<usize>>;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]

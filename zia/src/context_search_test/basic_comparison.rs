@@ -1,14 +1,18 @@
 use crate::{
+    ast::MultiThreadedSyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
-        Comparison, ComparisonReason, ContextSearch, ReductionReason,
+        Comparison, ComparisonReason, ContextReferences, ContextSearch,
+        ReductionReason,
     },
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
+
+type Syntax = MultiThreadedSyntaxTree<ConceptId>;
 
 #[test]
 fn basic_comparison() {
@@ -16,12 +20,13 @@ fn basic_comparison() {
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::<MockSnapShot>::from((
-        &snapshot,
-        &delta,
-        &cache,
-        &bound_variables,
-    ));
+    let context_search =
+        ContextSearch::<MockSnapShot, Syntax>::from(ContextReferences {
+            snap_shot: &snapshot,
+            delta: &delta,
+            cache: &cache,
+            bound_variable_syntax: &bound_variables,
+        });
     let left_syntax = context_search.to_ast(1);
     let right_syntax = context_search.to_ast(2);
     let another_syntax = context_search.to_ast(8);

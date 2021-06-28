@@ -1,31 +1,36 @@
 use crate::{
-    ast::SyntaxTree,
+    ast::{MultiThreadedSyntaxTree, SyntaxTree},
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::{ContextSearch, ReductionReason},
+    context_search::{ContextReferences, ContextSearch, ReductionReason},
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
+
+type Syntax = MultiThreadedSyntaxTree<ConceptId>;
 
 #[test]
 fn basic_existence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta = ContextDelta::default();
     let cache = ContextCache::default();
-    let variable_syntax = SyntaxTree::from("_x_").share();
+    let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.clone()};
-    let context_search = ContextSearch::<MockSnapShot>::from((
-        &snapshot,
-        &delta,
-        &cache,
-        &bound_variables,
-    ));
+    let context_search =
+        ContextSearch::<MockSnapShot, Syntax>::from(ContextReferences {
+            snap_shot: &snapshot,
+            delta: &delta,
+            cache: &cache,
+            bound_variable_syntax: &bound_variables,
+        });
     let exists_such_that_syntax = context_search.to_ast(0);
     let variable_exists_such_that_variable_is_true_syntax = context_search
         .combine(
-            &context_search.combine(&variable_syntax, &exists_such_that_syntax),
+            &context_search
+                .combine(&variable_syntax, &exists_such_that_syntax)
+                .share(),
             &variable_syntax,
         )
         .into();

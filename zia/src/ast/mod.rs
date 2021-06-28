@@ -14,9 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 use std::{
+    borrow::Borrow,
     collections::{HashMap, HashSet},
-    fmt::{self, Debug},
+    fmt::{self, Debug, Display},
     hash::{Hash, Hasher},
+    ops::Deref,
+    rc::Rc,
     sync::Arc,
 };
 
@@ -25,30 +28,324 @@ use maplit::hashmap;
 use crate::{and_also::AndAlso, consistent_merge::ConsistentMerge};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
-#[derive(Clone)]
-pub struct SyntaxTree<ConceptId> {
-    /// The root of this syntax tree, represented as a `String`.
-    syntax: Option<String>,
-    /// Index of the concept that the syntax may represent.
-    concept: Option<ConceptId>,
-    ///
-    node: SyntaxNode<ConceptId>,
+macro_rules! define_syntax_tree {
+    ($refcounter:tt, $syntax_tree:tt) => {
+        #[derive(Clone)]
+        pub struct $syntax_tree<ConceptId> {
+            /// The root of this syntax tree, represented as a `String`.
+            syntax: Option<String>,
+            /// Index of the concept that the syntax may represent.
+            concept: Option<ConceptId>,
+            ///
+            node: SyntaxNode<$refcounter<$syntax_tree<ConceptId>>>,
+        }
+
+        impl<ConceptId> Debug for $syntax_tree<ConceptId> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
+            }
+        }
+
+        impl<ConceptId: PartialEq> PartialEq<Self> for $syntax_tree<ConceptId> {
+            /// `SyntaxTree`s are equal if the syntax they represent is the same.
+            fn eq(&self, other: &Self) -> bool {
+                if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
+                    ss == os
+                } else if let (Some(sc), Some(oc)) = (&self.concept, &other.concept) {
+                    sc == oc
+                } else {
+                    self.node == other.node
+                }
+            }
+        }
+
+        impl<ConceptId: PartialEq> PartialEq<$refcounter<Self>> for $syntax_tree<ConceptId> {
+            /// `SyntaxTree`s are equal if the syntax they represent is the same.
+            fn eq(&self, other: &$refcounter<Self>) -> bool {
+                if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
+                    ss == os
+                } else {
+                    self.concept == other.concept
+                }
+            }
+        }
+
+        impl<ConceptId: PartialEq> Eq for $syntax_tree<ConceptId> {}
+
+        impl<ConceptId: Hash> Hash for $syntax_tree<ConceptId> {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                self.syntax.hash(state);
+                self.concept.hash(state);
+            }
+        }
+
+        impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display
+            for $syntax_tree<ConceptId>
+        {
+            /// Displays the same as the inside of an `SyntaxTree` variant.
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(
+                    f,
+                    "{}",
+                    self.syntax.clone().unwrap_or_else(|| self
+                        .get_expansion()
+                        .map_or_else(
+                            || "".into(),
+                            |(left, right)| left.to_string() + " " + &right.to_string()
+                        ))
+                )
+            }
+        }
+
+        impl<S, ConceptId> From<S> for $syntax_tree<ConceptId>
+        where
+            S: Into<String>,
+        {
+            fn from(syntax: S) -> Self {
+                let syntax = syntax.into();
+                let node = if is_variable(&syntax) {
+                    SyntaxNode::Leaf(SyntaxLeaf::Variable)
+                } else {
+                    SyntaxNode::Leaf(SyntaxLeaf::Constant)
+                };
+                Self {
+                    syntax: Some(syntax),
+                    concept: None,
+                    node,
+                }
+            }
+        }
+
+        impl<'a, ConceptId> From<&'a $refcounter<$syntax_tree<ConceptId>>> for &'a SyntaxNode<$refcounter<$syntax_tree<ConceptId>>> {
+            fn from(syntax_tree: &'a $refcounter<$syntax_tree<ConceptId>>) -> Self {
+                &syntax_tree.node
+            }
+        }
+
+        impl<ConceptId: Copy + Debug + Eq + Hash> SyntaxTree<ConceptId> for $syntax_tree<ConceptId> {
+            type SharedSyntax = $refcounter<Self>;
+
+            fn make_mut<'a>(refcounter: &'a mut Self::SharedSyntax) -> &'a mut Self {
+                $refcounter::make_mut(refcounter)
+            }
+
+            fn share(self) -> Self::SharedSyntax {
+                $refcounter::new(self)
+            }
+
+            fn is_leaf_variable(&self) -> bool {
+                matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
+            }
+
+            fn new_constant_concept(concept_id: ConceptId) -> Self {
+                Self {
+                    syntax: None,
+                    concept: Some(concept_id),
+                    node: SyntaxNode::Leaf(SyntaxLeaf::Constant),
+                }
+            }
+
+            fn new_quantifier_concept(concept_id: ConceptId) -> Self {
+                Self {
+                    syntax: None,
+                    concept: Some(concept_id),
+                    node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier),
+                }
+            }
+
+            fn new_pair(left: Self::SharedSyntax, right: Self::SharedSyntax) -> Self {
+                Self {
+                    syntax: None,
+                    concept: None,
+                    node: SyntaxNode::new_pair(left, right),
+                }
+            }
+
+            fn new_leaf_variable(concept_id: ConceptId) -> Self {
+                Self {
+                    syntax: None,
+                    concept: Some(concept_id),
+                    node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
+                }
+            }
+
+            fn bind_nonquantifier_concept(mut self, concept: ConceptId) -> Self {
+                self.concept = Some(concept);
+                self
+            }
+
+            fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId) {
+                self.concept = Some(concept);
+            }
+
+            fn bind_quantifier_concept(mut self, concept: ConceptId) -> Self {
+                debug_assert_eq!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Constant));
+                self.concept = Some(concept);
+                self.node = SyntaxNode::Leaf(SyntaxLeaf::Quantifier);
+                self
+            }
+
+            fn contains(&self, other: &Self) -> bool {
+                if let Some((ref left, ref right)) = self.get_expansion() {
+                    other == left
+                        || other == right
+                        || left.contains(other)
+                        || right.contains(other)
+                } else {
+                    false
+                }
+            }
+
+            /// An expression does have an expansion while a symbol does not.
+            fn get_expansion(&self) -> Option<(Self::SharedSyntax, Self::SharedSyntax)> {
+                if let SyntaxNode::Branch {
+                    left,
+                    right,
+                    ..
+                } = &self.node
+                {
+                    Some((left.clone(), right.clone()))
+                } else {
+                    None
+                }
+            }
+
+            fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
+                if let SyntaxNode::Branch {
+                    left,
+                    right,
+                    ..
+                } = &mut self.node
+                {
+                    Some(($refcounter::make_mut(left), $refcounter::make_mut(right)))
+                } else {
+                    None
+                }
+            }
+
+            fn bind_pair(mut self, left: Self::SharedSyntax, right: Self::SharedSyntax) -> Self {
+                self.node = SyntaxNode::new_pair(left, right);
+                self
+            }
+
+            fn get_concept(&self) -> Option<ConceptId> {
+                self.concept
+            }
+
+            fn is_variable(&self) -> bool {
+                match &self.node {
+                    SyntaxNode::Branch {
+                        free_variables,
+                        binding_variables,
+                        ..
+                    } => !free_variables.is_empty() || !binding_variables.is_empty(),
+                    SyntaxNode::Leaf(SyntaxLeaf::Variable) => true,
+                    SyntaxNode::Leaf(_) => false,
+                }
+            }
+
+            fn check_example(
+                example: &Self::SharedSyntax,
+                generalisation: &Self::SharedSyntax,
+            ) -> Option<HashMap<Self::SharedSyntax, Self::SharedSyntax>> {
+                match (example.get_expansion(), generalisation.get_expansion()) {
+                    (
+                        Some((left_example, right_example)),
+                        Some((left_gen, right_gen)),
+                    ) => Self::check_example(&left_example, &left_gen)
+                        .and_also_move(Self::check_example(&right_example, &right_gen))
+                        .and_then(|(left_vm, right_vm)| {
+                            left_vm.consistent_merge(right_vm)
+                        }),
+                    (Some(_), None) => generalisation
+                        .is_variable()
+                        .then(|| hashmap! {generalisation.clone() => example.clone()}),
+                    (None, Some(_)) => None,
+                    (None, None) => generalisation
+                        .is_variable()
+                        .then(|| hashmap! {generalisation.clone() => example.clone()})
+                        .or_else(|| (example == generalisation).then(|| hashmap! {})),
+                }
+            }
+        }
+    };
 }
 
-impl<ConceptId> Debug for SyntaxTree<ConceptId> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
-    }
+define_syntax_tree!(Arc, MultiThreadedSyntaxTree);
+define_syntax_tree!(Rc, SingleThreadedSyntaxTree);
+
+pub trait SyntaxTree<ConceptId>
+where
+    Self: Clone
+        + Debug
+        + Display
+        + Eq
+        + for<'a> From<&'a str>
+        + From<String>
+        + for<'a> From<&'a String>
+        + Hash
+        + PartialEq<Self::SharedSyntax>,
+{
+    type SharedSyntax: AsRef<Self>
+        + Borrow<Self>
+        + Clone
+        + Debug
+        + Deref<Target = Self>
+        + Display
+        + Eq
+        + Hash;
+    fn share(self) -> Self::SharedSyntax;
+
+    fn make_mut(refcounter: &mut Self::SharedSyntax) -> &mut Self;
+
+    fn is_leaf_variable(&self) -> bool;
+
+    fn new_constant_concept(concept_id: ConceptId) -> Self;
+
+    fn new_quantifier_concept(concept_id: ConceptId) -> Self;
+
+    fn new_pair(left: Self::SharedSyntax, right: Self::SharedSyntax) -> Self;
+
+    fn new_leaf_variable(concept_id: ConceptId) -> Self;
+
+    fn bind_nonquantifier_concept(self, concept: ConceptId) -> Self;
+
+    fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId);
+
+    fn bind_quantifier_concept(self, concept: ConceptId) -> Self;
+
+    fn contains(&self, other: &Self) -> bool;
+
+    /// An expression does have an expansion while a symbol does not.
+    fn get_expansion(&self)
+        -> Option<(Self::SharedSyntax, Self::SharedSyntax)>;
+
+    fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)>;
+
+    fn bind_pair(
+        self,
+        left: Self::SharedSyntax,
+        right: Self::SharedSyntax,
+    ) -> Self;
+
+    fn get_concept(&self) -> Option<ConceptId>;
+
+    fn is_variable(&self) -> bool;
+
+    fn check_example(
+        example: &Self::SharedSyntax,
+        generalisation: &Self::SharedSyntax,
+    ) -> Option<HashMap<Self::SharedSyntax, Self::SharedSyntax>>;
 }
 
 #[derive(Clone, Debug)]
-enum SyntaxNode<ConceptId> {
+enum SyntaxNode<SharedSyntax> {
     /// This syntax tree may branch to two subtrees
     Branch {
-        left: Arc<SyntaxTree<ConceptId>>,
-        right: Arc<SyntaxTree<ConceptId>>,
-        free_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
-        binding_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
+        left: SharedSyntax,
+        right: SharedSyntax,
+        free_variables: HashSet<SharedSyntax>,
+        binding_variables: HashSet<SharedSyntax>,
     },
     /// or have no descendants
     Leaf(SyntaxLeaf),
@@ -61,72 +358,8 @@ enum SyntaxLeaf {
     Quantifier,
 }
 
-#[derive(Clone, Debug)]
-struct SyntaxExpansion<ConceptId> {
-    left: Arc<SyntaxTree<ConceptId>>,
-    right: Arc<SyntaxTree<ConceptId>>,
-    /// The variables that aren't bound by any quantifiers
-    free_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
-    /// The variables that bind the equivalent free variable via quantifiers
-    binding_variables: HashSet<Arc<SyntaxTree<ConceptId>>>,
-}
-
-impl<ConceptId: Eq + Hash> SyntaxNode<ConceptId> {
-    fn new_pair(
-        left: Arc<SyntaxTree<ConceptId>>,
-        right: Arc<SyntaxTree<ConceptId>>,
-    ) -> Self {
-        let mut free_variables = HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
-        let mut binding_variables =
-            HashSet::<Arc<SyntaxTree<ConceptId>>>::new();
-        let right_is_quantifier = match &right.node {
-            Self::Branch {
-                free_variables: fv,
-                binding_variables: bv,
-                ..
-            } => {
-                free_variables.extend(fv.iter().cloned());
-                binding_variables.extend(bv.iter().cloned());
-                false
-            },
-            Self::Leaf(SyntaxLeaf::Variable) => {
-                free_variables.insert(right.clone());
-                false
-            },
-            Self::Leaf(SyntaxLeaf::Constant) => false,
-            Self::Leaf(SyntaxLeaf::Quantifier) => true,
-        };
-        match &left.node {
-            Self::Branch {
-                free_variables: fv,
-                binding_variables: bv,
-                ..
-            } => {
-                free_variables.retain(|v| !bv.contains(v));
-                free_variables.extend(fv.iter().cloned());
-                binding_variables.retain(|v| !fv.contains(v));
-                binding_variables.extend(bv.iter().cloned());
-            },
-            Self::Leaf(SyntaxLeaf::Variable) => {
-                if right_is_quantifier {
-                    binding_variables.insert(left.clone());
-                } else {
-                    free_variables.insert(left.clone());
-                }
-            },
-            Self::Leaf(_) => {},
-        }
-        Self::Branch {
-            left,
-            right,
-            binding_variables,
-            free_variables,
-        }
-    }
-}
-
 // the variables fields can be derived from left and right so no need to check them for equality
-impl<ConceptId: PartialEq> PartialEq for SyntaxNode<ConceptId> {
+impl<SharedSyntax: PartialEq> PartialEq for SyntaxNode<SharedSyntax> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
@@ -158,216 +391,70 @@ impl<ConceptId: PartialEq> PartialEq for SyntaxNode<ConceptId> {
     }
 }
 
-impl<ConceptId: PartialEq> PartialEq<Self> for SyntaxTree<ConceptId> {
-    /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &Self) -> bool {
-        if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
-            ss == os
-        } else if let (Some(sc), Some(oc)) = (&self.concept, &other.concept) {
-            sc == oc
-        } else {
-            self.node == other.node
-        }
-    }
-}
-
-impl<ConceptId: PartialEq> PartialEq<Arc<Self>> for SyntaxTree<ConceptId> {
-    /// `SyntaxTree`s are equal if the syntax they represent is the same.
-    fn eq(&self, other: &Arc<Self>) -> bool {
-        if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
-            ss == os
-        } else {
-            self.concept == other.concept
-        }
-    }
-}
-
-impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display
-    for SyntaxTree<ConceptId>
-{
-    /// Displays the same as the inside of an `SyntaxTree` variant.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.syntax.clone().unwrap_or_else(|| self
-                .get_expansion()
-                .map_or_else(
-                    || "".into(),
-                    |(left, right)| left.to_string() + " " + &right.to_string()
-                ))
-        )
-    }
-}
-
-impl<S, ConceptId> From<S> for SyntaxTree<ConceptId>
+impl<SharedSyntax> SyntaxNode<SharedSyntax>
 where
-    S: Into<String>,
+    SharedSyntax: Clone + Eq + Hash,
+    for<'a> &'a Self: From<&'a SharedSyntax>,
 {
-    fn from(syntax: S) -> Self {
-        let syntax = syntax.into();
-        let node = if is_variable(&syntax) {
-            SyntaxNode::Leaf(SyntaxLeaf::Variable)
-        } else {
-            SyntaxNode::Leaf(SyntaxLeaf::Constant)
-        };
-        Self {
-            syntax: Some(syntax),
-            concept: None,
-            node,
-        }
-    }
-}
-
-impl<ConceptId: PartialEq> Eq for SyntaxTree<ConceptId> {}
-
-impl<ConceptId: Hash> Hash for SyntaxTree<ConceptId> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.syntax.hash(state);
-        self.concept.hash(state);
-    }
-}
-
-impl<ConceptId: Copy + Debug + Eq + Hash> SyntaxTree<ConceptId> {
-    pub fn share(self) -> Arc<Self> {
-        Arc::new(self)
-    }
-
-    pub fn is_leaf_variable(&self) -> bool {
-        matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
-    }
-
-    pub fn new_constant_concept(concept_id: ConceptId) -> Self {
-        Self {
-            syntax: None,
-            concept: Some(concept_id),
-            node: SyntaxNode::Leaf(SyntaxLeaf::Constant),
-        }
-    }
-
-    pub fn new_quantifier_concept(concept_id: ConceptId) -> Self {
-        Self {
-            syntax: None,
-            concept: Some(concept_id),
-            node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier),
-        }
-    }
-
-    pub fn new_pair(self: Arc<Self>, right: Arc<Self>) -> Self {
-        Self {
-            syntax: None,
-            concept: None,
-            node: SyntaxNode::new_pair(self, right),
-        }
-    }
-
-    pub fn new_leaf_variable(concept_id: ConceptId) -> Self {
-        Self {
-            syntax: None,
-            concept: Some(concept_id),
-            node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
-        }
-    }
-
-    pub fn bind_nonquantifier_concept(mut self, concept: ConceptId) -> Self {
-        self.concept = Some(concept);
-        self
-    }
-
-    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId) {
-        self.concept = Some(concept);
-    }
-
-    pub fn bind_quantifier_concept(mut self, concept: ConceptId) -> Self {
-        debug_assert_eq!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Constant));
-        self.concept = Some(concept);
-        self.node = SyntaxNode::Leaf(SyntaxLeaf::Quantifier);
-        self
-    }
-
-    pub fn contains(&self, other: &Self) -> bool {
-        if let Some((ref left, ref right)) = self.get_expansion() {
-            other == left
-                || other == right
-                || left.contains(other)
-                || right.contains(other)
-        } else {
-            false
-        }
-    }
-
-    /// An expression does have an expansion while a symbol does not.
-    pub fn get_expansion(&self) -> Option<(Arc<Self>, Arc<Self>)> {
-        if let SyntaxNode::Branch {
-            left,
-            right,
-            ..
-        } = &self.node
-        {
-            Some((left.clone(), right.clone()))
-        } else {
-            None
-        }
-    }
-
-    pub fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
-        if let SyntaxNode::Branch {
-            left,
-            right,
-            ..
-        } = &mut self.node
-        {
-            Some((Arc::make_mut(left), Arc::make_mut(right)))
-        } else {
-            None
-        }
-    }
-
-    pub fn bind_pair(mut self, left: Arc<Self>, right: Arc<Self>) -> Self {
-        self.node = SyntaxNode::new_pair(left, right);
-        self
-    }
-
-    pub fn get_concept(&self) -> Option<ConceptId> {
-        self.concept
-    }
-
-    pub fn is_variable(&self) -> bool {
-        match &self.node {
-            SyntaxNode::Branch {
-                free_variables,
-                binding_variables,
+    fn new_pair(left: SharedSyntax, right: SharedSyntax) -> Self {
+        let mut free_variables = HashSet::<SharedSyntax>::new();
+        let mut binding_variables = HashSet::<SharedSyntax>::new();
+        let right_node: &Self = (&right).into();
+        let right_is_quantifier = match right_node {
+            Self::Branch {
+                free_variables: fv,
+                binding_variables: bv,
                 ..
-            } => !free_variables.is_empty() || !binding_variables.is_empty(),
-            SyntaxNode::Leaf(SyntaxLeaf::Variable) => true,
-            SyntaxNode::Leaf(_) => false,
+            } => {
+                free_variables.extend(fv.iter().cloned());
+                binding_variables.extend(bv.iter().cloned());
+                false
+            },
+            Self::Leaf(SyntaxLeaf::Variable) => {
+                free_variables.insert(right.clone());
+                false
+            },
+            Self::Leaf(SyntaxLeaf::Constant) => false,
+            Self::Leaf(SyntaxLeaf::Quantifier) => true,
+        };
+        let left_node: &Self = (&left).into();
+        match left_node {
+            Self::Branch {
+                free_variables: fv,
+                binding_variables: bv,
+                ..
+            } => {
+                free_variables.retain(|v| !bv.contains(v));
+                free_variables.extend(fv.iter().cloned());
+                binding_variables.retain(|v| !fv.contains(v));
+                binding_variables.extend(bv.iter().cloned());
+            },
+            Self::Leaf(SyntaxLeaf::Variable) => {
+                if right_is_quantifier {
+                    binding_variables.insert(left.clone());
+                } else {
+                    free_variables.insert(left.clone());
+                }
+            },
+            Self::Leaf(_) => {},
+        }
+        Self::Branch {
+            left,
+            right,
+            binding_variables,
+            free_variables,
         }
     }
+}
 
-    pub fn check_example(
-        self: &Arc<Self>,
-        generalisation: &Arc<Self>,
-    ) -> Option<HashMap<Arc<Self>, Arc<Self>>> {
-        match (self.get_expansion(), generalisation.get_expansion()) {
-            (
-                Some((left_example, right_example)),
-                Some((left_gen, right_gen)),
-            ) => left_example
-                .check_example(&left_gen)
-                .and_also_move(right_example.check_example(&right_gen))
-                .and_then(|(left_vm, right_vm)| {
-                    left_vm.consistent_merge(right_vm)
-                }),
-            (Some(_), None) => generalisation
-                .is_variable()
-                .then(|| hashmap! {generalisation.clone() => self.clone()}),
-            (None, Some(_)) => None,
-            (None, None) => generalisation
-                .is_variable()
-                .then(|| hashmap! {generalisation.clone() => self.clone()})
-                .or_else(|| (self == generalisation).then(|| hashmap! {})),
-        }
-    }
+#[derive(Clone, Debug)]
+struct SyntaxExpansion<SharedSyntax> {
+    left: SharedSyntax,
+    right: SharedSyntax,
+    /// The variables that aren't bound by any quantifiers
+    free_variables: HashSet<SharedSyntax>,
+    /// The variables that bind the equivalent free variable via quantifiers
+    binding_variables: HashSet<SharedSyntax>,
 }
 
 pub fn is_variable(string: &str) -> bool {
