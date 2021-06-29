@@ -49,7 +49,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn basic_rule() {

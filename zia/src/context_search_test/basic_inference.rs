@@ -9,7 +9,7 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn basic_inference() {

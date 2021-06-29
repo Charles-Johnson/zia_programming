@@ -170,10 +170,9 @@ pub use crate::errors::ZiaError;
 use lazy_static::lazy_static;
 
 pub type SingleThreadedContext =
-    GenericContext<ContextSnapShot, SingleThreadedSyntaxTree<usize>>;
+    GenericContext<ContextSnapShot, SingleThreadedSyntaxTree>;
 
-pub type Context =
-    GenericContext<ContextSnapShot, MultiThreadedSyntaxTree<usize>>;
+pub type Context = GenericContext<ContextSnapShot, MultiThreadedSyntaxTree>;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]

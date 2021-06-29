@@ -55,7 +55,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     hashmap! {4 => "a"}
 }
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn basic_precedence() {

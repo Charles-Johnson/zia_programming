@@ -29,24 +29,24 @@ use crate::{and_also::AndAlso, consistent_merge::ConsistentMerge};
 
 /// Represents syntax as a full binary tree and links syntax to concepts where possible.
 macro_rules! define_syntax_tree {
-    ($refcounter:tt, $syntax_tree:tt) => {
+    ($refcounter:tt, $syntax_tree:tt, $concept_id:ty) => {
         #[derive(Clone)]
-        pub struct $syntax_tree<ConceptId> {
+        pub struct $syntax_tree {
             /// The root of this syntax tree, represented as a `String`.
             syntax: Option<String>,
             /// Index of the concept that the syntax may represent.
-            concept: Option<ConceptId>,
+            concept: Option<$concept_id>,
             ///
-            node: SyntaxNode<$refcounter<$syntax_tree<ConceptId>>>,
+            node: SyntaxNode<$refcounter<$syntax_tree>>,
         }
 
-        impl<ConceptId> Debug for $syntax_tree<ConceptId> {
+        impl Debug for $syntax_tree {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
             }
         }
 
-        impl<ConceptId: PartialEq> PartialEq<Self> for $syntax_tree<ConceptId> {
+        impl PartialEq<Self> for $syntax_tree {
             /// `SyntaxTree`s are equal if the syntax they represent is the same.
             fn eq(&self, other: &Self) -> bool {
                 if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -59,7 +59,7 @@ macro_rules! define_syntax_tree {
             }
         }
 
-        impl<ConceptId: PartialEq> PartialEq<$refcounter<Self>> for $syntax_tree<ConceptId> {
+        impl PartialEq<$refcounter<Self>> for $syntax_tree {
             /// `SyntaxTree`s are equal if the syntax they represent is the same.
             fn eq(&self, other: &$refcounter<Self>) -> bool {
                 if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -70,17 +70,16 @@ macro_rules! define_syntax_tree {
             }
         }
 
-        impl<ConceptId: PartialEq> Eq for $syntax_tree<ConceptId> {}
+        impl Eq for $syntax_tree {}
 
-        impl<ConceptId: Hash> Hash for $syntax_tree<ConceptId> {
+        impl Hash for $syntax_tree {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 self.syntax.hash(state);
                 self.concept.hash(state);
             }
         }
 
-        impl<ConceptId: Copy + Debug + Eq + Hash> fmt::Display
-            for $syntax_tree<ConceptId>
+        impl fmt::Display for $syntax_tree
         {
             /// Displays the same as the inside of an `SyntaxTree` variant.
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -97,7 +96,7 @@ macro_rules! define_syntax_tree {
             }
         }
 
-        impl<S, ConceptId> From<S> for $syntax_tree<ConceptId>
+        impl<S> From<S> for $syntax_tree
         where
             S: Into<String>,
         {
@@ -116,14 +115,15 @@ macro_rules! define_syntax_tree {
             }
         }
 
-        impl<'a, ConceptId> From<&'a $refcounter<$syntax_tree<ConceptId>>> for &'a SyntaxNode<$refcounter<$syntax_tree<ConceptId>>> {
-            fn from(syntax_tree: &'a $refcounter<$syntax_tree<ConceptId>>) -> Self {
+        impl<'a> From<&'a $refcounter<$syntax_tree>> for &'a SyntaxNode<$refcounter<$syntax_tree>> {
+            fn from(syntax_tree: &'a $refcounter<$syntax_tree>) -> Self {
                 &syntax_tree.node
             }
         }
 
-        impl<ConceptId: Copy + Debug + Eq + Hash> SyntaxTree<ConceptId> for $syntax_tree<ConceptId> {
+        impl SyntaxTree for $syntax_tree {
             type SharedSyntax = $refcounter<Self>;
+            type ConceptId = $concept_id;
 
             fn make_mut<'a>(refcounter: &'a mut Self::SharedSyntax) -> &'a mut Self {
                 $refcounter::make_mut(refcounter)
@@ -137,7 +137,7 @@ macro_rules! define_syntax_tree {
                 matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
             }
 
-            fn new_constant_concept(concept_id: ConceptId) -> Self {
+            fn new_constant_concept(concept_id: Self::ConceptId) -> Self {
                 Self {
                     syntax: None,
                     concept: Some(concept_id),
@@ -145,7 +145,7 @@ macro_rules! define_syntax_tree {
                 }
             }
 
-            fn new_quantifier_concept(concept_id: ConceptId) -> Self {
+            fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self {
                 Self {
                     syntax: None,
                     concept: Some(concept_id),
@@ -161,7 +161,7 @@ macro_rules! define_syntax_tree {
                 }
             }
 
-            fn new_leaf_variable(concept_id: ConceptId) -> Self {
+            fn new_leaf_variable(concept_id: Self::ConceptId) -> Self {
                 Self {
                     syntax: None,
                     concept: Some(concept_id),
@@ -169,16 +169,16 @@ macro_rules! define_syntax_tree {
                 }
             }
 
-            fn bind_nonquantifier_concept(mut self, concept: ConceptId) -> Self {
+            fn bind_nonquantifier_concept(mut self, concept: Self::ConceptId) -> Self {
                 self.concept = Some(concept);
                 self
             }
 
-            fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId) {
+            fn bind_nonquantifier_concept_as_ref(&mut self, concept: Self::ConceptId) {
                 self.concept = Some(concept);
             }
 
-            fn bind_quantifier_concept(mut self, concept: ConceptId) -> Self {
+            fn bind_quantifier_concept(mut self, concept: Self::ConceptId) -> Self {
                 debug_assert_eq!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Constant));
                 self.concept = Some(concept);
                 self.node = SyntaxNode::Leaf(SyntaxLeaf::Quantifier);
@@ -228,7 +228,7 @@ macro_rules! define_syntax_tree {
                 self
             }
 
-            fn get_concept(&self) -> Option<ConceptId> {
+            fn get_concept(&self) -> Option<Self::ConceptId> {
                 self.concept
             }
 
@@ -271,10 +271,10 @@ macro_rules! define_syntax_tree {
     };
 }
 
-define_syntax_tree!(Arc, MultiThreadedSyntaxTree);
-define_syntax_tree!(Rc, SingleThreadedSyntaxTree);
+define_syntax_tree!(Arc, MultiThreadedSyntaxTree, usize);
+define_syntax_tree!(Rc, SingleThreadedSyntaxTree, usize);
 
-pub trait SyntaxTree<ConceptId>
+pub trait SyntaxTree
 where
     Self: Clone
         + Debug
@@ -294,25 +294,26 @@ where
         + Display
         + Eq
         + Hash;
+    type ConceptId: Copy + Debug + Display + Eq + Hash;
     fn share(self) -> Self::SharedSyntax;
 
     fn make_mut(refcounter: &mut Self::SharedSyntax) -> &mut Self;
 
     fn is_leaf_variable(&self) -> bool;
 
-    fn new_constant_concept(concept_id: ConceptId) -> Self;
+    fn new_constant_concept(concept_id: Self::ConceptId) -> Self;
 
-    fn new_quantifier_concept(concept_id: ConceptId) -> Self;
+    fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self;
 
     fn new_pair(left: Self::SharedSyntax, right: Self::SharedSyntax) -> Self;
 
-    fn new_leaf_variable(concept_id: ConceptId) -> Self;
+    fn new_leaf_variable(concept_id: Self::ConceptId) -> Self;
 
-    fn bind_nonquantifier_concept(self, concept: ConceptId) -> Self;
+    fn bind_nonquantifier_concept(self, concept: Self::ConceptId) -> Self;
 
-    fn bind_nonquantifier_concept_as_ref(&mut self, concept: ConceptId);
+    fn bind_nonquantifier_concept_as_ref(&mut self, concept: Self::ConceptId);
 
-    fn bind_quantifier_concept(self, concept: ConceptId) -> Self;
+    fn bind_quantifier_concept(self, concept: Self::ConceptId) -> Self;
 
     fn contains(&self, other: &Self) -> bool;
 
@@ -328,7 +329,7 @@ where
         right: Self::SharedSyntax,
     ) -> Self;
 
-    fn get_concept(&self) -> Option<ConceptId>;
+    fn get_concept(&self) -> Option<Self::ConceptId>;
 
     fn is_variable(&self) -> bool;
 

@@ -22,11 +22,11 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn existence_inference_rule() {
-    let context_cache = ContextCache::<ConceptId, Syntax>::default();
+    let context_cache = ContextCache::<Syntax>::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};

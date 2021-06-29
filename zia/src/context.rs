@@ -46,7 +46,7 @@ use std::{
 pub struct Context<S, Syntax>
 where
     S: SnapShotReader,
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     for<'a> ContextSearch<'a, S, Syntax>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
@@ -54,7 +54,7 @@ where
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
     delta: ContextDelta<S::ConceptId>,
-    cache: ContextCache<S::ConceptId, Syntax>,
+    cache: ContextCache<Syntax>,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
     bounded_variable_syntax: HashSet<Syntax::SharedSyntax>,
 }
@@ -73,7 +73,7 @@ where
         + Apply<Delta = ContextDelta<S::ConceptId>>
         + Debug,
     S::ConceptId: Default,
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     for<'a> ContextSearch<'a, S, Syntax>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
@@ -1147,7 +1147,7 @@ where
 impl<S, Syntax> Default for Context<S, Syntax>
 where
     S: Default + SnapShotReader,
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     for<'a> ContextSearch<'a, S, Syntax>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
@@ -1174,7 +1174,7 @@ where
 impl<S, Syntax> From<S> for Context<S, Syntax>
 where
     S: Default + SnapShotReader,
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     S::ConceptId: Default,
     for<'a> ContextSearch<'a, S, Syntax>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax>,

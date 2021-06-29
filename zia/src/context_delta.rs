@@ -52,7 +52,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
         snapshot: &R,
     ) -> ConceptId
     where
-        Syntax: SyntaxTree<ConceptId> + SyntaxTree<R::ConceptId>,
+        Syntax: SyntaxTree<ConceptId = R::ConceptId>,
         R: Reader<ConceptId = ConceptId>,
     {
         let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
@@ -155,12 +155,12 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
 
     pub fn update_concept_delta<Syntax, R>(
         &mut self,
-        concept_delta: &Arc<DirectConceptDelta<ConceptId>>,
-        cache_to_invalidate: &mut ContextCache<ConceptId, Syntax>,
+        concept_delta: &Arc<DirectConceptDelta<Syntax::ConceptId>>,
+        cache_to_invalidate: &mut ContextCache<Syntax>,
         snapshot: &R,
     ) -> ConceptId
     where
-        Syntax: SyntaxTree<R::ConceptId> + SyntaxTree<ConceptId>,
+        Syntax: SyntaxTree<ConceptId = R::ConceptId>,
         R: Reader<ConceptId = ConceptId>,
     {
         let dcd = ConceptDelta::Direct(concept_delta.clone());

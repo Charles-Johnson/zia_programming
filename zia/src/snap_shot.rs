@@ -147,7 +147,7 @@ pub trait Reader {
         s: &str,
     ) -> Syntax
     where
-        Syntax: SyntaxTree<Self::ConceptId>,
+        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
     {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
@@ -164,7 +164,7 @@ pub trait Reader {
         concept: Self::ConceptId,
     ) -> Syntax
     where
-        Syntax: SyntaxTree<Self::ConceptId>,
+        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
     {
         if self.concrete_concept_type(delta, concept)
             == Some(ConcreteConceptType::ExistsSuchThat)
@@ -179,7 +179,7 @@ pub trait Reader {
         concept: &Concept<Self::ConceptId>,
     ) -> Syntax
     where
-        Syntax: SyntaxTree<Self::ConceptId>,
+        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
     {
         let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);

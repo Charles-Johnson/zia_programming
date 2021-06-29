@@ -155,7 +155,7 @@ fn concept_labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type Syntax = MultiThreadedSyntaxTree<usize>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn infered_precedence_test() {

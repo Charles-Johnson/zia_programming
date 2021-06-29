@@ -28,21 +28,17 @@ use maplit::{hashmap, hashset};
 use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
-    fmt::{Debug, Display},
+    fmt::Debug,
     hash::Hash,
     sync::Arc,
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<
-    'a,
-    S: SnapShotReader,
-    Syntax: SyntaxTree<S::ConceptId>,
-> {
+pub struct ContextSearch<'a, S: SnapShotReader, Syntax: SyntaxTree> {
     snap_shot: &'a S,
-    variable_mask: Arc<VariableMaskList<S::ConceptId, Syntax>>,
+    variable_mask: Arc<VariableMaskList<Syntax>>,
     delta: &'a ContextDelta<S::ConceptId>,
-    caches: ContextCache<S::ConceptId, Syntax>,
+    caches: ContextCache<Syntax>,
     syntax_evaluating: HashSet<Syntax::SharedSyntax>,
     bound_variable_syntax: Arc<HashSet<Syntax::SharedSyntax>>,
 }
@@ -94,10 +90,7 @@ pub enum ReductionReason<ConceptId: Eq + Hash, SharedSyntax: Eq + Hash> {
 
 type Substitutions<SharedSyntax> = HashMap<SharedSyntax, SharedSyntax>;
 
-fn substitute<
-    ConceptId: Copy + Debug + Eq + Hash + Clone,
-    Syntax: SyntaxTree<ConceptId>,
->(
+fn substitute<Syntax: SyntaxTree>(
     syntax: &mut Syntax,
     substitutions: &Substitutions<Syntax::SharedSyntax>,
 ) {
@@ -112,7 +105,7 @@ fn substitute<
 impl<'a, S, Syntax> ContextSearch<'a, S, Syntax>
 where
     S: SnapShotReader + Sync + std::fmt::Debug,
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax>,
 {
     fn infer_reduction(
@@ -708,7 +701,7 @@ where
                         left_examples.into_iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
                             let mut mutable_right = Syntax::make_mut(&mut right_clone);
-                            substitute::<S::ConceptId, Syntax>(&mut mutable_right, &left_example);
+                            substitute::<Syntax>(&mut mutable_right, &left_example);
                             if self.contains_bound_variable_syntax(&right_clone) {
                                 self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
                                     right_example.extend(left_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -722,7 +715,7 @@ where
                         }).chain(right_examples.into_iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
                             let mut mutable_left = Syntax::make_mut(&mut left_clone);
-                            substitute::<S::ConceptId, Syntax>(&mut mutable_left, &right_example);
+                            substitute::<Syntax>(&mut mutable_left, &right_example);
                             if self.contains_bound_variable_syntax(&left_clone) {
                                 self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
                                     left_example.extend(right_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -1192,19 +1185,19 @@ where
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Example<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> {
+pub struct Example<Syntax: SyntaxTree> {
     generalisation: Syntax::SharedSyntax,
-    substitutions: HashMap<Syntax::SharedSyntax, Match<ConceptId, Syntax>>,
+    substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax>>,
 }
 
 type MaybeReducedSyntaxWithReason<ConceptId, SharedSyntax> =
     (SharedSyntax, Option<ReductionReason<ConceptId, SharedSyntax>>);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Match<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> {
+pub struct Match<Syntax: SyntaxTree> {
     value: Syntax::SharedSyntax,
     reduction: Syntax::SharedSyntax,
-    reason: ReductionReason<ConceptId, Syntax>,
+    reason: ReductionReason<Syntax::ConceptId, Syntax::SharedSyntax>,
 }
 
 fn simplify_reasoning<
@@ -1270,11 +1263,10 @@ pub enum ComparisonReason<ConceptId: Eq + Hash, SharedSyntax: Eq + Hash> {
     NoGreaterThanConcept,
 }
 
-impl<'a, S: SnapShotReader, Syntax>
-    From<ContextReferences<'a, S, S::ConceptId, Syntax>>
+impl<'a, S: SnapShotReader, Syntax> From<ContextReferences<'a, S, Syntax>>
     for ContextSearch<'a, S, Syntax>
 where
-    Syntax: SyntaxTree<S::ConceptId>,
+    Syntax: SyntaxTree<ConceptId = S::ConceptId>,
 {
     fn from(
         ContextReferences {
@@ -1282,7 +1274,7 @@ where
             delta,
             cache,
             bound_variable_syntax,
-        }: ContextReferences<'a, S, S::ConceptId, Syntax>,
+        }: ContextReferences<'a, S, Syntax>,
     ) -> ContextSearch<'a, S, Syntax> {
         // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
@@ -1296,31 +1288,28 @@ where
     }
 }
 
-pub struct ContextReferences<
-    'a,
-    S,
-    ConceptId: Clone + Display + Eq + Hash,
-    Syntax: SyntaxTree<ConceptId>,
-> {
+pub struct ContextReferences<'a, S, Syntax: SyntaxTree> {
     pub snap_shot: &'a S,
-    pub delta: &'a ContextDelta<ConceptId>,
-    pub cache: &'a ContextCache<ConceptId, Syntax>,
+    pub delta: &'a ContextDelta<Syntax::ConceptId>,
+    pub cache: &'a ContextCache<Syntax>,
     pub bound_variable_syntax: &'a HashSet<Syntax::SharedSyntax>,
 }
 
 type VariableMask<ConceptId, SharedSyntax> = HashMap<ConceptId, SharedSyntax>;
 
 #[derive(Clone, PartialEq, Debug)]
-struct VariableMaskList<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> {
-    head: VariableMask<ConceptId, Syntax::SharedSyntax>,
-    tail: Option<Arc<VariableMaskList<ConceptId, Syntax>>>,
+struct VariableMaskList<Syntax: SyntaxTree> {
+    head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
+    tail: Option<Arc<VariableMaskList<Syntax>>>,
 }
 
-impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>>
-    From<VariableMask<ConceptId, Syntax::SharedSyntax>>
-    for VariableMaskList<ConceptId, Syntax>
+impl<Syntax: SyntaxTree>
+    From<VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>>
+    for VariableMaskList<Syntax>
 {
-    fn from(head: VariableMask<ConceptId, Syntax::SharedSyntax>) -> Self {
+    fn from(
+        head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
+    ) -> Self {
         Self {
             head,
             tail: None,
@@ -1328,14 +1317,12 @@ impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>>
     }
 }
 
-impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>>
-    VariableMaskList<ConceptId, Syntax>
-{
+impl<Syntax: SyntaxTree> VariableMaskList<Syntax> {
     /// returns None if `head` is equal to one of the nodes.
     /// This prevents cycles in reduction evaluations
     fn push(
         list: &Arc<Self>,
-        head: VariableMask<ConceptId, Syntax::SharedSyntax>,
+        head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
     ) -> Option<Self> {
         (!list.contains(&head)).then(|| Self {
             head,
@@ -1345,13 +1332,16 @@ impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>>
 
     fn contains(
         &self,
-        node: &VariableMask<ConceptId, Syntax::SharedSyntax>,
+        node: &VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
     ) -> bool {
         &self.head == node
             || self.tail.as_ref().map_or(false, |vml| vml.contains(node))
     }
 
-    fn get(&self, concept_id: ConceptId) -> Option<&Syntax::SharedSyntax> {
+    fn get(
+        &self,
+        concept_id: Syntax::ConceptId,
+    ) -> Option<&Syntax::SharedSyntax> {
         self.head
             .get(&concept_id)
             .or_else(|| self.tail.as_ref().and_then(|vml| vml.get(concept_id)))
@@ -1359,33 +1349,32 @@ impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>>
 }
 
 pub trait Iteration {
-    type Syntax: SyntaxTree<Self::ConceptId>;
+    type Syntax: SyntaxTree;
     type ConceptId;
     fn filter_generalisations_from_candidates(
         &self,
-        example: &<Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
     ) -> Generalisations<
         Self::ConceptId,
-        <Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        <Self::Syntax as SyntaxTree>::SharedSyntax,
     >;
 }
 
-impl<'a, S> Iteration
-    for ContextSearch<'a, S, MultiThreadedSyntaxTree<S::ConceptId>>
+impl<'a, S> Iteration for ContextSearch<'a, S, MultiThreadedSyntaxTree>
 where
     S: SnapShotReader<ConceptId = usize> + Sync + Debug,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;
+    type Syntax = MultiThreadedSyntaxTree;
 
     fn filter_generalisations_from_candidates(
         &self,
-        example: &<Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
     ) -> Generalisations<
         Self::ConceptId,
-        <Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        <Self::Syntax as SyntaxTree>::SharedSyntax,
     > {
         candidates
             .par_iter()
@@ -1402,21 +1391,20 @@ where
     }
 }
 
-impl<'a, S> Iteration
-    for ContextSearch<'a, S, SingleThreadedSyntaxTree<S::ConceptId>>
+impl<'a, S> Iteration for ContextSearch<'a, S, SingleThreadedSyntaxTree>
 where
     S: SnapShotReader<ConceptId = usize> + Sync + Debug,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;
+    type Syntax = SingleThreadedSyntaxTree;
 
     fn filter_generalisations_from_candidates(
         &self,
-        example: &<Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
     ) -> Generalisations<
         Self::ConceptId,
-        <Self::Syntax as SyntaxTree<Self::ConceptId>>::SharedSyntax,
+        <Self::Syntax as SyntaxTree>::SharedSyntax,
     > {
         candidates
             .iter()

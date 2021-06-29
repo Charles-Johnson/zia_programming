@@ -12,11 +12,11 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MultiThreadedSyntaxTree;
 
 #[test]
 fn comparison_existence_implication_rule_test() {
-    let context_cache = ContextCache::<_, Syntax>::default();
+    let context_cache = ContextCache::<Syntax>::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};

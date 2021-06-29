@@ -3,25 +3,17 @@ use crate::{
 };
 use dashmap::DashMap;
 use log::debug;
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-    sync::Arc,
-};
+use std::{fmt::Debug, sync::Arc};
 
 #[derive(Debug, Clone)]
-pub struct ReductionCacheList<
-    ConceptId: Eq + Hash,
-    Syntax: SyntaxTree<ConceptId>,
-> {
-    head: Arc<ReductionCache<ConceptId, Syntax::SharedSyntax>>,
-    tail: Option<Arc<ReductionCacheList<ConceptId, Syntax>>>,
+pub struct ReductionCacheList<Syntax: SyntaxTree> {
+    head: Arc<ReductionCache<Syntax::ConceptId, Syntax::SharedSyntax>>,
+    tail: Option<Arc<ReductionCacheList<Syntax>>>,
 }
 
-impl<ConceptId: Eq + Hash, Syntax> Default
-    for ReductionCacheList<ConceptId, Syntax>
+impl<Syntax> Default for ReductionCacheList<Syntax>
 where
-    Syntax: SyntaxTree<ConceptId>,
+    Syntax: SyntaxTree,
 {
     fn default() -> Self {
         Self {
@@ -31,14 +23,14 @@ where
     }
 }
 
-impl<'a, ConceptId: Clone + Eq + Hash, Syntax>
-    From<Arc<ReductionCache<ConceptId, Syntax::SharedSyntax>>>
-    for ReductionCacheList<ConceptId, Syntax>
+impl<'a, Syntax>
+    From<Arc<ReductionCache<Syntax::ConceptId, Syntax::SharedSyntax>>>
+    for ReductionCacheList<Syntax>
 where
-    Syntax: SyntaxTree<ConceptId>,
+    Syntax: SyntaxTree,
 {
     fn from(
-        head: Arc<ReductionCache<ConceptId, Syntax::SharedSyntax>>,
+        head: Arc<ReductionCache<Syntax::ConceptId, Syntax::SharedSyntax>>,
     ) -> Self {
         Self {
             head,
@@ -47,12 +39,10 @@ where
     }
 }
 
-impl<ConceptId: Copy + Debug + Eq + Hash, Syntax: SyntaxTree<ConceptId>>
-    ReductionCacheList<ConceptId, Syntax>
-{
+impl<Syntax: SyntaxTree> ReductionCacheList<Syntax> {
     pub fn spawn(
         self: &Arc<Self>,
-        cache: Arc<ReductionCache<ConceptId, Syntax::SharedSyntax>>,
+        cache: Arc<ReductionCache<Syntax::ConceptId, Syntax::SharedSyntax>>,
     ) -> Arc<Self> {
         Arc::new(Self {
             head: cache,
@@ -63,8 +53,9 @@ impl<ConceptId: Copy + Debug + Eq + Hash, Syntax: SyntaxTree<ConceptId>>
     pub fn get_reduction_or_else(
         &self,
         ast: &Syntax::SharedSyntax,
-        reduce: impl Fn() -> ReductionResult<ConceptId, Syntax::SharedSyntax> + Copy,
-    ) -> ReductionResult<ConceptId, Syntax::SharedSyntax> {
+        reduce: impl Fn() -> ReductionResult<Syntax::ConceptId, Syntax::SharedSyntax>
+            + Copy,
+    ) -> ReductionResult<Syntax::ConceptId, Syntax::SharedSyntax> {
         self.head.get(ast).map_or_else(
             || {
                 self.tail.as_ref().map_or_else(reduce, |ccl| {
@@ -78,7 +69,10 @@ impl<ConceptId: Copy + Debug + Eq + Hash, Syntax: SyntaxTree<ConceptId>>
     pub fn insert_reduction(
         &self,
         ast: &Syntax::SharedSyntax,
-        reduction_result: &ReductionResult<ConceptId, Syntax::SharedSyntax>,
+        reduction_result: &ReductionResult<
+            Syntax::ConceptId,
+            Syntax::SharedSyntax,
+        >,
     ) {
         if !ast.is_variable()
             && reduction_result.as_ref().map_or(true, |(r, _)| r != ast)
@@ -89,15 +83,13 @@ impl<ConceptId: Copy + Debug + Eq + Hash, Syntax: SyntaxTree<ConceptId>>
 }
 
 #[derive(Debug, Clone)]
-pub struct ContextCache<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> {
-    pub reductions: Arc<ReductionCacheList<ConceptId, Syntax>>,
-    syntax_trees: Arc<DashMap<ConceptId, Syntax::SharedSyntax>>,
+pub struct ContextCache<Syntax: SyntaxTree> {
+    pub reductions: Arc<ReductionCacheList<Syntax>>,
+    syntax_trees: Arc<DashMap<Syntax::ConceptId, Syntax::SharedSyntax>>,
     contains_bound_variable_syntax: Arc<DashMap<Syntax::SharedSyntax, bool>>,
 }
 
-impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> Default
-    for ContextCache<ConceptId, Syntax>
-{
+impl<Syntax: SyntaxTree> Default for ContextCache<Syntax> {
     fn default() -> Self {
         Self {
             reductions: Arc::new(ReductionCacheList::default()),
@@ -110,10 +102,9 @@ impl<ConceptId: Eq + Hash, Syntax: SyntaxTree<ConceptId>> Default
 pub type ReductionCache<ConceptId, SharedSyntax> =
     DashMap<SharedSyntax, ReductionResult<ConceptId, SharedSyntax>>;
 
-impl<ConceptId: Copy + Debug + Display + Eq + Hash, Syntax>
-    ContextCache<ConceptId, Syntax>
+impl<Syntax> ContextCache<Syntax>
 where
-    Syntax: SyntaxTree<ConceptId>,
+    Syntax: SyntaxTree,
 {
     pub fn invalidate(&mut self) {
         std::mem::take(self);
@@ -122,7 +113,7 @@ where
 
     pub fn spawn(
         &self,
-        cache: &Arc<ReductionCache<ConceptId, Syntax::SharedSyntax>>,
+        cache: &Arc<ReductionCache<Syntax::ConceptId, Syntax::SharedSyntax>>,
     ) -> Self {
         Self {
             reductions: self.reductions.spawn(cache.clone()),
@@ -140,7 +131,7 @@ where
 
     pub fn get_syntax_tree_or_else(
         &self,
-        concept_id: ConceptId,
+        concept_id: Syntax::ConceptId,
         build_syntax: impl Fn() -> Syntax::SharedSyntax + Copy,
     ) -> Syntax::SharedSyntax {
         self.syntax_trees
@@ -150,11 +141,9 @@ where
 
     pub fn insert_syntax_tree(
         &self,
-        concept: &Concept<ConceptId>,
+        concept: &Concept<Syntax::ConceptId>,
         syntax_tree: &Syntax::SharedSyntax,
-    ) where
-        ConceptId: Eq + Hash,
-    {
+    ) {
         if !concept.anonymous_variable() {
             self.syntax_trees.insert(concept.id(), syntax_tree.clone());
         }
