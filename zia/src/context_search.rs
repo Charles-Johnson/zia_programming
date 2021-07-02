@@ -44,8 +44,12 @@ pub struct ContextSearch<'a, S: SnapShotReader, C: ContextCache> {
     bound_variable_syntax: Arc<HashSet<SharedSyntax<C>>>,
 }
 
-pub type ReductionResult<ConceptId, SharedSyntax> =
-    Option<Reduction<ConceptId, SharedSyntax>>;
+pub type ReductionResult<Syntax> = Option<
+    Reduction<
+        <Syntax as SyntaxTree>::ConceptId,
+        <Syntax as SyntaxTree>::SharedSyntax,
+    >,
+>;
 
 type Reduction<ConceptId, SharedSyntax> =
     (SharedSyntax, ReductionReason<ConceptId, SharedSyntax>);
@@ -116,7 +120,7 @@ where
     fn infer_reduction(
         &self,
         concept: &Concept<S::ConceptId>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionResult<C::Syntax> {
         debug!("infer_reduction({:#?})", concept);
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
@@ -184,10 +188,7 @@ where
     }
 
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(
-        &self,
-        id: S::ConceptId,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    fn reduce_concept(&self, id: S::ConceptId) -> ReductionResult<C::Syntax> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta, id);
         self.infer_reduction(&concept).or_else(|| {
@@ -209,9 +210,8 @@ where
         right: &SharedSyntax<C>,
         operator_id: S::ConceptId,
         default_concept_id: S::ConceptId,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
-        let mut reduced_pair: ReductionResult<S::ConceptId, SharedSyntax<C>> =
-            None;
+    ) -> ReductionResult<C::Syntax> {
+        let mut reduced_pair: ReductionResult<C::Syntax> = None;
         let mut operator_composition_check = || {
             let cache = <C as ContextCache>::SharedReductionCache::default();
             let mut context_search = self.spawn(&cache);
@@ -240,10 +240,7 @@ where
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(
-        &self,
-        ast: &SharedSyntax<C>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    pub fn reduce(&self, ast: &SharedSyntax<C>) -> ReductionResult<C::Syntax> {
         debug!("reduce({})", ast.to_string());
         self.caches.get_reduction_or_else(ast, || {
             let reduction_result = ast
@@ -293,7 +290,7 @@ where
         &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionResult<C::Syntax> {
         debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
         right
             .get_expansion()
@@ -315,7 +312,7 @@ where
         &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionResult<C::Syntax> {
         debug!("recursively_reduce_pair({}, {})", left, right);
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
@@ -614,7 +611,7 @@ where
         leftleft: &SharedSyntax<C>,
         leftright: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionResult<C::Syntax> {
         let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
@@ -807,7 +804,7 @@ where
         left: &SharedSyntax<C>,
         rightleft: &SharedSyntax<C>,
         rightright: &SharedSyntax<C>,
-    ) -> ReductionResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionResult<C::Syntax> {
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
             ConcreteConceptType::GreaterThan => {

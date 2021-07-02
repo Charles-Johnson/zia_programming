@@ -1,5 +1,6 @@
 use crate::{
     ast::impl_syntax_tree,
+    context_cache::impl_cache,
     context_search::{
         ContextSearch, Generalisations, Iteration as ContextSearchIteration,
     },
