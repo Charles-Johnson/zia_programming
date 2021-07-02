@@ -1,22 +1,19 @@
 use crate::{
-    ast::MultiThreadedSyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
         ReductionReason,
     },
     mock_snap_shot::{ConceptId, MockSnapShot},
+    multi_threaded::MultiThreadedContextCache,
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-type Syntax = MultiThreadedSyntaxTree;
-
 #[test]
 fn comparison_existence_implication_rule_test() {
-    let context_cache = ContextCache::<Syntax>::default();
+    let context_cache = MultiThreadedContextCache::default();
     let context_delta = ContextDelta::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};

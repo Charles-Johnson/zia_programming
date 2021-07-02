@@ -130,6 +130,7 @@ mod consistent_merge;
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
+#[macro_use]
 mod context_cache;
 
 mod context_delta;
@@ -157,22 +158,27 @@ mod mock_snap_shot;
 
 mod parser;
 
+mod single_threaded;
+
+mod multi_threaded;
+
 mod snap_shot;
 
 /// A container for adding, writing, reading and removing `Concept`s.
-use crate::context::Context as GenericContext;
-use crate::context_snap_shot::ContextSnapShot;
-
-use crate::ast::{MultiThreadedSyntaxTree, SingleThreadedSyntaxTree};
+use crate::{
+    context::Context as GenericContext, context_snap_shot::ContextSnapShot,
+    multi_threaded::MultiThreadedContextCache,
+    single_threaded::SingleThreadedContextCache,
+};
 
 pub use crate::errors::ZiaError;
 
 use lazy_static::lazy_static;
 
 pub type SingleThreadedContext =
-    GenericContext<ContextSnapShot, SingleThreadedSyntaxTree>;
+    GenericContext<ContextSnapShot, SingleThreadedContextCache>;
 
-pub type Context = GenericContext<ContextSnapShot, MultiThreadedSyntaxTree>;
+pub type Context = GenericContext<ContextSnapShot, MultiThreadedContextCache>;
 
 // Saves having to construct a new `Context` each time.
 #[macro_export]

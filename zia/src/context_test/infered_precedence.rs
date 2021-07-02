@@ -1,8 +1,10 @@
 use crate::{
-    ast::{MultiThreadedSyntaxTree, SyntaxTree},
+    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context::Context,
+    context_cache::ContextCache,
     mock_snap_shot::{ConceptId, MockSnapShot},
+    multi_threaded::MultiThreadedContextCache,
 };
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -155,12 +157,13 @@ fn concept_labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type Syntax = MultiThreadedSyntaxTree;
+type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 
 #[test]
 fn infered_precedence_test() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());
-    let mut context: Context<MockSnapShot, Syntax> = snapshot.into();
+    let mut context: Context<MockSnapShot, MultiThreadedContextCache> =
+        snapshot.into();
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
         Ok(Syntax::new_pair(

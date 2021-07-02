@@ -156,7 +156,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     pub fn update_concept_delta<Syntax, R>(
         &mut self,
         concept_delta: &Arc<DirectConceptDelta<Syntax::ConceptId>>,
-        cache_to_invalidate: &mut ContextCache<Syntax>,
+        cache_to_invalidate: &mut impl ContextCache<Syntax = Syntax>,
         snapshot: &R,
     ) -> ConceptId
     where
