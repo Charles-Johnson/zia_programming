@@ -20,7 +20,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{format_string, Concept, ConcreteConceptType, Hand},
     context_cache::ContextCache,
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, DirectConceptDelta},
     snap_shot::Reader as SnapShotReader,
 };
 use log::debug;
@@ -35,10 +35,17 @@ use std::{
 pub type SharedSyntax<C> =
     <<C as ContextCache>::Syntax as SyntaxTree>::SharedSyntax;
 #[derive(Debug)]
-pub struct ContextSearch<'a, S: SnapShotReader, C: ContextCache> {
+pub struct ContextSearch<'a, S, C, SDCD>
+where
+    S: SnapShotReader<SDCD>,
+    C: ContextCache,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
+{
     snap_shot: &'a S,
     variable_mask: Arc<VariableMaskList<C::Syntax>>,
-    delta: &'a ContextDelta<S::ConceptId>,
+    delta: &'a ContextDelta<S::ConceptId, SDCD>,
     caches: C,
     syntax_evaluating: HashSet<SharedSyntax<C>>,
     bound_variable_syntax: Arc<HashSet<SharedSyntax<C>>>,
@@ -107,15 +114,18 @@ fn substitute<Syntax: SyntaxTree>(
     }
 }
 
-impl<'a, S, C> ContextSearch<'a, S, C>
+impl<'a, S, C, SDCD> ContextSearch<'a, S, C, SDCD>
 where
-    S: SnapShotReader + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD> + Sync + std::fmt::Debug,
     Self: Iteration<
         ConceptId = S::ConceptId,
         Syntax = <C as ContextCache>::Syntax,
     >,
     C: ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     fn infer_reduction(
         &self,
@@ -1254,10 +1264,14 @@ pub enum ComparisonReason<ConceptId: Eq + Hash, SharedSyntax: Eq + Hash> {
     NoGreaterThanConcept,
 }
 
-impl<'a, S: SnapShotReader, C> From<ContextReferences<'a, S, C>>
-    for ContextSearch<'a, S, C>
+impl<'a, S, C, SDCD> From<ContextReferences<'a, S, C, SDCD>>
+    for ContextSearch<'a, S, C, SDCD>
 where
     C: ContextCache,
+    S: SnapShotReader<SDCD>,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     fn from(
         ContextReferences {
@@ -1265,8 +1279,8 @@ where
             delta,
             cache,
             bound_variable_syntax,
-        }: ContextReferences<'a, S, C>,
-    ) -> ContextSearch<'a, S, C> {
+        }: ContextReferences<'a, S, C, SDCD>,
+    ) -> ContextSearch<'a, S, C, SDCD> {
         // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
             bound_variable_syntax: Arc::new(bound_variable_syntax.clone()),
@@ -1279,9 +1293,16 @@ where
     }
 }
 
-pub struct ContextReferences<'a, S: SnapShotReader, C: ContextCache> {
+pub struct ContextReferences<'a, S, C, SDCD>
+where
+    S: SnapShotReader<SDCD>,
+    C: ContextCache,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
+{
     pub snap_shot: &'a S,
-    pub delta: &'a ContextDelta<S::ConceptId>,
+    pub delta: &'a ContextDelta<S::ConceptId, SDCD>,
     pub cache: &'a C,
     pub bound_variable_syntax: &'a HashSet<SharedSyntax<C>>,
 }

@@ -1,9 +1,12 @@
 use crate::{
     ast::impl_syntax_tree,
+    context::Context as GenericContext,
     context_cache::impl_cache,
+    context_delta::DirectConceptDelta,
     context_search::{
         ContextSearch, Generalisations, Iteration as ContextSearchIteration,
     },
+    context_snap_shot::ContextSnapShot,
     snap_shot::Reader as SnapShotReader,
 };
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
@@ -11,10 +14,21 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 impl_syntax_tree!(Rc, SingleThreadedSyntaxTree, usize);
 impl_cache!(Rc, SingleThreadedContextCache, SingleThreadedSyntaxTree);
 
-impl<'a, S> ContextSearchIteration
-    for ContextSearch<'a, S, SingleThreadedContextCache>
+pub type Context = GenericContext<
+    ContextSnapShot,
+    SingleThreadedContextCache,
+    SharedDirectConceptDelta,
+>;
+
+type SharedDirectConceptDelta = Rc<DirectConceptDelta<usize>>;
+
+impl<'a, S, SDCD> ContextSearchIteration
+    for ContextSearch<'a, S, SingleThreadedContextCache, SDCD>
 where
-    S: SnapShotReader<ConceptId = usize> + Sync + Debug,
+    S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<usize>>
+        + From<DirectConceptDelta<usize>>,
 {
     type ConceptId = S::ConceptId;
     type Syntax = SingleThreadedSyntaxTree;

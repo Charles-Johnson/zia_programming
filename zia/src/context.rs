@@ -39,22 +39,24 @@ use std::{
     collections::{HashMap, HashSet},
     default::Default,
     fmt::Debug,
-    sync::Arc,
 };
 
 #[derive(Clone)]
-pub struct Context<S, C>
+pub struct Context<S, C, SDCD>
 where
-    S: SnapShotReader,
+    S: SnapShotReader<SDCD>,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C>:
+    for<'a> ContextSearch<'a, S, C, SDCD>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     snap_shot: S,
     #[cfg(not(target_arch = "wasm32"))]
     logger: Logger,
-    delta: ContextDelta<S::ConceptId>,
+    delta: ContextDelta<S::ConceptId, SDCD>,
     cache: C,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
     bounded_variable_syntax: HashSet<<C::Syntax as SyntaxTree>::SharedSyntax>,
@@ -66,21 +68,21 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub positions: Vec<usize>,
 }
 
-impl<S, C> Context<S, C>
+impl<S, C, SDCD> Context<S, C, SDCD>
 where
-    S: SnapShotReader
-        + Default
-        + Sync
-        + Apply<Delta = ContextDelta<S::ConceptId>>
-        + Debug,
+    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
     S::ConceptId: Default,
     <C as ContextCache>::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C>: ContextSearchIteration<
+    for<'a> ContextSearch<'a, S, C, SDCD>: ContextSearchIteration<
         ConceptId = S::ConceptId,
         Syntax = <C as ContextCache>::Syntax,
     >,
     C: Default + ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
+    SDCD: Clone
+        + Debug
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     #[must_use]
     pub fn new() -> Self {
@@ -134,15 +136,15 @@ where
                 .get(&ast.to_string())
                 .copied()
                 .unwrap_or_else(|| {
-                    let direct_delta = Arc::new(DirectConceptDelta::New(
+                    let direct_delta = DirectConceptDelta::New(
                         if self.bounded_variable_syntax.contains(ast) {
                             NewConceptDelta::BoundVariable
                         } else {
                             NewConceptDelta::FreeVariable
                         },
-                    ));
+                    );
                     let concept_id = self.delta.update_concept_delta(
-                        &direct_delta,
+                        direct_delta,
                         &mut self.cache,
                         &self.snap_shot,
                     );
@@ -838,7 +840,7 @@ where
 
     fn blindly_remove_concept(&mut self, id: S::ConceptId) {
         self.delta.update_concept_delta(
-            &DirectConceptDelta::Remove(id).into(),
+            DirectConceptDelta::Remove(id),
             &mut self.cache,
             &self.snap_shot,
         );
@@ -938,11 +940,10 @@ where
                 // update self.delta to include deletion of composition
                 // and invalidate cache
                 self.delta.update_concept_delta(
-                    &DirectConceptDelta::Reduce {
+                    DirectConceptDelta::Reduce {
                         change: Change::Remove(z),
                         unreduced_id: concept_id,
-                    }
-                    .into(),
+                    },
                     &mut self.cache,
                     &self.snap_shot,
                 );
@@ -995,10 +996,9 @@ where
         );
         let new_concept_label_id = {
             let direct_delta =
-                DirectConceptDelta::New(NewConceptDelta::String(string.into()))
-                    .into();
+                DirectConceptDelta::New(NewConceptDelta::String(string.into()));
             self.delta.update_concept_delta(
-                &direct_delta,
+                direct_delta,
                 &mut self.cache,
                 &self.snap_shot,
             )
@@ -1007,10 +1007,9 @@ where
             let direct_delta =
                 DirectConceptDelta::New(NewConceptDelta::ReducesTo {
                     reduction: new_concept_label_id,
-                })
-                .into();
+                });
             self.delta.update_concept_delta(
-                &direct_delta,
+                direct_delta,
                 &mut self.cache,
                 &self.snap_shot,
             )
@@ -1026,10 +1025,9 @@ where
                     left_id,
                     concrete_type,
                 },
-            ))
-            .into();
+            ));
             self.delta.update_concept_delta(
-                &direct_delta,
+                direct_delta,
                 &mut self.cache,
                 &self.snap_shot,
             )
@@ -1050,14 +1048,13 @@ where
         string: impl Into<String> + Clone,
     ) -> S::ConceptId {
         self.delta.update_concept_delta(
-            &DirectConceptDelta::New(NewConceptDelta::String(string.into()))
-                .into(),
+            DirectConceptDelta::New(NewConceptDelta::String(string.into())),
             &mut self.cache,
             &self.snap_shot,
         )
     }
 
-    fn context_search(&self) -> ContextSearch<S, C> {
+    fn context_search(&self) -> ContextSearch<S, C, SDCD> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: &self.delta,
@@ -1077,13 +1074,12 @@ where
             .find_as_lefthand_in_composition_with_righthand(righthand);
         match pair {
             None => self.delta.update_concept_delta(
-                &DirectConceptDelta::New(NewConceptDelta::Composition(
+                DirectConceptDelta::New(NewConceptDelta::Composition(
                     Composition {
                         left_id: lefthand,
                         right_id: righthand,
                     },
-                ))
-                .into(),
+                )),
                 &mut self.cache,
                 &self.snap_shot,
             ),
@@ -1115,9 +1111,7 @@ where
             let composition_concept =
                 self.snap_shot.read_concept(&self.delta, composition);
             self.delta.update_concept_delta(
-                &Arc::new(
-                    composition_concept.compose_delta(lefthand, righthand)?,
-                ),
+                composition_concept.compose_delta(lefthand, righthand)?,
                 &mut self.cache,
                 &self.snap_shot,
             );
@@ -1159,10 +1153,9 @@ where
                         let delta = DirectConceptDelta::Reduce {
                             unreduced_id: concept,
                             change,
-                        }
-                        .into();
+                        };
                         self.delta.update_concept_delta(
-                            &delta,
+                            delta,
                             &mut self.cache,
                             &self.snap_shot,
                         );
@@ -1173,13 +1166,16 @@ where
     }
 }
 
-impl<S, C: Default> Default for Context<S, C>
+impl<S, C: Default, SDCD> Default for Context<S, C, SDCD>
 where
-    S: Default + SnapShotReader,
-    for<'a> ContextSearch<'a, S, C>:
+    S: Default + SnapShotReader<SDCD>,
+    for<'a> ContextSearch<'a, S, C, SDCD>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     #[must_use]
     fn default() -> Self {
@@ -1201,14 +1197,17 @@ where
     }
 }
 
-impl<S, C: Default> From<S> for Context<S, C>
+impl<S, C: Default, SDCD> From<S> for Context<S, C, SDCD>
 where
-    S: Default + SnapShotReader,
+    S: Default + SnapShotReader<SDCD>,
     S::ConceptId: Default,
-    for<'a> ContextSearch<'a, S, C>:
+    for<'a> ContextSearch<'a, S, C, SDCD>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
 {
     fn from(snap_shot: S) -> Self {
         Self {

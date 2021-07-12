@@ -5,7 +5,7 @@ use crate::{
     context_delta::ContextDelta,
     context_search::{ContextReferences, ContextSearch, ReductionReason},
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::MultiThreadedContextCache,
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 #[test]
 fn basic_existence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = ContextDelta::default();
+    let delta = ContextDelta::<usize, SharedDirectConceptDelta>::default();
     let cache = MultiThreadedContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.clone()};

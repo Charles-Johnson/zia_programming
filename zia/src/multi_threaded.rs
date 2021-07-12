@@ -1,21 +1,43 @@
 use crate::{
     ast::impl_syntax_tree,
+    context::Context as GenericContext,
     context_cache::impl_cache,
+    context_delta::DirectConceptDelta,
     context_search::{
         ContextSearch, Generalisations, Iteration as ContextSearchIteration,
     },
+    context_snap_shot::ContextSnapShot,
     snap_shot::Reader as SnapShotReader,
 };
+use lazy_static::lazy_static;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashSet, fmt::Debug, sync::Arc};
 
 impl_syntax_tree!(Arc, MultiThreadedSyntaxTree, usize);
 impl_cache!(Arc, MultiThreadedContextCache, MultiThreadedSyntaxTree);
 
-impl<'a, S> ContextSearchIteration
-    for ContextSearch<'a, S, MultiThreadedContextCache>
+pub type Context = GenericContext<
+    ContextSnapShot,
+    MultiThreadedContextCache,
+    SharedDirectConceptDelta,
+>;
+
+// Saves having to construct a new `Context` each time.
+#[macro_export]
+lazy_static! {
+    pub static ref NEW_CONTEXT: Context = Context::new();
+}
+
+pub type SharedDirectConceptDelta = Arc<DirectConceptDelta<usize>>;
+
+impl<'a, S, SDCD> ContextSearchIteration
+    for ContextSearch<'a, S, MultiThreadedContextCache, SDCD>
 where
-    S: SnapShotReader<ConceptId = usize> + Sync + Debug,
+    S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<usize>>
+        + From<DirectConceptDelta<usize>>
+        + Sync,
 {
     type ConceptId = S::ConceptId;
     type Syntax = MultiThreadedSyntaxTree;

@@ -125,6 +125,7 @@ macro_rules! impl_cache {
         }
 
         impl<Syntax: SyntaxTree> ReductionCacheList<Syntax> {
+            #[must_use]
             pub fn spawn(
                 self: &$refcounter<Self>,
                 cache: $refcounter<ReductionCache<Syntax>>,

@@ -17,7 +17,7 @@ extern crate zia;
 #[macro_use]
 extern crate proptest;
 
-use zia::{ZiaError, NEW_CONTEXT};
+use zia::{multi_threaded::NEW_CONTEXT, ZiaError};
 
 #[test]
 fn empty_parentheses() {

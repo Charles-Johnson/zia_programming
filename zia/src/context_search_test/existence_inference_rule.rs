@@ -5,7 +5,7 @@ use crate::{
     context_delta::ContextDelta,
     context_search::{ContextReferences, ContextSearch, ReductionReason},
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::MultiThreadedContextCache,
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -28,7 +28,7 @@ type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 #[test]
 fn existence_inference_rule() {
     let context_cache = MultiThreadedContextCache::default();
-    let context_delta = ContextDelta::default();
+    let context_delta = ContextDelta::<_, SharedDirectConceptDelta>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

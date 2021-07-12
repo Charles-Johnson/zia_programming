@@ -20,7 +20,7 @@ extern crate test;
 extern crate zia;
 
 use test::Bencher;
-use zia::NEW_CONTEXT;
+use zia::multi_threaded::NEW_CONTEXT;
 
 #[test]
 fn simple_condition() {

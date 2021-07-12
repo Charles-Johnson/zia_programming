@@ -4,7 +4,7 @@ use crate::{
     context::Context,
     context_cache::ContextCache,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::MultiThreadedContextCache,
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -62,7 +62,11 @@ type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 #[test]
 fn basic_precedence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let mut context: Context<_, MultiThreadedContextCache> = snapshot.into();
+    let mut context: Context<
+        _,
+        MultiThreadedContextCache,
+        SharedDirectConceptDelta,
+    > = snapshot.into();
 
     assert_eq!(
         context.ast_from_expression("c b a"),

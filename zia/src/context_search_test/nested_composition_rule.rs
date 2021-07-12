@@ -5,7 +5,7 @@ use crate::{
     context_delta::ContextDelta,
     context_search::{ContextReferences, ContextSearch, ReductionReason},
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::MultiThreadedContextCache,
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -55,7 +55,7 @@ type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = ContextDelta::default();
+    let delta = ContextDelta::<_, SharedDirectConceptDelta>::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

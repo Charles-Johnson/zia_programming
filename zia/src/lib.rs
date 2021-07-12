@@ -49,7 +49,7 @@
 //!
 //! ```
 //! extern crate zia;
-//! use zia::{Context, ZiaError};
+//! use zia::{multi_threaded::Context, ZiaError};
 //!
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
@@ -158,30 +158,10 @@ mod mock_snap_shot;
 
 mod parser;
 
-mod single_threaded;
+pub mod single_threaded;
 
-mod multi_threaded;
+pub mod multi_threaded;
 
 mod snap_shot;
 
-/// A container for adding, writing, reading and removing `Concept`s.
-use crate::{
-    context::Context as GenericContext, context_snap_shot::ContextSnapShot,
-    multi_threaded::MultiThreadedContextCache,
-    single_threaded::SingleThreadedContextCache,
-};
-
 pub use crate::errors::ZiaError;
-
-use lazy_static::lazy_static;
-
-pub type SingleThreadedContext =
-    GenericContext<ContextSnapShot, SingleThreadedContextCache>;
-
-pub type Context = GenericContext<ContextSnapShot, MultiThreadedContextCache>;
-
-// Saves having to construct a new `Context` each time.
-#[macro_export]
-lazy_static! {
-    pub static ref NEW_CONTEXT: Context = Context::new();
-}

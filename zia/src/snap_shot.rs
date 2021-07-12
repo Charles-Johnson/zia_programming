@@ -12,7 +12,12 @@ use std::{
     hash::Hash,
 };
 
-pub trait Reader {
+pub trait Reader<SDCD>
+where
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<Self::ConceptId>>
+        + From<DirectConceptDelta<Self::ConceptId>>,
+{
     type ConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
     fn get_concept(
         &self,
@@ -20,7 +25,7 @@ pub trait Reader {
     ) -> Option<&Concept<Self::ConceptId>>;
     fn read_concept(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         id: Self::ConceptId,
     ) -> Concept<Self::ConceptId> {
         delta
@@ -124,7 +129,7 @@ pub trait Reader {
     }
     fn concepts_from_composition(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         comp: Composition<Self::ConceptId>,
     ) -> [Concept<Self::ConceptId>; 2] {
         [
@@ -134,16 +139,16 @@ pub trait Reader {
     }
     fn lowest_unoccupied_concept_id(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
     ) -> Self::ConceptId;
     fn get_label(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept_id: Self::ConceptId,
     ) -> Option<String>;
     fn ast_from_symbol<Syntax>(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         s: &str,
     ) -> Syntax
     where
@@ -159,7 +164,7 @@ pub trait Reader {
     }
     fn bind_concept_to_syntax<Syntax>(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         syntax: Syntax,
         concept: Self::ConceptId,
     ) -> Syntax
@@ -193,12 +198,12 @@ pub trait Reader {
     }
     fn concept_from_label(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         s: &str,
     ) -> Option<Self::ConceptId>;
     fn get_reduction_of_composition(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> Self::ConceptId {
         self.read_concept(delta, concept)
@@ -216,7 +221,7 @@ pub trait Reader {
     }
     fn is_disconnected(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
@@ -231,7 +236,7 @@ pub trait Reader {
     }
     fn righthand_of_without_label_is_empty(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         con: Self::ConceptId,
     ) -> bool {
         self.concrete_concept_id(delta, ConcreteConceptType::Label)
@@ -243,7 +248,7 @@ pub trait Reader {
     }
     fn get_normal_form(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         self.read_concept(delta, concept)
@@ -252,7 +257,7 @@ pub trait Reader {
     }
     fn get_concept_of_label(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         let label_concept_id =
@@ -263,7 +268,7 @@ pub trait Reader {
     }
     fn contains(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         outer: Self::ConceptId,
         inner: Self::ConceptId,
     ) -> bool {
@@ -280,7 +285,7 @@ pub trait Reader {
     }
     fn check_reductions(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         outer_concept: Self::ConceptId,
         inner_concept: Self::ConceptId,
     ) -> ZiaResult<()> {
@@ -298,7 +303,7 @@ pub trait Reader {
     }
     fn get_reduction_or_reduction_of_composition(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> Concept<Self::ConceptId> {
         self.read_concept(
@@ -310,12 +315,12 @@ pub trait Reader {
     }
     fn concrete_concept_id(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId>;
     fn concrete_concept_type(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType>;
 }
