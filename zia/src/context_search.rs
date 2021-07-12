@@ -48,7 +48,7 @@ where
     delta: &'a ContextDelta<S::ConceptId, SDCD>,
     caches: C,
     syntax_evaluating: HashSet<SharedSyntax<C>>,
-    bound_variable_syntax: Arc<HashSet<SharedSyntax<C>>>,
+    bound_variable_syntax: &'a HashSet<SharedSyntax<C>>,
 }
 
 pub type ReductionResult<Syntax> = Option<
@@ -1142,7 +1142,7 @@ where
         cache: &<C as ContextCache>::SharedReductionCache,
     ) -> Self {
         Self {
-            bound_variable_syntax: self.bound_variable_syntax.clone(),
+            bound_variable_syntax: self.bound_variable_syntax,
             caches: self.caches.spawn(cache),
             delta: self.delta,
             snap_shot: self.snap_shot,
@@ -1283,7 +1283,7 @@ where
     ) -> ContextSearch<'a, S, C, SDCD> {
         // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
-            bound_variable_syntax: Arc::new(bound_variable_syntax.clone()),
+            bound_variable_syntax,
             snap_shot,
             variable_mask: VariableMaskList::from(hashmap! {}).into(),
             delta,
