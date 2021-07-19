@@ -25,7 +25,7 @@ use crate::{
     },
     context_search::{
         Comparison, ContextReferences, ContextSearch,
-        Iteration as ContextSearchIteration, SharedSyntax,
+        Iteration as ContextSearchIteration, SharedSyntax, VariableMaskList,
     },
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -39,19 +39,21 @@ use std::{
     collections::{HashMap, HashSet},
     default::Default,
     fmt::Debug,
+    marker::PhantomData,
 };
 
 #[derive(Clone)]
-pub struct Context<S, C, SDCD>
+pub struct Context<S, C, SDCD, VML>
 where
     S: SnapShotReader<SDCD>,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C, SDCD>:
+    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList,
 {
     snap_shot: S,
     #[cfg(not(target_arch = "wasm32"))]
@@ -60,6 +62,7 @@ where
     cache: C,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
     bounded_variable_syntax: HashSet<<C::Syntax as SyntaxTree>::SharedSyntax>,
+    _phantom: PhantomData<VML>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -68,12 +71,12 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub positions: Vec<usize>,
 }
 
-impl<S, C, SDCD> Context<S, C, SDCD>
+impl<S, C, SDCD, VML> Context<S, C, SDCD, VML>
 where
     S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
     S::ConceptId: Default,
     <C as ContextCache>::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C, SDCD>: ContextSearchIteration<
+    for<'a> ContextSearch<'a, S, C, SDCD, VML>: ContextSearchIteration<
         ConceptId = S::ConceptId,
         Syntax = <C as ContextCache>::Syntax,
     >,
@@ -83,6 +86,7 @@ where
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList<Syntax = C::Syntax>,
 {
     #[must_use]
     pub fn new() -> Self {
@@ -1054,7 +1058,7 @@ where
         )
     }
 
-    fn context_search(&self) -> ContextSearch<S, C, SDCD> {
+    fn context_search(&self) -> ContextSearch<S, C, SDCD, VML> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: &self.delta,
@@ -1166,16 +1170,17 @@ where
     }
 }
 
-impl<S, C: Default, SDCD> Default for Context<S, C, SDCD>
+impl<S, C: Default, SDCD, VML> Default for Context<S, C, SDCD, VML>
 where
     S: Default + SnapShotReader<SDCD>,
-    for<'a> ContextSearch<'a, S, C, SDCD>:
+    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList,
 {
     #[must_use]
     fn default() -> Self {
@@ -1193,15 +1198,17 @@ where
             cache: C::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<S, C: Default, SDCD> From<S> for Context<S, C, SDCD>
+impl<S, C: Default, SDCD, VML> From<S> for Context<S, C, SDCD, VML>
 where
     S: Default + SnapShotReader<SDCD>,
     S::ConceptId: Default,
-    for<'a> ContextSearch<'a, S, C, SDCD>:
+    VML: VariableMaskList,
+    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = C::Syntax>,
     C: ContextCache,
     C::Syntax: SyntaxTree<ConceptId = S::ConceptId>,

@@ -135,6 +135,7 @@ mod context_cache;
 
 mod context_delta;
 
+#[macro_use]
 mod context_search;
 
 #[cfg(test)]

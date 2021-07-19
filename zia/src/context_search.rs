@@ -28,14 +28,14 @@ use maplit::{hashmap, hashset};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    hash::Hash,
+    ops::Deref,
     sync::Arc,
 };
 
 pub type SharedSyntax<C> =
     <<C as ContextCache>::Syntax as SyntaxTree>::SharedSyntax;
 #[derive(Debug)]
-pub struct ContextSearch<'a, S, C, SDCD>
+pub struct ContextSearch<'a, S, C, SDCD, VML: VariableMaskList>
 where
     S: SnapShotReader<SDCD>,
     C: ContextCache,
@@ -44,59 +44,53 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
 {
     snap_shot: &'a S,
-    variable_mask: Arc<VariableMaskList<C::Syntax>>,
+    variable_mask: VML::Shared,
     delta: &'a ContextDelta<S::ConceptId, SDCD>,
     caches: C,
     syntax_evaluating: HashSet<SharedSyntax<C>>,
     bound_variable_syntax: &'a HashSet<SharedSyntax<C>>,
 }
 
-pub type ReductionResult<Syntax> = Option<
-    Reduction<
-        <Syntax as SyntaxTree>::ConceptId,
-        <Syntax as SyntaxTree>::SharedSyntax,
-    >,
->;
+pub type ReductionResult<Syntax> = Option<Reduction<Syntax>>;
 
-type Reduction<ConceptId, SharedSyntax> =
-    (SharedSyntax, ReductionReason<ConceptId, SharedSyntax>);
+type Reduction<S> = (<S as SyntaxTree>::SharedSyntax, ReductionReason<S>);
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum ReductionReason<ConceptId: Eq + Hash, SharedSyntax: Eq + Hash> {
-    Comparison(Arc<ComparisonReason<ConceptId, SharedSyntax>>),
+pub enum ReductionReason<S: SyntaxTree> {
+    Comparison(Arc<ComparisonReason<S>>),
     Explicit,
     Rule {
-        generalisation: SharedSyntax,
-        variable_mask: VariableMask<ConceptId, SharedSyntax>,
-        reason: Arc<ReductionReason<ConceptId, SharedSyntax>>,
+        generalisation: <S as SyntaxTree>::SharedSyntax,
+        variable_mask: VariableMask<S>,
+        reason: Arc<ReductionReason<S>>,
     },
     Inference {
-        implication: SharedSyntax,
-        reason: Arc<ReductionReason<ConceptId, SharedSyntax>>,
+        implication: <S as SyntaxTree>::SharedSyntax,
+        reason: Arc<ReductionReason<S>>,
     },
     Default {
-        operator: ConceptId,
+        operator: <S as SyntaxTree>::ConceptId,
     },
-    Partial(HashMap<SharedSyntax, Reduction<ConceptId, SharedSyntax>>),
+    Partial(HashMap<<S as SyntaxTree>::SharedSyntax, Reduction<S>>),
     Existence {
-        substitutions: Substitutions<SharedSyntax>,
-        generalisation: SharedSyntax,
+        substitutions: Substitutions<<S as SyntaxTree>::SharedSyntax>,
+        generalisation: <S as SyntaxTree>::SharedSyntax,
     },
     Recursive {
-        syntax: SharedSyntax,
-        reason: Arc<ReductionReason<ConceptId, SharedSyntax>>,
-        from: Arc<ReductionReason<ConceptId, SharedSyntax>>,
+        syntax: <S as SyntaxTree>::SharedSyntax,
+        reason: Arc<ReductionReason<S>>,
+        from: Arc<ReductionReason<S>>,
     },
     SyntaxCannotReduceToItself,
     LeftReducesToRight {
-        reason: Arc<ReductionReason<ConceptId, SharedSyntax>>,
-        left: SharedSyntax,
-        right: SharedSyntax,
+        reason: Arc<ReductionReason<S>>,
+        left: <S as SyntaxTree>::SharedSyntax,
+        right: <S as SyntaxTree>::SharedSyntax,
     },
     RightReducesToLeft {
-        reason: Arc<ReductionReason<ConceptId, SharedSyntax>>,
-        left: SharedSyntax,
-        right: SharedSyntax,
+        reason: Arc<ReductionReason<S>>,
+        left: <S as SyntaxTree>::SharedSyntax,
+        right: <S as SyntaxTree>::SharedSyntax,
     },
 }
 
@@ -114,7 +108,7 @@ fn substitute<Syntax: SyntaxTree>(
     }
 }
 
-impl<'a, S, C, SDCD> ContextSearch<'a, S, C, SDCD>
+impl<'a, S, C, SDCD, VML> ContextSearch<'a, S, C, SDCD, VML>
 where
     S: SnapShotReader<SDCD> + Sync + std::fmt::Debug,
     Self: Iteration<
@@ -126,6 +120,7 @@ where
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList<Syntax = C::Syntax>,
 {
     fn infer_reduction(
         &self,
@@ -349,7 +344,7 @@ where
                                     generalisation: self
                                         .to_ast(*generalisation),
                                     variable_mask: variable_mask.clone(),
-                                    reason: Arc::new(reason),
+                                    reason: reason.into(),
                                 },
                             )
                         },
@@ -410,7 +405,7 @@ where
     pub fn substitute(
         &self,
         ast: &SharedSyntax<C>,
-        variable_mask: &VariableMask<S::ConceptId, SharedSyntax<C>>,
+        variable_mask: &VariableMask<C::Syntax>,
     ) -> SharedSyntax<C> {
         ast.get_concept()
             .and_then(|c| variable_mask.get(&c).cloned())
@@ -432,7 +427,7 @@ where
         &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> Generalisations<S::ConceptId, SharedSyntax<C>> {
+    ) -> Generalisations<C::Syntax> {
         let ast = self.contract_pair(left, right);
         let generalisation_candidates = self.find_generalisations(&ast);
         debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
@@ -485,7 +480,7 @@ where
         &self,
         ast: &SharedSyntax<C>,
         generalisation: S::ConceptId,
-    ) -> Option<VariableMask<S::ConceptId, SharedSyntax<C>>> {
+    ) -> Option<VariableMask<C::Syntax>> {
         (self.is_free_variable(generalisation)
             && !self.bound_variable_syntax.contains(ast)
             && !ast.get_concept().map_or(false, |c| {
@@ -584,8 +579,7 @@ where
         self.snap_shot.read_concept(self.delta, v).free_variable()
             && self
                 .variable_mask
-                .tail
-                .as_ref()
+                .tail()
                 .map_or(true, |vml| vml.get(v).is_none()) // A hack required to prevent stack overflow
     }
 
@@ -597,11 +591,9 @@ where
     pub fn recursively_reduce(
         &self,
         ast: &SharedSyntax<C>,
-    ) -> MaybeReducedSyntaxWithReason<S::ConceptId, SharedSyntax<C>> {
+    ) -> MaybeReducedSyntaxWithReason<C::Syntax> {
         debug!("recursively_reduce({})", ast);
-        let mut maybe_reason: Option<
-            ReductionReason<S::ConceptId, SharedSyntax<C>>,
-        > = None;
+        let mut maybe_reason: Option<ReductionReason<C::Syntax>> = None;
         let mut reduced_ast = ast.clone();
         while let Some((ref a, ref reason)) = self.reduce(&reduced_ast) {
             maybe_reason = Some(maybe_reason.map_or(reason.clone(), |from| {
@@ -833,12 +825,7 @@ where
                     | Comparison::Incomparable => None,
                 }
                 .map(|ast| {
-                    (
-                        ast,
-                        ReductionReason::Comparison(Arc::new(
-                            comparison_reason,
-                        )),
-                    )
+                    (ast, ReductionReason::Comparison(comparison_reason.into()))
                 })
             },
             ConcreteConceptType::Reduction => {
@@ -859,7 +846,7 @@ where
         &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> ReductionTruthResult<S::ConceptId, SharedSyntax<C>> {
+    ) -> ReductionTruthResult<C::Syntax> {
         if left == right {
             Some((false, ReductionReason::SyntaxCannotReduceToItself))
         } else {
@@ -896,7 +883,7 @@ where
         &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
-    ) -> Option<ReductionReason<S::ConceptId, SharedSyntax<C>>> {
+    ) -> Option<ReductionReason<C::Syntax>> {
         self.reduce(left).and_then(|(reduced_left, reason)| {
             if &reduced_left == right {
                 Some(reason)
@@ -1032,7 +1019,7 @@ where
         &self,
         some_syntax: &SharedSyntax<C>,
         another_syntax: &SharedSyntax<C>,
-    ) -> (Comparison, ComparisonReason<S::ConceptId, SharedSyntax<C>>) {
+    ) -> (Comparison, ComparisonReason<C::Syntax>) {
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
@@ -1154,12 +1141,10 @@ where
     /// Error if `variable_mask` is already included
     fn insert_variable_mask(
         &mut self,
-        variable_mask: VariableMask<S::ConceptId, SharedSyntax<C>>,
+        variable_mask: VariableMask<C::Syntax>,
     ) -> Result<(), ()> {
-        self.variable_mask = Arc::new(
-            VariableMaskList::push(&self.variable_mask, variable_mask)
-                .ok_or(())?,
-        );
+        self.variable_mask =
+            VML::push(&self.variable_mask, variable_mask).ok_or(())?.into();
         Ok(())
     }
 
@@ -1191,23 +1176,20 @@ pub struct Example<Syntax: SyntaxTree> {
     substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax>>,
 }
 
-type MaybeReducedSyntaxWithReason<ConceptId, SharedSyntax> =
-    (SharedSyntax, Option<ReductionReason<ConceptId, SharedSyntax>>);
+type MaybeReducedSyntaxWithReason<S> =
+    (<S as SyntaxTree>::SharedSyntax, Option<ReductionReason<S>>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Match<Syntax: SyntaxTree> {
     value: Syntax::SharedSyntax,
     reduction: Syntax::SharedSyntax,
-    reason: ReductionReason<Syntax::ConceptId, Syntax::SharedSyntax>,
+    reason: ReductionReason<Syntax>,
 }
 
-fn simplify_reasoning<
-    ConceptId: Eq + Hash + Clone,
-    SharedSyntax: Clone + Eq + Hash,
->(
-    reason: Option<ReductionReason<ConceptId, SharedSyntax>>,
-    reversed_reason: Option<ReductionReason<ConceptId, SharedSyntax>>,
-) -> ComparisonReason<ConceptId, SharedSyntax> {
+fn simplify_reasoning<S: SyntaxTree>(
+    reason: Option<ReductionReason<S>>,
+    reversed_reason: Option<ReductionReason<S>>,
+) -> ComparisonReason<S> {
     match (&reason, &reversed_reason) {
         (Some(ReductionReason::Comparison(cr)), rr) => match cr.as_ref() {
             ComparisonReason::Reduction {
@@ -1255,23 +1237,24 @@ pub enum Comparison {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum ComparisonReason<ConceptId: Eq + Hash, SharedSyntax: Eq + Hash> {
+pub enum ComparisonReason<S: SyntaxTree> {
     SameSyntax,
     Reduction {
-        reason: Option<ReductionReason<ConceptId, SharedSyntax>>,
-        reversed_reason: Option<ReductionReason<ConceptId, SharedSyntax>>,
+        reason: Option<ReductionReason<S>>,
+        reversed_reason: Option<ReductionReason<S>>,
     },
     NoGreaterThanConcept,
 }
 
-impl<'a, S, C, SDCD> From<ContextReferences<'a, S, C, SDCD>>
-    for ContextSearch<'a, S, C, SDCD>
+impl<'a, S, C, SDCD, VML> From<ContextReferences<'a, S, C, SDCD>>
+    for ContextSearch<'a, S, C, SDCD, VML>
 where
     C: ContextCache,
     S: SnapShotReader<SDCD>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList,
 {
     fn from(
         ContextReferences {
@@ -1280,12 +1263,12 @@ where
             cache,
             bound_variable_syntax,
         }: ContextReferences<'a, S, C, SDCD>,
-    ) -> ContextSearch<'a, S, C, SDCD> {
+    ) -> ContextSearch<'a, S, C, SDCD, VML> {
         // simple_logger::init().unwrap_or(());
         ContextSearch::<'a> {
             bound_variable_syntax,
             snap_shot,
-            variable_mask: VariableMaskList::from(hashmap! {}).into(),
+            variable_mask: VML::from(hashmap! {}).into(),
             delta,
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
@@ -1307,57 +1290,84 @@ where
     pub bound_variable_syntax: &'a HashSet<SharedSyntax<C>>,
 }
 
-type VariableMask<ConceptId, SharedSyntax> = HashMap<ConceptId, SharedSyntax>;
+pub type VariableMask<Syntax> = HashMap<
+    <Syntax as SyntaxTree>::ConceptId,
+    <Syntax as SyntaxTree>::SharedSyntax,
+>;
 
-#[derive(Clone, PartialEq, Debug)]
-struct VariableMaskList<Syntax: SyntaxTree> {
-    head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
-    tail: Option<Arc<VariableMaskList<Syntax>>>,
-}
-
-impl<Syntax: SyntaxTree>
-    From<VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>>
-    for VariableMaskList<Syntax>
-{
-    fn from(
-        head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
-    ) -> Self {
-        Self {
-            head,
-            tail: None,
+macro_rules! impl_variable_mask_list {
+    ($refcounter:tt, $vml:tt) => {
+        use crate::context_search::{VariableMask, VariableMaskList};
+        #[derive(Clone, PartialEq, Debug)]
+        pub struct $vml<Syntax: SyntaxTree> {
+            head: VariableMask<Syntax>,
+            tail: Option<$refcounter<$vml<Syntax>>>,
         }
-    }
+        impl<Syntax: SyntaxTree> From<VariableMask<Syntax>> for $vml<Syntax> {
+            fn from(head: VariableMask<Syntax>) -> Self {
+                Self {
+                    head,
+                    tail: None,
+                }
+            }
+        }
+
+        impl<Syntax: SyntaxTree> VariableMaskList for $vml<Syntax> {
+            type Shared = $refcounter<$vml<Syntax>>;
+            type Syntax = Syntax;
+
+            /// returns None if `head` is equal to one of the nodes.
+            /// This prevents cycles in reduction evaluations
+            fn push(
+                list: &$refcounter<Self>,
+                head: VariableMask<Syntax>,
+            ) -> Option<Self> {
+                (!list.contains(&head)).then(|| Self {
+                    head,
+                    tail: Some(list.clone()),
+                })
+            }
+
+            fn contains(&self, node: &VariableMask<Syntax>) -> bool {
+                &self.head == node
+                    || self
+                        .tail
+                        .as_ref()
+                        .map_or(false, |vml| vml.contains(node))
+            }
+
+            fn get(
+                &self,
+                concept_id: Syntax::ConceptId,
+            ) -> Option<&Syntax::SharedSyntax> {
+                self.head.get(&concept_id).or_else(|| {
+                    self.tail.as_ref().and_then(|vml| vml.get(concept_id))
+                })
+            }
+
+            fn tail(&self) -> Option<&$refcounter<Self>> {
+                self.tail.as_ref()
+            }
+        }
+    };
 }
 
-impl<Syntax: SyntaxTree> VariableMaskList<Syntax> {
-    /// returns None if `head` is equal to one of the nodes.
-    /// This prevents cycles in reduction evaluations
+pub trait VariableMaskList: Sized + From<VariableMask<Self::Syntax>> {
+    type Shared: Clone + Deref<Target = Self> + From<Self>;
+    type Syntax: SyntaxTree;
     fn push(
-        list: &Arc<Self>,
-        head: VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
-    ) -> Option<Self> {
-        (!list.contains(&head)).then(|| Self {
-            head,
-            tail: Some(list.clone()),
-        })
-    }
+        list: &Self::Shared,
+        head: VariableMask<Self::Syntax>,
+    ) -> Option<Self>;
 
-    fn contains(
-        &self,
-        node: &VariableMask<Syntax::ConceptId, Syntax::SharedSyntax>,
-    ) -> bool {
-        &self.head == node
-            || self.tail.as_ref().map_or(false, |vml| vml.contains(node))
-    }
+    fn contains(&self, node: &VariableMask<Self::Syntax>) -> bool;
 
     fn get(
         &self,
-        concept_id: Syntax::ConceptId,
-    ) -> Option<&Syntax::SharedSyntax> {
-        self.head
-            .get(&concept_id)
-            .or_else(|| self.tail.as_ref().and_then(|vml| vml.get(concept_id)))
-    }
+        concept_id: <Self::Syntax as SyntaxTree>::ConceptId,
+    ) -> Option<&<Self::Syntax as SyntaxTree>::SharedSyntax>;
+
+    fn tail(&self) -> Option<&Self::Shared>;
 }
 
 pub trait Iteration {
@@ -1367,14 +1377,10 @@ pub trait Iteration {
         &self,
         example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<
-        Self::ConceptId,
-        <Self::Syntax as SyntaxTree>::SharedSyntax,
-    >;
+    ) -> Generalisations<Self::Syntax>;
 }
 
-pub type Generalisations<ConceptId, SharedSyntax> =
-    Vec<(ConceptId, VariableMask<ConceptId, SharedSyntax>)>;
+pub type Generalisations<Syntax> =
+    Vec<(<Syntax as SyntaxTree>::ConceptId, VariableMask<Syntax>)>;
 
-type ReductionTruthResult<ConceptId, SharedSyntax> =
-    Option<(bool, ReductionReason<ConceptId, SharedSyntax>)>;
+type ReductionTruthResult<S> = Option<(bool, ReductionReason<S>)>;

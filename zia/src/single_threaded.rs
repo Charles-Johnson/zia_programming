@@ -13,17 +13,25 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
 impl_syntax_tree!(Rc, SingleThreadedSyntaxTree, usize);
 impl_cache!(Rc, SingleThreadedContextCache, SingleThreadedSyntaxTree);
+impl_variable_mask_list!(Rc, SingleThreadedVariableMaskList);
 
 pub type Context = GenericContext<
     ContextSnapShot,
     SingleThreadedContextCache,
     SharedDirectConceptDelta,
+    SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
 >;
 
 type SharedDirectConceptDelta = Rc<DirectConceptDelta<usize>>;
 
 impl<'a, S, SDCD> ContextSearchIteration
-    for ContextSearch<'a, S, SingleThreadedContextCache, SDCD>
+    for ContextSearch<
+        'a,
+        S,
+        SingleThreadedContextCache,
+        SDCD,
+        SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
+    >
 where
     S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
     SDCD: Clone
@@ -37,10 +45,7 @@ where
         &self,
         example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<
-        Self::ConceptId,
-        <Self::Syntax as SyntaxTree>::SharedSyntax,
-    > {
+    ) -> Generalisations<Self::Syntax> {
         candidates
             .iter()
             .filter_map(|gc| {

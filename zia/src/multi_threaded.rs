@@ -15,11 +15,13 @@ use std::{collections::HashSet, fmt::Debug, sync::Arc};
 
 impl_syntax_tree!(Arc, MultiThreadedSyntaxTree, usize);
 impl_cache!(Arc, MultiThreadedContextCache, MultiThreadedSyntaxTree);
+impl_variable_mask_list!(Arc, MultiThreadedVariableMaskList);
 
 pub type Context = GenericContext<
     ContextSnapShot,
     MultiThreadedContextCache,
     SharedDirectConceptDelta,
+    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
 >;
 
 // Saves having to construct a new `Context` each time.
@@ -31,7 +33,13 @@ lazy_static! {
 pub type SharedDirectConceptDelta = Arc<DirectConceptDelta<usize>>;
 
 impl<'a, S, SDCD> ContextSearchIteration
-    for ContextSearch<'a, S, MultiThreadedContextCache, SDCD>
+    for ContextSearch<
+        'a,
+        S,
+        MultiThreadedContextCache,
+        SDCD,
+        MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
+    >
 where
     S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
     SDCD: Clone
@@ -46,10 +54,7 @@ where
         &self,
         example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<
-        Self::ConceptId,
-        <Self::Syntax as SyntaxTree>::SharedSyntax,
-    > {
+    ) -> Generalisations<Self::Syntax> {
         candidates
             .par_iter()
             .filter_map(|gc| {
