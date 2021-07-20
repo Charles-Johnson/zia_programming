@@ -25,13 +25,14 @@ use crate::{
     },
     context_search::{
         Comparison, ContextReferences, ContextSearch,
-        Iteration as ContextSearchIteration, SharedSyntax, VariableMaskList,
+        Iteration as ContextSearchIteration, SharedSyntax,
     },
     delta::Apply,
     errors::{ZiaError, ZiaResult},
     map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
+    variable_mask_list::VariableMaskList,
 };
 #[cfg(not(target_arch = "wasm32"))]
 use slog::{info, o, Drain, Logger};

@@ -113,7 +113,6 @@
 //! assert_eq!(context.execute("let _x_ or true -> true"), "");
 //! assert_eq!(context.execute("false or true"), "true");
 //! ```
-
 mod and_also;
 
 mod associativity;
@@ -135,7 +134,6 @@ mod context_cache;
 
 mod context_delta;
 
-#[macro_use]
 mod context_search;
 
 #[cfg(test)]
@@ -164,5 +162,7 @@ pub mod single_threaded;
 pub mod multi_threaded;
 
 mod snap_shot;
+
+pub mod variable_mask_list;
 
 pub use crate::errors::ZiaError;

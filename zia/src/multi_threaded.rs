@@ -8,6 +8,7 @@ use crate::{
     },
     context_snap_shot::ContextSnapShot,
     snap_shot::Reader as SnapShotReader,
+    variable_mask_list::impl_variable_mask_list,
 };
 use lazy_static::lazy_static;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
