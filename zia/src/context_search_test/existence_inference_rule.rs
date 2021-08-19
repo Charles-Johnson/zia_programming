@@ -1,11 +1,14 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch, ReductionReason},
+    context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{
+        MultiThreadedContextCache, MultiThreadedReductionReason,
+        SharedDirectConceptDelta,
+    },
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -23,7 +26,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
+type ReductionReason = MultiThreadedReductionReason<Syntax>;
 
 #[test]
 fn existence_inference_rule() {

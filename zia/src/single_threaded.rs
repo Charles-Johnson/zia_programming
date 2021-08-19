@@ -13,12 +13,15 @@ use crate::{
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
 impl_syntax_tree!(Rc, SingleThreadedSyntaxTree, usize);
-impl_cache!(Rc, SingleThreadedContextCache, SingleThreadedSyntaxTree);
+impl_cache!(Rc, SingleThreadedContextCache);
 impl_variable_mask_list!(Rc, SingleThreadedVariableMaskList);
+impl_reduction_reason!(Rc, SingleThreadedReductionReason);
 
 pub type Context = GenericContext<
     ContextSnapShot,
-    SingleThreadedContextCache,
+    SingleThreadedContextCache<
+        SingleThreadedReductionReason<SingleThreadedSyntaxTree>,
+    >,
     SharedDirectConceptDelta,
     SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
 >;
@@ -29,7 +32,9 @@ impl<'a, S, SDCD> ContextSearchIteration
     for ContextSearch<
         'a,
         S,
-        SingleThreadedContextCache,
+        SingleThreadedContextCache<
+            SingleThreadedReductionReason<SingleThreadedSyntaxTree>,
+        >,
         SDCD,
         SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
     >

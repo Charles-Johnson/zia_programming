@@ -1,23 +1,23 @@
 #![allow(clippy::single_component_path_imports)]
 
 macro_rules! impl_cache {
-    ($refcounter:tt, $cache:tt, $syntax:ty) => {
+    ($refcounter:tt, $cache:tt) => {
         use crate::{
             ast::SyntaxTree,
             concepts::Concept,
-            context_cache::{ContextCache, ReductionCache},
+            context_cache::{ContextCache, ReductionCache, ConceptId, SharedSyntax},
             context_search::ReductionResult,
         };
         use dashmap::DashMap;
         use log::debug;
         #[derive(Debug, Clone)]
-        pub struct $cache {
-            pub reductions: $refcounter<ReductionCacheList<$syntax>>,
-            syntax_trees: $refcounter<DashMap<<$syntax as SyntaxTree>::ConceptId, <$syntax as SyntaxTree>::SharedSyntax>>,
-            contains_bound_variable_syntax: $refcounter<DashMap<<$syntax as SyntaxTree>::SharedSyntax, bool>>,
+        pub struct $cache<RR: ReductionReason> {
+            pub reductions: $refcounter<ReductionCacheList<RR>>,
+            syntax_trees: $refcounter<DashMap<ConceptId<RR>, SharedSyntax<RR>>>,
+            contains_bound_variable_syntax: $refcounter<DashMap<SharedSyntax<RR>, bool>>,
         }
 
-        impl Default for $cache {
+        impl<RR: ReductionReason> Default for $cache<RR> {
             fn default() -> Self {
                 Self {
                     reductions: $refcounter::new(ReductionCacheList::default()),
@@ -27,10 +27,10 @@ macro_rules! impl_cache {
             }
         }
 
-        impl ContextCache for $cache
+        impl<RR: ReductionReason> ContextCache for $cache<RR>
         {
-            type Syntax = $syntax;
-            type SharedReductionCache = $refcounter<ReductionCache<Self::Syntax>>;
+            type RR = RR;
+            type SharedReductionCache = $refcounter<ReductionCache<RR>>;
             fn invalidate(&mut self) {
                 std::mem::take(self);
                 debug!("Cache invalidated");
@@ -48,7 +48,7 @@ macro_rules! impl_cache {
 
             fn remember_if_contains_bound_variable_syntax_or_else(
                 &self,
-                syntax: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+                syntax: &SharedSyntax<Self::RR>,
                 f: impl Fn() -> bool,
             ) -> bool {
                 self.contains_bound_variable_syntax.get(syntax).map_or_else(f, |v| *v)
@@ -56,9 +56,9 @@ macro_rules! impl_cache {
 
             fn get_syntax_tree_or_else(
                 &self,
-                concept_id: <Self::Syntax as SyntaxTree>::ConceptId,
-                build_syntax: impl Fn() -> <Self::Syntax as SyntaxTree>::SharedSyntax + Copy,
-            ) -> <Self::Syntax as SyntaxTree>::SharedSyntax {
+                concept_id: ConceptId<Self::RR>,
+                build_syntax: impl Fn() -> SharedSyntax<Self::RR> + Copy,
+            ) -> <<Self::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax {
                 self.syntax_trees
                     .get(&concept_id)
                     .map_or_else(build_syntax, |v| v.clone())
@@ -66,8 +66,8 @@ macro_rules! impl_cache {
 
             fn insert_syntax_tree(
                 &self,
-                concept: &Concept<<Self::Syntax as SyntaxTree>::ConceptId>,
-                syntax_tree: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+                concept: &Concept<ConceptId<Self::RR>>,
+                syntax_tree: &SharedSyntax<Self::RR>,
             ) {
                 if !concept.anonymous_variable() {
                     self.syntax_trees.insert(concept.id(), syntax_tree.clone());
@@ -76,46 +76,42 @@ macro_rules! impl_cache {
 
             fn get_reduction_or_else(
                 &self,
-                ast: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-                reduce: impl Fn() -> ReductionResult<Self::Syntax>
+                ast: &SharedSyntax<Self::RR>,
+                reduce: impl Fn() -> ReductionResult<RR>
                     + Copy,
-            ) -> ReductionResult<Self::Syntax> {
+            ) -> ReductionResult<RR> {
                 self.reductions.get_reduction_or_else(ast, reduce)
             }
 
             fn insert_reduction(&self,
-                ast: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-                reduction_result: &ReductionResult<Self::Syntax>,) {
+                ast: &SharedSyntax<Self::RR>,
+                reduction_result: &ReductionResult<RR>,) {
                 self.reductions.insert_reduction(ast, reduction_result);
             }
         }
 
         #[derive(Debug, Clone)]
-        pub struct ReductionCacheList<Syntax: SyntaxTree> {
-            head: $refcounter<ReductionCache<Syntax>>,
+        pub struct ReductionCacheList<RR: ReductionReason> {
+            head: $refcounter<ReductionCache<RR>>,
             tail: Option<$refcounter<Self>>,
         }
 
-        impl<Syntax> Default for ReductionCacheList<Syntax>
-        where
-            Syntax: SyntaxTree,
+        impl<RR: ReductionReason> Default for ReductionCacheList<RR>
         {
             fn default() -> Self {
                 Self {
-                    head: $refcounter::new(ReductionCache::<Syntax>::default()),
+                    head: $refcounter::new(ReductionCache::<RR>::default()),
                     tail: None,
                 }
             }
         }
 
-        impl<'a, Syntax>
-            From<$refcounter<ReductionCache<Syntax>>>
-            for ReductionCacheList<Syntax>
-        where
-            Syntax: SyntaxTree,
+        impl<'a, RR: ReductionReason>
+            From<$refcounter<ReductionCache<RR>>>
+            for ReductionCacheList<RR>
         {
             fn from(
-                head: $refcounter<ReductionCache<Syntax>>,
+                head: $refcounter<ReductionCache<RR>>,
             ) -> Self {
                 Self {
                     head,
@@ -124,11 +120,11 @@ macro_rules! impl_cache {
             }
         }
 
-        impl<Syntax: SyntaxTree> ReductionCacheList<Syntax> {
+        impl<RR: ReductionReason> ReductionCacheList<RR> {
             #[must_use]
             pub fn spawn(
                 self: &$refcounter<Self>,
-                cache: $refcounter<ReductionCache<Syntax>>,
+                cache: $refcounter<ReductionCache<RR>>,
             ) -> $refcounter<Self> {
                 $refcounter::new(Self {
                     head: cache,
@@ -138,10 +134,10 @@ macro_rules! impl_cache {
 
             pub fn get_reduction_or_else(
                 &self,
-                ast: &Syntax::SharedSyntax,
-                reduce: impl Fn() -> ReductionResult<Syntax>
+                ast: &SharedSyntax<RR>,
+                reduce: impl Fn() -> ReductionResult<RR>
                     + Copy,
-            ) -> ReductionResult<Syntax> {
+            ) -> ReductionResult<RR> {
                 self.head.get(ast).map_or_else(
                     || {
                         self.tail.as_ref().map_or_else(reduce, |ccl| {
@@ -154,8 +150,8 @@ macro_rules! impl_cache {
 
             pub fn insert_reduction(
                 &self,
-                ast: &Syntax::SharedSyntax,
-                reduction_result: &ReductionResult<Syntax>,
+                ast: &SharedSyntax<RR>,
+                reduction_result: &ReductionResult<RR>,
             ) {
                 if !ast.is_variable()
                     && reduction_result.as_ref().map_or(true, |(r, _)| r != ast)

@@ -15,12 +15,15 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashSet, fmt::Debug, sync::Arc};
 
 impl_syntax_tree!(Arc, MultiThreadedSyntaxTree, usize);
-impl_cache!(Arc, MultiThreadedContextCache, MultiThreadedSyntaxTree);
+impl_cache!(Arc, MultiThreadedContextCache);
 impl_variable_mask_list!(Arc, MultiThreadedVariableMaskList);
+impl_reduction_reason!(Arc, MultiThreadedReductionReason);
 
 pub type Context = GenericContext<
     ContextSnapShot,
-    MultiThreadedContextCache,
+    MultiThreadedContextCache<
+        MultiThreadedReductionReason<MultiThreadedSyntaxTree>,
+    >,
     SharedDirectConceptDelta,
     MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
 >;
@@ -37,7 +40,9 @@ impl<'a, S, SDCD> ContextSearchIteration
     for ContextSearch<
         'a,
         S,
-        MultiThreadedContextCache,
+        MultiThreadedContextCache<
+            MultiThreadedReductionReason<MultiThreadedSyntaxTree>,
+        >,
         SDCD,
         MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
     >

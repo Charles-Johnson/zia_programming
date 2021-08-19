@@ -1,10 +1,9 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_cache::ContextCache,
     context_test::Context,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::MultiThreadedContextCache,
 };
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -156,9 +155,6 @@ fn concept_labels() -> HashMap<ConceptId, &'static str> {
         33 => "false",
     }
 }
-
-type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
-
 #[test]
 fn infered_precedence_test() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());

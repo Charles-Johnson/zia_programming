@@ -1,9 +1,10 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_cache::ContextCache,
     context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch, ReductionReason},
+    context_search::{ContextReferences, ContextSearch},
+    context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };
@@ -49,8 +50,6 @@ fn labels() -> HashMap<ConceptId, &'static str> {
         4 => "_y_"
     }
 }
-
-type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 
 #[test]
 fn basic_rule() {

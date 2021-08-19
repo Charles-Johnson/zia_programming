@@ -1,7 +1,7 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    context_cache::ContextCache,
     context_delta::ContextDelta,
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -9,8 +9,6 @@ use crate::{
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
-
-type Syntax = <MultiThreadedContextCache as ContextCache>::Syntax;
 
 #[test]
 fn basic_composition() {

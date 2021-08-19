@@ -3,8 +3,8 @@ use crate::{
     context_delta::ContextDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
-        ReductionReason,
     },
+    context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
 };

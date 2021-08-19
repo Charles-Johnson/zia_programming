@@ -18,6 +18,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
+    context_search::{ReductionReason, Syntax},
     snap_shot::Reader,
 };
 use std::{
@@ -56,21 +57,23 @@ where
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>,
 {
-    pub fn update_concept_delta<Syntax, R>(
+    pub fn update_concept_delta<C, R>(
         &mut self,
         concept_delta: DirectConceptDelta<R::ConceptId>,
-        cache_to_invalidate: &mut impl ContextCache<Syntax = Syntax>,
+        cache_to_invalidate: &mut C,
         snapshot: &R,
     ) -> ConceptId
     where
-        Syntax: SyntaxTree<ConceptId = R::ConceptId>,
+        C: ContextCache,
+        <C::RR as ReductionReason>::Syntax:
+            SyntaxTree<ConceptId = R::ConceptId>,
         R: Reader<SharedDirectConceptDelta, ConceptId = ConceptId>,
     {
         let concept_delta: SharedDirectConceptDelta = concept_delta.into();
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
-                self.update_new_concept_delta::<Syntax, R>(delta, snapshot)
+                self.update_new_concept_delta::<Syntax<C>, R>(delta, snapshot)
             },
             DirectConceptDelta::Compose {
                 composition_id,

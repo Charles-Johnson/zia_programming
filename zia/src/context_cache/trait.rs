@@ -1,45 +1,49 @@
 use crate::{
-    ast::SyntaxTree, concepts::Concept, context_search::ReductionResult,
+    ast::SyntaxTree,
+    concepts::Concept,
+    context_search::{ReductionReason, ReductionResult},
 };
 use std::fmt::Debug;
+
+use super::{ConceptId, SharedSyntax};
 
 pub trait ContextCache
 where
     Self: Clone + Debug + Default,
 {
     type SharedReductionCache: Default;
-    type Syntax: SyntaxTree;
+    type RR: ReductionReason;
     fn invalidate(&mut self);
 
     fn spawn(&self, cache: &Self::SharedReductionCache) -> Self;
 
     fn remember_if_contains_bound_variable_syntax_or_else(
         &self,
-        syntax: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+        syntax: &SharedSyntax<Self::RR>,
         f: impl Fn() -> bool,
     ) -> bool;
 
     fn get_syntax_tree_or_else(
         &self,
-        concept_id: <Self::Syntax as SyntaxTree>::ConceptId,
-        build_syntax: impl Fn() -> <Self::Syntax as SyntaxTree>::SharedSyntax + Copy,
-    ) -> <Self::Syntax as SyntaxTree>::SharedSyntax;
+        concept_id: ConceptId<Self::RR>,
+        build_syntax: impl Fn() -> SharedSyntax<Self::RR> + Copy,
+    ) -> <<Self::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax;
 
     fn insert_syntax_tree(
         &self,
-        concept: &Concept<<Self::Syntax as SyntaxTree>::ConceptId>,
-        syntax_tree: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+        concept: &Concept<ConceptId<Self::RR>>,
+        syntax_tree: &SharedSyntax<Self::RR>,
     );
 
     fn get_reduction_or_else(
         &self,
-        ast: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-        reduce: impl Fn() -> ReductionResult<Self::Syntax> + Copy,
-    ) -> ReductionResult<Self::Syntax>;
+        ast: &SharedSyntax<Self::RR>,
+        reduce: impl Fn() -> ReductionResult<Self::RR> + Copy,
+    ) -> ReductionResult<Self::RR>;
 
     fn insert_reduction(
         &self,
-        ast: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-        reduction_result: &ReductionResult<Self::Syntax>,
+        ast: &SharedSyntax<Self::RR>,
+        reduction_result: &ReductionResult<Self::RR>,
     );
 }
