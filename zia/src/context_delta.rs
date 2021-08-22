@@ -310,7 +310,7 @@ where
                             &DirectConceptDelta::Remove(_)
                         ) =>
                     {
-                        panic!("Concept {} already removed", concept_id)
+                        panic!("Concept {} already removed", concept_id);
                     }
                     _ => (),
                 };
@@ -518,7 +518,7 @@ pub enum NewConceptDelta<Id> {
     },
 }
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub enum Change<T> {
     Create(T),
     Update {
@@ -526,22 +526,6 @@ pub enum Change<T> {
         after: T,
     },
     Remove(T),
-}
-
-impl<T: Clone> Clone for Change<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Create(x) => Self::Create(x.clone()),
-            Self::Update {
-                before,
-                after,
-            } => Self::Update {
-                before: before.clone(),
-                after: after.clone(),
-            },
-            Self::Remove(x) => Self::Remove(x.clone()),
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

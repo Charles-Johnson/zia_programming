@@ -64,11 +64,11 @@ impl ContextSnapShot {
         match delta {
             NewConceptDelta::FreeVariable => {
                 self.concepts[*new_concept_id] =
-                    Some(Concept::make_free_variable(*new_concept_id))
+                    Some(Concept::make_free_variable(*new_concept_id));
             },
             NewConceptDelta::BoundVariable => {
                 self.concepts[*new_concept_id] =
-                    Some(Concept::make_bound_variable(*new_concept_id))
+                    Some(Concept::make_bound_variable(*new_concept_id));
             },
             NewConceptDelta::String(s) => {
                 self.string_map.insert(s.into(), *new_concept_id);
@@ -244,7 +244,7 @@ impl ContextSnapShot {
                     },
                 },
             )
-            .cloned()
+            .copied()
     }
 
     fn get_labellee<
@@ -317,7 +317,7 @@ where
             for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 if let DirectConceptDelta::New(_) = dcd.as_ref() {
                     if *id >= new_concept_length {
-                        new_concept_length = *id + 1
+                        new_concept_length = *id + 1;
                     }
                 }
             }
@@ -404,13 +404,13 @@ where
                     DirectConceptDelta::New(_) => id = Some(Some(*concept_id)),
                     DirectConceptDelta::Remove(concept_id) => {
                         debug_assert_eq!(Some(Some(*concept_id)), id);
-                        id = Some(None)
+                        id = Some(None);
                     },
                     _ => (),
                 }
             }
         }
-        id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).cloned())
+        id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).copied())
     }
 
     fn concrete_concept_type(
@@ -428,7 +428,7 @@ where
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>,
 {
-    #[allow(clippy::clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines)]
     fn apply(&mut self, delta: ContextDelta<Self::ConceptId, SDCD>) {
         delta.string().iter().for_each(|(s, sd)| match sd {
             context_delta::Change::Update {
@@ -441,7 +441,7 @@ where
             context_delta::Change::Create(id) => self.add_string(*id, s),
             context_delta::Change::Remove(before) => {
                 debug_assert_eq!(self.string_map.get(s), Some(before));
-                self.remove_string(s)
+                self.remove_string(s);
             },
         });
         let concept_len = self.concept_len(&delta);
@@ -454,7 +454,7 @@ where
                     self.apply_new_concept(&NewDirectConceptDelta {
                         delta: delta.clone(),
                         new_concept_id: *concept_id,
-                    })
+                    });
                 },
                 DirectConceptDelta::Compose {
                     change,

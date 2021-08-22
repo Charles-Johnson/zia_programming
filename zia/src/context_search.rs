@@ -784,7 +784,7 @@ where
                         .read_concept(self.delta, *g)
                         .get_lefthand_of()
                         .values(),
-                )
+                );
             });
             self.find_generalisations(&r).iter().for_each(|g| {
                 generalisations.extend(
@@ -792,7 +792,7 @@ where
                         .read_concept(self.delta, *g)
                         .get_righthand_of()
                         .values(),
-                )
+                );
             });
             generalisations
         } else {
@@ -1182,7 +1182,7 @@ where
         }
     }
 
-    #[allow(clippy::clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines)]
     pub fn compare(
         &self,
         some_syntax: &SharedSyntax<C>,

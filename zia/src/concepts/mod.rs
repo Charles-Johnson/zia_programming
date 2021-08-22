@@ -222,8 +222,9 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 }) => !free_variables.is_empty(),
                 MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
-                MaybeComposition::Leaf(LeafCharacter::Constant)
-                | MaybeComposition::Leaf(LeafCharacter::BoundVariable) => false,
+                MaybeComposition::Leaf(
+                    LeafCharacter::Constant | LeafCharacter::BoundVariable,
+                ) => false,
             }
         } else {
             false
@@ -244,8 +245,9 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                     ..
                 }) => !binding_variables.is_empty(),
                 MaybeComposition::Leaf(LeafCharacter::BoundVariable) => true,
-                MaybeComposition::Leaf(LeafCharacter::Constant)
-                | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => false,
+                MaybeComposition::Leaf(
+                    LeafCharacter::Constant | LeafCharacter::FreeVariable,
+                ) => false,
             }
         } else {
             false
@@ -268,8 +270,9 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
                 }) => {
                     !binding_variables.is_empty() | !free_variables.is_empty()
                 },
-                MaybeComposition::Leaf(LeafCharacter::BoundVariable)
-                | MaybeComposition::Leaf(LeafCharacter::FreeVariable) => true,
+                MaybeComposition::Leaf(
+                    LeafCharacter::BoundVariable | LeafCharacter::FreeVariable,
+                ) => true,
                 MaybeComposition::Leaf(LeafCharacter::Constant) => false,
             }
         } else {
@@ -382,14 +385,14 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
         &self,
         right_id: Id,
     ) -> Option<Id> {
-        self.concrete_part.lefthand_of.get(&right_id).cloned()
+        self.concrete_part.lefthand_of.get(&right_id).copied()
     }
 
     pub fn find_as_righthand_in_composition_with_lefthand(
         &self,
         left_id: Id,
     ) -> Option<Id> {
-        self.concrete_part.righthand_of.get(&left_id).cloned()
+        self.concrete_part.righthand_of.get(&left_id).copied()
     }
 
     pub fn get_concrete_concept_type(&self) -> Option<ConcreteConceptType> {
@@ -404,7 +407,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug> Concept<Id> {
             ap.reduces_to = Some(other.id);
             other.concrete_part.reduces_from.insert(self.id);
         } else {
-            panic!("Cannot reduce a concrete concept")
+            panic!("Cannot reduce a concrete concept");
         }
     }
 

@@ -644,8 +644,10 @@ where
                     .get_expansion()
                     .and_then(|(left, right)| {
                         self.execute_let(&left, &right).and_then(|x| match x {
-                            Err(ZiaError::CannotReduceFurther)
-                            | Err(ZiaError::UnusedSymbol) => None,
+                            Err(
+                                ZiaError::CannotReduceFurther
+                                | ZiaError::UnusedSymbol,
+                            ) => None,
                             _ => Some(x),
                         })
                     })

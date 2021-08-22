@@ -29,7 +29,6 @@ pub type Context = GenericContext<
 >;
 
 // Saves having to construct a new `Context` each time.
-#[macro_export]
 lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new();
 }
