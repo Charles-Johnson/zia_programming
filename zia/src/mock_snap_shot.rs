@@ -1,6 +1,6 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, DirectConceptDelta},
     context_search_test::check_order,
     delta::Apply,
     snap_shot::Reader,
@@ -38,12 +38,20 @@ impl MockSnapShot {
     }
 }
 
-impl Apply for MockSnapShot {
-    type Delta = ContextDelta<ConceptId>;
-
-    fn apply(&mut self, _: Self::Delta) {}
+impl<SDCD> Apply<SDCD> for MockSnapShot
+where
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<ConceptId>>
+        + From<DirectConceptDelta<ConceptId>>,
+{
+    fn apply(&mut self, _: ContextDelta<ConceptId, SDCD>) {}
 }
-impl Reader for MockSnapShot {
+impl<SDCD> Reader<SDCD> for MockSnapShot
+where
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<ConceptId>>
+        + From<DirectConceptDelta<ConceptId>>,
+{
     type ConceptId = ConceptId;
 
     fn get_concept(
@@ -55,14 +63,14 @@ impl Reader for MockSnapShot {
 
     fn lowest_unoccupied_concept_id(
         &self,
-        _: &ContextDelta<Self::ConceptId>,
+        _: &ContextDelta<Self::ConceptId, SDCD>,
     ) -> Self::ConceptId {
         self.concepts.len()
     }
 
     fn get_label(
         &self,
-        _: &ContextDelta<Self::ConceptId>,
+        _: &ContextDelta<Self::ConceptId, SDCD>,
         concept_id: Self::ConceptId,
     ) -> Option<String> {
         self.concept_labels.get_by_left(&concept_id).map(|s| s.to_string())
@@ -70,7 +78,7 @@ impl Reader for MockSnapShot {
 
     fn concept_from_label(
         &self,
-        _: &ContextDelta<Self::ConceptId>,
+        _: &ContextDelta<Self::ConceptId, SDCD>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.concept_labels.get_by_right(&s).cloned()
@@ -78,7 +86,7 @@ impl Reader for MockSnapShot {
 
     fn concrete_concept_id(
         &self,
-        _: &ContextDelta<Self::ConceptId>,
+        _: &ContextDelta<Self::ConceptId, SDCD>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).cloned()
@@ -86,7 +94,7 @@ impl Reader for MockSnapShot {
 
     fn concrete_concept_type(
         &self,
-        _: &ContextDelta<Self::ConceptId>,
+        _: &ContextDelta<Self::ConceptId, SDCD>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.concrete_concepts.get_by_left(&concept_id).cloned()

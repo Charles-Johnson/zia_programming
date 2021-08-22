@@ -16,7 +16,7 @@
 
 extern crate zia;
 
-use zia::NEW_CONTEXT;
+use zia::multi_threaded::NEW_CONTEXT;
 
 #[test]
 fn some_concept_is_true() {

@@ -35,7 +35,7 @@ disciplines.
 
 ```rust
 extern crate zia;
-use zia::{Context, ZiaError};
+use zia::{multi_threaded::Context, ZiaError};
 
 // Construct a new `Context` using the `new` method
 let mut context = Context::new();

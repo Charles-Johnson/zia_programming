@@ -19,7 +19,7 @@ extern crate linefeed;
 extern crate zia;
 
 use linefeed::{Interface, ReadResult};
-use zia::Context;
+use zia::multi_threaded::Context;
 
 fn main() {
     let reader = Interface::new("IZia").unwrap();

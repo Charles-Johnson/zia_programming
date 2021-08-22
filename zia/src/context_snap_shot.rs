@@ -64,11 +64,11 @@ impl ContextSnapShot {
         match delta {
             NewConceptDelta::FreeVariable => {
                 self.concepts[*new_concept_id] =
-                    Some(Concept::make_free_variable(*new_concept_id))
+                    Some(Concept::make_free_variable(*new_concept_id));
             },
             NewConceptDelta::BoundVariable => {
                 self.concepts[*new_concept_id] =
-                    Some(Concept::make_bound_variable(*new_concept_id))
+                    Some(Concept::make_bound_variable(*new_concept_id));
             },
             NewConceptDelta::String(s) => {
                 self.string_map.insert(s.into(), *new_concept_id);
@@ -186,7 +186,14 @@ impl ContextSnapShot {
         })
     }
 
-    fn concept_len(&self, delta: &ContextDelta<ConceptId>) -> ConceptId {
+    fn concept_len<
+        SDCD: Clone
+            + AsRef<DirectConceptDelta<ConceptId>>
+            + From<DirectConceptDelta<ConceptId>>,
+    >(
+        &self,
+        delta: &ContextDelta<ConceptId, SDCD>,
+    ) -> ConceptId {
         let mut length = self.concepts.len();
         for (id, cdv) in delta.concept() {
             for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
@@ -208,9 +215,13 @@ impl ContextSnapShot {
         self.string_map.remove(string).expect("No string to remove!");
     }
 
-    fn get_string_concept(
+    fn get_string_concept<
+        SDCD: Clone
+            + AsRef<DirectConceptDelta<ConceptId>>
+            + From<DirectConceptDelta<ConceptId>>,
+    >(
         &self,
-        delta: &ContextDelta<ConceptId>,
+        delta: &ContextDelta<ConceptId, SDCD>,
         s: &str,
     ) -> Option<ConceptId> {
         delta
@@ -233,12 +244,16 @@ impl ContextSnapShot {
                     },
                 },
             )
-            .cloned()
+            .copied()
     }
 
-    fn get_labellee(
+    fn get_labellee<
+        SDCD: Clone
+            + AsRef<DirectConceptDelta<ConceptId>>
+            + From<DirectConceptDelta<ConceptId>>,
+    >(
         &self,
-        delta: &ContextDelta<ConceptId>,
+        delta: &ContextDelta<ConceptId, SDCD>,
         c: ConceptId,
     ) -> Option<ConceptId> {
         let concept = self.read_concept(delta, c);
@@ -264,12 +279,17 @@ impl ContextSnapShot {
     }
 }
 
-impl SnapShotReader for ContextSnapShot {
+impl<SDCD> SnapShotReader<SDCD> for ContextSnapShot
+where
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<ConceptId>>
+        + From<DirectConceptDelta<ConceptId>>,
+{
     type ConceptId = ConceptId;
 
     fn concept_from_label(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.get_string_concept(delta, s)
@@ -288,7 +308,7 @@ impl SnapShotReader for ContextSnapShot {
 
     fn lowest_unoccupied_concept_id(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
     ) -> Self::ConceptId {
         let mut added_gaps = Vec::<Self::ConceptId>::new();
         let mut removed_gaps = HashSet::<Self::ConceptId>::new();
@@ -297,7 +317,7 @@ impl SnapShotReader for ContextSnapShot {
             for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
                 if let DirectConceptDelta::New(_) = dcd.as_ref() {
                     if *id >= new_concept_length {
-                        new_concept_length = *id + 1
+                        new_concept_length = *id + 1;
                     }
                 }
             }
@@ -352,7 +372,7 @@ impl SnapShotReader for ContextSnapShot {
 
     fn get_label(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
@@ -370,7 +390,7 @@ impl SnapShotReader for ContextSnapShot {
 
     fn concrete_concept_id(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         let mut id = None;
@@ -384,29 +404,32 @@ impl SnapShotReader for ContextSnapShot {
                     DirectConceptDelta::New(_) => id = Some(Some(*concept_id)),
                     DirectConceptDelta::Remove(concept_id) => {
                         debug_assert_eq!(Some(Some(*concept_id)), id);
-                        id = Some(None)
+                        id = Some(None);
                     },
                     _ => (),
                 }
             }
         }
-        id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).cloned())
+        id.unwrap_or_else(|| self.concrete_concepts.get_by_right(&cc).copied())
     }
 
     fn concrete_concept_type(
         &self,
-        delta: &ContextDelta<Self::ConceptId>,
+        delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()
     }
 }
 
-impl Apply for ContextSnapShot {
-    type Delta = ContextDelta<ConceptId>;
-
-    #[allow(clippy::clippy::too_many_lines)]
-    fn apply(&mut self, delta: ContextDelta<ConceptId>) {
+impl<SDCD> Apply<SDCD> for ContextSnapShot
+where
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<ConceptId>>
+        + From<DirectConceptDelta<ConceptId>>,
+{
+    #[allow(clippy::too_many_lines)]
+    fn apply(&mut self, delta: ContextDelta<Self::ConceptId, SDCD>) {
         delta.string().iter().for_each(|(s, sd)| match sd {
             context_delta::Change::Update {
                 after,
@@ -418,7 +441,7 @@ impl Apply for ContextSnapShot {
             context_delta::Change::Create(id) => self.add_string(*id, s),
             context_delta::Change::Remove(before) => {
                 debug_assert_eq!(self.string_map.get(s), Some(before));
-                self.remove_string(s)
+                self.remove_string(s);
             },
         });
         let concept_len = self.concept_len(&delta);
@@ -431,7 +454,7 @@ impl Apply for ContextSnapShot {
                     self.apply_new_concept(&NewDirectConceptDelta {
                         delta: delta.clone(),
                         new_concept_id: *concept_id,
-                    })
+                    });
                 },
                 DirectConceptDelta::Compose {
                     change,

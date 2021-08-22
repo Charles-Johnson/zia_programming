@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 extern crate zia;
 
-use zia::NEW_CONTEXT;
+use zia::multi_threaded::NEW_CONTEXT;
 
 // A previously unused symbol cannot reduce
 #[test]

@@ -49,7 +49,7 @@
 //!
 //! ```
 //! extern crate zia;
-//! use zia::{Context, ZiaError};
+//! use zia::{multi_threaded::Context, ZiaError};
 //!
 //! // Construct a new `Context` using the `new` method
 //! let mut context = Context::new();
@@ -113,7 +113,6 @@
 //! assert_eq!(context.execute("let _x_ or true -> true"), "");
 //! assert_eq!(context.execute("false or true"), "true");
 //! ```
-
 mod and_also;
 
 mod associativity;
@@ -130,10 +129,12 @@ mod consistent_merge;
 /// The container of concepts that coordinates adding, reading, writing and removing of concepts.
 mod context;
 
+#[macro_use]
 mod context_cache;
 
 mod context_delta;
 
+#[macro_use]
 mod context_search;
 
 #[cfg(test)]
@@ -157,20 +158,12 @@ mod mock_snap_shot;
 
 mod parser;
 
+pub mod single_threaded;
+
+pub mod multi_threaded;
+
 mod snap_shot;
 
-/// A container for adding, writing, reading and removing `Concept`s.
-use crate::context::Context as GenericContext;
-use crate::context_snap_shot::ContextSnapShot;
+pub mod variable_mask_list;
 
 pub use crate::errors::ZiaError;
-
-use lazy_static::lazy_static;
-
-pub type Context = GenericContext<ContextSnapShot>;
-
-// Saves having to construct a new `Context` each time.
-#[macro_export]
-lazy_static! {
-    pub static ref NEW_CONTEXT: Context = Context::new();
-}

@@ -1,6 +1,6 @@
 extern crate zia;
 
-use zia::Context;
+use zia::multi_threaded::Context;
 
 const PRESENTATION: &str = "
 # Zia programming language

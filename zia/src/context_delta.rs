@@ -15,26 +15,31 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
+    context_search::{ReductionReason, Syntax},
     snap_shot::Reader,
 };
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::{self, Debug, Display, Formatter},
     hash::Hash,
-    sync::Arc,
 };
 
 #[derive(Clone)]
-pub struct ContextDelta<ConceptId: Clone + Display> {
+pub struct ContextDelta<ConceptId, SharedDirectConceptDelta> {
     string: HashMap<String, Change<ConceptId>>,
-    concepts_to_apply_in_order:
-        Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)>,
-    concept: HashMap<ConceptId, Vec<ConceptDelta<ConceptId>>>,
+    concepts_to_apply_in_order: Vec<(ConceptId, SharedDirectConceptDelta)>,
+    concept: HashMap<
+        ConceptId,
+        Vec<ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
+    >,
 }
 
-impl<ConceptId: Copy + Display> Default for ContextDelta<ConceptId> {
+impl<ConceptId, SharedDirectConceptDelta> Default
+    for ContextDelta<ConceptId, SharedDirectConceptDelta>
+{
     fn default() -> Self {
         Self {
             string: HashMap::new(),
@@ -44,12 +49,153 @@ impl<ConceptId: Copy + Display> Default for ContextDelta<ConceptId> {
     }
 }
 
-impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
-    fn update_new_concept_delta(
+impl<ConceptId, SharedDirectConceptDelta>
+    ContextDelta<ConceptId, SharedDirectConceptDelta>
+where
+    ConceptId: Clone + Copy + Display + Eq + Hash,
+    SharedDirectConceptDelta: Clone
+        + AsRef<DirectConceptDelta<ConceptId>>
+        + From<DirectConceptDelta<ConceptId>>,
+{
+    pub fn update_concept_delta<C, R>(
+        &mut self,
+        concept_delta: DirectConceptDelta<R::ConceptId>,
+        cache_to_invalidate: &mut C,
+        snapshot: &R,
+    ) -> ConceptId
+    where
+        C: ContextCache,
+        <C::RR as ReductionReason>::Syntax:
+            SyntaxTree<ConceptId = R::ConceptId>,
+        R: Reader<SharedDirectConceptDelta, ConceptId = ConceptId>,
+    {
+        let concept_delta: SharedDirectConceptDelta = concept_delta.into();
+        let dcd = ConceptDelta::Direct(concept_delta.clone());
+        let concept_id = match concept_delta.as_ref() {
+            DirectConceptDelta::New(delta) => {
+                self.update_new_concept_delta::<Syntax<C>, R>(delta, snapshot)
+            },
+            DirectConceptDelta::Compose {
+                composition_id,
+                change,
+            } => {
+                self.insert_delta_for_existing_concept(*composition_id, dcd);
+                if let Change::Remove(before)
+                | Change::Update {
+                    before,
+                    ..
+                } = change
+                {
+                    let Composition {
+                        left_id,
+                        right_id,
+                    } = before;
+                    let cd = IndirectConceptDelta::NoLongerLefthandOf(
+                        *composition_id,
+                    )
+                    .into();
+                    self.insert_delta_for_existing_concept(*left_id, cd);
+                    let cd = IndirectConceptDelta::NoLongerRighthandOf(
+                        *composition_id,
+                    )
+                    .into();
+                    self.insert_delta_for_existing_concept(*right_id, cd);
+                }
+                if let Change::Create(after)
+                | Change::Update {
+                    after,
+                    ..
+                } = change
+                {
+                    let Composition {
+                        left_id,
+                        right_id,
+                    } = after;
+                    let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+                        composition: *composition_id,
+                        righthand: *right_id,
+                    })
+                    .into();
+                    self.insert_delta_for_existing_concept(*left_id, cd);
+                    let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+                        composition: *composition_id,
+                        lefthand: *left_id,
+                    })
+                    .into();
+                    self.insert_delta_for_existing_concept(*right_id, cd);
+                }
+                *composition_id
+            },
+            DirectConceptDelta::Reduce {
+                unreduced_id,
+                change,
+            } => {
+                self.insert_delta_for_existing_concept(*unreduced_id, dcd);
+                if let Change::Remove(before)
+                | Change::Update {
+                    before,
+                    ..
+                } = change
+                {
+                    let cd = IndirectConceptDelta::NoLongerReducesFrom(
+                        *unreduced_id,
+                    )
+                    .into();
+                    self.insert_delta_for_existing_concept(*before, cd);
+                }
+                if let Change::Create(after)
+                | Change::Update {
+                    after,
+                    ..
+                } = change
+                {
+                    let cd =
+                        IndirectConceptDelta::ReducesFrom(*unreduced_id).into();
+                    self.insert_delta_for_existing_concept(*after, cd);
+                }
+                *unreduced_id
+            },
+            DirectConceptDelta::Remove(concept_id_to_remove) => {
+                self.insert_delta_for_existing_concept(
+                    *concept_id_to_remove,
+                    dcd,
+                );
+                *concept_id_to_remove
+            },
+        };
+        self.concepts_to_apply_in_order.push((concept_id, concept_delta));
+        cache_to_invalidate.invalidate();
+        concept_id
+    }
+
+    pub fn concepts_to_apply_in_order(
+        &self,
+    ) -> &Vec<(ConceptId, SharedDirectConceptDelta)> {
+        &self.concepts_to_apply_in_order
+    }
+
+    pub fn string(&self) -> &HashMap<String, Change<ConceptId>> {
+        &self.string
+    }
+
+    pub fn concept(
+        &self,
+    ) -> &HashMap<
+        ConceptId,
+        Vec<ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
+    > {
+        &self.concept
+    }
+
+    fn update_new_concept_delta<Syntax, R>(
         &mut self,
         delta: &NewConceptDelta<ConceptId>,
-        snapshot: &impl Reader<ConceptId = ConceptId>,
-    ) -> ConceptId {
+        snapshot: &R,
+    ) -> ConceptId
+    where
+        Syntax: SyntaxTree<ConceptId = R::ConceptId>,
+        R: Reader<SharedDirectConceptDelta, ConceptId = ConceptId>,
+    {
         let new_concept_id = snapshot.lowest_unoccupied_concept_id(self);
         self.insert_delta_for_new_concept(new_concept_id, delta.clone());
         match delta {
@@ -148,121 +294,10 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
         new_concept_id
     }
 
-    pub fn update_concept_delta(
-        &mut self,
-        concept_delta: &Arc<DirectConceptDelta<ConceptId>>,
-        cache_to_invalidate: &mut ContextCache<ConceptId>,
-        snapshot: &impl Reader<ConceptId = ConceptId>,
-    ) -> ConceptId {
-        let dcd = ConceptDelta::Direct(concept_delta.clone());
-        let concept_id = match concept_delta.as_ref() {
-            DirectConceptDelta::New(delta) => {
-                self.update_new_concept_delta(delta, snapshot)
-            },
-            DirectConceptDelta::Compose {
-                composition_id,
-                change,
-            } => {
-                self.insert_delta_for_existing_concept(*composition_id, dcd);
-                if let Change::Remove(before)
-                | Change::Update {
-                    before,
-                    ..
-                } = change
-                {
-                    let Composition {
-                        left_id,
-                        right_id,
-                    } = before;
-                    let cd = IndirectConceptDelta::NoLongerLefthandOf(
-                        *composition_id,
-                    )
-                    .into();
-                    self.insert_delta_for_existing_concept(*left_id, cd);
-                    let cd = IndirectConceptDelta::NoLongerRighthandOf(
-                        *composition_id,
-                    )
-                    .into();
-                    self.insert_delta_for_existing_concept(*right_id, cd);
-                }
-                if let Change::Create(after)
-                | Change::Update {
-                    after,
-                    ..
-                } = change
-                {
-                    let Composition {
-                        left_id,
-                        right_id,
-                    } = after;
-                    let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
-                        composition: *composition_id,
-                        righthand: *right_id,
-                    })
-                    .into();
-                    self.insert_delta_for_existing_concept(*left_id, cd);
-                    let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
-                        composition: *composition_id,
-                        lefthand: *left_id,
-                    })
-                    .into();
-                    self.insert_delta_for_existing_concept(*right_id, cd);
-                }
-                *composition_id
-            },
-            DirectConceptDelta::Reduce {
-                unreduced_id,
-                change,
-            } => {
-                self.insert_delta_for_existing_concept(*unreduced_id, dcd);
-                if let Change::Remove(before)
-                | Change::Update {
-                    before,
-                    ..
-                } = change
-                {
-                    let cd = IndirectConceptDelta::NoLongerReducesFrom(
-                        *unreduced_id,
-                    )
-                    .into();
-                    self.insert_delta_for_existing_concept(*before, cd);
-                }
-                if let Change::Create(after)
-                | Change::Update {
-                    after,
-                    ..
-                } = change
-                {
-                    let cd =
-                        IndirectConceptDelta::ReducesFrom(*unreduced_id).into();
-                    self.insert_delta_for_existing_concept(*after, cd);
-                }
-                *unreduced_id
-            },
-            DirectConceptDelta::Remove(concept_id_to_remove) => {
-                self.insert_delta_for_existing_concept(
-                    *concept_id_to_remove,
-                    dcd,
-                );
-                *concept_id_to_remove
-            },
-        };
-        self.concepts_to_apply_in_order
-            .push((concept_id, concept_delta.clone()));
-        cache_to_invalidate.invalidate();
-        concept_id
-    }
-
-    pub fn concepts_to_apply_in_order(
-        &self,
-    ) -> &Vec<(ConceptId, Arc<DirectConceptDelta<ConceptId>>)> {
-        &self.concepts_to_apply_in_order
-    }
-
     fn insert_delta_for_existing_concept(
         &mut self,
         concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId>,
+        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
     ) {
         self.insert_delta_for_concept(
             concept_id,
@@ -275,7 +310,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
                             &DirectConceptDelta::Remove(_)
                         ) =>
                     {
-                        panic!("Concept {} already removed", concept_id)
+                        panic!("Concept {} already removed", concept_id);
                     }
                     _ => (),
                 };
@@ -290,7 +325,7 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     ) {
         self.insert_delta_for_concept(
             concept_id,
-            ConceptDelta::Direct(Arc::new(DirectConceptDelta::New(cd))),
+            ConceptDelta::Direct(DirectConceptDelta::New(cd).into()),
             |last_delta, concept_id: ConceptId| {
                 match last_delta {
                     ConceptDelta::Direct(dcd)
@@ -307,8 +342,11 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
     fn insert_delta_for_concept(
         &mut self,
         concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId>,
-        sanity_check: impl Fn(&ConceptDelta<ConceptId>, ConceptId),
+        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
+        sanity_check: impl Fn(
+            &ConceptDelta<ConceptId, SharedDirectConceptDelta>,
+            ConceptId,
+        ),
     ) {
         match self.concept.entry(concept_id) {
             Entry::Occupied(mut e) => {
@@ -324,18 +362,13 @@ impl<ConceptId: Copy + Debug + Display + Eq + Hash> ContextDelta<ConceptId> {
             },
         };
     }
-
-    pub fn string(&self) -> &HashMap<String, Change<ConceptId>> {
-        &self.string
-    }
-
-    pub fn concept(&self) -> &HashMap<ConceptId, Vec<ConceptDelta<ConceptId>>> {
-        &self.concept
-    }
 }
 
-impl<ConceptId: Clone + Debug + Display + Eq + Hash> Debug
-    for ContextDelta<ConceptId>
+impl<ConceptId, SharedDirectConceptDelta> Debug
+    for ContextDelta<ConceptId, SharedDirectConceptDelta>
+where
+    ConceptId: Clone + Debug + Display + Eq + Hash,
+    SharedDirectConceptDelta: Debug,
 {
     fn fmt(
         &self,
@@ -366,6 +399,50 @@ impl<ConceptId: Clone + Debug + Display + Eq + Hash> Debug
     }
 }
 
+#[derive(Clone)]
+pub enum ConceptDelta<Id, SharedDirectConceptDelta> {
+    Direct(SharedDirectConceptDelta),
+    Indirect(IndirectConceptDelta<Id>),
+}
+
+impl<Id: Clone + Display, SharedDirectConceptDelta>
+    ConceptDelta<Id, SharedDirectConceptDelta>
+{
+    pub fn try_direct(&self) -> Option<&SharedDirectConceptDelta> {
+        if let Self::Direct(dcd) = &self {
+            Some(dcd)
+        } else {
+            None
+        }
+    }
+}
+
+impl<Id: Clone + Display, SharedDirectConceptDelta>
+    From<IndirectConceptDelta<Id>>
+    for ConceptDelta<Id, SharedDirectConceptDelta>
+{
+    fn from(icd: IndirectConceptDelta<Id>) -> Self {
+        Self::Indirect(icd)
+    }
+}
+
+impl<Id, SharedDirectConceptDelta> Debug
+    for ConceptDelta<Id, SharedDirectConceptDelta>
+where
+    SharedDirectConceptDelta: Debug,
+    Id: Debug,
+{
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> Result<(), std::fmt::Error> {
+        formatter.write_str(&match *self {
+            Self::Direct(ref c) => format!("+ {:#?}", c) + " (direct) ",
+            Self::Indirect(ref c) => format!("- {:#?}", c) + " (indirect) ",
+        })
+    }
+}
+
 impl<T: Clone + Display> Debug for Change<T> {
     fn fmt(
         &self,
@@ -379,28 +456,6 @@ impl<T: Clone + Display> Debug for Change<T> {
                 after,
             } => format!("{} -> {}", before, after),
         })
-    }
-}
-
-#[derive(Clone)]
-pub enum ConceptDelta<Id: Clone + Display> {
-    Direct(Arc<DirectConceptDelta<Id>>),
-    Indirect(IndirectConceptDelta<Id>),
-}
-
-impl<Id: Clone + Display> ConceptDelta<Id> {
-    pub fn try_direct(&self) -> Option<&Arc<DirectConceptDelta<Id>>> {
-        if let Self::Direct(dcd) = &self {
-            Some(dcd)
-        } else {
-            None
-        }
-    }
-}
-
-impl<Id: Clone + Display> From<IndirectConceptDelta<Id>> for ConceptDelta<Id> {
-    fn from(icd: IndirectConceptDelta<Id>) -> Self {
-        Self::Indirect(icd)
     }
 }
 
@@ -463,7 +518,7 @@ pub enum NewConceptDelta<Id> {
     },
 }
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub enum Change<T> {
     Create(T),
     Update {
@@ -471,22 +526,6 @@ pub enum Change<T> {
         after: T,
     },
     Remove(T),
-}
-
-impl<T: Clone> Clone for Change<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Create(x) => Self::Create(x.clone()),
-            Self::Update {
-                before,
-                after,
-            } => Self::Update {
-                before: before.clone(),
-                after: after.clone(),
-            },
-            Self::Remove(x) => Self::Remove(x.clone()),
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -498,17 +537,5 @@ pub struct Composition<Id> {
 impl<Id: Display> Display for Composition<Id> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("({}, {})", self.left_id, self.right_id))
-    }
-}
-
-impl<Id: Clone + Debug + Display> Debug for ConceptDelta<Id> {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter,
-    ) -> Result<(), std::fmt::Error> {
-        formatter.write_str(&match *self {
-            Self::Direct(ref c) => format!("+ {:#?}", c) + " (direct) ",
-            Self::Indirect(ref c) => format!("- {:#?}", c) + " (indirect) ",
-        })
     }
 }

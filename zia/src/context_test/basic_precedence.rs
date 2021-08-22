@@ -1,7 +1,8 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context::Context,
+    context_test::Context,
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::hashmap;
@@ -58,17 +59,18 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 #[test]
 fn basic_precedence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let mut context: Context<_> = snapshot.into();
+    let mut context: Context = snapshot.into();
 
     assert_eq!(
         context.ast_from_expression("c b a"),
-        Ok(SyntaxTree::from("(c b) a")
+        Ok(Syntax::from("(c b) a")
             .bind_pair(
-                SyntaxTree::from("c")
-                    .share()
-                    .new_pair(SyntaxTree::from("b").into())
-                    .into(),
-                SyntaxTree::from("a").bind_nonquantifier_concept(4).into()
+                Syntax::new_pair(
+                    Syntax::from("c").share(),
+                    Syntax::from("b").into()
+                )
+                .into(),
+                Syntax::from("a").bind_nonquantifier_concept(4).into()
             )
             .into())
     );

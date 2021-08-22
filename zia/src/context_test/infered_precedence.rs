@@ -1,7 +1,8 @@
+use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context::Context,
+    context_test::Context,
     mock_snap_shot::{ConceptId, MockSnapShot},
 };
 use maplit::hashmap;
@@ -154,31 +155,29 @@ fn concept_labels() -> HashMap<ConceptId, &'static str> {
         33 => "false",
     }
 }
-
 #[test]
 fn infered_precedence_test() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());
-    let mut context: Context<MockSnapShot> = snapshot.into();
+    let mut context: Context = snapshot.into();
     assert_eq!(
         context.ast_from_expression("let a b -> c"),
-        Ok(SyntaxTree::from("let")
-            .bind_nonquantifier_concept(21)
-            .share()
-            .new_pair(
-                SyntaxTree::from("a")
-                    .share()
-                    .new_pair(SyntaxTree::from("b").into())
-                    .share()
-                    .new_pair(
-                        SyntaxTree::from("->")
-                            .bind_nonquantifier_concept(22)
-                            .share()
-                            .new_pair(SyntaxTree::from("c").into())
-                            .into()
-                    )
-                    .into()
+        Ok(Syntax::new_pair(
+            Syntax::from("let").bind_nonquantifier_concept(21).share(),
+            Syntax::new_pair(
+                Syntax::new_pair(
+                    Syntax::from("a").share(),
+                    Syntax::from("b").into()
+                )
+                .share(),
+                Syntax::new_pair(
+                    Syntax::from("->").bind_nonquantifier_concept(22).share(),
+                    Syntax::from("c").into()
+                )
+                .into()
             )
-            .into())
+            .into()
+        )
+        .into())
     );
     assert_eq!(context.execute("default > (prec let)"), "true");
 }
