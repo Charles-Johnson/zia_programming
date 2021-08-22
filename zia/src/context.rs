@@ -44,7 +44,7 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct ContextS, C, SDCD, VML>
+pub struct Context<S, C, SDCD, VML>
 where
     S: SnapShotReader<SDCD>,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
