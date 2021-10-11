@@ -1,6 +1,6 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::Concept,
+    concepts::ConceptTrait,
     context_search::{ReductionReason, ReductionResult},
 };
 use std::fmt::Debug;
@@ -31,7 +31,7 @@ where
 
     fn insert_syntax_tree(
         &self,
-        concept: &Concept<ConceptId<Self::RR>>,
+        concept: &impl ConceptTrait<Id = ConceptId<Self::RR>>,
         syntax_tree: &SharedSyntax<Self::RR>,
     );
 

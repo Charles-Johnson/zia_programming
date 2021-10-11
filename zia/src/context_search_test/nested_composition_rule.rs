@@ -54,7 +54,8 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = ContextDelta::<_, SharedDirectConceptDelta>::default();
+    let delta =
+        ContextDelta::<_, SharedDirectConceptDelta<ConceptId>>::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

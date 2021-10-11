@@ -1,7 +1,7 @@
 #![allow(clippy::single_component_path_imports)]
 
 macro_rules! impl_syntax_tree {
-    ($refcounter:tt, $syntax_tree:tt, $concept_id:ty) => {
+    ($refcounter:tt, $syntax_tree:tt) => {
         use maplit::hashmap;
         use std::{
             collections::HashMap,
@@ -14,22 +14,22 @@ macro_rules! impl_syntax_tree {
             consistent_merge::ConsistentMerge
         };
         #[derive(Clone)]
-        pub struct $syntax_tree {
+        pub struct $syntax_tree<ConceptId> {
             /// The root of this syntax tree, represented as a `String`.
             syntax: Option<String>,
             /// Index of the concept that the syntax may represent.
-            concept: Option<$concept_id>,
+            concept: Option<ConceptId>,
             ///
-            node: SyntaxNode<$refcounter<$syntax_tree>>,
+            node: SyntaxNode<$refcounter<Self>>,
         }
 
-        impl Debug for $syntax_tree {
+        impl<ConceptId> Debug for $syntax_tree<ConceptId> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
             }
         }
 
-        impl PartialEq<Self> for $syntax_tree {
+        impl<ConceptId: PartialEq> PartialEq<Self> for $syntax_tree<ConceptId> {
             /// `SyntaxTree`s are equal if the syntax they represent is the same.
             fn eq(&self, other: &Self) -> bool {
                 if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -42,7 +42,7 @@ macro_rules! impl_syntax_tree {
             }
         }
 
-        impl PartialEq<$refcounter<Self>> for $syntax_tree {
+        impl<ConceptId: PartialEq> PartialEq<$refcounter<Self>> for $syntax_tree<ConceptId> {
             /// `SyntaxTree`s are equal if the syntax they represent is the same.
             fn eq(&self, other: &$refcounter<Self>) -> bool {
                 if let (Some(ss), Some(os)) = (&self.syntax, &other.syntax) {
@@ -53,16 +53,16 @@ macro_rules! impl_syntax_tree {
             }
         }
 
-        impl Eq for $syntax_tree {}
+        impl<ConceptId: PartialEq> Eq for $syntax_tree<ConceptId> {}
 
-        impl Hash for $syntax_tree {
+        impl<ConceptId: Hash> Hash for $syntax_tree<ConceptId> {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 self.syntax.hash(state);
                 self.concept.hash(state);
             }
         }
 
-        impl fmt::Display for $syntax_tree
+        impl<ConceptId: Copy + Debug + fmt::Display + Eq + Hash> fmt::Display for $syntax_tree<ConceptId>
         {
             /// Displays the same as the inside of an `SyntaxTree` variant.
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -79,7 +79,7 @@ macro_rules! impl_syntax_tree {
             }
         }
 
-        impl<S> From<S> for $syntax_tree
+        impl<S, ConceptId> From<S> for $syntax_tree<ConceptId>
         where
             S: Into<String>,
         {
@@ -98,15 +98,15 @@ macro_rules! impl_syntax_tree {
             }
         }
 
-        impl<'a> From<&'a $refcounter<$syntax_tree>> for &'a SyntaxNode<$refcounter<$syntax_tree>> {
-            fn from(syntax_tree: &'a $refcounter<$syntax_tree>) -> Self {
+        impl<'a, ConceptId> From<&'a $refcounter<$syntax_tree<ConceptId>>> for &'a SyntaxNode<$refcounter<$syntax_tree<ConceptId>>> {
+            fn from(syntax_tree: &'a $refcounter<$syntax_tree<ConceptId>>) -> Self {
                 &syntax_tree.node
             }
         }
 
-        impl SyntaxTree for $syntax_tree {
+        impl<ConceptId: Clone + Copy + Debug + fmt::Display + Eq + Hash> SyntaxTree for $syntax_tree<ConceptId> {
             type SharedSyntax = $refcounter<Self>;
-            type ConceptId = $concept_id;
+            type ConceptId = ConceptId;
 
             fn make_mut<'a>(refcounter: &'a mut Self::SharedSyntax) -> &'a mut Self {
                 $refcounter::make_mut(refcounter)
