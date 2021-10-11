@@ -33,6 +33,7 @@ description = "Check format with nightly rustfmt"
 args = ["fmt", "--all", "--", "--check"]
 
 [tasks.clippy]
+toolchain = "nightly"
 description = "Lint with Clippy"
 clear = true
 install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
@@ -41,5 +42,6 @@ args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clipp
 
 [tasks.wasm_check]
 description = "check web assembly"
+toolchain = "nightly"
 command = "cargo"
 args = ["check", "-p", "zia", "--target", "wasm32-unknown-unknown"]

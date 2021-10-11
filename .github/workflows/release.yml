@@ -16,11 +16,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install stable Rust
+      - name: Install nightly Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
       
       - name: Release zia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
