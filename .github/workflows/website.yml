@@ -1,6 +1,9 @@
 name: Main
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
 
 env:
   RUST_BACKTRACE: 1
