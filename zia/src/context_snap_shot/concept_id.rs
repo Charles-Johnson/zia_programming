@@ -3,10 +3,7 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use slotmap::{DefaultKey, Key, KeyData};
-
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Committed(DefaultKey);
+use slotmap::new_key_type;
 
 impl Display for Committed {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -14,16 +11,8 @@ impl Display for Committed {
     }
 }
 
-impl Key for Committed {
-    fn data(&self) -> slotmap::KeyData {
-        self.0.data()
-    }
-}
-
-impl From<KeyData> for Committed {
-    fn from(kd: KeyData) -> Self {
-        Self(DefaultKey::from(kd))
-    }
+new_key_type! {
+    pub struct Committed;
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
