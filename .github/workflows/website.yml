@@ -22,6 +22,8 @@ jobs:
 
       - name: Install cargo-make
         uses: davidB/rust-cargo-make@v1
+        with:
+          version: '0.35.1'
 
       - name: Install Node dependencies
         run: yarn
