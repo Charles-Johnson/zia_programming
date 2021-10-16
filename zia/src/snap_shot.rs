@@ -1,38 +1,57 @@
 use crate::{
     ast::SyntaxTree,
-    concepts::{Concept, ConcreteConceptType},
+    concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_delta::{
-        Change, Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
-        NewDirectConceptDelta,
+        Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
+        NewDirectConceptDelta, ValueChange,
     },
     errors::{ZiaError, ZiaResult},
 };
 use std::{
+    convert::TryFrom,
     fmt::{Debug, Display},
     hash::Hash,
 };
+
+pub type UncommittedConceptId = usize;
 
 pub trait Reader<SDCD>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<Self::ConceptId>>
         + From<DirectConceptDelta<Self::ConceptId>>,
+    Self::CommittedConceptId: TryFrom<Self::ConceptId>,
+    Self::ConceptId: From<Self::CommittedConceptId>,
 {
-    type ConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
+    type ConceptId: Copy
+        + Eq
+        + Hash
+        + Display
+        + Debug
+        + Send
+        + Sync
+        + From<UncommittedConceptId>;
+    type CommittedConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
+    type MixedConcept<'a>: ConceptTrait<Id = Self::ConceptId>
+        + Clone
+        + Debug
+        + for<'b> From<
+            &'b NewDirectConceptDelta<Self::ConceptId, Self::ConceptId>,
+        >;
     fn get_concept(
         &self,
         concept_id: Self::ConceptId,
-    ) -> Option<&Concept<Self::ConceptId>>;
-    fn read_concept(
-        &self,
+    ) -> Option<Self::MixedConcept<'_>>;
+    fn read_concept<'a>(
+        &'a self,
         delta: &ContextDelta<Self::ConceptId, SDCD>,
         id: Self::ConceptId,
-    ) -> Concept<Self::ConceptId> {
+    ) -> Self::MixedConcept<'a> {
         delta
             .concept()
             .get(&id)
             .and_then(|cds| {
-                let mut concept = self.get_concept(id).cloned();
+                let mut concept = self.get_concept(id);
                 for cd in cds {
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
@@ -54,17 +73,17 @@ where
                             } => {
                                 debug_assert_eq!(*composition_id, id);
                                 match change {
-                                    Change::Create(comp) => {
+                                    ValueChange::Create(comp) => {
                                         let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
                                         concept
                                             .as_mut()
                                             .unwrap()
-                                            .change_composition(Change::Create(
+                                            .change_composition(ValueChange::Create(
                                                 [&mut left, &mut right],
                                             ))
                                             .unwrap();
                                     },
-                                    Change::Update {
+                                    ValueChange::Update {
                                         before,
                                         after,
                                     } => {
@@ -74,7 +93,7 @@ where
                                             .as_mut()
                                             .unwrap()
                                             .change_composition(
-                                                Change::Update {
+                                                ValueChange::Update {
                                                     before: [
                                                         &mut before_left,
                                                         &mut before_right,
@@ -87,12 +106,12 @@ where
                                             )
                                             .unwrap();
                                     },
-                                    Change::Remove(comp) => {
+                                    ValueChange::Remove(comp) => {
                                         let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
                                         concept
                                             .as_mut()
                                             .unwrap()
-                                            .change_composition(Change::Remove(
+                                            .change_composition(ValueChange::Remove(
                                                 [&mut left, &mut right],
                                             ))
                                             .unwrap();
@@ -124,23 +143,18 @@ where
             .unwrap_or_else(|| {
                 self.get_concept(id)
                     .unwrap_or_else(|| panic!("No concept with id = {}", id))
-                    .clone()
             })
     }
-    fn concepts_from_composition(
-        &self,
+    fn concepts_from_composition<'a>(
+        &'a self,
         delta: &ContextDelta<Self::ConceptId, SDCD>,
         comp: Composition<Self::ConceptId>,
-    ) -> [Concept<Self::ConceptId>; 2] {
+    ) -> [Self::MixedConcept<'a>; 2] {
         [
             self.read_concept(delta, comp.left_id),
             self.read_concept(delta, comp.right_id),
         ]
     }
-    fn lowest_unoccupied_concept_id(
-        &self,
-        delta: &ContextDelta<Self::ConceptId, SDCD>,
-    ) -> Self::ConceptId;
     fn get_label(
         &self,
         delta: &ContextDelta<Self::ConceptId, SDCD>,
@@ -179,9 +193,9 @@ where
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept_that_has_no_label_or_composition<Syntax>(
-        &self,
-        concept: &Concept<Self::ConceptId>,
+    fn new_syntax_from_concept_that_has_no_label_or_composition<'a, Syntax>(
+        &'a self,
+        concept: &Self::MixedConcept<'a>,
     ) -> Syntax
     where
         Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
@@ -210,11 +224,12 @@ where
             .get_composition()
             .and_then(|(left, right)| {
                 self.get_reduction_or_reduction_of_composition(delta, left)
-                    .find_as_lefthand_in_composition_with_righthand(
+                    .find_as_hand_in_composition_with(
                         self.get_reduction_or_reduction_of_composition(
                             delta, right,
                         )
                         .id(),
+                        Hand::Left,
                     )
             })
             .unwrap_or(concept)
@@ -226,7 +241,11 @@ where
     ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
             && self.read_concept(delta, concept).get_composition().is_none()
-            && self.read_concept(delta, concept).get_lefthand_of().is_empty()
+            && self
+                .read_concept(delta, concept)
+                .iter_hand_of(Hand::Left)
+                .next()
+                .is_none()
             && self.righthand_of_without_label_is_empty(delta, concept)
             && self
                 .read_concept(delta, concept)
@@ -242,7 +261,7 @@ where
         self.concrete_concept_id(delta, ConcreteConceptType::Label)
             .and_then(|label_id| {
                 self.read_concept(delta, con)
-                    .find_as_righthand_in_composition_with_lefthand(label_id)
+                    .find_as_hand_in_composition_with(label_id, Hand::Right)
             })
             .is_none()
     }
@@ -264,7 +283,7 @@ where
             self.concrete_concept_id(delta, ConcreteConceptType::Label)?;
 
         self.read_concept(delta, concept)
-            .find_as_righthand_in_composition_with_lefthand(label_concept_id)
+            .find_as_hand_in_composition_with(label_concept_id, Hand::Right)
     }
     fn contains(
         &self,
@@ -301,11 +320,11 @@ where
             },
         )
     }
-    fn get_reduction_or_reduction_of_composition(
-        &self,
+    fn get_reduction_or_reduction_of_composition<'a>(
+        &'a self,
         delta: &ContextDelta<Self::ConceptId, SDCD>,
         concept: Self::ConceptId,
-    ) -> Concept<Self::ConceptId> {
+    ) -> Self::MixedConcept<'a> {
         self.read_concept(
             delta,
             self.read_concept(delta, concept).get_reduction().unwrap_or_else(

@@ -14,7 +14,8 @@ use std::collections::HashMap;
 #[test]
 fn comparison_existence_implication_rule_test() {
     let context_cache = MultiThreadedContextCache::default();
-    let context_delta = ContextDelta::<_, SharedDirectConceptDelta>::default();
+    let context_delta =
+        ContextDelta::<_, SharedDirectConceptDelta<_>>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

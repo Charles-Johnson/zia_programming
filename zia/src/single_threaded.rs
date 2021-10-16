@@ -6,13 +6,13 @@ use crate::{
     context_search::{
         ContextSearch, Generalisations, Iteration as ContextSearchIteration,
     },
-    context_snap_shot::ContextSnapShot,
+    context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
 };
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
-impl_syntax_tree!(Rc, SingleThreadedSyntaxTree, usize);
+impl_syntax_tree!(Rc, SingleThreadedSyntaxTree);
 impl_cache!(Rc, SingleThreadedContextCache);
 impl_variable_mask_list!(Rc, SingleThreadedVariableMaskList);
 impl_reduction_reason!(Rc, SingleThreadedReductionReason);
@@ -20,32 +20,36 @@ impl_reduction_reason!(Rc, SingleThreadedReductionReason);
 pub type Context = GenericContext<
     ContextSnapShot,
     SingleThreadedContextCache<
-        SingleThreadedReductionReason<SingleThreadedSyntaxTree>,
+        SingleThreadedReductionReason<
+            SingleThreadedSyntaxTree<ContextConceptId>,
+        >,
     >,
     SharedDirectConceptDelta,
-    SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
+    SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
 >;
 
-type SharedDirectConceptDelta = Rc<DirectConceptDelta<usize>>;
+type SharedDirectConceptDelta = Rc<DirectConceptDelta<ContextConceptId>>;
 
 impl<'a, S, SDCD> ContextSearchIteration
     for ContextSearch<
         'a,
         S,
         SingleThreadedContextCache<
-            SingleThreadedReductionReason<SingleThreadedSyntaxTree>,
+            SingleThreadedReductionReason<
+                SingleThreadedSyntaxTree<S::ConceptId>,
+            >,
         >,
         SDCD,
-        SingleThreadedVariableMaskList<SingleThreadedSyntaxTree>,
+        SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<S::ConceptId>>,
     >
 where
-    S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
+    S: SnapShotReader<SDCD, ConceptId = ContextConceptId> + Sync + Debug,
     SDCD: Clone
-        + AsRef<DirectConceptDelta<usize>>
-        + From<DirectConceptDelta<usize>>,
+        + AsRef<DirectConceptDelta<ContextConceptId>>
+        + From<DirectConceptDelta<ContextConceptId>>,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = SingleThreadedSyntaxTree;
+    type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;
 
     fn filter_generalisations_from_candidates(
         &self,

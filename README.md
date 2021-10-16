@@ -4,7 +4,6 @@ This is the project workspace. Please refer to individual members for details:
 
 - interpreter library: [zia](zia/README.md)
 - interactive shell: [izia](izia/README.md)
-- testing library: [test_zia](test_zia/lib.rs)
 
 ## Building from Source
 

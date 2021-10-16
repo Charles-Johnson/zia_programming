@@ -18,7 +18,7 @@ use crate::{
     and_also::AndAlso,
     associativity::Associativity,
     ast::SyntaxTree,
-    concepts::{format_string, Concept, ConcreteConceptType, Hand},
+    concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{ContextDelta, DirectConceptDelta},
     snap_shot::Reader as SnapShotReader,
@@ -382,27 +382,27 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
 {
-    fn infer_reduction(
-        &self,
-        concept: &Concept<S::ConceptId>,
+    fn infer_reduction<'b>(
+        &'b self,
+        concept: &S::MixedConcept<'b>,
     ) -> ReductionResult<C::RR> {
         debug!("infer_reduction({:#?})", concept);
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let composition_id = concept
-            .find_as_righthand_in_composition_with_lefthand(implication_id)?;
+            .find_as_hand_in_composition_with(implication_id, Hand::Right)?;
         let composition_concept =
             self.snap_shot.read_concept(self.delta, composition_id);
-        let result = composition_concept.get_righthand_of().iter().find_map(
+        let result = composition_concept.iter_hand_of(Hand::Right).find_map(
             |(condition_id, implication_rule_id)| {
-                let condition = self.to_ast(*condition_id);
+                let condition = self.to_ast(condition_id);
                 let (reduced_condition, reason) = self.reduce(&condition)?;
                 let x = reduced_condition.get_concept()?;
                 self.is_concrete_type(ConcreteConceptType::True, x).map(|x| {
                     (
                         self.to_ast(x),
                         C::RR::inference(
-                            self.to_ast(*implication_rule_id),
+                            self.to_ast(implication_rule_id),
                             reason,
                         ),
                     )
@@ -485,8 +485,7 @@ where
             let operator_concept =
                 self.snap_shot.read_concept(self.delta, operator_id);
             let find = |c| {
-                operator_concept
-                    .find_as_lefthand_in_composition_with_righthand(c)
+                operator_concept.find_as_hand_in_composition_with(c, Hand::Left)
             };
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
@@ -686,7 +685,7 @@ where
             .and_then(|(lc, rc)| {
                 let left_concept = self.snap_shot.read_concept(self.delta, *lc);
                 left_concept
-                    .find_as_lefthand_in_composition_with_righthand(*rc)
+                    .find_as_hand_in_composition_with(*rc, Hand::Left)
                     .map(|def| {
                         let syntax = Syntax::<C>::from(
                             self.snap_shot
@@ -766,38 +765,32 @@ where
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, c)
-                        .get_lefthand_of()
-                        .values(),
+                        .iter_composition_ids(Hand::Left),
                 );
             }
             if let Some(c) = r.get_concept() {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, c)
-                        .get_righthand_of()
-                        .values(),
+                        .iter_composition_ids(Hand::Right),
                 );
             }
             self.find_generalisations(&l).iter().for_each(|g| {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, *g)
-                        .get_lefthand_of()
-                        .values(),
+                        .iter_composition_ids(Hand::Left),
                 );
             });
             self.find_generalisations(&r).iter().for_each(|g| {
                 generalisations.extend(
                     self.snap_shot
                         .read_concept(self.delta, *g)
-                        .get_righthand_of()
-                        .values(),
+                        .iter_composition_ids(Hand::Right),
                 );
             });
-            generalisations
-        } else {
-            generalisations
         }
+        generalisations
     }
 
     fn is_leaf_variable(&self, lv: S::ConceptId) -> bool {
@@ -852,7 +845,7 @@ where
                 let true_concept =
                     self.snap_shot.read_concept(self.delta, true_id);
                 let truths = true_concept.find_what_reduces_to_it();
-                self.find_example(right, &truths.copied().collect()).map(
+                self.find_example(right, &truths.collect()).map(
                     |substitutions| {
                         let true_syntax = self.to_ast(true_id);
                         (
@@ -901,7 +894,6 @@ where
                         let mut equivalent_left_equivalence_set: HashSet<S::ConceptId> =
                             equivalent_left
                                 .find_what_reduces_to_it()
-                                .copied()
                                 .collect();
                         equivalent_left_equivalence_set.insert(equivalent_left_id);
                         let left_examples = self.find_examples(
@@ -916,7 +908,6 @@ where
                             S::ConceptId,
                         > = equivalent_right
                             .find_what_reduces_to_it()
-                            .copied()
                             .collect();
                         equivalent_right_equivalence_set
                             .insert(equivalent_right_id);
@@ -926,8 +917,8 @@ where
                         );
                         left_examples.into_iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
-                            let mut mutable_right = Syntax::<C>::make_mut(&mut right_clone);
-                            substitute::<Syntax<C>>(&mut mutable_right, &left_example);
+                            let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
+                            substitute::<Syntax<C>>(mutable_right, &left_example);
                             if self.contains_bound_variable_syntax(&right_clone) {
                                 self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
                                     right_example.extend(left_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -940,8 +931,8 @@ where
                             }
                         }).chain(right_examples.into_iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
-                            let mut mutable_left = Syntax::<C>::make_mut(&mut left_clone);
-                            substitute::<Syntax<C>>(&mut mutable_left, &right_example);
+                            let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
+                            substitute::<Syntax<C>>(mutable_left, &right_example);
                             if self.contains_bound_variable_syntax(&left_clone) {
                                 self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
                                     left_example.extend(right_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -988,40 +979,44 @@ where
         equivalence_set_of_composition: &HashSet<S::ConceptId>,
         non_generalised_hand: Hand,
     ) -> Vec<Substitutions<SharedSyntax<C>>> {
-        if let Some(non_generalised_id) = non_generalised_part.get_concept() {
-            let non_generalised_concept =
-                self.snap_shot.read_concept(self.delta, non_generalised_id);
-            let examples =
-                non_generalised_concept.get_hand_of(non_generalised_hand);
-            examples
-                .iter()
-                .filter_map(|(generalised_hand, composition)| {
-                    equivalence_set_of_composition
-                        .contains(composition)
-                        .then(|| *generalised_hand)
-                })
-                .filter_map(|generalised_hand| {
-                    Syntax::<C>::check_example(
-                        &self.to_ast(generalised_hand),
-                        generalisated_part,
-                    )
-                    .or_else(|| {
-                        // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
-                        let mut equivalence_set = hashset! {generalised_hand};
-                        let non_generalised_hand_concept = self
-                            .snap_shot
-                            .read_concept(self.delta, generalised_hand);
-                        equivalence_set.extend(
-                            non_generalised_hand_concept
-                                .find_what_reduces_to_it(),
-                        );
-                        self.find_example(generalisated_part, &equivalence_set)
+        non_generalised_part.get_concept().map_or_else(
+            Vec::new,
+            |non_generalised_id| {
+                let non_generalised_concept =
+                    self.snap_shot.read_concept(self.delta, non_generalised_id);
+                let examples =
+                    non_generalised_concept.iter_hand_of(non_generalised_hand);
+                examples
+                    .filter_map(|(generalised_hand, composition)| {
+                        equivalence_set_of_composition
+                            .contains(&composition)
+                            .then(|| generalised_hand)
                     })
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+                    .filter_map(|generalised_hand| {
+                        Syntax::<C>::check_example(
+                            &self.to_ast(generalised_hand),
+                            generalisated_part,
+                        )
+                        .or_else(|| {
+                            // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
+                            let mut equivalence_set =
+                                hashset! {generalised_hand};
+                            let non_generalised_hand_concept = self
+                                .snap_shot
+                                .read_concept(self.delta, generalised_hand);
+                            equivalence_set.extend(
+                                non_generalised_hand_concept
+                                    .find_what_reduces_to_it(),
+                            );
+                            self.find_example(
+                                generalisated_part,
+                                &equivalence_set,
+                            )
+                        })
+                    })
+                    .collect()
+            },
+        )
     }
 
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -1105,7 +1100,7 @@ where
             .and_then(|(l, r)| {
                 let left_concept = self.snap_shot.read_concept(self.delta, *l);
                 left_concept
-                    .find_as_lefthand_in_composition_with_righthand(*r)
+                    .find_as_hand_in_composition_with(*r, Hand::Left)
                     .map(|concept| {
                         let syntax = self.join(ast, other);
                         self.snap_shot
@@ -1191,8 +1186,8 @@ where
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
-        if let Some(greater_than_concept_id) =
-            self.concrete_concept_id(ConcreteConceptType::GreaterThan)
+
+        self.concrete_concept_id(ConcreteConceptType::GreaterThan).map_or((Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept), |greater_than_concept_id|
         {
             let greater_than_syntax = self.to_ast(greater_than_concept_id);
             let comparing_syntax = self.combine(
@@ -1287,9 +1282,7 @@ where
                 },
                 C::RR::simplify_reasoning(reason, reversed_reason),
             )
-        } else {
-            (Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept)
-        }
+        })
     }
 
     pub fn spawn(

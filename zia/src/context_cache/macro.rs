@@ -4,7 +4,7 @@ macro_rules! impl_cache {
     ($refcounter:tt, $cache:tt) => {
         use crate::{
             ast::SyntaxTree,
-            concepts::Concept,
+            concepts::ConceptTrait,
             context_cache::{ContextCache, ReductionCache, ConceptId, SharedSyntax},
             context_search::ReductionResult,
         };
@@ -66,9 +66,10 @@ macro_rules! impl_cache {
 
             fn insert_syntax_tree(
                 &self,
-                concept: &Concept<ConceptId<Self::RR>>,
+                concept: &impl ConceptTrait<Id=ConceptId<Self::RR>>,
                 syntax_tree: &SharedSyntax<Self::RR>,
-            ) {
+            )
+            {
                 if !concept.anonymous_variable() {
                     self.syntax_trees.insert(concept.id(), syntax_tree.clone());
                 }

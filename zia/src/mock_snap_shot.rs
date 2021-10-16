@@ -1,5 +1,5 @@
 use crate::{
-    concepts::{Concept, ConcreteConceptType},
+    concepts::{Concept, ConceptTrait, ConcreteConceptType},
     context_delta::{ContextDelta, DirectConceptDelta},
     context_search_test::check_order,
     delta::Apply,
@@ -52,20 +52,15 @@ where
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>,
 {
+    type CommittedConceptId = ConceptId;
     type ConceptId = ConceptId;
+    type MixedConcept<'a> = Concept<ConceptId>;
 
-    fn get_concept(
-        &self,
+    fn get_concept<'a>(
+        &'a self,
         concept_id: Self::ConceptId,
-    ) -> Option<&Concept<Self::ConceptId>> {
-        self.concepts.get(concept_id)
-    }
-
-    fn lowest_unoccupied_concept_id(
-        &self,
-        _: &ContextDelta<Self::ConceptId, SDCD>,
-    ) -> Self::ConceptId {
-        self.concepts.len()
+    ) -> Option<Self::MixedConcept<'a>> {
+        self.concepts.get(concept_id).cloned()
     }
 
     fn get_label(

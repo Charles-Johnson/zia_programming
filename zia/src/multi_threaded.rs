@@ -6,7 +6,7 @@ use crate::{
     context_search::{
         ContextSearch, Generalisations, Iteration as ContextSearchIteration,
     },
-    context_snap_shot::ContextSnapShot,
+    context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
 };
@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashSet, fmt::Debug, sync::Arc};
 
-impl_syntax_tree!(Arc, MultiThreadedSyntaxTree, usize);
+impl_syntax_tree!(Arc, MultiThreadedSyntaxTree);
 impl_cache!(Arc, MultiThreadedContextCache);
 impl_variable_mask_list!(Arc, MultiThreadedVariableMaskList);
 impl_reduction_reason!(Arc, MultiThreadedReductionReason);
@@ -22,10 +22,10 @@ impl_reduction_reason!(Arc, MultiThreadedReductionReason);
 pub type Context = GenericContext<
     ContextSnapShot,
     MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree>,
+        MultiThreadedReductionReason<MultiThreadedSyntaxTree<ContextConceptId>>,
     >,
-    SharedDirectConceptDelta,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
+    SharedDirectConceptDelta<ContextConceptId>,
+    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ContextConceptId>>,
 >;
 
 // Saves having to construct a new `Context` each time.
@@ -33,27 +33,28 @@ lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new();
 }
 
-pub type SharedDirectConceptDelta = Arc<DirectConceptDelta<usize>>;
+pub type SharedDirectConceptDelta<ConceptId> =
+    Arc<DirectConceptDelta<ConceptId>>;
 
 impl<'a, S, SDCD> ContextSearchIteration
     for ContextSearch<
         'a,
         S,
         MultiThreadedContextCache<
-            MultiThreadedReductionReason<MultiThreadedSyntaxTree>,
+            MultiThreadedReductionReason<MultiThreadedSyntaxTree<S::ConceptId>>,
         >,
         SDCD,
-        MultiThreadedVariableMaskList<MultiThreadedSyntaxTree>,
+        MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<S::ConceptId>>,
     >
 where
-    S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
+    S: SnapShotReader<SDCD> + Sync + Debug,
     SDCD: Clone
-        + AsRef<DirectConceptDelta<usize>>
-        + From<DirectConceptDelta<usize>>
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>
         + Sync,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = MultiThreadedSyntaxTree;
+    type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;
 
     fn filter_generalisations_from_candidates(
         &self,

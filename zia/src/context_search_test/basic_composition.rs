@@ -13,7 +13,9 @@ use std::collections::HashMap;
 #[test]
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = ContextDelta::<usize, SharedDirectConceptDelta>::default();
+    let delta =
+        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+        );
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

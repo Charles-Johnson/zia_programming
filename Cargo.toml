@@ -3,6 +3,6 @@
 members = [
 	"izia",
 	"presentations",
-	"test_zia",
 	"zia",
+	"zia-lang.org/crate"
 ]

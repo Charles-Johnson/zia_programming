@@ -10,7 +10,7 @@ mod inference_rule;
 mod nested_composition_rule;
 
 use crate::{
-    concepts::Concept,
+    concepts::{Concept, ConceptTrait},
     mock_snap_shot::ConceptId,
     multi_threaded::{MultiThreadedReductionReason, MultiThreadedSyntaxTree},
 };
@@ -26,5 +26,5 @@ pub fn check_order(concepts: &[Concept<ConceptId>]) -> Vec<Concept<ConceptId>> {
         .collect::<Vec<Concept<ConceptId>>>()
 }
 
-type Syntax = MultiThreadedSyntaxTree;
+type Syntax = MultiThreadedSyntaxTree<ConceptId>;
 type ReductionReason = MultiThreadedReductionReason<Syntax>;
