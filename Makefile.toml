@@ -43,6 +43,7 @@ args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clipp
 # ---- TEST ----
 
 [tasks.test_web]
+toolchain = "nightly"
 description = "Run tests. Ex: 'cargo make test firefox'. Test envs: [chrome, firefox, safari]"
 clear = true
 install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1" }
