@@ -35,6 +35,7 @@ args = ["fmt", "--all", "--", "--check"]
 [tasks.clippy]
 description = "Lint with Clippy"
 clear = true
+toolchain = "nightly"
 install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
 command = "cargo"
 args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"]
