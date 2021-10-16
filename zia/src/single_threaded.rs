@@ -28,7 +28,7 @@ pub type Context = GenericContext<
     SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
 >;
 
-type SharedDirectConceptDelta = Rc<DirectConceptDelta<usize>>;
+type SharedDirectConceptDelta = Rc<DirectConceptDelta<ContextConceptId>>;
 
 impl<'a, S, SDCD> ContextSearchIteration
     for ContextSearch<
@@ -43,10 +43,10 @@ impl<'a, S, SDCD> ContextSearchIteration
         SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<S::ConceptId>>,
     >
 where
-    S: SnapShotReader<SDCD, ConceptId = usize> + Sync + Debug,
+    S: SnapShotReader<SDCD, ConceptId = ContextConceptId> + Sync + Debug,
     SDCD: Clone
-        + AsRef<DirectConceptDelta<usize>>
-        + From<DirectConceptDelta<usize>>,
+        + AsRef<DirectConceptDelta<ContextConceptId>>
+        + From<DirectConceptDelta<ContextConceptId>>,
 {
     type ConceptId = S::ConceptId;
     type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;

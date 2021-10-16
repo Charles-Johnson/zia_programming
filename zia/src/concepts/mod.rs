@@ -93,8 +93,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
         Id: 'static,
     {
         if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
-            if let MaybeComposition::Leaf(LeafCharacter::Constant) =
-                ap.composition
+            if MaybeComposition::Leaf(LeafCharacter::Constant) == ap.composition
             {
                 RighthandOf {
                     composition: composition.id,
@@ -158,8 +157,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
         concrete_concept_type: Option<ConcreteConceptType>,
     ) -> ZiaResult<Self> {
         if let SpecificPart::Abstract(ap) = &mut composition.specific_part {
-            if let MaybeComposition::Leaf(LeafCharacter::Constant) =
-                ap.composition
+            if MaybeComposition::Leaf(LeafCharacter::Constant) == ap.composition
             {
                 LefthandOf {
                     composition: composition.id,

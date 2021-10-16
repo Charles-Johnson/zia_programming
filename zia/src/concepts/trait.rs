@@ -35,32 +35,35 @@ pub trait Concept: Sized {
             left_id,
             right_id,
         };
-        if let Some(mc) = self.maybe_composition() {
-            Ok(DirectConceptDelta::Compose {
-                change: match mc {
-                    MaybeComposition::Composition(CompositePart {
-                        lefthand,
-                        righthand,
-                        ..
-                    }) => ValueChange::Update {
-                        before: Composition {
-                            left_id: lefthand,
-                            right_id: righthand,
+        self.maybe_composition().map_or(
+            Err(ZiaError::SettingCompositionOfConcrete),
+            |mc| {
+                Ok(DirectConceptDelta::Compose {
+                    change: match mc {
+                        MaybeComposition::Composition(CompositePart {
+                            lefthand,
+                            righthand,
+                            ..
+                        }) => ValueChange::Update {
+                            before: Composition {
+                                left_id: lefthand,
+                                right_id: righthand,
+                            },
+                            after,
                         },
-                        after,
+                        MaybeComposition::Leaf(LeafCharacter::Constant) => {
+                            ValueChange::Create(after)
+                        },
+                        MaybeComposition::Leaf(_) => {
+                            panic!(
+                                "Not sure what you are trying to do here ..."
+                            )
+                        },
                     },
-                    MaybeComposition::Leaf(LeafCharacter::Constant) => {
-                        ValueChange::Create(after)
-                    },
-                    MaybeComposition::Leaf(_) => {
-                        panic!("Not sure what you are trying to do here ...")
-                    },
-                },
-                composition_id: self.id(),
-            })
-        } else {
-            Err(ZiaError::SettingCompositionOfConcrete)
-        }
+                    composition_id: self.id(),
+                })
+            },
+        )
     }
 
     fn change_reduction(&mut self, change: ValueChange<Self::Id>);

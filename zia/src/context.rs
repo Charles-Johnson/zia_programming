@@ -450,12 +450,11 @@ where
     ) -> ZiaResult<Syntax<C>> {
         let lefthand = self.ast_from_token(left)?;
         let righthand = self.ast_from_token(right)?;
-        if let Some(ConcreteConceptType::ExistsSuchThat) =
-            self.concrete_type_of_ast(&righthand)
+        if Some(ConcreteConceptType::ExistsSuchThat)
+            == self.concrete_type_of_ast(&righthand)
+            && lefthand.is_leaf_variable()
         {
-            if lefthand.is_leaf_variable() {
-                self.bounded_variable_syntax.insert(lefthand.clone());
-            }
+            self.bounded_variable_syntax.insert(lefthand.clone());
         }
         Ok(self.context_search().combine(&lefthand, &righthand))
     }
@@ -660,8 +659,8 @@ where
                 _ => None,
             })
             .unwrap_or_else(|| {
-                if let Some(ConcreteConceptType::Reduction) =
-                    self.concrete_type_of_ast(right)
+                if Some(ConcreteConceptType::Reduction)
+                    == self.concrete_type_of_ast(right)
                 {
                     self.try_reducing_then_call(left)
                 } else {

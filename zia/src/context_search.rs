@@ -917,8 +917,8 @@ where
                         );
                         left_examples.into_iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
-                            let mut mutable_right = Syntax::<C>::make_mut(&mut right_clone);
-                            substitute::<Syntax<C>>(&mut mutable_right, &left_example);
+                            let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
+                            substitute::<Syntax<C>>(mutable_right, &left_example);
                             if self.contains_bound_variable_syntax(&right_clone) {
                                 self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
                                     right_example.extend(left_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -931,8 +931,8 @@ where
                             }
                         }).chain(right_examples.into_iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
-                            let mut mutable_left = Syntax::<C>::make_mut(&mut left_clone);
-                            substitute::<Syntax<C>>(&mut mutable_left, &right_example);
+                            let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
+                            substitute::<Syntax<C>>(mutable_left, &right_example);
                             if self.contains_bound_variable_syntax(&left_clone) {
                                 self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
                                     left_example.extend(right_example.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -979,39 +979,44 @@ where
         equivalence_set_of_composition: &HashSet<S::ConceptId>,
         non_generalised_hand: Hand,
     ) -> Vec<Substitutions<SharedSyntax<C>>> {
-        if let Some(non_generalised_id) = non_generalised_part.get_concept() {
-            let non_generalised_concept =
-                self.snap_shot.read_concept(self.delta, non_generalised_id);
-            let examples =
-                non_generalised_concept.iter_hand_of(non_generalised_hand);
-            examples
-                .filter_map(|(generalised_hand, composition)| {
-                    equivalence_set_of_composition
-                        .contains(&composition)
-                        .then(|| generalised_hand)
-                })
-                .filter_map(|generalised_hand| {
-                    Syntax::<C>::check_example(
-                        &self.to_ast(generalised_hand),
-                        generalisated_part,
-                    )
-                    .or_else(|| {
-                        // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
-                        let mut equivalence_set = hashset! {generalised_hand};
-                        let non_generalised_hand_concept = self
-                            .snap_shot
-                            .read_concept(self.delta, generalised_hand);
-                        equivalence_set.extend(
-                            non_generalised_hand_concept
-                                .find_what_reduces_to_it(),
-                        );
-                        self.find_example(generalisated_part, &equivalence_set)
+        non_generalised_part.get_concept().map_or_else(
+            Vec::new,
+            |non_generalised_id| {
+                let non_generalised_concept =
+                    self.snap_shot.read_concept(self.delta, non_generalised_id);
+                let examples =
+                    non_generalised_concept.iter_hand_of(non_generalised_hand);
+                examples
+                    .filter_map(|(generalised_hand, composition)| {
+                        equivalence_set_of_composition
+                            .contains(&composition)
+                            .then(|| generalised_hand)
                     })
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+                    .filter_map(|generalised_hand| {
+                        Syntax::<C>::check_example(
+                            &self.to_ast(generalised_hand),
+                            generalisated_part,
+                        )
+                        .or_else(|| {
+                            // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
+                            let mut equivalence_set =
+                                hashset! {generalised_hand};
+                            let non_generalised_hand_concept = self
+                                .snap_shot
+                                .read_concept(self.delta, generalised_hand);
+                            equivalence_set.extend(
+                                non_generalised_hand_concept
+                                    .find_what_reduces_to_it(),
+                            );
+                            self.find_example(
+                                generalisated_part,
+                                &equivalence_set,
+                            )
+                        })
+                    })
+                    .collect()
+            },
+        )
     }
 
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -1181,8 +1186,8 @@ where
         if some_syntax == another_syntax {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
-        if let Some(greater_than_concept_id) =
-            self.concrete_concept_id(ConcreteConceptType::GreaterThan)
+
+        self.concrete_concept_id(ConcreteConceptType::GreaterThan).map_or((Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept), |greater_than_concept_id|
         {
             let greater_than_syntax = self.to_ast(greater_than_concept_id);
             let comparing_syntax = self.combine(
@@ -1277,9 +1282,7 @@ where
                 },
                 C::RR::simplify_reasoning(reason, reversed_reason),
             )
-        } else {
-            (Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept)
-        }
+        })
     }
 
     pub fn spawn(

@@ -4,4 +4,5 @@ members = [
 	"izia",
 	"presentations",
 	"zia",
+	"zia-lang.org/crate"
 ]

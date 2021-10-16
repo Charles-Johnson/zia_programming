@@ -46,7 +46,7 @@ impl<'a> From<&'a Concept<Committed>> for Mixed<'a> {
             uncommitted_composition: c
                 .get_composition()
                 .map(|(l, r)| (l.into(), r.into())),
-            uncommitted_reduction: c.get_reduction().map(|r| r.into()),
+            uncommitted_reduction: c.get_reduction().map(Into::into),
         }
     }
 }
@@ -301,7 +301,7 @@ impl<'a> ConceptTrait for Mixed<'a> {
                 if let Ok(other_id) = other_id.try_into() {
                     original_concept
                         .find_as_hand_in_composition_with(other_id, hand)
-                        .map(|id| id.into())
+                        .map(Into::into)
                 } else {
                     None
                 }
