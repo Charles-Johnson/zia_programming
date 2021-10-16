@@ -45,7 +45,7 @@ args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clipp
 [tasks.test_web]
 description = "Run tests. Ex: 'cargo make test firefox'. Test envs: [chrome, firefox, safari]"
 clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V" }
+install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1" }
 command = "wasm-pack"
 args = ["test", "zia-lang.org/crate", "--${@}"]
 
@@ -72,13 +72,13 @@ args = ["test", "zia-lang.org/crate", "--headless", "--${@}", "--release"]
 [tasks.test_web_one]
 description = "Run a single test in Firefox. Ex 'cargo make test_one my_test'"
 clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V" }
+install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1" }
 command = "wasm-pack"
 args = ["test", "zia-lang.org/crate", "--firefox", "--", "--lib", "${@}"]
 
 [tasks.test_web_one_h]
 description = "Run a single test in headless Firefox. Ex 'cargo make test_one_h my_test'"
 clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V" }
+install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1"}
 command = "wasm-pack"
 args = ["test", "zia-lang.org/crate",  "--firefox", "--headless", "--", "--lib", "${@}"]
