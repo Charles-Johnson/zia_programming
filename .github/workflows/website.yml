@@ -1,9 +1,6 @@
 name: Main
 
-on:
-  push:
-    branches:
-      - master
+on: [push, pull_request]
 
 env:
   RUST_BACKTRACE: 1
@@ -34,10 +31,6 @@ jobs:
         run: yarn build:prerender
         working-directory: ./zia-lang.org
 
-      - name: Run tests
-        run: cargo make verify_only
-        working-directory: ./zia-lang.org/crate
-
       - name: Install Netlify CLI
         if: github.ref == 'refs/heads/master'
         run: sudo npm install netlify-cli -g
@@ -47,7 +40,7 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
-        run: sudo netlify deploy -s $NETLIFY_SITE_ID --auth $NETLIFY_ACCESS_TOKEN -p --dir ./dist
+        run: sudo netlify deploy -s $NETLIFY_SITE_ID --auth $NETLIFY_ACCESS_TOKEN -p --dir ./zia-lang.org/dist
 
          
 
