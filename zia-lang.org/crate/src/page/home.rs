@@ -7,7 +7,7 @@ use zia::single_threaded::Context;
 pub struct Model {
     context: Context,
     input: String,
-    history: Vec<InterpreterHistoryEntry>
+    history: Vec<InterpreterHistoryEntry>,
 }
 
 impl Default for Model {
@@ -15,19 +15,19 @@ impl Default for Model {
         Self {
             context: Context::new(),
             input: String::new(),
-            history: Vec::new()
+            history: Vec::new(),
         }
     }
 }
 
 struct InterpreterHistoryEntry {
     kind: EntryKind,
-    value: String
+    value: String,
 }
 
 enum EntryKind {
     Command,
-    Evaluation
+    Evaluation,
 }
 
 #[derive(Clone)]
@@ -46,11 +46,11 @@ pub fn update(msg: Msg, model: &mut Model) {
             let output = model.context.execute(&input);
             model.history.push(InterpreterHistoryEntry {
                 value: input,
-                kind: EntryKind::Command
+                kind: EntryKind::Command,
             });
             model.history.push(InterpreterHistoryEntry {
                 value: output,
-                kind: EntryKind::Evaluation
+                kind: EntryKind::Evaluation,
             });
         },
         Msg::Nothing => {},
@@ -64,7 +64,7 @@ pub fn view(model: &Model) -> impl View<GlobalMsg> {
             div![
                 class![match entry.kind {
                     EntryKind::Command => C.text_right,
-                    EntryKind::Evaluation => C.text_left
+                    EntryKind::Evaluation => C.text_left,
                 }],
                 p![entry.value]
             ]
