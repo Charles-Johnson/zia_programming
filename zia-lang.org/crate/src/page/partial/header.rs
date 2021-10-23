@@ -3,7 +3,9 @@ use crate::{
     image_src, Model, Msg, Page, ScrollHistory,
     Visibility::{self, *},
 };
-use seed::{a, attrs, class, C, div, empty, header, id, img, li, prelude::*, ul};
+use seed::{
+    a, attrs, class, div, empty, header, id, img, li, prelude::*, ul, C,
+};
 
 fn header_visibility(
     menu_visibility: Visibility,

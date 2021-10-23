@@ -8,13 +8,21 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
+const index = '/';
+
 module.exports = (env, argv) => {
   return {
+    performance: {
+      // Don't break compilation because of WASM file bigger than 244 KB.
+      hints: false
+    },
     entry: {
       // Bundle root with name `app.js`.
       app: path.resolve(__dirname, "../entries/index.ts")
     },
     output: {
+      // You can change it to e.g. `/ui/`, but also edit `historyApiFallback` below and `<base href..`> in `index.hbs`.
+      publicPath: index,
       // You can deploy your site from this folder (after build with e.g. `yarn build:release`)
       path: dist,
       filename:'[name].[contenthash].js'
@@ -24,14 +32,19 @@ module.exports = (env, argv) => {
       // You can connect to dev server from devices in your network (e.g. 192.168.0.3:8000).
       host: "0.0.0.0",
       port: 8000,
+      historyApiFallback: {
+        index
+      },
       noInfo: true,
       stats: "errors-only",
       overlay: {
-        warnings: true,
+        // Commented to prevent error:
+        // `./crate/pkg/index_bg.js 382:14-53   Critical dependency: the request of a dependency is an expression`
+        // warnings: true,
         errors: true
       },
-      historyApiFallback: true,
     },
+    devtool: "eval",
     experiments: {
       asyncWebAssembly: true,
     },

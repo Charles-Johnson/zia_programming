@@ -11,10 +11,11 @@ mod page;
 use console_error_panic_hook::set_once;
 use fixed_vec_deque::FixedVecDeque;
 use generated::css_classes::C;
-use seed::{class, div, document, log, prelude::*, window};
+use seed::{body, class, div, document, log, prelude::*, window};
 use Visibility::*;
 
 use page::home;
+use web_sys::Event;
 
 const TITLE_SUFFIX: &str = "Zia";
 // https://mailtolink.me/
@@ -115,16 +116,14 @@ fn is_in_prerendering() -> bool {
 //    Routes
 // ------ ------
 #[must_use]
-
 // ------ ------
 //    Update
 // ------ ------
-
 #[derive(Clone)]
 pub enum Msg {
     UrlChanged(subs::UrlChanged),
     ScrollToTop,
-    Scrolled(i32),
+    Scrolled,
     ToggleMenu,
     HideMenu,
     Home(home::Msg),
@@ -138,7 +137,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::ScrollToTop => window().scroll_to_with_scroll_to_options(
             web_sys::ScrollToOptions::new().top(0.),
         ),
-        Msg::Scrolled(position) => {
+        Msg::Scrolled => {
+            // Some browsers use `document.body.scrollTop`
+            // and other ones `document.documentElement.scrollTop`.
+            let mut position = body().scroll_top();
+            if position == 0 {
+                position = document()
+                    .document_element()
+                    .expect("get document element")
+                    .scroll_top()
+            }
             *model.scroll_history.push_back() = position;
         },
         Msg::ToggleMenu => model.menu_visibility.toggle(),
