@@ -3,7 +3,7 @@ use crate::{
     image_src, Model, Msg, Page, ScrollHistory,
     Visibility::{self, *},
 };
-use seed::{a, attrs, class, div, empty, header, id, img, li, prelude::*, ul};
+use seed::{a, attrs, class, C, div, empty, header, id, img, li, prelude::*, ul};
 
 fn header_visibility(
     menu_visibility: Visibility,
@@ -22,7 +22,7 @@ fn header_visibility(
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn view(model: &Model) -> impl View<Msg> {
+pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     let show_header =
         header_visibility(model.menu_visibility, &model.scroll_history)
             == Visible;
@@ -233,7 +233,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                                 },
                                 "GitHub",
                                 img![
-                                    class![
+                                    C![
                                         // md__
                                         C.md__inline
                                         C.md__mb_5,
@@ -249,15 +249,14 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     ],
                     // Hamburger
                     div![
-                        class![
-                            C.cursor_pointer => !model.in_prerendering,
-                            // md__
-                            C.md__hidden,
+                        C![
+                            (!model.in_prerendering).then(|| "cursor-pointer"),
+                            "md-hidden",
                         ],
-                        simple_ev(Ev::Click, Msg::ToggleMenu),
+                        ev(Ev::Click, |_| Msg::ToggleMenu),
                         img![
                             id!("hamburger"),
-                            class![
+                            C![
                                 C.h_8,
                                 C.w_12,
                                 C.sm__h_10
@@ -279,7 +278,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                         ]
                     ],
                     // Spacer
-                    div![class![
+                    div![C![
                         C.hidden,
                         // md__
                         C.md__block,

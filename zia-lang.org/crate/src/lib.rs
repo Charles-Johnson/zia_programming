@@ -11,7 +11,7 @@ mod page;
 use console_error_panic_hook::set_once;
 use fixed_vec_deque::FixedVecDeque;
 use generated::css_classes::C;
-use seed::{body, class, div, document, log, prelude::*, window, Listener};
+use seed::{class, div, document, log, prelude::*, window};
 use Visibility::*;
 
 use page::home;
@@ -23,16 +23,7 @@ const CHARLES_EMAIL: &str = "Contact";
 const TWEET_TO_CHARLES: &str = "https://twitter.com/Charles40189535?s=03";
 
 const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
-const STATIC_PATH: &str = "static";
 const IMAGES_PATH: &str = "static/images";
-
-// ------ ------
-// Before Mount
-// ------ ------
-
-fn before_mount(_: Url) -> BeforeMount {
-    BeforeMount::new().mount_type(MountType::Takeover)
-}
 
 // ------ ------
 //     Model
@@ -86,10 +77,12 @@ impl Page {
 impl From<Url> for Page {
     #[must_use]
     fn from(url: Url) -> Self {
-        match url.path.first().map(String::as_str) {
-            None | Some("") => Self::Home,
-            _ => Self::NotFound,
-        }
+        let (page, title) = match url.path().first().map(String::as_str) {
+            None | Some("") => (Self::Home, TITLE_SUFFIX.to_owned()),
+            _ => (Self::NotFound, format!("404 - {}", TITLE_SUFFIX)),
+        };
+        document().set_title(&title);
+        page
     }
 }
 
@@ -97,18 +90,18 @@ impl From<Url> for Page {
 //  After Mount
 // ------ ------
 
-fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
-    orders.send_msg(Msg::UpdatePageTitle);
+fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
+    orders
+        .subscribe(Msg::UrlChanged)
+        .stream(streams::window_event(Ev::Scroll, |_| Msg::Scrolled));
 
-    let model = Model {
+    Model {
         page: url.into(),
         home_page_model: home::Model::default(),
         scroll_history: ScrollHistory::new(),
         menu_visibility: Hidden,
         in_prerendering: is_in_prerendering(),
-    };
-
-    AfterMount::new(model).url_handling(UrlHandling::None)
+    }
 }
 
 fn is_in_prerendering() -> bool {
@@ -122,32 +115,6 @@ fn is_in_prerendering() -> bool {
 //    Routes
 // ------ ------
 #[must_use]
-pub fn routes(url: Url) -> Option<Msg> {
-    // Urls which start with `static` are files => treat them as external links.
-    if url.path.starts_with(&[STATIC_PATH.into()]) {
-        return None;
-    }
-    Some(Msg::RouteChanged(url))
-}
-
-// ------ ------
-// Window Events
-// ------ ------
-#[must_use]
-pub fn window_events(_: &Model) -> Vec<Listener<Msg>> {
-    vec![raw_ev(Ev::Scroll, |_| {
-        // Some browsers use `document.body.scrollTop`
-        // and other ones `document.documentElement.scrollTop`.
-        let mut position = body().scroll_top();
-        if position == 0 {
-            position = document()
-                .document_element()
-                .expect("cannot get document element")
-                .scroll_top();
-        }
-        Msg::Scrolled(position)
-    })]
-}
 
 // ------ ------
 //    Update
@@ -155,8 +122,7 @@ pub fn window_events(_: &Model) -> Vec<Listener<Msg>> {
 
 #[derive(Clone)]
 pub enum Msg {
-    RouteChanged(Url),
-    UpdatePageTitle,
+    UrlChanged(subs::UrlChanged),
     ScrollToTop,
     Scrolled(i32),
     ToggleMenu,
@@ -166,16 +132,8 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::RouteChanged(url) => {
+        Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.page = url.into();
-            orders.send_msg(Msg::UpdatePageTitle);
-        },
-        Msg::UpdatePageTitle => {
-            let title = match model.page {
-                Page::Home => TITLE_SUFFIX.to_owned(),
-                Page::NotFound => format!("404 - {}", TITLE_SUFFIX),
-            };
-            document().set_title(&title);
         },
         Msg::ScrollToTop => window().scroll_to_with_scroll_to_options(
             web_sys::ScrollToOptions::new().top(0.),
@@ -202,7 +160,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 // - "▶\u{fe0e}" - \u{fe0e} is the variation selector, it prevents ▶ to change to emoji in some browsers
 //   - https://codepoints.net/U+FE0E
 #[must_use]
-pub fn view(model: &Model) -> impl View<Msg> {
+pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     // @TODO: Setup `prerendered` properly once https://github.com/David-OConnor/seed/issues/223 is resolved
     let prerendered = true;
     div![
@@ -213,11 +171,11 @@ pub fn view(model: &Model) -> impl View<Msg> {
             C.flex_col,
         ],
         match model.page {
-            Page::Home => page::home::view(&model.home_page_model).els(),
-            Page::NotFound => page::not_found::view().els(),
+            Page::Home => page::home::view(&model.home_page_model).into_nodes(),
+            Page::NotFound => page::not_found::view().into_nodes(),
         },
-        page::partial::header::view(model).els(),
-        page::partial::footer::view().els(),
+        page::partial::header::view(model).into_nodes(),
+        page::partial::footer::view().into_nodes(),
     ]
 }
 
@@ -234,12 +192,7 @@ pub fn image_src(image: &str) -> String {
 pub fn run() {
     set_once();
     log!("Starting app...");
-    App::builder(update, view)
-        .before_mount(before_mount)
-        .after_mount(after_mount)
-        .routes(routes)
-        .window_events(window_events)
-        .build_and_start();
+    App::start("app", init, update, view);
 
     log!("App started.");
 }

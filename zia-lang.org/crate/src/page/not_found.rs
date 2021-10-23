@@ -1,7 +1,7 @@
 use crate::{generated::css_classes::C, Msg};
 use seed::{attrs, class, div, h1, path, prelude::*, style, svg};
 
-pub fn view() -> impl View<Msg> {
+pub fn view() -> impl IntoNodes<Msg> {
     div![
         class![
             C.mt_16,

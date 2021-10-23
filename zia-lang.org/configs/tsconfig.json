@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig.base",
-  "exclude": ["index.css_classes.ts"]
+  "files": [
+    "../entries/index.ts"
+  ],
+  "exclude": ["../entries/index.css_classes.ts"]
 }

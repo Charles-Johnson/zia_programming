@@ -57,7 +57,7 @@ pub fn update(msg: Msg, model: &mut Model) {
     };
 }
 
-pub fn view(model: &Model) -> impl View<GlobalMsg> {
+pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
     div![
         class![C.flex, C.flex_col, C.justify_center, C.flex_1],
         model.history.iter().map(|entry| {
@@ -66,7 +66,7 @@ pub fn view(model: &Model) -> impl View<GlobalMsg> {
                     EntryKind::Command => C.text_right,
                     EntryKind::Evaluation => C.text_left,
                 }],
-                p![entry.value]
+                p![&entry.value]
             ]
         }),
         input![
