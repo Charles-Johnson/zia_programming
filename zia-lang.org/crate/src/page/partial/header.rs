@@ -3,9 +3,7 @@ use crate::{
     image_src, Model, Msg, Page, ScrollHistory,
     Visibility::{self, *},
 };
-use seed::{
-    a, attrs, class, div, empty, header, id, img, li, prelude::*, ul, C,
-};
+use seed::{a, attrs, div, empty, header, id, img, li, prelude::*, ul, C};
 
 fn header_visibility(
     menu_visibility: Visibility,
@@ -32,7 +30,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
         // Header background and line container
         if show_header {
             div![
-                class![
+                C![
                     C.fixed,
                     C.top_0
                     C.inset_x_0,
@@ -41,7 +39,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                     C.sm__h_24,
                 ],
                 // Header background
-                div![class![C.absolute, C.inset_0, C.opacity_90]],
+                div![C![C.absolute, C.inset_0, C.opacity_90]],
             ]
         } else {
             empty![]
@@ -49,7 +47,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
         // Menu
         if model.menu_visibility == Visible {
             div![
-                class![
+                C![
                     C.fixed,
                     C.w_screen,
                     C.opacity_90,
@@ -58,9 +56,9 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                     C.md__hidden,
                 ],
                 div![
-                    class![C.w_56, C.mx_auto, C.flex, C.max_h_full,],
+                    C![C.w_56, C.mx_auto, C.flex, C.max_h_full,],
                     ul![
-                        class![
+                        C![
                             C.mt_20,
                             C.w_full,
                             C.font_semibold,
@@ -74,7 +72,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                             C.sm__text_21,
                         ],
                         li![
-                            class![
+                            C![
                                 C.block,
                                 C.h_full,
                                 C.border_l_4,
@@ -85,7 +83,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                                 C.sm__hidden,
                             ],
                             a![
-                                class![
+                                C![
                                     C.pl_8,
                                     C.h_full,
                                     C.flex,
@@ -97,15 +95,15 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                                 attrs! {
                                     At::Href => Page::Home.to_href()
                                 },
-                                simple_ev(Ev::Click, Msg::ScrollToTop),
-                                simple_ev(Ev::Click, Msg::HideMenu),
+                                ev(Ev::Click, |_| Msg::ScrollToTop),
+                                ev(Ev::Click, |_| Msg::HideMenu),
                                 "Home"
                             ]
                         ],
                         li![
-                            class![C.block, C.h_full, C.w_full,],
+                            C![C.block, C.h_full, C.w_full,],
                             a![
-                                class![
+                                C![
                                     C.pl_8,
                                     C.h_full,
                                     C.flex,
@@ -120,10 +118,10 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                                 attrs! {
                                     At::Href => "https://github.com/Charles-Johnson/zia_programming"
                                 },
-                                simple_ev(Ev::Click, Msg::HideMenu),
+                                ev(Ev::Click, |_| Msg::HideMenu),
                                 "GitHub",
                                 img![
-                                    class![
+                                    C![
                                         C.inline
                                         C.mb_3,
                                         C.w_3,
@@ -147,14 +145,14 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
         // Header
         if show_header {
             header![
-                class![
+                C![
                     C.fixed,
                     C.top_0
                     C.inset_x_0,
                 ],
                 // Header controls container
                 div![
-                    class![
+                    C![
                         C.mx_8
                         C.h_16,
                         C.flex,
@@ -168,10 +166,10 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                         attrs! {
                             At::Href => Page::Home.to_href()
                         },
-                        simple_ev(Ev::Click, Msg::ScrollToTop),
-                        simple_ev(Ev::Click, Msg::HideMenu),
+                        ev(Ev::Click, |_| Msg::ScrollToTop),
+                        ev(Ev::Click, |_| Msg::HideMenu),
                         img![
-                            class![C.h_6, C.sm__h_10, C.sm__w_70px,],
+                            C![C.h_6, C.sm__h_10, C.sm__w_70px,],
                             attrs! {
                                 At::Src => image_src("zia.svg"),
                             }
@@ -179,7 +177,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                     ],
                     // Links
                     ul![
-                        class![
+                        C![
                             C.hidden,
                             // sm__
                             C.sm___mt_px,
@@ -192,13 +190,13 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                             C.sm__h_full,
                         ],
                         li![
-                            class![
+                            C![
                                 // sm__
                                 C.sm__block,
                                 C.sm__h_full,
                             ],
                             a![
-                                class![
+                                C![
                                     // sm__
                                     C.sm__h_full,
                                     C.sm__flex,
@@ -209,13 +207,13 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                                 attrs! {
                                     At::Href => Page::Home.to_href()
                                 },
-                                simple_ev(Ev::Click, Msg::ScrollToTop),
-                                simple_ev(Ev::Click, Msg::HideMenu),
+                                ev(Ev::Click, |_| Msg::ScrollToTop),
+                                ev(Ev::Click, |_| Msg::HideMenu),
                                 "Home"
                             ]
                         ],
                         li![
-                            class![
+                            C![
                                 C.hidden,
                                 // md__
                                 C.md__block,
@@ -223,7 +221,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                                 C.md__h_full,
                             ],
                             a![
-                                class![
+                                C![
                                     // md__
                                     C.md__h_full,
                                     C.md__flex,

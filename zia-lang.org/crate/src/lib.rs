@@ -11,11 +11,10 @@ mod page;
 use console_error_panic_hook::set_once;
 use fixed_vec_deque::FixedVecDeque;
 use generated::css_classes::C;
-use seed::{body, class, div, document, log, prelude::*, window};
+use seed::{body, div, document, log, prelude::*, window, C};
 use Visibility::*;
 
 use page::home;
-use web_sys::Event;
 
 const TITLE_SUFFIX: &str = "Zia";
 // https://mailtolink.me/
@@ -129,7 +128,7 @@ pub enum Msg {
     Home(home::Msg),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.page = url.into();
@@ -145,7 +144,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 position = document()
                     .document_element()
                     .expect("get document element")
-                    .scroll_top()
+                    .scroll_top();
             }
             *model.scroll_history.push_back() = position;
         },
@@ -172,8 +171,8 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     // @TODO: Setup `prerendered` properly once https://github.com/David-OConnor/seed/issues/223 is resolved
     let prerendered = true;
     div![
-        class![
-            C.fade_in => !prerendered,
+        C![
+            (!prerendered).then(|| C.fade_in),
             C.min_h_screen,
             C.flex,
             C.flex_col,

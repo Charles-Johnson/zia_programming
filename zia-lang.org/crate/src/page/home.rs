@@ -1,7 +1,7 @@
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{attrs, class, div, input, p, prelude::*};
+use seed::{attrs, div, input, p, prelude::*, C};
 use zia::single_threaded::Context;
 
 pub struct Model {
@@ -59,10 +59,10 @@ pub fn update(msg: Msg, model: &mut Model) {
 
 pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
     div![
-        class![C.flex, C.flex_col, C.justify_center, C.flex_1],
+        C![C.flex, C.flex_col, C.justify_center, C.flex_1],
         model.history.iter().map(|entry| {
             div![
-                class![match entry.kind {
+                C![match entry.kind {
                     EntryKind::Command => C.text_right,
                     EntryKind::Evaluation => C.text_left,
                 }],
@@ -70,7 +70,7 @@ pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
             ]
         }),
         input![
-            class![C.border_primary, C.border_2],
+            C![C.border_primary, C.border_2],
             attrs! {At::Type => "text", At::Name => "input", At::Value => model.input},
             input_ev(Ev::Input, |s| GlobalMsg::Home(Msg::Input(s))),
             keyboard_ev("keydown", |ev| if ev.key_code() == 13 {

@@ -2,7 +2,7 @@ use crate::{
     generated::css_classes::C, image_src, Msg, CHARLES_EMAIL, MAIL_TO_CHARLES,
     TWEET_TO_CHARLES,
 };
-use seed::{a, attrs, class, div, footer, h3, img, prelude::*, C};
+use seed::{a, attrs, div, footer, h3, img, prelude::*, C};
 
 pub fn view() -> impl IntoNodes<Msg> {
     footer![
