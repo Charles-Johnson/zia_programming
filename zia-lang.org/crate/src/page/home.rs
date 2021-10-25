@@ -59,7 +59,7 @@ pub fn update(msg: Msg, model: &mut Model) {
 
 pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
     div![
-        C![C.flex, C.flex_col, C.justify_center, C.flex_1],
+        C![C.flex, C.flex_col, C.justify_center, C.flex_1, C.pl_4, C.pr_4],
         model.history.iter().map(|entry| {
             div![
                 C![match entry.kind {
