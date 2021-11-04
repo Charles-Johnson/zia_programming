@@ -2756,6 +2756,7 @@ pub struct CssClasses<'a> {
     pub divide_double: &'a str,
     pub divide_none: &'a str,
     pub divide_primary: &'a str,
+    pub divide_secondary: &'a str,
     pub divide_opacity_0: &'a str,
     pub divide_opacity_10: &'a str,
     pub divide_opacity_20: &'a str,
@@ -2999,11 +3000,16 @@ pub struct CssClasses<'a> {
     pub border_double: &'a str,
     pub border_none: &'a str,
     pub border_primary: &'a str,
+    pub border_secondary: &'a str,
     pub group: &'a str,
     pub group_hover__border_primary: &'a str,
+    pub group_hover__border_secondary: &'a str,
     pub focus_within__border_primary: &'a str,
+    pub focus_within__border_secondary: &'a str,
     pub hover__border_primary: &'a str,
+    pub hover__border_secondary: &'a str,
     pub focus__border_primary: &'a str,
+    pub focus__border_secondary: &'a str,
     pub border_opacity_0: &'a str,
     pub border_opacity_10: &'a str,
     pub border_opacity_20: &'a str,
@@ -3060,10 +3066,15 @@ pub struct CssClasses<'a> {
     pub focus__border_opacity_90: &'a str,
     pub focus__border_opacity_100: &'a str,
     pub bg_primary: &'a str,
+    pub bg_secondary: &'a str,
     pub group_hover__bg_primary: &'a str,
+    pub group_hover__bg_secondary: &'a str,
     pub focus_within__bg_primary: &'a str,
+    pub focus_within__bg_secondary: &'a str,
     pub hover__bg_primary: &'a str,
+    pub hover__bg_secondary: &'a str,
     pub focus__bg_primary: &'a str,
+    pub focus__bg_secondary: &'a str,
     pub bg_opacity_0: &'a str,
     pub bg_opacity_10: &'a str,
     pub bg_opacity_20: &'a str,
@@ -3129,14 +3140,23 @@ pub struct CssClasses<'a> {
     pub bg_gradient_to_l: &'a str,
     pub bg_gradient_to_tl: &'a str,
     pub from_primary: &'a str,
+    pub from_secondary: &'a str,
     pub hover__from_primary: &'a str,
+    pub hover__from_secondary: &'a str,
     pub focus__from_primary: &'a str,
+    pub focus__from_secondary: &'a str,
     pub via_primary: &'a str,
+    pub via_secondary: &'a str,
     pub hover__via_primary: &'a str,
+    pub hover__via_secondary: &'a str,
     pub focus__via_primary: &'a str,
+    pub focus__via_secondary: &'a str,
     pub to_primary: &'a str,
+    pub to_secondary: &'a str,
     pub hover__to_primary: &'a str,
+    pub hover__to_secondary: &'a str,
     pub focus__to_primary: &'a str,
+    pub focus__to_secondary: &'a str,
     pub decoration_slice: &'a str,
     pub decoration_clone: &'a str,
     pub bg_auto: &'a str,
@@ -3530,10 +3550,15 @@ pub struct CssClasses<'a> {
     pub tracking_wider: &'a str,
     pub tracking_widest: &'a str,
     pub text_primary: &'a str,
+    pub text_secondary: &'a str,
     pub group_hover__text_primary: &'a str,
+    pub group_hover__text_secondary: &'a str,
     pub focus_within__text_primary: &'a str,
+    pub focus_within__text_secondary: &'a str,
     pub hover__text_primary: &'a str,
+    pub hover__text_secondary: &'a str,
     pub focus__text_primary: &'a str,
+    pub focus__text_secondary: &'a str,
     pub text_opacity_0: &'a str,
     pub text_opacity_10: &'a str,
     pub text_opacity_20: &'a str,
@@ -3607,7 +3632,9 @@ pub struct CssClasses<'a> {
     pub antialiased: &'a str,
     pub subpixel_antialiased: &'a str,
     pub placeholder_primary: &'a str,
+    pub placeholder_secondary: &'a str,
     pub focus__placeholder_primary: &'a str,
+    pub focus__placeholder_secondary: &'a str,
     pub placeholder_opacity_0: &'a str,
     pub placeholder_opacity_10: &'a str,
     pub placeholder_opacity_20: &'a str,
@@ -3798,8 +3825,11 @@ pub struct CssClasses<'a> {
     pub focus_within__ring_inset: &'a str,
     pub focus__ring_inset: &'a str,
     pub ring_primary: &'a str,
+    pub ring_secondary: &'a str,
     pub focus_within__ring_primary: &'a str,
+    pub focus_within__ring_secondary: &'a str,
     pub focus__ring_primary: &'a str,
+    pub focus__ring_secondary: &'a str,
     pub ring_opacity_0: &'a str,
     pub ring_opacity_10: &'a str,
     pub ring_opacity_20: &'a str,
@@ -3849,8 +3879,11 @@ pub struct CssClasses<'a> {
     pub focus__ring_offset_4: &'a str,
     pub focus__ring_offset_8: &'a str,
     pub ring_offset_primary: &'a str,
+    pub ring_offset_secondary: &'a str,
     pub focus_within__ring_offset_primary: &'a str,
+    pub focus_within__ring_offset_secondary: &'a str,
     pub focus__ring_offset_primary: &'a str,
+    pub focus__ring_offset_secondary: &'a str,
     pub filter: &'a str,
     pub filter_none: &'a str,
     pub blur_0: &'a str,
@@ -6754,6 +6787,7 @@ pub struct CssClasses<'a> {
     pub sm__divide_double: &'a str,
     pub sm__divide_none: &'a str,
     pub sm__divide_primary: &'a str,
+    pub sm__divide_secondary: &'a str,
     pub sm__divide_opacity_0: &'a str,
     pub sm__divide_opacity_10: &'a str,
     pub sm__divide_opacity_20: &'a str,
@@ -6997,10 +7031,15 @@ pub struct CssClasses<'a> {
     pub sm__border_double: &'a str,
     pub sm__border_none: &'a str,
     pub sm__border_primary: &'a str,
+    pub sm__border_secondary: &'a str,
     pub sm__group_hover__border_primary: &'a str,
+    pub sm__group_hover__border_secondary: &'a str,
     pub sm__focus_within__border_primary: &'a str,
+    pub sm__focus_within__border_secondary: &'a str,
     pub sm__hover__border_primary: &'a str,
+    pub sm__hover__border_secondary: &'a str,
     pub sm__focus__border_primary: &'a str,
+    pub sm__focus__border_secondary: &'a str,
     pub sm__border_opacity_0: &'a str,
     pub sm__border_opacity_10: &'a str,
     pub sm__border_opacity_20: &'a str,
@@ -7057,10 +7096,15 @@ pub struct CssClasses<'a> {
     pub sm__focus__border_opacity_90: &'a str,
     pub sm__focus__border_opacity_100: &'a str,
     pub sm__bg_primary: &'a str,
+    pub sm__bg_secondary: &'a str,
     pub sm__group_hover__bg_primary: &'a str,
+    pub sm__group_hover__bg_secondary: &'a str,
     pub sm__focus_within__bg_primary: &'a str,
+    pub sm__focus_within__bg_secondary: &'a str,
     pub sm__hover__bg_primary: &'a str,
+    pub sm__hover__bg_secondary: &'a str,
     pub sm__focus__bg_primary: &'a str,
+    pub sm__focus__bg_secondary: &'a str,
     pub sm__bg_opacity_0: &'a str,
     pub sm__bg_opacity_10: &'a str,
     pub sm__bg_opacity_20: &'a str,
@@ -7126,14 +7170,23 @@ pub struct CssClasses<'a> {
     pub sm__bg_gradient_to_l: &'a str,
     pub sm__bg_gradient_to_tl: &'a str,
     pub sm__from_primary: &'a str,
+    pub sm__from_secondary: &'a str,
     pub sm__hover__from_primary: &'a str,
+    pub sm__hover__from_secondary: &'a str,
     pub sm__focus__from_primary: &'a str,
+    pub sm__focus__from_secondary: &'a str,
     pub sm__via_primary: &'a str,
+    pub sm__via_secondary: &'a str,
     pub sm__hover__via_primary: &'a str,
+    pub sm__hover__via_secondary: &'a str,
     pub sm__focus__via_primary: &'a str,
+    pub sm__focus__via_secondary: &'a str,
     pub sm__to_primary: &'a str,
+    pub sm__to_secondary: &'a str,
     pub sm__hover__to_primary: &'a str,
+    pub sm__hover__to_secondary: &'a str,
     pub sm__focus__to_primary: &'a str,
+    pub sm__focus__to_secondary: &'a str,
     pub sm__decoration_slice: &'a str,
     pub sm__decoration_clone: &'a str,
     pub sm__bg_auto: &'a str,
@@ -7527,10 +7580,15 @@ pub struct CssClasses<'a> {
     pub sm__tracking_wider: &'a str,
     pub sm__tracking_widest: &'a str,
     pub sm__text_primary: &'a str,
+    pub sm__text_secondary: &'a str,
     pub sm__group_hover__text_primary: &'a str,
+    pub sm__group_hover__text_secondary: &'a str,
     pub sm__focus_within__text_primary: &'a str,
+    pub sm__focus_within__text_secondary: &'a str,
     pub sm__hover__text_primary: &'a str,
+    pub sm__hover__text_secondary: &'a str,
     pub sm__focus__text_primary: &'a str,
+    pub sm__focus__text_secondary: &'a str,
     pub sm__text_opacity_0: &'a str,
     pub sm__text_opacity_10: &'a str,
     pub sm__text_opacity_20: &'a str,
@@ -7604,7 +7662,9 @@ pub struct CssClasses<'a> {
     pub sm__antialiased: &'a str,
     pub sm__subpixel_antialiased: &'a str,
     pub sm__placeholder_primary: &'a str,
+    pub sm__placeholder_secondary: &'a str,
     pub sm__focus__placeholder_primary: &'a str,
+    pub sm__focus__placeholder_secondary: &'a str,
     pub sm__placeholder_opacity_0: &'a str,
     pub sm__placeholder_opacity_10: &'a str,
     pub sm__placeholder_opacity_20: &'a str,
@@ -7795,8 +7855,11 @@ pub struct CssClasses<'a> {
     pub sm__focus_within__ring_inset: &'a str,
     pub sm__focus__ring_inset: &'a str,
     pub sm__ring_primary: &'a str,
+    pub sm__ring_secondary: &'a str,
     pub sm__focus_within__ring_primary: &'a str,
+    pub sm__focus_within__ring_secondary: &'a str,
     pub sm__focus__ring_primary: &'a str,
+    pub sm__focus__ring_secondary: &'a str,
     pub sm__ring_opacity_0: &'a str,
     pub sm__ring_opacity_10: &'a str,
     pub sm__ring_opacity_20: &'a str,
@@ -7846,8 +7909,11 @@ pub struct CssClasses<'a> {
     pub sm__focus__ring_offset_4: &'a str,
     pub sm__focus__ring_offset_8: &'a str,
     pub sm__ring_offset_primary: &'a str,
+    pub sm__ring_offset_secondary: &'a str,
     pub sm__focus_within__ring_offset_primary: &'a str,
+    pub sm__focus_within__ring_offset_secondary: &'a str,
     pub sm__focus__ring_offset_primary: &'a str,
+    pub sm__focus__ring_offset_secondary: &'a str,
     pub sm__filter: &'a str,
     pub sm__filter_none: &'a str,
     pub sm__blur_0: &'a str,
@@ -10748,6 +10814,7 @@ pub struct CssClasses<'a> {
     pub md__divide_double: &'a str,
     pub md__divide_none: &'a str,
     pub md__divide_primary: &'a str,
+    pub md__divide_secondary: &'a str,
     pub md__divide_opacity_0: &'a str,
     pub md__divide_opacity_10: &'a str,
     pub md__divide_opacity_20: &'a str,
@@ -10991,10 +11058,15 @@ pub struct CssClasses<'a> {
     pub md__border_double: &'a str,
     pub md__border_none: &'a str,
     pub md__border_primary: &'a str,
+    pub md__border_secondary: &'a str,
     pub md__group_hover__border_primary: &'a str,
+    pub md__group_hover__border_secondary: &'a str,
     pub md__focus_within__border_primary: &'a str,
+    pub md__focus_within__border_secondary: &'a str,
     pub md__hover__border_primary: &'a str,
+    pub md__hover__border_secondary: &'a str,
     pub md__focus__border_primary: &'a str,
+    pub md__focus__border_secondary: &'a str,
     pub md__border_opacity_0: &'a str,
     pub md__border_opacity_10: &'a str,
     pub md__border_opacity_20: &'a str,
@@ -11051,10 +11123,15 @@ pub struct CssClasses<'a> {
     pub md__focus__border_opacity_90: &'a str,
     pub md__focus__border_opacity_100: &'a str,
     pub md__bg_primary: &'a str,
+    pub md__bg_secondary: &'a str,
     pub md__group_hover__bg_primary: &'a str,
+    pub md__group_hover__bg_secondary: &'a str,
     pub md__focus_within__bg_primary: &'a str,
+    pub md__focus_within__bg_secondary: &'a str,
     pub md__hover__bg_primary: &'a str,
+    pub md__hover__bg_secondary: &'a str,
     pub md__focus__bg_primary: &'a str,
+    pub md__focus__bg_secondary: &'a str,
     pub md__bg_opacity_0: &'a str,
     pub md__bg_opacity_10: &'a str,
     pub md__bg_opacity_20: &'a str,
@@ -11120,14 +11197,23 @@ pub struct CssClasses<'a> {
     pub md__bg_gradient_to_l: &'a str,
     pub md__bg_gradient_to_tl: &'a str,
     pub md__from_primary: &'a str,
+    pub md__from_secondary: &'a str,
     pub md__hover__from_primary: &'a str,
+    pub md__hover__from_secondary: &'a str,
     pub md__focus__from_primary: &'a str,
+    pub md__focus__from_secondary: &'a str,
     pub md__via_primary: &'a str,
+    pub md__via_secondary: &'a str,
     pub md__hover__via_primary: &'a str,
+    pub md__hover__via_secondary: &'a str,
     pub md__focus__via_primary: &'a str,
+    pub md__focus__via_secondary: &'a str,
     pub md__to_primary: &'a str,
+    pub md__to_secondary: &'a str,
     pub md__hover__to_primary: &'a str,
+    pub md__hover__to_secondary: &'a str,
     pub md__focus__to_primary: &'a str,
+    pub md__focus__to_secondary: &'a str,
     pub md__decoration_slice: &'a str,
     pub md__decoration_clone: &'a str,
     pub md__bg_auto: &'a str,
@@ -11521,10 +11607,15 @@ pub struct CssClasses<'a> {
     pub md__tracking_wider: &'a str,
     pub md__tracking_widest: &'a str,
     pub md__text_primary: &'a str,
+    pub md__text_secondary: &'a str,
     pub md__group_hover__text_primary: &'a str,
+    pub md__group_hover__text_secondary: &'a str,
     pub md__focus_within__text_primary: &'a str,
+    pub md__focus_within__text_secondary: &'a str,
     pub md__hover__text_primary: &'a str,
+    pub md__hover__text_secondary: &'a str,
     pub md__focus__text_primary: &'a str,
+    pub md__focus__text_secondary: &'a str,
     pub md__text_opacity_0: &'a str,
     pub md__text_opacity_10: &'a str,
     pub md__text_opacity_20: &'a str,
@@ -11598,7 +11689,9 @@ pub struct CssClasses<'a> {
     pub md__antialiased: &'a str,
     pub md__subpixel_antialiased: &'a str,
     pub md__placeholder_primary: &'a str,
+    pub md__placeholder_secondary: &'a str,
     pub md__focus__placeholder_primary: &'a str,
+    pub md__focus__placeholder_secondary: &'a str,
     pub md__placeholder_opacity_0: &'a str,
     pub md__placeholder_opacity_10: &'a str,
     pub md__placeholder_opacity_20: &'a str,
@@ -11789,8 +11882,11 @@ pub struct CssClasses<'a> {
     pub md__focus_within__ring_inset: &'a str,
     pub md__focus__ring_inset: &'a str,
     pub md__ring_primary: &'a str,
+    pub md__ring_secondary: &'a str,
     pub md__focus_within__ring_primary: &'a str,
+    pub md__focus_within__ring_secondary: &'a str,
     pub md__focus__ring_primary: &'a str,
+    pub md__focus__ring_secondary: &'a str,
     pub md__ring_opacity_0: &'a str,
     pub md__ring_opacity_10: &'a str,
     pub md__ring_opacity_20: &'a str,
@@ -11840,8 +11936,11 @@ pub struct CssClasses<'a> {
     pub md__focus__ring_offset_4: &'a str,
     pub md__focus__ring_offset_8: &'a str,
     pub md__ring_offset_primary: &'a str,
+    pub md__ring_offset_secondary: &'a str,
     pub md__focus_within__ring_offset_primary: &'a str,
+    pub md__focus_within__ring_offset_secondary: &'a str,
     pub md__focus__ring_offset_primary: &'a str,
+    pub md__focus__ring_offset_secondary: &'a str,
     pub md__filter: &'a str,
     pub md__filter_none: &'a str,
     pub md__blur_0: &'a str,
@@ -14742,6 +14841,7 @@ pub struct CssClasses<'a> {
     pub lg__divide_double: &'a str,
     pub lg__divide_none: &'a str,
     pub lg__divide_primary: &'a str,
+    pub lg__divide_secondary: &'a str,
     pub lg__divide_opacity_0: &'a str,
     pub lg__divide_opacity_10: &'a str,
     pub lg__divide_opacity_20: &'a str,
@@ -14985,10 +15085,15 @@ pub struct CssClasses<'a> {
     pub lg__border_double: &'a str,
     pub lg__border_none: &'a str,
     pub lg__border_primary: &'a str,
+    pub lg__border_secondary: &'a str,
     pub lg__group_hover__border_primary: &'a str,
+    pub lg__group_hover__border_secondary: &'a str,
     pub lg__focus_within__border_primary: &'a str,
+    pub lg__focus_within__border_secondary: &'a str,
     pub lg__hover__border_primary: &'a str,
+    pub lg__hover__border_secondary: &'a str,
     pub lg__focus__border_primary: &'a str,
+    pub lg__focus__border_secondary: &'a str,
     pub lg__border_opacity_0: &'a str,
     pub lg__border_opacity_10: &'a str,
     pub lg__border_opacity_20: &'a str,
@@ -15045,10 +15150,15 @@ pub struct CssClasses<'a> {
     pub lg__focus__border_opacity_90: &'a str,
     pub lg__focus__border_opacity_100: &'a str,
     pub lg__bg_primary: &'a str,
+    pub lg__bg_secondary: &'a str,
     pub lg__group_hover__bg_primary: &'a str,
+    pub lg__group_hover__bg_secondary: &'a str,
     pub lg__focus_within__bg_primary: &'a str,
+    pub lg__focus_within__bg_secondary: &'a str,
     pub lg__hover__bg_primary: &'a str,
+    pub lg__hover__bg_secondary: &'a str,
     pub lg__focus__bg_primary: &'a str,
+    pub lg__focus__bg_secondary: &'a str,
     pub lg__bg_opacity_0: &'a str,
     pub lg__bg_opacity_10: &'a str,
     pub lg__bg_opacity_20: &'a str,
@@ -15114,14 +15224,23 @@ pub struct CssClasses<'a> {
     pub lg__bg_gradient_to_l: &'a str,
     pub lg__bg_gradient_to_tl: &'a str,
     pub lg__from_primary: &'a str,
+    pub lg__from_secondary: &'a str,
     pub lg__hover__from_primary: &'a str,
+    pub lg__hover__from_secondary: &'a str,
     pub lg__focus__from_primary: &'a str,
+    pub lg__focus__from_secondary: &'a str,
     pub lg__via_primary: &'a str,
+    pub lg__via_secondary: &'a str,
     pub lg__hover__via_primary: &'a str,
+    pub lg__hover__via_secondary: &'a str,
     pub lg__focus__via_primary: &'a str,
+    pub lg__focus__via_secondary: &'a str,
     pub lg__to_primary: &'a str,
+    pub lg__to_secondary: &'a str,
     pub lg__hover__to_primary: &'a str,
+    pub lg__hover__to_secondary: &'a str,
     pub lg__focus__to_primary: &'a str,
+    pub lg__focus__to_secondary: &'a str,
     pub lg__decoration_slice: &'a str,
     pub lg__decoration_clone: &'a str,
     pub lg__bg_auto: &'a str,
@@ -15515,10 +15634,15 @@ pub struct CssClasses<'a> {
     pub lg__tracking_wider: &'a str,
     pub lg__tracking_widest: &'a str,
     pub lg__text_primary: &'a str,
+    pub lg__text_secondary: &'a str,
     pub lg__group_hover__text_primary: &'a str,
+    pub lg__group_hover__text_secondary: &'a str,
     pub lg__focus_within__text_primary: &'a str,
+    pub lg__focus_within__text_secondary: &'a str,
     pub lg__hover__text_primary: &'a str,
+    pub lg__hover__text_secondary: &'a str,
     pub lg__focus__text_primary: &'a str,
+    pub lg__focus__text_secondary: &'a str,
     pub lg__text_opacity_0: &'a str,
     pub lg__text_opacity_10: &'a str,
     pub lg__text_opacity_20: &'a str,
@@ -15592,7 +15716,9 @@ pub struct CssClasses<'a> {
     pub lg__antialiased: &'a str,
     pub lg__subpixel_antialiased: &'a str,
     pub lg__placeholder_primary: &'a str,
+    pub lg__placeholder_secondary: &'a str,
     pub lg__focus__placeholder_primary: &'a str,
+    pub lg__focus__placeholder_secondary: &'a str,
     pub lg__placeholder_opacity_0: &'a str,
     pub lg__placeholder_opacity_10: &'a str,
     pub lg__placeholder_opacity_20: &'a str,
@@ -15783,8 +15909,11 @@ pub struct CssClasses<'a> {
     pub lg__focus_within__ring_inset: &'a str,
     pub lg__focus__ring_inset: &'a str,
     pub lg__ring_primary: &'a str,
+    pub lg__ring_secondary: &'a str,
     pub lg__focus_within__ring_primary: &'a str,
+    pub lg__focus_within__ring_secondary: &'a str,
     pub lg__focus__ring_primary: &'a str,
+    pub lg__focus__ring_secondary: &'a str,
     pub lg__ring_opacity_0: &'a str,
     pub lg__ring_opacity_10: &'a str,
     pub lg__ring_opacity_20: &'a str,
@@ -15834,8 +15963,11 @@ pub struct CssClasses<'a> {
     pub lg__focus__ring_offset_4: &'a str,
     pub lg__focus__ring_offset_8: &'a str,
     pub lg__ring_offset_primary: &'a str,
+    pub lg__ring_offset_secondary: &'a str,
     pub lg__focus_within__ring_offset_primary: &'a str,
+    pub lg__focus_within__ring_offset_secondary: &'a str,
     pub lg__focus__ring_offset_primary: &'a str,
+    pub lg__focus__ring_offset_secondary: &'a str,
     pub lg__filter: &'a str,
     pub lg__filter_none: &'a str,
     pub lg__blur_0: &'a str,
@@ -18736,6 +18868,7 @@ pub struct CssClasses<'a> {
     pub xl__divide_double: &'a str,
     pub xl__divide_none: &'a str,
     pub xl__divide_primary: &'a str,
+    pub xl__divide_secondary: &'a str,
     pub xl__divide_opacity_0: &'a str,
     pub xl__divide_opacity_10: &'a str,
     pub xl__divide_opacity_20: &'a str,
@@ -18979,10 +19112,15 @@ pub struct CssClasses<'a> {
     pub xl__border_double: &'a str,
     pub xl__border_none: &'a str,
     pub xl__border_primary: &'a str,
+    pub xl__border_secondary: &'a str,
     pub xl__group_hover__border_primary: &'a str,
+    pub xl__group_hover__border_secondary: &'a str,
     pub xl__focus_within__border_primary: &'a str,
+    pub xl__focus_within__border_secondary: &'a str,
     pub xl__hover__border_primary: &'a str,
+    pub xl__hover__border_secondary: &'a str,
     pub xl__focus__border_primary: &'a str,
+    pub xl__focus__border_secondary: &'a str,
     pub xl__border_opacity_0: &'a str,
     pub xl__border_opacity_10: &'a str,
     pub xl__border_opacity_20: &'a str,
@@ -19039,10 +19177,15 @@ pub struct CssClasses<'a> {
     pub xl__focus__border_opacity_90: &'a str,
     pub xl__focus__border_opacity_100: &'a str,
     pub xl__bg_primary: &'a str,
+    pub xl__bg_secondary: &'a str,
     pub xl__group_hover__bg_primary: &'a str,
+    pub xl__group_hover__bg_secondary: &'a str,
     pub xl__focus_within__bg_primary: &'a str,
+    pub xl__focus_within__bg_secondary: &'a str,
     pub xl__hover__bg_primary: &'a str,
+    pub xl__hover__bg_secondary: &'a str,
     pub xl__focus__bg_primary: &'a str,
+    pub xl__focus__bg_secondary: &'a str,
     pub xl__bg_opacity_0: &'a str,
     pub xl__bg_opacity_10: &'a str,
     pub xl__bg_opacity_20: &'a str,
@@ -19108,14 +19251,23 @@ pub struct CssClasses<'a> {
     pub xl__bg_gradient_to_l: &'a str,
     pub xl__bg_gradient_to_tl: &'a str,
     pub xl__from_primary: &'a str,
+    pub xl__from_secondary: &'a str,
     pub xl__hover__from_primary: &'a str,
+    pub xl__hover__from_secondary: &'a str,
     pub xl__focus__from_primary: &'a str,
+    pub xl__focus__from_secondary: &'a str,
     pub xl__via_primary: &'a str,
+    pub xl__via_secondary: &'a str,
     pub xl__hover__via_primary: &'a str,
+    pub xl__hover__via_secondary: &'a str,
     pub xl__focus__via_primary: &'a str,
+    pub xl__focus__via_secondary: &'a str,
     pub xl__to_primary: &'a str,
+    pub xl__to_secondary: &'a str,
     pub xl__hover__to_primary: &'a str,
+    pub xl__hover__to_secondary: &'a str,
     pub xl__focus__to_primary: &'a str,
+    pub xl__focus__to_secondary: &'a str,
     pub xl__decoration_slice: &'a str,
     pub xl__decoration_clone: &'a str,
     pub xl__bg_auto: &'a str,
@@ -19509,10 +19661,15 @@ pub struct CssClasses<'a> {
     pub xl__tracking_wider: &'a str,
     pub xl__tracking_widest: &'a str,
     pub xl__text_primary: &'a str,
+    pub xl__text_secondary: &'a str,
     pub xl__group_hover__text_primary: &'a str,
+    pub xl__group_hover__text_secondary: &'a str,
     pub xl__focus_within__text_primary: &'a str,
+    pub xl__focus_within__text_secondary: &'a str,
     pub xl__hover__text_primary: &'a str,
+    pub xl__hover__text_secondary: &'a str,
     pub xl__focus__text_primary: &'a str,
+    pub xl__focus__text_secondary: &'a str,
     pub xl__text_opacity_0: &'a str,
     pub xl__text_opacity_10: &'a str,
     pub xl__text_opacity_20: &'a str,
@@ -19586,7 +19743,9 @@ pub struct CssClasses<'a> {
     pub xl__antialiased: &'a str,
     pub xl__subpixel_antialiased: &'a str,
     pub xl__placeholder_primary: &'a str,
+    pub xl__placeholder_secondary: &'a str,
     pub xl__focus__placeholder_primary: &'a str,
+    pub xl__focus__placeholder_secondary: &'a str,
     pub xl__placeholder_opacity_0: &'a str,
     pub xl__placeholder_opacity_10: &'a str,
     pub xl__placeholder_opacity_20: &'a str,
@@ -19777,8 +19936,11 @@ pub struct CssClasses<'a> {
     pub xl__focus_within__ring_inset: &'a str,
     pub xl__focus__ring_inset: &'a str,
     pub xl__ring_primary: &'a str,
+    pub xl__ring_secondary: &'a str,
     pub xl__focus_within__ring_primary: &'a str,
+    pub xl__focus_within__ring_secondary: &'a str,
     pub xl__focus__ring_primary: &'a str,
+    pub xl__focus__ring_secondary: &'a str,
     pub xl__ring_opacity_0: &'a str,
     pub xl__ring_opacity_10: &'a str,
     pub xl__ring_opacity_20: &'a str,
@@ -19828,8 +19990,11 @@ pub struct CssClasses<'a> {
     pub xl__focus__ring_offset_4: &'a str,
     pub xl__focus__ring_offset_8: &'a str,
     pub xl__ring_offset_primary: &'a str,
+    pub xl__ring_offset_secondary: &'a str,
     pub xl__focus_within__ring_offset_primary: &'a str,
+    pub xl__focus_within__ring_offset_secondary: &'a str,
     pub xl__focus__ring_offset_primary: &'a str,
+    pub xl__focus__ring_offset_secondary: &'a str,
     pub xl__filter: &'a str,
     pub xl__filter_none: &'a str,
     pub xl__blur_0: &'a str,
@@ -34761,6 +34926,12 @@ pub static C: CssClasses = CssClasses {
     divide_primary: "divide-primary",
 
     /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-divide-opacity));
+    */
+    divide_secondary: "divide-secondary",
+
+    /**
         --tw-divide-opacity: 0;
     */
     divide_opacity_0: "divide-opacity-0",
@@ -36049,7 +36220,14 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+    */
+    border_secondary: "border-secondary",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
         --tw-border-opacity: 0;
         --tw-border-opacity: 0.1px;
         --tw-border-opacity: 0.2px;
@@ -36063,6 +36241,7 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1px;
         --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
         --tw-bg-opacity: 0;
         --tw-bg-opacity: 0.1px;
         --tw-bg-opacity: 0.2px;
@@ -36076,6 +36255,7 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1px;
         --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
         --tw-text-opacity: 0;
         --tw-text-opacity: 0.1px;
         --tw-text-opacity: 0.2px;
@@ -36114,6 +36294,7 @@ pub static C: CssClasses = CssClasses {
         --tw-shadow: 0 0 5px 2px hsl(205, 97%, 85%);
         --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
         --tw-border-opacity: 0;    @media (min-width: 569px)
         --tw-border-opacity: 0.1px;    @media (min-width: 569px)
         --tw-border-opacity: 0.2px;    @media (min-width: 569px)
@@ -36127,6 +36308,7 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1px;    @media (min-width: 569px)
         --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
         --tw-bg-opacity: 0;    @media (min-width: 569px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 569px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 569px)
@@ -36140,6 +36322,7 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1px;    @media (min-width: 569px)
         --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
         --tw-text-opacity: 0;    @media (min-width: 569px)
         --tw-text-opacity: 0.1px;    @media (min-width: 569px)
         --tw-text-opacity: 0.2px;    @media (min-width: 569px)
@@ -36178,6 +36361,7 @@ pub static C: CssClasses = CssClasses {
         --tw-shadow: 0 0 5px 2px hsl(205, 97%, 85%);    @media (min-width: 569px)
         --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
         --tw-border-opacity: 0;    @media (min-width: 769px)
         --tw-border-opacity: 0.1px;    @media (min-width: 769px)
         --tw-border-opacity: 0.2px;    @media (min-width: 769px)
@@ -36191,6 +36375,7 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1px;    @media (min-width: 769px)
         --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
         --tw-bg-opacity: 0;    @media (min-width: 769px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 769px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 769px)
@@ -36204,6 +36389,7 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1px;    @media (min-width: 769px)
         --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
         --tw-text-opacity: 0;    @media (min-width: 769px)
         --tw-text-opacity: 0.1px;    @media (min-width: 769px)
         --tw-text-opacity: 0.2px;    @media (min-width: 769px)
@@ -36242,6 +36428,7 @@ pub static C: CssClasses = CssClasses {
         --tw-shadow: 0 0 5px 2px hsl(205, 97%, 85%);    @media (min-width: 769px)
         --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
         --tw-border-opacity: 0;    @media (min-width: 1025px)
         --tw-border-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-border-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36255,6 +36442,7 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1px;    @media (min-width: 1025px)
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
         --tw-bg-opacity: 0;    @media (min-width: 1025px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36268,6 +36456,7 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1px;    @media (min-width: 1025px)
         --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
         --tw-text-opacity: 0;    @media (min-width: 1025px)
         --tw-text-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-text-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36306,6 +36495,7 @@ pub static C: CssClasses = CssClasses {
         --tw-shadow: 0 0 5px 2px hsl(205, 97%, 85%);    @media (min-width: 1025px)
         --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
         --tw-border-opacity: 0;    @media (min-width: 1701px)
         --tw-border-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-border-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36319,6 +36509,7 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1px;    @media (min-width: 1701px)
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
         --tw-bg-opacity: 0;    @media (min-width: 1701px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36332,6 +36523,7 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1px;    @media (min-width: 1701px)
         --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
         --tw-text-opacity: 0;    @media (min-width: 1701px)
         --tw-text-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-text-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36379,9 +36571,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+    */
+    group_hover__border_secondary: "group-hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
     */
     focus_within__border_primary: "focus-within:border-primary",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+    */
+    focus_within__border_secondary: "focus-within:border-secondary",
 
     /**
         --tw-border-opacity: 1;
@@ -36391,9 +36595,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+    */
+    hover__border_secondary: "hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
     */
     focus__border_primary: "focus:border-primary",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+    */
+    focus__border_secondary: "focus:border-secondary",
 
     /**
         --tw-border-opacity: 0;
@@ -36678,9 +36894,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+    */
+    bg_secondary: "bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     group_hover__bg_primary: "group-hover:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+    */
+    group_hover__bg_secondary: "group-hover:bg-secondary",
 
     /**
         --tw-bg-opacity: 1;
@@ -36690,15 +36918,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+    */
+    focus_within__bg_secondary: "focus-within:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     hover__bg_primary: "hover:bg-primary",
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+    */
+    hover__bg_secondary: "hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     focus__bg_primary: "focus:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+    */
+    focus__bg_secondary: "focus:bg-secondary",
 
     /**
         --tw-bg-opacity: 0;
@@ -37027,10 +37273,22 @@ pub static C: CssClasses = CssClasses {
     from_primary: "from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    from_secondary: "from-secondary",
+
+    /**
         --tw-gradient-from: #0B723B;
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
     hover__from_primary: "hover:from-primary",
+
+    /**
+        --tw-gradient-from: #FFFFFF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    hover__from_secondary: "hover:from-secondary",
 
     /**
         --tw-gradient-from: #0B723B;
@@ -37039,9 +37297,20 @@ pub static C: CssClasses = CssClasses {
     focus__from_primary: "focus:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    focus__from_secondary: "focus:from-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
     via_primary: "via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    via_secondary: "via-secondary",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
@@ -37049,9 +37318,19 @@ pub static C: CssClasses = CssClasses {
     hover__via_primary: "hover:via-primary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    hover__via_secondary: "hover:via-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
     focus__via_primary: "focus:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));
+    */
+    focus__via_secondary: "focus:via-secondary",
 
     /**
         --tw-gradient-to: #0B723B;
@@ -37059,14 +37338,29 @@ pub static C: CssClasses = CssClasses {
     to_primary: "to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;
+    */
+    to_secondary: "to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;
     */
     hover__to_primary: "hover:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;
+    */
+    hover__to_secondary: "hover:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;
     */
     focus__to_primary: "focus:to-primary",
+
+    /**
+        --tw-gradient-to: #FFFFFF;
+    */
+    focus__to_secondary: "focus:to-secondary",
 
     /**
         box-decoration-break: slice;
@@ -39156,9 +39450,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
+    */
+    text_secondary: "text-secondary",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     group_hover__text_primary: "group-hover:text-primary",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
+    */
+    group_hover__text_secondary: "group-hover:text-secondary",
 
     /**
         --tw-text-opacity: 1;
@@ -39168,15 +39474,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
+    */
+    focus_within__text_secondary: "focus-within:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     hover__text_primary: "hover:text-primary",
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
+    */
+    hover__text_secondary: "hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     focus__text_primary: "focus:text-primary",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-text-opacity));
+    */
+    focus__text_secondary: "focus:text-secondary",
 
     /**
         --tw-text-opacity: 0;
@@ -39548,9 +39872,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));
+    */
+    placeholder_secondary: "placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));
     */
     focus__placeholder_primary: "focus:placeholder-primary",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_secondary: "focus:placeholder-secondary",
 
     /**
         --tw-placeholder-opacity: 0;
@@ -40600,15 +40936,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));
+    */
+    ring_secondary: "ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));
     */
     focus_within__ring_primary: "focus-within:ring-primary",
 
     /**
         --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));
+    */
+    focus_within__ring_secondary: "focus-within:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));
     */
     focus__ring_primary: "focus:ring-primary",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));
+    */
+    focus__ring_secondary: "focus:ring-secondary",
 
     /**
         --tw-ring-opacity: 0;
@@ -40856,14 +41210,29 @@ pub static C: CssClasses = CssClasses {
     ring_offset_primary: "ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;
+    */
+    ring_offset_secondary: "ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;
     */
     focus_within__ring_offset_primary: "focus-within:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;
+    */
+    focus_within__ring_offset_secondary: "focus-within:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;
     */
     focus__ring_offset_primary: "focus:ring-offset-primary",
+
+    /**
+        --tw-ring-offset-color: #FFFFFF;
+    */
+    focus__ring_offset_secondary: "focus:ring-offset-secondary",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);
@@ -56426,6 +56795,12 @@ pub static C: CssClasses = CssClasses {
     sm__divide_primary: "sm:divide-primary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_secondary: "sm:divide-secondary",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 569px)
     */
     sm__divide_opacity_0: "sm:divide-opacity-0",
@@ -57714,9 +58089,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_secondary: "sm:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__border_primary: "sm:group-hover:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_secondary: "sm:group-hover:border-secondary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
@@ -57726,15 +58113,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_secondary: "sm:focus-within:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__hover__border_primary: "sm:hover:border-primary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_secondary: "sm:hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__focus__border_primary: "sm:focus:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_secondary: "sm:focus:border-secondary",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 569px)
@@ -58019,9 +58424,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_secondary: "sm:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__bg_primary: "sm:group-hover:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_secondary: "sm:group-hover:bg-secondary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
@@ -58031,15 +58448,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_secondary: "sm:focus-within:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__hover__bg_primary: "sm:hover:bg-primary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_secondary: "sm:hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__focus__bg_primary: "sm:focus:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_secondary: "sm:focus:bg-secondary",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 569px)
@@ -58368,10 +58803,22 @@ pub static C: CssClasses = CssClasses {
     sm__from_primary: "sm:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__from_secondary: "sm:from-secondary",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 569px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
     sm__hover__from_primary: "sm:hover:from-primary",
+
+    /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_secondary: "sm:hover:from-secondary",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 569px)
@@ -58380,9 +58827,20 @@ pub static C: CssClasses = CssClasses {
     sm__focus__from_primary: "sm:focus:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_secondary: "sm:focus:from-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
     sm__via_primary: "sm:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__via_secondary: "sm:via-secondary",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
@@ -58390,9 +58848,19 @@ pub static C: CssClasses = CssClasses {
     sm__hover__via_primary: "sm:hover:via-primary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_secondary: "sm:hover:via-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
     sm__focus__via_primary: "sm:focus:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_secondary: "sm:focus:via-secondary",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
@@ -58400,14 +58868,29 @@ pub static C: CssClasses = CssClasses {
     sm__to_primary: "sm:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__to_secondary: "sm:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
     */
     sm__hover__to_primary: "sm:hover:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__hover__to_secondary: "sm:hover:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
     */
     sm__focus__to_primary: "sm:focus:to-primary",
+
+    /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__focus__to_secondary: "sm:focus:to-secondary",
 
     /**
         box-decoration-break: slice;    @media (min-width: 569px)
@@ -60497,9 +60980,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_secondary: "sm:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__text_primary: "sm:group-hover:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_secondary: "sm:group-hover:text-secondary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
@@ -60509,15 +61004,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_secondary: "sm:focus-within:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__hover__text_primary: "sm:hover:text-primary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_secondary: "sm:hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__focus__text_primary: "sm:focus:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_secondary: "sm:focus:text-secondary",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 569px)
@@ -60889,9 +61402,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_secondary: "sm:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 569px)
     */
     sm__focus__placeholder_primary: "sm:focus:placeholder-primary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_secondary: "sm:focus:placeholder-secondary",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 569px)
@@ -61941,15 +62466,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_secondary: "sm:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 569px)
     */
     sm__focus_within__ring_primary: "sm:focus-within:ring-primary",
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_secondary: "sm:focus-within:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 569px)
     */
     sm__focus__ring_primary: "sm:focus:ring-primary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_secondary: "sm:focus:ring-secondary",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 569px)
@@ -62197,14 +62740,29 @@ pub static C: CssClasses = CssClasses {
     sm__ring_offset_primary: "sm:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__ring_offset_secondary: "sm:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 569px)
     */
     sm__focus_within__ring_offset_primary: "sm:focus-within:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_secondary: "sm:focus-within:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 569px)
     */
     sm__focus__ring_offset_primary: "sm:focus:ring-offset-primary",
+
+    /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_secondary: "sm:focus:ring-offset-secondary",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 569px)
@@ -77751,6 +78309,12 @@ pub static C: CssClasses = CssClasses {
     md__divide_primary: "md:divide-primary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_secondary: "md:divide-secondary",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 769px)
     */
     md__divide_opacity_0: "md:divide-opacity-0",
@@ -79039,9 +79603,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_secondary: "md:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__group_hover__border_primary: "md:group-hover:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_secondary: "md:group-hover:border-secondary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
@@ -79051,15 +79627,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_secondary: "md:focus-within:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__hover__border_primary: "md:hover:border-primary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_secondary: "md:hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__focus__border_primary: "md:focus:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_secondary: "md:focus:border-secondary",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 769px)
@@ -79344,9 +79938,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_secondary: "md:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__group_hover__bg_primary: "md:group-hover:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_secondary: "md:group-hover:bg-secondary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
@@ -79356,15 +79962,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_secondary: "md:focus-within:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__hover__bg_primary: "md:hover:bg-primary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_secondary: "md:hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__focus__bg_primary: "md:focus:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_secondary: "md:focus:bg-secondary",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 769px)
@@ -79693,10 +80317,22 @@ pub static C: CssClasses = CssClasses {
     md__from_primary: "md:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__from_secondary: "md:from-secondary",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 769px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
     md__hover__from_primary: "md:hover:from-primary",
+
+    /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_secondary: "md:hover:from-secondary",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 769px)
@@ -79705,9 +80341,20 @@ pub static C: CssClasses = CssClasses {
     md__focus__from_primary: "md:focus:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_secondary: "md:focus:from-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
     md__via_primary: "md:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__via_secondary: "md:via-secondary",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
@@ -79715,9 +80362,19 @@ pub static C: CssClasses = CssClasses {
     md__hover__via_primary: "md:hover:via-primary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_secondary: "md:hover:via-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
     md__focus__via_primary: "md:focus:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_secondary: "md:focus:via-secondary",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
@@ -79725,14 +80382,29 @@ pub static C: CssClasses = CssClasses {
     md__to_primary: "md:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__to_secondary: "md:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
     */
     md__hover__to_primary: "md:hover:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__hover__to_secondary: "md:hover:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
     */
     md__focus__to_primary: "md:focus:to-primary",
+
+    /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__focus__to_secondary: "md:focus:to-secondary",
 
     /**
         box-decoration-break: slice;    @media (min-width: 769px)
@@ -81822,9 +82494,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_secondary: "md:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__group_hover__text_primary: "md:group-hover:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_secondary: "md:group-hover:text-secondary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
@@ -81834,15 +82518,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_secondary: "md:focus-within:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__hover__text_primary: "md:hover:text-primary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_secondary: "md:hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__focus__text_primary: "md:focus:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_secondary: "md:focus:text-secondary",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 769px)
@@ -82214,9 +82916,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_secondary: "md:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 769px)
     */
     md__focus__placeholder_primary: "md:focus:placeholder-primary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_secondary: "md:focus:placeholder-secondary",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 769px)
@@ -83266,15 +83980,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_secondary: "md:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 769px)
     */
     md__focus_within__ring_primary: "md:focus-within:ring-primary",
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_secondary: "md:focus-within:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 769px)
     */
     md__focus__ring_primary: "md:focus:ring-primary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_secondary: "md:focus:ring-secondary",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 769px)
@@ -83522,14 +84254,29 @@ pub static C: CssClasses = CssClasses {
     md__ring_offset_primary: "md:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__ring_offset_secondary: "md:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 769px)
     */
     md__focus_within__ring_offset_primary: "md:focus-within:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_secondary: "md:focus-within:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 769px)
     */
     md__focus__ring_offset_primary: "md:focus:ring-offset-primary",
+
+    /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_secondary: "md:focus:ring-offset-secondary",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 769px)
@@ -99076,6 +99823,12 @@ pub static C: CssClasses = CssClasses {
     lg__divide_primary: "lg:divide-primary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_secondary: "lg:divide-secondary",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 1025px)
     */
     lg__divide_opacity_0: "lg:divide-opacity-0",
@@ -100364,9 +101117,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_secondary: "lg:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__border_primary: "lg:group-hover:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_secondary: "lg:group-hover:border-secondary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
@@ -100376,15 +101141,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_secondary: "lg:focus-within:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__hover__border_primary: "lg:hover:border-primary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_secondary: "lg:hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__focus__border_primary: "lg:focus:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_secondary: "lg:focus:border-secondary",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 1025px)
@@ -100669,9 +101452,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_secondary: "lg:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__bg_primary: "lg:group-hover:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_secondary: "lg:group-hover:bg-secondary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
@@ -100681,15 +101476,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_secondary: "lg:focus-within:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__hover__bg_primary: "lg:hover:bg-primary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_secondary: "lg:hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__focus__bg_primary: "lg:focus:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_secondary: "lg:focus:bg-secondary",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 1025px)
@@ -101018,10 +101831,22 @@ pub static C: CssClasses = CssClasses {
     lg__from_primary: "lg:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__from_secondary: "lg:from-secondary",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1025px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
     lg__hover__from_primary: "lg:hover:from-primary",
+
+    /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_secondary: "lg:hover:from-secondary",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1025px)
@@ -101030,9 +101855,20 @@ pub static C: CssClasses = CssClasses {
     lg__focus__from_primary: "lg:focus:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_secondary: "lg:focus:from-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
     lg__via_primary: "lg:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__via_secondary: "lg:via-secondary",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
@@ -101040,9 +101876,19 @@ pub static C: CssClasses = CssClasses {
     lg__hover__via_primary: "lg:hover:via-primary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_secondary: "lg:hover:via-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
     lg__focus__via_primary: "lg:focus:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_secondary: "lg:focus:via-secondary",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
@@ -101050,14 +101896,29 @@ pub static C: CssClasses = CssClasses {
     lg__to_primary: "lg:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__to_secondary: "lg:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
     */
     lg__hover__to_primary: "lg:hover:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__hover__to_secondary: "lg:hover:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus__to_primary: "lg:focus:to-primary",
+
+    /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__focus__to_secondary: "lg:focus:to-secondary",
 
     /**
         box-decoration-break: slice;    @media (min-width: 1025px)
@@ -103147,9 +104008,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_secondary: "lg:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__text_primary: "lg:group-hover:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_secondary: "lg:group-hover:text-secondary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
@@ -103159,15 +104032,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_secondary: "lg:focus-within:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__hover__text_primary: "lg:hover:text-primary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_secondary: "lg:hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__focus__text_primary: "lg:focus:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_secondary: "lg:focus:text-secondary",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 1025px)
@@ -103539,9 +104430,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_secondary: "lg:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
     */
     lg__focus__placeholder_primary: "lg:focus:placeholder-primary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_secondary: "lg:focus:placeholder-secondary",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 1025px)
@@ -104591,15 +105494,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_secondary: "lg:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1025px)
     */
     lg__focus_within__ring_primary: "lg:focus-within:ring-primary",
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_secondary: "lg:focus-within:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1025px)
     */
     lg__focus__ring_primary: "lg:focus:ring-primary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_secondary: "lg:focus:ring-secondary",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 1025px)
@@ -104847,14 +105768,29 @@ pub static C: CssClasses = CssClasses {
     lg__ring_offset_primary: "lg:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_secondary: "lg:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus_within__ring_offset_primary: "lg:focus-within:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_secondary: "lg:focus-within:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus__ring_offset_primary: "lg:focus:ring-offset-primary",
+
+    /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_secondary: "lg:focus:ring-offset-secondary",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 1025px)
@@ -120401,6 +121337,12 @@ pub static C: CssClasses = CssClasses {
     xl__divide_primary: "xl:divide-primary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_secondary: "xl:divide-secondary",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 1701px)
     */
     xl__divide_opacity_0: "xl:divide-opacity-0",
@@ -121689,9 +122631,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_secondary: "xl:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__border_primary: "xl:group-hover:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_secondary: "xl:group-hover:border-secondary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
@@ -121701,15 +122655,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_secondary: "xl:focus-within:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__hover__border_primary: "xl:hover:border-primary",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_secondary: "xl:hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__focus__border_primary: "xl:focus:border-primary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_secondary: "xl:focus:border-secondary",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 1701px)
@@ -121994,9 +122966,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_secondary: "xl:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__bg_primary: "xl:group-hover:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_secondary: "xl:group-hover:bg-secondary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
@@ -122006,15 +122990,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_secondary: "xl:focus-within:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__hover__bg_primary: "xl:hover:bg-primary",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_secondary: "xl:hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__focus__bg_primary: "xl:focus:bg-primary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_secondary: "xl:focus:bg-secondary",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 1701px)
@@ -122343,10 +123345,22 @@ pub static C: CssClasses = CssClasses {
     xl__from_primary: "xl:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__from_secondary: "xl:from-secondary",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1701px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
     xl__hover__from_primary: "xl:hover:from-primary",
+
+    /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_secondary: "xl:hover:from-secondary",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1701px)
@@ -122355,9 +123369,20 @@ pub static C: CssClasses = CssClasses {
     xl__focus__from_primary: "xl:focus:from-primary",
 
     /**
+        --tw-gradient-from: #FFFFFF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_secondary: "xl:focus:from-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
     xl__via_primary: "xl:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__via_secondary: "xl:via-secondary",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
@@ -122365,9 +123390,19 @@ pub static C: CssClasses = CssClasses {
     xl__hover__via_primary: "xl:hover:via-primary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_secondary: "xl:hover:via-secondary",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
     xl__focus__via_primary: "xl:focus:via-primary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_secondary: "xl:focus:via-secondary",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
@@ -122375,14 +123410,29 @@ pub static C: CssClasses = CssClasses {
     xl__to_primary: "xl:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__to_secondary: "xl:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
     */
     xl__hover__to_primary: "xl:hover:to-primary",
 
     /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__hover__to_secondary: "xl:hover:to-secondary",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus__to_primary: "xl:focus:to-primary",
+
+    /**
+        --tw-gradient-to: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__focus__to_secondary: "xl:focus:to-secondary",
 
     /**
         box-decoration-break: slice;    @media (min-width: 1701px)
@@ -124472,9 +125522,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_secondary: "xl:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__text_primary: "xl:group-hover:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_secondary: "xl:group-hover:text-secondary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
@@ -124484,15 +125546,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_secondary: "xl:focus-within:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__hover__text_primary: "xl:hover:text-primary",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_secondary: "xl:hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__focus__text_primary: "xl:focus:text-primary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_secondary: "xl:focus:text-secondary",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 1701px)
@@ -124864,9 +125944,21 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_secondary: "xl:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
     */
     xl__focus__placeholder_primary: "xl:focus:placeholder-primary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_secondary: "xl:focus:placeholder-secondary",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 1701px)
@@ -125916,15 +127008,33 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_secondary: "xl:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1701px)
     */
     xl__focus_within__ring_primary: "xl:focus-within:ring-primary",
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_secondary: "xl:focus-within:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1701px)
     */
     xl__focus__ring_primary: "xl:focus:ring-primary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_secondary: "xl:focus:ring-secondary",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 1701px)
@@ -126172,14 +127282,29 @@ pub static C: CssClasses = CssClasses {
     xl__ring_offset_primary: "xl:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_secondary: "xl:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus_within__ring_offset_primary: "xl:focus-within:ring-offset-primary",
 
     /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_secondary: "xl:focus-within:ring-offset-secondary",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus__ring_offset_primary: "xl:focus:ring-offset-primary",
+
+    /**
+        --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_secondary: "xl:focus:ring-offset-secondary",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 1701px)

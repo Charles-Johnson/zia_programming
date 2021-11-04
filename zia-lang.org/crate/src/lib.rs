@@ -9,51 +9,21 @@ mod generated;
 mod page;
 
 use console_error_panic_hook::set_once;
-use fixed_vec_deque::FixedVecDeque;
 use generated::css_classes::C;
-use seed::{body, div, document, log, prelude::*, window, C};
-use Visibility::*;
+use seed::{div, document, log, prelude::*, C};
 
 use page::home;
 
 const TITLE_SUFFIX: &str = "Zia";
-// https://mailtolink.me/
-const MAIL_TO_CHARLES: &str = "mailto:charlesthomasjohnson0@gmail.com";
-const CHARLES_EMAIL: &str = "Contact";
-const TWEET_TO_CHARLES: &str = "https://twitter.com/Charles40189535?s=03";
-
-const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
 const IMAGES_PATH: &str = "static/images";
 
 // ------ ------
 //     Model
 // ------ ------
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum Visibility {
-    Visible,
-    Hidden,
-}
-
-impl Visibility {
-    pub fn toggle(&mut self) {
-        *self = match self {
-            Visible => Hidden,
-            Hidden => Visible,
-        }
-    }
-}
-
-// We need at least 3 last values to detect scroll direction,
-// because neighboring ones are sometimes equal.
-type ScrollHistory = FixedVecDeque<[i32; 3]>;
-
 pub struct Model {
     pub page: Page,
     pub home_page_model: home::Model,
-    pub scroll_history: ScrollHistory,
-    pub menu_visibility: Visibility,
-    pub in_prerendering: bool,
 }
 
 // ------ Page ------
@@ -93,22 +63,12 @@ impl From<Url> for Page {
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders
         .subscribe(Msg::UrlChanged)
-        .stream(streams::window_event(Ev::Scroll, |_| Msg::Scrolled));
+        .after_next_render(|_| Msg::FocusOnCommandInput);
 
     Model {
         page: url.into(),
         home_page_model: home::Model::default(),
-        scroll_history: ScrollHistory::new(),
-        menu_visibility: Hidden,
-        in_prerendering: is_in_prerendering(),
     }
-}
-
-fn is_in_prerendering() -> bool {
-    let user_agent =
-        window().navigator().user_agent().expect("cannot get user agent");
-
-    user_agent == USER_AGENT_FOR_PRERENDERING
 }
 
 // ------ ------
@@ -121,38 +81,19 @@ fn is_in_prerendering() -> bool {
 #[derive(Clone)]
 pub enum Msg {
     UrlChanged(subs::UrlChanged),
-    ScrollToTop,
-    Scrolled,
-    ToggleMenu,
-    HideMenu,
     Home(home::Msg),
+    FocusOnCommandInput,
 }
 
-pub fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.page = url.into();
         },
-        Msg::ScrollToTop => window().scroll_to_with_scroll_to_options(
-            web_sys::ScrollToOptions::new().top(0.),
-        ),
-        Msg::Scrolled => {
-            // Some browsers use `document.body.scrollTop`
-            // and other ones `document.documentElement.scrollTop`.
-            let mut position = body().scroll_top();
-            if position == 0 {
-                position = document()
-                    .document_element()
-                    .expect("get document element")
-                    .scroll_top();
-            }
-            *model.scroll_history.push_back() = position;
+        Msg::Home(hm) => home::update(hm, &mut model.home_page_model, orders),
+        Msg::FocusOnCommandInput => {
+            model.home_page_model.focus_on_command_input();
         },
-        Msg::ToggleMenu => model.menu_visibility.toggle(),
-        Msg::HideMenu => {
-            model.menu_visibility = Hidden;
-        },
-        Msg::Home(hm) => home::update(hm, &mut model.home_page_model),
     }
 }
 
@@ -173,16 +114,16 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     div![
         C![
             (!prerendered).then(|| C.fade_in),
-            C.min_h_screen,
+            C.h_screen,
             C.flex,
             C.flex_col,
+            C.font_monospace
         ],
+        page::partial::header::view().into_nodes(),
         match model.page {
             Page::Home => page::home::view(&model.home_page_model).into_nodes(),
             Page::NotFound => page::not_found::view().into_nodes(),
         },
-        page::partial::header::view(model).into_nodes(),
-        page::partial::footer::view().into_nodes(),
     ]
 }
 

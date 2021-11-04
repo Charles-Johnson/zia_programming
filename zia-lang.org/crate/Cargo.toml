@@ -18,15 +18,12 @@ wasm-bindgen-test = "^0.3.18"
 [dependencies]
 zia = { path = "../../zia", version = "0.5.0"}
 seed = "0.8.0"
-fixed-vec-deque = "0.1.9"
 console_error_panic_hook = "0.1.7"
 
 [dependencies.web-sys]
 version = "^0.3.45"
 features = [
-  "ScrollToOptions",
-  "Navigator",
-  "KeyboardEvent",
+  "KeyboardEvent"
 ]
 
 [profile.release]
