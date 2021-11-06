@@ -6,16 +6,23 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const Critters = require('critters-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+const index = '/';
 
 module.exports = (env, argv) => {
   return {
+    performance: {
+      // Don't break compilation because of WASM file bigger than 244 KB.
+      hints: false
+    },
     entry: {
       // Bundle root with name `app.js`.
       app: path.resolve(__dirname, "../entries/index.ts")
     },
     output: {
+      // You can change it to e.g. `/ui/`, but also edit `historyApiFallback` below and `<base href..`> in `index.hbs`.
+      publicPath: index,
       // You can deploy your site from this folder (after build with e.g. `yarn build:release`)
       path: dist,
       filename:'[name].[contenthash].js'
@@ -25,13 +32,21 @@ module.exports = (env, argv) => {
       // You can connect to dev server from devices in your network (e.g. 192.168.0.3:8000).
       host: "0.0.0.0",
       port: 8000,
+      historyApiFallback: {
+        index
+      },
       noInfo: true,
       stats: "errors-only",
       overlay: {
-        warnings: true,
+        // Commented to prevent error:
+        // `./crate/pkg/index_bg.js 382:14-53   Critical dependency: the request of a dependency is an expression`
+        // warnings: true,
         errors: true
       },
-      historyApiFallback: true,
+    },
+    devtool: "eval",
+    experiments: {
+      asyncWebAssembly: true,
     },
     plugins: [
       // Show compilation progress bar in console.
@@ -46,12 +61,6 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, "../entries/index.hbs")
       }),
-      // Inline the critical part of styles, preload remainder.
-      new Critters({
-        logLevel: "warn",
-        // https://github.com/GoogleChromeLabs/critters/issues/34
-        pruneSource: false,
-      }),
       // Compile Rust.
       new WasmPackPlugin({
         crateDirectory: path.resolve(__dirname, "../crate"),
@@ -60,16 +69,18 @@ module.exports = (env, argv) => {
 
       // You can find files from folder `../static` on url `http://my-site.com/static/`.
       // And favicons in the root.
-      new CopyWebpackPlugin([
-        {
-          from: "static",
-          to: "static"
-        },
-        {
-          from: "favicons",
-          to: ""
-        }
-      ]),
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: "static",
+            to: "static"
+          },
+          {
+            from: "favicons",
+            to: ""
+          }
+        ]
+      }),
     ],
     // Webpack try to guess how to resolve imports in this order:
     resolve: {
@@ -107,8 +118,14 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.ts$/,
-          loader: "ts-loader?configFile=configs/tsconfig.json"
-        },
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                configFile: "configs/tsconfig.css_classes.json"
+              }
+            }
+          ]        },
         {
           test: /\.css$/,
           use: [
@@ -117,11 +134,8 @@ module.exports = (env, argv) => {
             {
               loader: "postcss-loader",
               options: {
-                config: {
-                  // Path to postcss.config.js.
-                  path: __dirname,
-                  // Pass mode into `postcss.config.js` (see more info in that file).
-                  ctx: { mode: argv.mode }
+                postcssOptions: {
+                  config: path.resolve(__dirname, "postcss.config.js"),
                 }
               }
             }

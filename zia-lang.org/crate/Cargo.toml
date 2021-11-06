@@ -13,21 +13,17 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dev-dependencies]
-wasm-bindgen-test = "^0.3.5"
+wasm-bindgen-test = "^0.3.18"
 
 [dependencies]
 zia = { path = "../../zia", version = "0.5.0"}
-wasm-bindgen = "^0.2.55" # sync with `wasm-bindgen-test`
-seed = "0.5.0"
-fixed-vec-deque = "0.1.8"
-console_error_panic_hook = "0.1.6"
+seed = "0.8.0"
+console_error_panic_hook = "0.1.7"
 
 [dependencies.web-sys]
-version = "^0.3.32"
+version = "^0.3.45"
 features = [
-  "ScrollToOptions",
-  "Navigator",
-  "KeyboardEvent",
+  "KeyboardEvent"
 ]
 
 [profile.release]

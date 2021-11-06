@@ -45,6 +45,7 @@ module.exports = {
     })(),
     colors: {
 		  primary: "#0B723B",
+      secondary: "#FFFFFF"
     },
     opacity: (() => {
         return Object.fromEntries([

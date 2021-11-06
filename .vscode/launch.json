@@ -1,0 +1,272 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'izia'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=izia",
+                    "--package=izia"
+                ],
+                "filter": {
+                    "name": "izia",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'izia'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=izia",
+                    "--package=izia"
+                ],
+                "filter": {
+                    "name": "izia",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'zia'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "zia",
+                    "kind": "lib"
+                }
+            },
+            "args": ["comparison_existence_implication_rule_test"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'definitions_and_reductions'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=definitions_and_reductions",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "definitions_and_reductions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'program_recognition'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=program_recognition",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "program_recognition",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'precedence'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=precedence",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "precedence",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'implication'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=implication",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "implication",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'definitions'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=definitions",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "definitions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'variables'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=variables",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "variables",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'reductions'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=reductions",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "reductions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'syntax'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=syntax",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "syntax",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'exists_such_that'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=exists_such_that",
+                    "--package=zia"
+                ],
+                "filter": {
+                    "name": "exists_such_that",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'presentations'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=presentations",
+                    "--package=presentations"
+                ],
+                "filter": {
+                    "name": "presentations",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'presentations'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=presentations",
+                    "--package=presentations"
+                ],
+                "filter": {
+                    "name": "presentations",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

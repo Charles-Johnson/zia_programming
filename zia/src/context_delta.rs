@@ -304,7 +304,7 @@ where
                         ) =>
                     {
                         panic!("Concept {} already removed", concept_id);
-                    }
+                    },
                     _ => (),
                 };
             },

@@ -31,7 +31,14 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.ts$/,
-          loader: "ts-loader?configFile=configs/tsconfig.css_classes.json"
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                configFile: "configs/tsconfig.css_classes.json"
+              }
+            }
+          ]
         },
         {
           test: /\.css$/,
@@ -41,9 +48,8 @@ module.exports = (env, argv) => {
             {
               loader: "postcss-loader",
               options: {
-                config: {
-                  ctx: { mode: argv.mode },
-                  path: __dirname
+                postcssOptions: {
+                  config: path.resolve(__dirname, "postcss.config.js"),
                 }
               }
             }
