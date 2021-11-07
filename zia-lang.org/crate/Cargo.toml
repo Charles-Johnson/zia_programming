@@ -26,6 +26,13 @@ features = [
   "KeyboardEvent"
 ]
 
+[dev-dependencies.web-sys]
+features = [
+  "Window",
+  "Document",
+  "Element"
+]
+
 [profile.release]
 lto = true
 opt-level = 's'
