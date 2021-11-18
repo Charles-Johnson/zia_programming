@@ -1,22 +1,25 @@
 mod command_input;
+mod history;
 
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{div, p, prelude::*, style, C};
-use web_sys::HtmlElement;
+use seed::{C, div, log, prelude::*};
+use web_sys::{HtmlElement, HtmlTextAreaElement};
 use zia::single_threaded::Context;
 
 pub struct Model {
     context: Context,
     input: String,
     history: Vec<InterpreterHistoryEntry>,
-    command_input: ElRef<HtmlElement>,
+    command_input: ElRef<HtmlTextAreaElement>,
 }
 
 impl Model {
-    pub fn focus_on_command_input(&self) {
-        self.command_input.get().unwrap().focus().unwrap();
+    pub fn clear_command_input(&self) {
+        let textarea_element = self.command_input.get().unwrap();
+        textarea_element.set_value("");
+        textarea_element.focus().unwrap();
     }
 }
 
@@ -66,7 +69,8 @@ pub fn update(
                 value: output,
                 kind: EntryKind::Evaluation,
             });
-            orders.after_next_render(|_| GlobalMsg::FocusOnCommandInput);
+            log!(&model.input);
+            orders.after_next_render(|_| GlobalMsg::ClearCommandInput);
         },
     };
 }
@@ -77,27 +81,7 @@ pub static TEXT_PADDING: &str = C.p_2;
 pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
     div![
         C![C.flex, C.flex_col, C.flex_1, C.justify_end, C.p_4],
-        model.history.iter().map(|entry| {
-            div![
-                match entry.kind {
-                    EntryKind::Command => C![
-                        C.bg_primary,
-                        C.text_secondary,
-                        C.self_end,
-                        TEXT_PADDING,
-                        EDGE_STYLE
-                    ],
-                    EntryKind::Evaluation => C![
-                        C.text_primary,
-                        C.self_start,
-                        TEXT_PADDING,
-                        EDGE_STYLE
-                    ],
-                },
-                style!{St::MaxWidth => percent(70), St::OverflowWrap => "break-word"},
-                p![&entry.value]
-            ]
-        }),
+        history::view(model).into_nodes(),
         command_input::view(model).into_nodes(),
     ]
 }

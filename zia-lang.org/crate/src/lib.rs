@@ -63,7 +63,7 @@ impl From<Url> for Page {
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders
         .subscribe(Msg::UrlChanged)
-        .after_next_render(|_| Msg::FocusOnCommandInput);
+        .after_next_render(|_| Msg::ClearCommandInput);
 
     Model {
         page: url.into(),
@@ -82,7 +82,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 pub enum Msg {
     UrlChanged(subs::UrlChanged),
     Home(home::Msg),
-    FocusOnCommandInput,
+    ClearCommandInput,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -91,8 +91,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.page = url.into();
         },
         Msg::Home(hm) => home::update(hm, &mut model.home_page_model, orders),
-        Msg::FocusOnCommandInput => {
-            model.home_page_model.focus_on_command_input();
+        Msg::ClearCommandInput => {
+            model.home_page_model.clear_command_input();
         },
     }
 }
