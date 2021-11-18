@@ -144,3 +144,72 @@ pub fn run() {
 
     log!("App started.");
 }
+
+#[cfg(test)]
+mod test {
+    extern crate wasm_bindgen_test;
+    use super::run;
+    use seed::{prelude::JsCast, window};
+    use wasm_bindgen_test::*;
+    use web_sys::{HtmlTextAreaElement, KeyboardEvent, KeyboardEventInit};
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    fn load_page() {
+        // Need to insert an element with id="app" to mimic the loading screen
+        // defined in ../../entries/index.hbs
+        let document = window().document().unwrap();
+        let section = document.create_element("section").unwrap();
+        section.set_id("app");
+        document.body().unwrap().append_with_node_1(&section).unwrap();
+
+        // Now we can run the WASM part
+        run();
+    }
+
+    #[wasm_bindgen_test]
+    fn keyboard_input_is_displayed_textarea_element() {
+        load_page();
+        let keyboard_event = KeyboardEvent::new_with_keyboard_event_init_dict(
+            "KeyboardEvent",
+            KeyboardEventInit::new().key("x"),
+        )
+        .unwrap();
+        window().document().unwrap().dispatch_event(&keyboard_event).unwrap();
+        let command_input: HtmlTextAreaElement = JsCast::dyn_into(
+            window()
+                .document()
+                .unwrap()
+                .get_element_by_id("command_input")
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(command_input.value(), "x");
+    }
+
+    #[wasm_bindgen_test]
+    fn submitted_command_moves_from_textarea_to_history() {
+        load_page();
+        // TODO: focus textarea
+
+        // TODO: simulate typing text
+
+        // TODO: simulate pressing "Enter"
+
+        // TODO: assert textarea is empty
+
+        // TODO: assert text submitted appears in an element above textarea
+    }
+
+    #[wasm_bindgen_test]
+    fn height_of_textarea_does_not_change_when_typing_one_line() {
+        load_page();
+        // TODO: get the height of the textarea element
+
+        // TODO: simulate typing text
+
+        // TODO: get the height of the textarea element
+
+        // TODO: assert height of textarea element has not changed
+    }
+}

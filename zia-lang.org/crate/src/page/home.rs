@@ -82,7 +82,7 @@ pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
             C.outline_none,
             C.overflow_hidden
         ],
-        attrs! {At::Type => "text", At::Name => "input"},
+        attrs! {At::Type => "text", At::Name => "input", At::Id => "command_input"},
         style! {St::Resize => "none", St::Height => model.command_input.get().map_or_else(
             // flatten textarea on first render to prevent it being
             // too tall on subsequent renders

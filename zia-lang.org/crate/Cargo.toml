@@ -26,6 +26,19 @@ features = [
   "KeyboardEvent"
 ]
 
+[dev-dependencies.web-sys]
+version = "^0.3.45"
+features = [
+  "Window",
+  "Document",
+  "Element",
+  "Event",
+  "EventTarget",
+  "EventInit",
+  "KeyboardEventInit",
+  "HtmlTextAreaElement"
+]
+
 [profile.release]
 lto = true
 opt-level = 's'

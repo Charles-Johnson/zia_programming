@@ -18,8 +18,12 @@ use super::{
 
 pub trait Concept: Sized {
     type Id: Copy + Display + Eq + Hash + Debug;
-    type IdPairIterator<'a>: Iterator<Item = (Self::Id, Self::Id)>;
-    type IdIterator<'a>: Iterator<Item = Self::Id>;
+    type IdPairIterator<'a>: Iterator<Item = (Self::Id, Self::Id)>
+    where
+        Self: 'a;
+    type IdIterator<'a>: Iterator<Item = Self::Id>
+    where
+        Self: 'a;
     fn id(&self) -> Self::Id;
 
     fn maybe_composition(&self) -> Option<MaybeComposition<Self::Id>>;
