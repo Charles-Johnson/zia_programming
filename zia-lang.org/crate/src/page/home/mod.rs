@@ -1,7 +1,9 @@
+mod command_input;
+
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{attrs, div, p, prelude::*, style, textarea, C};
+use seed::{div, p, prelude::*, style, C};
 use web_sys::HtmlElement;
 use zia::single_threaded::Context;
 
@@ -69,37 +71,10 @@ pub fn update(
     };
 }
 
-static EDGE_STYLE: &str = C.rounded_28px;
-static TEXT_PADDING: &str = C.p_2;
+pub static EDGE_STYLE: &str = C.rounded_28px;
+pub static TEXT_PADDING: &str = C.p_2;
 
 pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
-    let command_input = textarea![
-        C![
-            C.border_primary,
-            C.border_2,
-            EDGE_STYLE,
-            TEXT_PADDING,
-            C.outline_none,
-            C.overflow_hidden
-        ],
-        attrs! {At::Type => "text", At::Name => "input"},
-        style! {St::Resize => "none", St::Height => model.command_input.get().map_or_else(
-            // flatten textarea on first render to prevent it being
-            // too tall on subsequent renders
-            || "0".to_owned(),
-            // subsequent renders should set the height just enough to fit the text
-            |e| px(e.scroll_height())
-        )},
-        el_ref(&model.command_input),
-        input_ev(Ev::Input, |s| GlobalMsg::Home(Msg::Input(s))),
-        keyboard_ev("keydown", |ev| (ev.key_code() == 13).then(|| {
-            // prevents textarea from retaining the text
-            ev.prevent_default();
-            ev.stop_propagation();
-            GlobalMsg::Home(Msg::Submit)
-        })),
-        &model.input
-    ];
     div![
         C![C.flex, C.flex_col, C.flex_1, C.justify_end, C.p_4],
         model.history.iter().map(|entry| {
@@ -123,6 +98,6 @@ pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
                 p![&entry.value]
             ]
         }),
-        command_input,
+        command_input::view(model).into_nodes(),
     ]
 }
