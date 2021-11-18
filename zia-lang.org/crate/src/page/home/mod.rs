@@ -4,8 +4,8 @@ mod history;
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{C, div, log, prelude::*};
-use web_sys::{HtmlElement, HtmlTextAreaElement};
+use seed::{div, log, prelude::*, C};
+use web_sys::HtmlTextAreaElement;
 use zia::single_threaded::Context;
 
 pub struct Model {
