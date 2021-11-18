@@ -1,5 +1,5 @@
+use super::{Model as HomeModel, Msg as HomeMsg, EDGE_STYLE, TEXT_PADDING};
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use super::{Msg as HomeMsg, EDGE_STYLE, TEXT_PADDING, Model as HomeModel};
 use seed::{attrs, prelude::*, style, textarea, C};
 
 pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
