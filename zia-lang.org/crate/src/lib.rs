@@ -149,8 +149,9 @@ pub fn run() {
 mod test {
     extern crate wasm_bindgen_test;
     use super::run;
-    use seed::window;
+    use seed::{prelude::JsCast, window};
     use wasm_bindgen_test::*;
+    use web_sys::{HtmlTextAreaElement, KeyboardEvent, KeyboardEventInit};
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -168,15 +169,27 @@ mod test {
 
     #[wasm_bindgen_test]
     fn keyboard_input_is_displayed_textarea_element() {
-        load_page()
-        // TODO: simulate keyboard input
-
-        // TODO: assert that text is displayed in textarea element
+        load_page();
+        let keyboard_event = KeyboardEvent::new_with_keyboard_event_init_dict(
+            "KeyboardEvent",
+            KeyboardEventInit::new().key("x"),
+        )
+        .unwrap();
+        window().document().unwrap().dispatch_event(&keyboard_event).unwrap();
+        let command_input: HtmlTextAreaElement = JsCast::dyn_into(
+            window()
+                .document()
+                .unwrap()
+                .get_element_by_id("command_input")
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(command_input.value(), "x");
     }
 
     #[wasm_bindgen_test]
     fn submitted_command_moves_from_textarea_to_history() {
-        load_page()
+        load_page();
         // TODO: focus textarea
 
         // TODO: simulate typing text
@@ -190,7 +203,7 @@ mod test {
 
     #[wasm_bindgen_test]
     fn height_of_textarea_does_not_change_when_typing_one_line() {
-        load_page()
+        load_page();
         // TODO: get the height of the textarea element
 
         // TODO: simulate typing text
