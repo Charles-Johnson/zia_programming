@@ -61,8 +61,8 @@ impl<'a, 'b> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>>
 
 impl<'a> ConceptTrait for Mixed<'a> {
     type Id = ConceptId;
-    type IdIterator<'b> = Box<dyn Iterator<Item = Self::Id> + 'b>;
-    type IdPairIterator<'b> =
+    type IdIterator<'b> where Self: 'b = Box<dyn Iterator<Item = Self::Id> + 'b>;
+    type IdPairIterator<'b> where Self: 'b =
         Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>;
 
     fn id(&self) -> Self::Id {
