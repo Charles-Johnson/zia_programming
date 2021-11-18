@@ -37,7 +37,9 @@ where
         + Debug
         + for<'b> From<
             &'b NewDirectConceptDelta<Self::ConceptId, Self::ConceptId>,
-        > where Self: 'a;
+        >
+    where
+        Self: 'a;
     fn get_concept(
         &self,
         concept_id: Self::ConceptId,
