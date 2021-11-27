@@ -4,7 +4,7 @@ mod history;
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{div, log, prelude::*, C};
+use seed::{div, log, prelude::*, style, C};
 use web_sys::HtmlTextAreaElement;
 use zia::single_threaded::Context;
 
@@ -77,10 +77,12 @@ pub fn update(
 
 pub static EDGE_STYLE: &str = C.rounded_28px;
 pub static TEXT_PADDING: &str = C.p_2;
+pub static OUTER_PADDING: &str = "1rem";
 
 pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
     div![
-        C![C.flex, C.flex_col, C.flex_1, C.justify_end, C.p_4],
+        C![C.flex, C.flex_col, C.flex_1, C.justify_end],
+        style! {St::Padding => OUTER_PADDING},
         history::view(model).into_nodes(),
         command_input::view(model).into_nodes(),
     ]
