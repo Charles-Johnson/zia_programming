@@ -119,11 +119,11 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
             C.flex_col,
             C.font_monospace
         ],
-        page::partial::header::view().into_nodes(),
         match model.page {
             Page::Home => page::home::view(&model.home_page_model).into_nodes(),
             Page::NotFound => page::not_found::view().into_nodes(),
         },
+        page::partial::header::view().into_nodes(),
     ]
 }
 
