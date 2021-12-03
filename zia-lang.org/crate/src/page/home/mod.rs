@@ -4,7 +4,7 @@ mod history;
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
-use seed::{div, log, prelude::*, style, C};
+use seed::{div, log, prelude::*, style, window, C};
 use web_sys::HtmlTextAreaElement;
 use zia::single_threaded::Context;
 
@@ -70,7 +70,18 @@ pub fn update(
                 kind: EntryKind::Evaluation,
             });
             log!(&model.input);
-            orders.after_next_render(|_| GlobalMsg::ClearCommandInput);
+            orders
+                .after_next_render(|_| GlobalMsg::ClearCommandInput)
+                .after_next_render(|_| {
+                    let app = window()
+                        .document()
+                        .unwrap()
+                        .get_element_by_id("app")
+                        .unwrap();
+                    let scroll_height = app.scroll_height();
+                    // Prevents latest history from being displayed underneath command input
+                    app.set_scroll_top(scroll_height);
+                });
         },
     };
 }
