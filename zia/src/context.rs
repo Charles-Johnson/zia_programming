@@ -33,8 +33,6 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use slog::{info, o, Drain, Logger};
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
@@ -56,8 +54,6 @@ where
     VML: VariableMaskList,
 {
     snap_shot: S,
-    #[cfg(not(target_arch = "wasm32"))]
-    logger: Logger,
     delta: ContextDelta<S::ConceptId, SDCD>,
     cache: C,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
@@ -88,8 +84,6 @@ where
     pub fn new() -> Self {
         let mut cont = Self::default();
         cont.setup();
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(cont.logger, "Setup a new context");
         cont
     }
 
@@ -101,22 +95,13 @@ where
     }
 
     fn execute_without_closing_scope(&mut self, command: &str) -> String {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "execute({})", command);
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
                 self.create_variable_concepts(Syntax::<C>::make_mut(&mut a));
-                #[cfg(not(target_arch = "wasm32"))]
-                info!(
-                    self.logger,
-                    "ast_from_expression({}) -> {:#?}", command, a
-                );
                 self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "execute({}) -> {:#?}", command, self.delta);
         self.commit();
         string
     }
@@ -161,8 +146,6 @@ where
         &mut self,
         tokens: &[String],
     ) -> ZiaResult<SharedSyntax<C>> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "ast_from_tokens({:#?})", tokens);
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
@@ -191,11 +174,6 @@ where
                         },
                         (x, None) => Ok(Some(x)),
                     })?;
-                #[cfg(not(target_arch = "wasm32"))]
-                info!(
-                    self.logger,
-                    "ast_from_tokens({:#?}): assoc = {:#?}", tokens, assoc
-                );
                 match assoc {
                     Some(Associativity::Right) => {
                         let tail = lp_indices
@@ -214,11 +192,6 @@ where
                                 },
                             )??
                             .0;
-                        #[cfg(not(target_arch = "wasm32"))]
-                        info!(
-                            self.logger,
-                            "ast_from_tokens({:#?}): tail = {}", tokens, tail
-                        );
                         if lp_indices[0] == 0 {
                             Ok(tail)
                         } else {
@@ -326,8 +299,6 @@ where
         &self,
         tokens: &[String],
     ) -> ZiaResult<TokenSubsequence<SharedSyntax<C>>> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "lowest_precedence_info({:#?})", tokens);
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
@@ -431,16 +402,10 @@ where
                 Ok((lowest_precedence_syntax, lp_indices, this_index))
             },
         )?;
-        let result = Ok(TokenSubsequence {
+        Ok(TokenSubsequence {
             syntax,
             positions,
-        });
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(
-            self.logger,
-            "lowest_precedence_info({:#?}) -> {:#?}", tokens, result
-        );
-        result
+        })
     }
 
     fn ast_from_pair(
@@ -522,8 +487,6 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ZiaResult<String> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "reduce_and_call_pair({}, {})", left, right);
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
         match (reduced_left, reduced_right) {
@@ -552,8 +515,6 @@ where
         &mut self,
         ast: &SharedSyntax<C>,
     ) -> ZiaResult<String> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "try_reducing_then_call({})", ast);
         let (normal_form, _) = &self.context_search().recursively_reduce(ast);
         if normal_form == ast {
             Err(ZiaError::CannotReduceFurther)
@@ -564,8 +525,6 @@ where
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
     fn call(&mut self, ast: &SharedSyntax<C>) -> ZiaResult<String> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "call({})", ast);
         ast.get_concept()
             .and_then(|c| {
                 self.snap_shot.read_concept(&self.delta, c).get_string()
@@ -629,8 +588,6 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ZiaResult<String> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "call_pair({}, {})", left, right);
         self.concrete_type_of_ast(left)
             .and_then(|cct| match cct {
                 ConcreteConceptType::Let => right
@@ -675,8 +632,6 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> Option<ZiaResult<()>> {
-        #[cfg(not(target_arch = "wasm32"))]
-        info!(self.logger, "execute_let({}, {})", left, right);
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
         })
@@ -919,16 +874,8 @@ where
 {
     #[must_use]
     fn default() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let logger = {
-            let plain =
-                slog_term::PlainSyncDecorator::new(slog_term::TestStdoutWriter);
-            Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
-        };
         Self {
             snap_shot: S::default(),
-            #[cfg(not(target_arch = "wasm32"))]
-            logger,
             delta: ContextDelta::default(),
             cache: C::default(),
             new_variable_concepts_by_label: HashMap::new(),
