@@ -1,6 +1,6 @@
-name: Main
+name: Website
 
-on: [push, pull_request]
+on: push
 
 env:
   RUST_BACKTRACE: 1
