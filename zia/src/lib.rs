@@ -155,6 +155,8 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+mod lexer;
+
 mod map_err_variant;
 
 #[cfg(test)]
