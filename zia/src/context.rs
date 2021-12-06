@@ -72,8 +72,8 @@ where
         cont
     }
 
-    pub fn lex(&self, command: &str) -> Vec<Lexeme> {
-        unimplemented!()
+    pub fn lex(&self, command: impl Into<String>) -> Vec<Lexeme> {
+        vec![Lexeme{text: command.into()}]
     }
 
     pub fn execute(&mut self, command: &str) -> String {
