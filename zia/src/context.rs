@@ -14,10 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{and_also::AndAlso, associativity::Associativity, ast::SyntaxTree, concepts::{ConceptTrait, ConcreteConceptType, Hand}, context_cache::ContextCache, context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta}, context_search::{
+use crate::{
+    and_also::AndAlso,
+    associativity::Associativity,
+    ast::SyntaxTree,
+    concepts::{ConceptTrait, ConcreteConceptType, Hand},
+    context_cache::ContextCache,
+    context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta},
+    context_search::{
         Comparison, ContextReferences, ContextSearch,
         Iteration as ContextSearchIteration, SharedSyntax, Syntax,
-    }, context_updater::ContextUpdater, delta::Apply, errors::{ZiaError, ZiaResult}, lexer::Lexeme, map_err_variant::MapErrVariant, parser::parse_line, snap_shot::Reader as SnapShotReader, variable_mask_list::VariableMaskList};
+    },
+    context_updater::ContextUpdater,
+    delta::Apply,
+    errors::{ZiaError, ZiaResult},
+    lexer::{Lexeme, Category as LexemeCategory},
+    map_err_variant::MapErrVariant,
+    parser::parse_line,
+    snap_shot::Reader as SnapShotReader,
+    variable_mask_list::VariableMaskList,
+};
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
@@ -73,7 +89,10 @@ where
     }
 
     pub fn lex(&self, command: impl Into<String>) -> Vec<Lexeme> {
-        vec![Lexeme{text: command.into()}]
+        vec![Lexeme {
+            text: command.into(),
+            category: LexemeCategory::NewConcept
+        }]
     }
 
     pub fn execute(&mut self, command: &str) -> String {
