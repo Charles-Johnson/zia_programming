@@ -13,9 +13,24 @@ proptest! {
 }
 
 #[test]
-fn lexer_indentifies_new_concepts() {
+fn lexer_indentifies_new_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("new_concept");
     assert_eq!(lexemes.len(), 1);
     assert_eq!(lexemes.first().unwrap().category, LexemeCategory::NewConcept);
+}
+
+#[test]
+fn lexer_indentifies_whitespace() {
+    let cont = NEW_CONTEXT.clone();
+    let lexemes = cont.lex("new_concept another_new_concept");
+    assert_eq!(lexemes.len(), 3);
+    assert_eq!(lexemes[0].text, "new_concept");
+    assert_eq!(lexemes[0].category, LexemeCategory::NewConcept);
+
+    assert_eq!(lexemes[1].text, " ");
+    assert_eq!(lexemes[1].category, LexemeCategory::Whitespace);
+
+    assert_eq!(lexemes[2].text, "another_new_concept");
+    assert_eq!(lexemes[2].category, LexemeCategory::NewConcept);
 }
