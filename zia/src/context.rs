@@ -28,7 +28,7 @@ use crate::{
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
-    lexer::{Lexeme, Category as LexemeCategory},
+    lexer::{Category as LexemeCategory, Lexeme},
     map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
@@ -91,7 +91,7 @@ where
     pub fn lex(&self, command: impl Into<String>) -> Vec<Lexeme> {
         vec![Lexeme {
             text: command.into(),
-            category: LexemeCategory::NewConcept
+            category: LexemeCategory::NewConcept,
         }]
     }
 
