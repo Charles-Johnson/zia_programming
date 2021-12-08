@@ -34,12 +34,7 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    default::Default,
-    fmt::Debug,
-    marker::PhantomData,
-};
+use std::{collections::{HashMap, HashSet}, default::Default, fmt::Debug, marker::PhantomData};
 
 #[derive(Clone)]
 pub struct Context<S, C, SDCD, VML>
@@ -88,11 +83,25 @@ where
         cont
     }
 
-    pub fn lex(&self, command: impl Into<String>) -> Vec<Lexeme> {
-        vec![Lexeme {
-            text: command.into(),
+    pub fn lex(&self, command: &str) -> Vec<Lexeme> {
+        let mut split_string = command.split(' ');
+        let mut lexemes = vec![Lexeme {
+            text: split_string.next().unwrap().into(),
             category: LexemeCategory::NewConcept,
-        }]
+        }];
+        for token in split_string {
+            lexemes.extend([
+                Lexeme {
+                    text: " ".into(),
+                    category: LexemeCategory::Whitespace
+                },
+                Lexeme {
+                    text: token.into(),
+                    category: LexemeCategory::NewConcept
+                }
+            ])
+        }
+        lexemes
     }
 
     pub fn execute(&mut self, command: &str) -> String {

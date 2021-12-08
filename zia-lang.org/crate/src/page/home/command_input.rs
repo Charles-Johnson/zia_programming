@@ -41,7 +41,11 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
             ev.stop_propagation();
             GlobalMsg::Home(HomeMsg::Submit)
         })),
-        &model.input
+        model
+            .context
+            .lex(&model.input)
+            .into_iter()
+            .map(|lexeme| div![lexeme.text])
     ];
     vec![div, textarea]
 }
