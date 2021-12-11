@@ -44,3 +44,11 @@ fn lexer_indentifies_concrete_concept() {
     assert_eq!(lexemes.len(), 1);
     assert_eq!(lexemes.first().unwrap().category, LexemeCategory::ConcreteConcept);
 }
+
+#[test]
+fn lexer_indentifies_abstract_concept() {
+    let cont = NEW_CONTEXT.clone();
+    let lexemes = cont.lex("and");
+    assert_eq!(lexemes.len(), 1);
+    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::AbstractConcept);
+}
