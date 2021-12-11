@@ -5,6 +5,7 @@ pub struct Lexeme {
 
 #[derive(Debug, PartialEq)]
 pub enum Category {
+    ConcreteConcept,
     NewConcept,
     Whitespace
 }

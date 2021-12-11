@@ -94,15 +94,9 @@ where
         while !remaining_command.is_empty() {
            if let Ok((start_of_whitespace, beginning_nonwhitespace)) = remaining_command.split_at_position::<_, ()>(|c| whitespace_regex.is_match(&c.to_string())) {
                 remaining_command = start_of_whitespace;
-                lexemes.push(Lexeme{
-                    text: beginning_nonwhitespace.into(),
-                    category: LexemeCategory::NewConcept
-                })
+                lexemes.push(self.concept_lexeme_from_string(beginning_nonwhitespace))
             } else {
-                lexemes.push(Lexeme {
-                    text: remaining_command.into(),
-                    category: LexemeCategory::NewConcept
-                });
+                lexemes.push(self.concept_lexeme_from_string(remaining_command));
                 return lexemes;
             }
 
@@ -121,6 +115,17 @@ where
             }
         }
         return lexemes;
+    }
+
+    fn concept_lexeme_from_string(&self, concept_string: &str) -> Lexeme {
+        let category = match self.snap_shot.concept_from_label(&self.delta, concept_string) {
+            None => LexemeCategory::NewConcept,
+            Some(_) => LexemeCategory::ConcreteConcept
+        };
+        Lexeme {
+            text: concept_string.into(),
+            category
+        }
     }
 
     pub fn execute(&mut self, command: &str) -> String {
