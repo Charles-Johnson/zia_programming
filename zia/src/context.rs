@@ -120,7 +120,11 @@ where
     fn concept_lexeme_from_string(&self, concept_string: &str) -> Lexeme {
         let category = match self.snap_shot.concept_from_label(&self.delta, concept_string) {
             None => LexemeCategory::NewConcept,
-            Some(_) => LexemeCategory::ConcreteConcept
+            Some(id) => if self.snap_shot.read_concept(&self.delta, id).get_concrete_concept_type().is_some() {
+                LexemeCategory::ConcreteConcept
+            } else {
+                LexemeCategory::AbstractConcept
+            }
         };
         Lexeme {
             text: concept_string.into(),
