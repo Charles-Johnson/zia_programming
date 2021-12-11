@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use nom::InputTakeAtPosition;
+use regex::Regex;
+
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
@@ -84,24 +87,40 @@ where
     }
 
     pub fn lex(&self, command: &str) -> Vec<Lexeme> {
-        let mut split_string = command.split(' ');
-        let mut lexemes = vec![Lexeme {
-            text: split_string.next().unwrap().into(),
-            category: LexemeCategory::NewConcept,
-        }];
-        for token in split_string {
-            lexemes.extend([
-                Lexeme {
-                    text: " ".into(),
-                    category: LexemeCategory::Whitespace
-                },
-                Lexeme {
-                    text: token.into(),
+        let mut lexemes = vec![];
+        let mut remaining_command = command;
+        //TODO convert to lazy static
+        let whitespace_regex = Regex::new(r"\s").unwrap();
+        while !remaining_command.is_empty() {
+           if let Ok((start_of_whitespace, beginning_nonwhitespace)) = remaining_command.split_at_position::<_, ()>(|c| whitespace_regex.is_match(&c.to_string())) {
+                remaining_command = start_of_whitespace;
+                lexemes.push(Lexeme{
+                    text: beginning_nonwhitespace.into(),
                     category: LexemeCategory::NewConcept
-                }
-            ])
+                })
+            } else {
+                lexemes.push(Lexeme {
+                    text: remaining_command.into(),
+                    category: LexemeCategory::NewConcept
+                });
+                return lexemes;
+            }
+
+            if let Ok((start_of_nonwhitespace, beginning_whitespace)) = remaining_command.split_at_position::<_, ()>(|c| !whitespace_regex.is_match(&c.to_string())) {
+                remaining_command = start_of_nonwhitespace;
+                lexemes.push(Lexeme{
+                    text: beginning_whitespace.into(),
+                    category: LexemeCategory::Whitespace
+                })
+            } else {
+                lexemes.push(Lexeme {
+                    text: remaining_command.into(),
+                    category: LexemeCategory::Whitespace
+                });
+                return lexemes;
+            }
         }
-        lexemes
+        return lexemes;
     }
 
     pub fn execute(&mut self, command: &str) -> String {
