@@ -40,11 +40,7 @@ proptest! {
 #[test]
 fn lexer_indentifies_concrete_concept() {
     let cont = NEW_CONTEXT.clone();
-        assert_eq!(
-            cont.lex("let"),
-            vec![Lexeme {
-                text: "let".into(),
-                category: LexemeCategory::ConcreteConcept
-            }]
-        );
+    let lexemes = cont.lex("let");
+    assert_eq!(lexemes.len(), 1);
+    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::ConcreteConcept);
 }
