@@ -42,7 +42,10 @@ fn lexer_indentifies_concrete_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("let");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::ConcreteConcept);
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::ConcreteConcept
+    );
 }
 
 #[test]
@@ -50,7 +53,10 @@ fn lexer_indentifies_abstract_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("and");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::AbstractConcept);
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::AbstractConcept
+    );
 }
 
 #[test]
@@ -58,7 +64,12 @@ fn lexer_indentifies_opening_parenthesis() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("(");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::OpeningParenthesis{closing_position: None});
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::OpeningParenthesis {
+            closing_position: None
+        }
+    );
 }
 
 #[test]
@@ -66,5 +77,10 @@ fn lexer_indentifies_closing_parenthesis() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex(")");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::ClosingParenthesis{opening_position: None});
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::ClosingParenthesis {
+            opening_position: None
+        }
+    );
 }

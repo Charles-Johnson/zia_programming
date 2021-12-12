@@ -37,7 +37,12 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
 };
-use std::{collections::{HashMap, HashSet}, default::Default, fmt::Debug, marker::PhantomData};
+use std::{
+    collections::{HashMap, HashSet},
+    default::Default,
+    fmt::Debug,
+    marker::PhantomData,
+};
 
 #[derive(Clone)]
 pub struct Context<S, C, SDCD, VML>
@@ -89,63 +94,108 @@ where
     pub fn lex(&self, command: &str) -> Vec<Lexeme> {
         let mut lexemes = vec![];
         let mut remaining_command = command;
-        //TODO convert to lazy static
+        // TODO convert to lazy static
         let whitespace_regex = Regex::new(r"\s").unwrap();
         while !remaining_command.is_empty() {
-            if let Ok((start_of_whitespace, beginning_nonwhitespace)) = remaining_command.split_at_position::<_, ()>(|c| whitespace_regex.is_match(&c.to_string())) {
+            if let Ok((start_of_whitespace, beginning_nonwhitespace)) =
+                remaining_command.split_at_position::<_, ()>(|c| {
+                    whitespace_regex.is_match(&c.to_string())
+                })
+            {
                 remaining_command = start_of_whitespace;
-                self.push_lexemes_from_nonwhitespace(&mut lexemes, beginning_nonwhitespace);
+                self.push_lexemes_from_nonwhitespace(
+                    &mut lexemes,
+                    beginning_nonwhitespace,
+                );
             } else {
-                self.push_lexemes_from_nonwhitespace(&mut lexemes, remaining_command);
+                self.push_lexemes_from_nonwhitespace(
+                    &mut lexemes,
+                    remaining_command,
+                );
                 return lexemes;
             }
 
-            if let Ok((start_of_nonwhitespace, beginning_whitespace)) = remaining_command.split_at_position::<_, ()>(|c| !whitespace_regex.is_match(&c.to_string())) {
-                remaining_command = start_of_nonwhitespace;
-                lexemes.push(Lexeme{
-                    text: beginning_whitespace.into(),
-                    category: LexemeCategory::Whitespace
+            if let Ok((start_of_nonwhitespace, beginning_whitespace)) =
+                remaining_command.split_at_position::<_, ()>(|c| {
+                    !whitespace_regex.is_match(&c.to_string())
                 })
+            {
+                remaining_command = start_of_nonwhitespace;
+                lexemes.push(Lexeme {
+                    text: beginning_whitespace.into(),
+                    category: LexemeCategory::Whitespace,
+                });
             } else {
                 lexemes.push(Lexeme {
                     text: remaining_command.into(),
-                    category: LexemeCategory::Whitespace
+                    category: LexemeCategory::Whitespace,
                 });
                 return lexemes;
             }
         }
-        return lexemes;
+        lexemes
     }
 
-    fn push_lexemes_from_nonwhitespace(&self, lexemes: &mut Vec<Lexeme>, mut nonwhitespace: &str) {
-        while let Some((mut before_first_opening_parenthesis, after_first_parenthesis)) = nonwhitespace.split_once('(') {
+    fn push_lexemes_from_nonwhitespace(
+        &self,
+        lexemes: &mut Vec<Lexeme>,
+        mut nonwhitespace: &str,
+    ) {
+        while let Some((
+            mut before_first_opening_parenthesis,
+            after_first_parenthesis,
+        )) = nonwhitespace.split_once('(')
+        {
             nonwhitespace = after_first_parenthesis;
-            while let Some((before_first_closing_parenthesis, after_first_closing_parenthesis)) = before_first_opening_parenthesis.split_once(')') {
-                before_first_opening_parenthesis = after_first_closing_parenthesis;
+            while let Some((
+                before_first_closing_parenthesis,
+                after_first_closing_parenthesis,
+            )) = before_first_opening_parenthesis.split_once(')')
+            {
+                before_first_opening_parenthesis =
+                    after_first_closing_parenthesis;
                 if !before_first_closing_parenthesis.is_empty() {
-                    lexemes.push(self.lexeme_from_symbol(before_first_closing_parenthesis));
+                    lexemes.push(
+                        self.lexeme_from_symbol(
+                            before_first_closing_parenthesis,
+                        ),
+                    );
                 }
                 lexemes.push(Lexeme {
                     text: ")".into(),
-                    category: LexemeCategory::ClosingParenthesis{opening_position: None}
+                    category: LexemeCategory::ClosingParenthesis {
+                        opening_position: None,
+                    },
                 });
             }
             if !before_first_opening_parenthesis.is_empty() {
-                lexemes.push(self.lexeme_from_symbol(before_first_opening_parenthesis));
+                lexemes.push(
+                    self.lexeme_from_symbol(before_first_opening_parenthesis),
+                );
             }
             lexemes.push(Lexeme {
                 text: "(".into(),
-                category: LexemeCategory::OpeningParenthesis{closing_position: None}
-            })
+                category: LexemeCategory::OpeningParenthesis {
+                    closing_position: None,
+                },
+            });
         }
-        while let Some((before_first_closing_parenthesis, after_first_closing_parenthesis)) = nonwhitespace.split_once(')') {
+        while let Some((
+            before_first_closing_parenthesis,
+            after_first_closing_parenthesis,
+        )) = nonwhitespace.split_once(')')
+        {
             nonwhitespace = after_first_closing_parenthesis;
             if !before_first_closing_parenthesis.is_empty() {
-                lexemes.push(self.lexeme_from_symbol(before_first_closing_parenthesis));
+                lexemes.push(
+                    self.lexeme_from_symbol(before_first_closing_parenthesis),
+                );
             }
             lexemes.push(Lexeme {
                 text: ")".into(),
-                category: LexemeCategory::ClosingParenthesis{opening_position: None}
+                category: LexemeCategory::ClosingParenthesis {
+                    opening_position: None,
+                },
             });
         }
         if !nonwhitespace.is_empty() {
@@ -154,17 +204,25 @@ where
     }
 
     fn lexeme_from_symbol(&self, symbol: &str) -> Lexeme {
-        let category = match self.snap_shot.concept_from_label(&self.delta, symbol) {
-            None => LexemeCategory::NewConcept,
-            Some(id) => if self.snap_shot.read_concept(&self.delta, id).get_concrete_concept_type().is_some() {
-                LexemeCategory::ConcreteConcept
-            } else {
-                LexemeCategory::AbstractConcept
-            }
-        };
+        let category =
+            match self.snap_shot.concept_from_label(&self.delta, symbol) {
+                None => LexemeCategory::NewConcept,
+                Some(id) => {
+                    if self
+                        .snap_shot
+                        .read_concept(&self.delta, id)
+                        .get_concrete_concept_type()
+                        .is_some()
+                    {
+                        LexemeCategory::ConcreteConcept
+                    } else {
+                        LexemeCategory::AbstractConcept
+                    }
+                },
+            };
         Lexeme {
             text: symbol.into(),
-            category
+            category,
         }
     }
 
