@@ -9,5 +9,6 @@ pub enum Category {
     ConcreteConcept,
     NewConcept,
     Whitespace,
-    OpeningParenthesis{closing_position: Option<()>}
+    OpeningParenthesis{closing_position: Option<()>},
+    ClosingParenthesis{opening_position: Option<()>}
 }

@@ -118,20 +118,38 @@ where
     }
 
     fn push_lexemes_from_nonwhitespace(&self, lexemes: &mut Vec<Lexeme>, mut nonwhitespace: &str) {
-        while !nonwhitespace.is_empty() {
-            if let Some((before_first_opening_parenthesis, after_first_parenthesis)) = nonwhitespace.split_once('(') {
-                nonwhitespace = after_first_parenthesis;
-                if !before_first_opening_parenthesis.is_empty() {
-                    lexemes.push(self.lexeme_from_symbol(before_first_opening_parenthesis));
+        while let Some((mut before_first_opening_parenthesis, after_first_parenthesis)) = nonwhitespace.split_once('(') {
+            nonwhitespace = after_first_parenthesis;
+            while let Some((before_first_closing_parenthesis, after_first_closing_parenthesis)) = before_first_opening_parenthesis.split_once(')') {
+                before_first_opening_parenthesis = after_first_closing_parenthesis;
+                if !before_first_closing_parenthesis.is_empty() {
+                    lexemes.push(self.lexeme_from_symbol(before_first_closing_parenthesis));
                 }
                 lexemes.push(Lexeme {
-                    text: "(".into(),
-                    category: LexemeCategory::OpeningParenthesis{closing_position: None}
-                })
-            } else {
-                lexemes.push(self.lexeme_from_symbol(nonwhitespace));
-                break;
+                    text: ")".into(),
+                    category: LexemeCategory::ClosingParenthesis{opening_position: None}
+                });
             }
+            if !before_first_opening_parenthesis.is_empty() {
+                lexemes.push(self.lexeme_from_symbol(before_first_opening_parenthesis));
+            }
+            lexemes.push(Lexeme {
+                text: "(".into(),
+                category: LexemeCategory::OpeningParenthesis{closing_position: None}
+            })
+        }
+        while let Some((before_first_closing_parenthesis, after_first_closing_parenthesis)) = nonwhitespace.split_once(')') {
+            nonwhitespace = after_first_closing_parenthesis;
+            if !before_first_closing_parenthesis.is_empty() {
+                lexemes.push(self.lexeme_from_symbol(before_first_closing_parenthesis));
+            }
+            lexemes.push(Lexeme {
+                text: ")".into(),
+                category: LexemeCategory::ClosingParenthesis{opening_position: None}
+            });
+        }
+        if !nonwhitespace.is_empty() {
+            lexemes.push(self.lexeme_from_symbol(nonwhitespace));
         }
     }
 
