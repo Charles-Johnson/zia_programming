@@ -52,3 +52,11 @@ fn lexer_indentifies_abstract_concept() {
     assert_eq!(lexemes.len(), 1);
     assert_eq!(lexemes.first().unwrap().category, LexemeCategory::AbstractConcept);
 }
+
+#[test]
+fn lexer_indentifies_opening_parenthesis() {
+    let cont = NEW_CONTEXT.clone();
+    let lexemes = cont.lex("(");
+    assert_eq!(lexemes.len(), 1);
+    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::OpeningParenthesis{closing_position: None, ..});
+}
