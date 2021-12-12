@@ -8,5 +8,6 @@ pub enum Category {
     AbstractConcept,
     ConcreteConcept,
     NewConcept,
-    Whitespace
+    Whitespace,
+    OpeningParenthesis{closing_position: Option<()>}
 }

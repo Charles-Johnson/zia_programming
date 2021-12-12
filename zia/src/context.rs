@@ -92,11 +92,11 @@ where
         //TODO convert to lazy static
         let whitespace_regex = Regex::new(r"\s").unwrap();
         while !remaining_command.is_empty() {
-           if let Ok((start_of_whitespace, beginning_nonwhitespace)) = remaining_command.split_at_position::<_, ()>(|c| whitespace_regex.is_match(&c.to_string())) {
+            if let Ok((start_of_whitespace, beginning_nonwhitespace)) = remaining_command.split_at_position::<_, ()>(|c| whitespace_regex.is_match(&c.to_string())) {
                 remaining_command = start_of_whitespace;
-                lexemes.push(self.concept_lexeme_from_string(beginning_nonwhitespace))
+                self.push_lexemes_from_nonwhitespace(&mut lexemes, beginning_nonwhitespace);
             } else {
-                lexemes.push(self.concept_lexeme_from_string(remaining_command));
+                self.push_lexemes_from_nonwhitespace(&mut lexemes, remaining_command);
                 return lexemes;
             }
 
@@ -117,8 +117,26 @@ where
         return lexemes;
     }
 
-    fn concept_lexeme_from_string(&self, concept_string: &str) -> Lexeme {
-        let category = match self.snap_shot.concept_from_label(&self.delta, concept_string) {
+    fn push_lexemes_from_nonwhitespace(&self, lexemes: &mut Vec<Lexeme>, mut nonwhitespace: &str) {
+        while !nonwhitespace.is_empty() {
+            if let Some((before_first_opening_parenthesis, after_first_parenthesis)) = nonwhitespace.split_once('(') {
+                nonwhitespace = after_first_parenthesis;
+                if !before_first_opening_parenthesis.is_empty() {
+                    lexemes.push(self.lexeme_from_symbol(before_first_opening_parenthesis));
+                }
+                lexemes.push(Lexeme {
+                    text: "(".into(),
+                    category: LexemeCategory::OpeningParenthesis{closing_position: None}
+                })
+            } else {
+                lexemes.push(self.lexeme_from_symbol(nonwhitespace));
+                break;
+            }
+        }
+    }
+
+    fn lexeme_from_symbol(&self, symbol: &str) -> Lexeme {
+        let category = match self.snap_shot.concept_from_label(&self.delta, symbol) {
             None => LexemeCategory::NewConcept,
             Some(id) => if self.snap_shot.read_concept(&self.delta, id).get_concrete_concept_type().is_some() {
                 LexemeCategory::ConcreteConcept
@@ -127,7 +145,7 @@ where
             }
         };
         Lexeme {
-            text: concept_string.into(),
+            text: symbol.into(),
             category
         }
     }
