@@ -60,3 +60,11 @@ fn lexer_indentifies_opening_parenthesis() {
     assert_eq!(lexemes.len(), 1);
     assert_eq!(lexemes.first().unwrap().category, LexemeCategory::OpeningParenthesis{closing_position: None});
 }
+
+#[test]
+fn lexer_indentifies_closing_parenthesis() {
+    let cont = NEW_CONTEXT.clone();
+    let lexemes = cont.lex(")");
+    assert_eq!(lexemes.len(), 1);
+    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::ClosingParenthesis{opening_position: None});
+}
