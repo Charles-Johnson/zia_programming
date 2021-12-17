@@ -90,20 +90,36 @@ where
 
     pub fn lex(&self, command: &str) -> Vec<Lexeme> {
         let mut lexemes = vec![];
+        let mut opening_parentheses_positions = vec![];
         for character in command.chars() {
             match character {
-                '(' => lexemes.push(Lexeme {
-                    text: "(".into(),
-                    category: LexemeCategory::OpeningParenthesis {
-                        closing_position: None,
-                    },
-                }),
-                ')' => lexemes.push(Lexeme {
-                    text: ")".into(),
-                    category: LexemeCategory::ClosingParenthesis {
-                        opening_position: None,
-                    },
-                }),
+                '(' => {
+                    opening_parentheses_positions.push(lexemes.len());
+                    lexemes.push(Lexeme {
+                        text: "(".into(),
+                        category: LexemeCategory::OpeningParenthesis {
+                            closing_position: None,
+                        },
+                    });
+                },
+                ')' => {
+                    let opening_position = opening_parentheses_positions.pop();
+                    if let Some(op) = opening_position {
+                        let cp = lexemes.len();
+                        if let LexemeCategory::OpeningParenthesis {
+                            closing_position,
+                        } = &mut lexemes[op].category
+                        {
+                            *closing_position = Some(cp);
+                        }
+                    }
+                    lexemes.push(Lexeme {
+                        text: ")".into(),
+                        category: LexemeCategory::ClosingParenthesis {
+                            opening_position,
+                        },
+                    });
+                },
                 _ if character.is_whitespace() => {
                     if let Some(Lexeme {
                         category: LexemeCategory::Whitespace,

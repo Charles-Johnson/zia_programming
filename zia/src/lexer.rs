@@ -10,9 +10,9 @@ pub enum Category {
     NewConcept,
     Whitespace,
     OpeningParenthesis {
-        closing_position: Option<()>,
+        closing_position: Option<usize>,
     },
     ClosingParenthesis {
-        opening_position: Option<()>,
+        opening_position: Option<usize>,
     },
 }
