@@ -84,3 +84,22 @@ fn lexer_indentifies_closing_parenthesis() {
         }
     );
 }
+
+#[test]
+fn lexer_indentifies_matching_parentheses() {
+    let cont = NEW_CONTEXT.clone();
+    let lexemes = cont.lex("()");
+    assert_eq!(lexemes.len(), 2);
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::OpeningParenthesis {
+            closing_position: Some(1)
+        }
+    );
+    assert_eq!(
+        lexemes.last().unwrap().category,
+        LexemeCategory::ClosingParenthesis {
+            opening_position: Some(0)
+        }
+    );
+}
