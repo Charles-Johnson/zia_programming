@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use zia::{multi_threaded::NEW_CONTEXT, LexemeCategory};
+use zia::{multi_threaded::NEW_CONTEXT, ConceptKind, LexemeCategory};
 
 proptest! {
     #[test]
@@ -17,7 +17,10 @@ fn lexer_indentifies_new_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("new_concept");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::NewConcept);
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::Concept(ConceptKind::New)
+    );
 }
 
 proptest! {
@@ -27,13 +30,13 @@ proptest! {
         let lexemes = cont.lex(&format!("new_concept{}another_new_concept", w));
         assert_eq!(lexemes.len(), 3);
         assert_eq!(lexemes[0].text, "new_concept");
-        assert_eq!(lexemes[0].category, LexemeCategory::NewConcept);
+        assert_eq!(lexemes[0].category, LexemeCategory::Concept(ConceptKind::New));
 
         assert_eq!(lexemes[1].text, w);
         assert_eq!(lexemes[1].category, LexemeCategory::Whitespace);
 
         assert_eq!(lexemes[2].text, "another_new_concept");
-        assert_eq!(lexemes[2].category, LexemeCategory::NewConcept);
+        assert_eq!(lexemes[2].category, LexemeCategory::Concept(ConceptKind::New));
     }
 }
 
@@ -44,7 +47,7 @@ fn lexer_indentifies_concrete_concept() {
     assert_eq!(lexemes.len(), 1);
     assert_eq!(
         lexemes.first().unwrap().category,
-        LexemeCategory::ConcreteConcept
+        LexemeCategory::Concept(ConceptKind::Concrete)
     );
 }
 
@@ -55,7 +58,7 @@ fn lexer_indentifies_abstract_concept() {
     assert_eq!(lexemes.len(), 1);
     assert_eq!(
         lexemes.first().unwrap().category,
-        LexemeCategory::AbstractConcept
+        LexemeCategory::Concept(ConceptKind::Abstract)
     );
 }
 
@@ -109,5 +112,8 @@ fn lexer_identifies_variable() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("_x_");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::Variable);
+    assert_eq!(
+        lexemes.first().unwrap().category,
+        LexemeCategory::Concept(ConceptKind::Variable)
+    );
 }

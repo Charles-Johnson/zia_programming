@@ -174,4 +174,4 @@ pub mod variable_mask_list;
 
 pub use crate::errors::ZiaError;
 
-pub use crate::lexer::Category as LexemeCategory;
+pub use crate::lexer::{Category as LexemeCategory, ConceptKind};

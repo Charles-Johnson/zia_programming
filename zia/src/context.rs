@@ -28,7 +28,7 @@ use crate::{
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
-    lexer::{Category as LexemeCategory, Lexeme},
+    lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
@@ -135,27 +135,24 @@ where
                     }
                 },
                 _ => {
-                    // TODO: refactor LexemeCategory to have a Concept variant which
-                    // has data specifying what kind of concept. This will make this
-                    // if condition a lot cleaner
                     if let Some(
                         lexeme @ Lexeme {
-                            category:
-                                LexemeCategory::AbstractConcept
-                                | LexemeCategory::ConcreteConcept
-                                | LexemeCategory::NewConcept
-                                | LexemeCategory::Variable,
+                            category: LexemeCategory::Concept(_),
                             ..
                         },
                     ) = lexemes.last_mut()
                     {
                         lexeme.text.push(character);
-                        let new_lexeme = self.lexeme_from_symbol(&lexeme.text);
-                        *lexeme = new_lexeme;
-                    } else {
-                        lexemes.push(
-                            self.lexeme_from_symbol(&character.to_string()),
+                        lexeme.category = LexemeCategory::Concept(
+                            self.concept_kind_from_symbol(&lexeme.text),
                         );
+                    } else {
+                        let text = character.to_string();
+                        let concept_kind = self.concept_kind_from_symbol(&text);
+                        lexemes.push(Lexeme {
+                            text,
+                            category: LexemeCategory::Concept(concept_kind),
+                        });
                     }
                 },
             }
@@ -163,32 +160,24 @@ where
         lexemes
     }
 
-    fn lexeme_from_symbol(&self, symbol: &str) -> Lexeme {
+    fn concept_kind_from_symbol(&self, symbol: &str) -> ConceptKind {
         if symbol.starts_with('_') && symbol.ends_with('_') {
-            return Lexeme {
-                text: symbol.into(),
-                category: LexemeCategory::Variable,
-            };
+            return ConceptKind::Variable;
         }
-        let category =
-            match self.snap_shot.concept_from_label(&self.delta, symbol) {
-                None => LexemeCategory::NewConcept,
-                Some(id) => {
-                    if self
-                        .snap_shot
-                        .read_concept(&self.delta, id)
-                        .get_concrete_concept_type()
-                        .is_some()
-                    {
-                        LexemeCategory::ConcreteConcept
-                    } else {
-                        LexemeCategory::AbstractConcept
-                    }
-                },
-            };
-        Lexeme {
-            text: symbol.into(),
-            category,
+        match self.snap_shot.concept_from_label(&self.delta, symbol) {
+            None => ConceptKind::New,
+            Some(id) => {
+                if self
+                    .snap_shot
+                    .read_concept(&self.delta, id)
+                    .get_concrete_concept_type()
+                    .is_some()
+                {
+                    ConceptKind::Concrete
+                } else {
+                    ConceptKind::Abstract
+                }
+            },
         }
     }
 

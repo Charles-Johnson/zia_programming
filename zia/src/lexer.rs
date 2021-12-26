@@ -5,9 +5,7 @@ pub struct Lexeme {
 
 #[derive(Debug, PartialEq)]
 pub enum Category {
-    AbstractConcept,
-    ConcreteConcept,
-    NewConcept,
+    Concept(ConceptKind),
     Whitespace,
     OpeningParenthesis {
         closing_position: Option<usize>,
@@ -15,5 +13,12 @@ pub enum Category {
     ClosingParenthesis {
         opening_position: Option<usize>,
     },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ConceptKind {
+    Concrete,
+    Abstract,
+    New,
     Variable,
 }
