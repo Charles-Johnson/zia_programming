@@ -15,4 +15,5 @@ pub enum Category {
     ClosingParenthesis {
         opening_position: Option<usize>,
     },
+    Variable,
 }

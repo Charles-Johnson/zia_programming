@@ -109,8 +109,5 @@ fn lexer_identifies_variable() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("_x_");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(
-        lexemes.first().unwrap().category,
-        LexemeCategory::Variable
-    );
+    assert_eq!(lexemes.first().unwrap().category, LexemeCategory::Variable);
 }

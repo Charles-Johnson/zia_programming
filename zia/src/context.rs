@@ -135,12 +135,16 @@ where
                     }
                 },
                 _ => {
+                    // TODO: refactor LexemeCategory to have a Concept variant which
+                    // has data specifying what kind of concept. This will make this
+                    // if condition a lot cleaner
                     if let Some(
                         lexeme @ Lexeme {
                             category:
                                 LexemeCategory::AbstractConcept
                                 | LexemeCategory::ConcreteConcept
-                                | LexemeCategory::NewConcept,
+                                | LexemeCategory::NewConcept
+                                | LexemeCategory::Variable,
                             ..
                         },
                     ) = lexemes.last_mut()
@@ -160,6 +164,12 @@ where
     }
 
     fn lexeme_from_symbol(&self, symbol: &str) -> Lexeme {
+        if symbol.starts_with('_') && symbol.ends_with('_') {
+            return Lexeme {
+                text: symbol.into(),
+                category: LexemeCategory::Variable,
+            };
+        }
         let category =
             match self.snap_shot.concept_from_label(&self.delta, symbol) {
                 None => LexemeCategory::NewConcept,
