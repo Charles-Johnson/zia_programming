@@ -72,10 +72,9 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
                 } => Some(C.text_unmatched_parenthesis),
                 _ => None,
             };
-            span![C![colour], lexeme.text]
+            span![C![colour, C.whitespace_pre_wrap], lexeme.text]
         })
         .collect();
-    // TODO check whether word wrapping properties are consistent with textarea
     let syntax_colouring = div![
         &textarea_style,
         &textarea_class,
