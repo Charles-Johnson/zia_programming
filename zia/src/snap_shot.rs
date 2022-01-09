@@ -132,11 +132,8 @@ where
                             },
                         },
                         ConceptDelta::Indirect(delta) => {
-                            if let Some(c) = &mut concept {
-                                c.apply_indirect(delta);
-                            } else {
-                                panic!("Concept doesn't exist");
-                            }
+                            let c = concept.as_mut().expect("Concept doesn't exist");
+                            c.apply_indirect(delta);
                         },
                     }
                 }
