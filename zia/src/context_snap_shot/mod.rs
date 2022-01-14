@@ -19,8 +19,8 @@ mod concept;
 mod concept_id;
 
 use concept::Mixed;
-pub use concept_id::ConceptId;
-use concept_id::{Committed, Uncommitted};
+use concept_id::Committed;
+pub use concept_id::{ConceptId, Uncommitted};
 
 use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType, SpecificPart},
