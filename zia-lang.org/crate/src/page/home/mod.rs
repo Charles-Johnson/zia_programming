@@ -80,6 +80,7 @@ pub fn update(
                         .unwrap();
                     let scroll_height = app.scroll_height();
                     // Prevents latest history from being displayed underneath command input
+                    // Doesn't seem to work in android browsers but works in android PWA
                     app.set_scroll_top(scroll_height);
                 });
         },
