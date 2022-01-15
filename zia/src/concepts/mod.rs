@@ -143,6 +143,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ),
                 })
             } else {
+                // TODO: handle case of variables
                 Err(ZiaError::BadComposition)
             }
         } else {
@@ -207,6 +208,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ),
                 })
             } else {
+                // TODO! handle case of variables
                 Err(ZiaError::BadComposition)
             }
         } else {
