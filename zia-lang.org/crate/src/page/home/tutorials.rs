@@ -15,7 +15,7 @@ pub const TUTORIALS: (Tutorial<5>, Tutorial<0>) = (
                 expected_evaluation: ""
             },
             TutorialStep {
-                command: "let 1 * _x_ -> _x_",
+                command: "let _x_ * 1 -> _x_",
                 explanation: "Need to define the multiplication operator, *. You can start by defining that anything multiplied by one is itself",
                 #[cfg(test)]
                 expected_evaluation: ""
@@ -55,7 +55,7 @@ pub struct TutorialStep {
     pub command: &'static str,
     pub explanation: &'static str,
     #[cfg(test)]
-    expected_evaluation: &'static str
+    expected_evaluation: &'static str,
 }
 
 #[cfg(test)]
