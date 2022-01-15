@@ -28,6 +28,7 @@ use crate::{
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
+    lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
@@ -85,6 +86,99 @@ where
         let mut cont = Self::default();
         cont.setup();
         cont
+    }
+
+    pub fn lex(&self, command: &str) -> Vec<Lexeme> {
+        let mut lexemes = vec![];
+        let mut opening_parentheses_positions = vec![];
+        for character in command.chars() {
+            match character {
+                '(' => {
+                    opening_parentheses_positions.push(lexemes.len());
+                    lexemes.push(Lexeme {
+                        text: "(".into(),
+                        category: LexemeCategory::OpeningParenthesis {
+                            closing_position: None,
+                        },
+                    });
+                },
+                ')' => {
+                    let opening_position = opening_parentheses_positions.pop();
+                    if let Some(op) = opening_position {
+                        let cp = lexemes.len();
+                        if let LexemeCategory::OpeningParenthesis {
+                            closing_position,
+                        } = &mut lexemes[op].category
+                        {
+                            *closing_position = Some(cp);
+                        }
+                    }
+                    lexemes.push(Lexeme {
+                        text: ")".into(),
+                        category: LexemeCategory::ClosingParenthesis {
+                            opening_position,
+                        },
+                    });
+                },
+                _ if character.is_whitespace() => {
+                    if let Some(Lexeme {
+                        category: LexemeCategory::Whitespace,
+                        text,
+                    }) = lexemes.last_mut()
+                    {
+                        text.push(character);
+                    } else {
+                        lexemes.push(Lexeme {
+                            text: character.to_string(),
+                            category: LexemeCategory::Whitespace,
+                        });
+                    }
+                },
+                _ => {
+                    if let Some(
+                        lexeme @ Lexeme {
+                            category: LexemeCategory::Concept(_),
+                            ..
+                        },
+                    ) = lexemes.last_mut()
+                    {
+                        lexeme.text.push(character);
+                        lexeme.category = LexemeCategory::Concept(
+                            self.concept_kind_from_symbol(&lexeme.text),
+                        );
+                    } else {
+                        let text = character.to_string();
+                        let concept_kind = self.concept_kind_from_symbol(&text);
+                        lexemes.push(Lexeme {
+                            text,
+                            category: LexemeCategory::Concept(concept_kind),
+                        });
+                    }
+                },
+            }
+        }
+        lexemes
+    }
+
+    fn concept_kind_from_symbol(&self, symbol: &str) -> ConceptKind {
+        if symbol.starts_with('_') && symbol.ends_with('_') {
+            return ConceptKind::Variable;
+        }
+        match self.snap_shot.concept_from_label(&self.delta, symbol) {
+            None => ConceptKind::New,
+            Some(id) => {
+                if self
+                    .snap_shot
+                    .read_concept(&self.delta, id)
+                    .get_concrete_concept_type()
+                    .is_some()
+                {
+                    ConceptKind::Concrete
+                } else {
+                    ConceptKind::Abstract
+                }
+            },
+        }
     }
 
     pub fn execute(&mut self, command: &str) -> String {

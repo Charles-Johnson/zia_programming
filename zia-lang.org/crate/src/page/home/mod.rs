@@ -18,7 +18,7 @@ pub struct Model {
     history: Vec<InterpreterHistoryEntry>,
     command_input: ElRef<HtmlTextAreaElement>,
     menu: menu::Model,
-    active_tutorial: Option<tutorials::Model>
+    active_tutorial: Option<tutorials::Model>,
 }
 
 impl Default for Model {
@@ -29,7 +29,7 @@ impl Default for Model {
             history: Vec::new(),
             command_input: ElRef::new(),
             menu: menu::Model::default(),
-            active_tutorial: None
+            active_tutorial: None,
         }
     }
 }
@@ -73,25 +73,30 @@ pub fn update(
             model.active_tutorial = Some(tutorials::Model {
                 current_step_index: 0,
                 steps,
-                showing_evaluation: false
+                showing_evaluation: false,
             });
-            orders.after_next_render(|_| GlobalMsg::Home(Msg::SetCommandInput(new_input)));
-        }
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
+        },
         Msg::Submit => {
             let mut input = String::new();
             swap(&mut input, &mut model.input);
             let output = model.context.execute(&input);
-            let new_input = if let Some(tutorial_model) = &mut model.active_tutorial {
-                if output.is_empty() {
-                    tutorial_model.current_step_index += 1;
-                    tutorial_model.steps[tutorial_model.current_step_index].command
+            let new_input =
+                if let Some(tutorial_model) = &mut model.active_tutorial {
+                    if output.is_empty() {
+                        tutorial_model.current_step_index += 1;
+                        tutorial_model.steps[tutorial_model.current_step_index]
+                            .command
+                    } else {
+                        tutorial_model.showing_evaluation = true;
+                        ""
+                    }
                 } else {
-                    tutorial_model.showing_evaluation = true;
                     ""
                 }
-            } else {
-                ""
-            }.into();
+                .into();
             model.history.push(InterpreterHistoryEntry {
                 value: input,
                 kind: EntryKind::Command,
@@ -102,7 +107,9 @@ pub fn update(
             });
             log!(&model.input);
             orders
-                .after_next_render(|_| GlobalMsg::Home(Msg::SetCommandInput(new_input)))
+                .after_next_render(|_| {
+                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
+                })
                 .after_next_render(|_| {
                     let app = window()
                         .document()
@@ -111,6 +118,7 @@ pub fn update(
                         .unwrap();
                     let scroll_height = app.scroll_height();
                     // Prevents latest history from being displayed underneath command input
+                    // Doesn't seem to work in android browsers but works in android PWA
                     app.set_scroll_top(scroll_height);
                 });
         },

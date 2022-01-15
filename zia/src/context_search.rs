@@ -1068,22 +1068,24 @@ where
             self.caches.get_syntax_tree_or_else(concept_id, || {
                 let concept =
                     self.snap_shot.read_concept(self.delta, concept_id);
-                let syntax = if let Some(s) = concept.get_string().map_or_else(
+                let syntax = concept.get_string().map_or_else(
                     || self.snap_shot.get_label(self.delta, concept_id),
                     |s| Some(format_string(&s)),
-                ) {
+                ).map_or_else(|| {
+                    if let Some((left, right)) = concept.get_composition() {
+                        self.combine(&self.to_ast(left), &self.to_ast(right))
+                    } else {
+                        self.snap_shot
+                            .new_syntax_from_concept_that_has_no_label_or_composition(&concept)
+                    }
+                }, |s| {
                     self.snap_shot
                         .bind_concept_to_syntax(
                             self.delta,
                             Syntax::<C>::from(s),
                             concept_id,
                         )
-                } else if let Some((left, right)) = concept.get_composition() {
-                    self.combine(&self.to_ast(left), &self.to_ast(right))
-                } else {
-                    self.snap_shot
-                        .new_syntax_from_concept_that_has_no_label_or_composition(&concept)
-                }.share();
+                }).share();
                 self.caches.insert_syntax_tree(&concept, &syntax);
                 syntax
             })
@@ -1158,23 +1160,31 @@ where
 
     /// Expands syntax by definition of its associated concept.
     pub fn expand(&self, ast: &SharedSyntax<C>) -> SharedSyntax<C> {
-        if let Some(con) = ast.get_concept() {
-            if let Some((left, right)) =
-                self.snap_shot.read_concept(self.delta, con).get_composition()
-            {
-                self.combine(
-                    &self.expand(&self.to_ast(left)),
-                    &self.expand(&self.to_ast(right)),
-                )
-                .share()
-            } else {
-                self.to_ast(con)
-            }
-        } else if let Some((ref left, ref right)) = ast.get_expansion() {
-            self.combine(&self.expand(left), &self.expand(right)).share()
-        } else {
-            ast.clone()
-        }
+        ast.get_concept().map_or_else(
+            || {
+                if let Some((ref left, ref right)) = ast.get_expansion() {
+                    self.combine(&self.expand(left), &self.expand(right))
+                        .share()
+                } else {
+                    ast.clone()
+                }
+            },
+            |con| {
+                if let Some((left, right)) = self
+                    .snap_shot
+                    .read_concept(self.delta, con)
+                    .get_composition()
+                {
+                    self.combine(
+                        &self.expand(&self.to_ast(left)),
+                        &self.expand(&self.to_ast(right)),
+                    )
+                    .share()
+                } else {
+                    self.to_ast(con)
+                }
+            },
+        )
     }
 
     #[allow(clippy::too_many_lines)]

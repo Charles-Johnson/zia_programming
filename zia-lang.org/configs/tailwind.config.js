@@ -45,7 +45,12 @@ module.exports = {
     })(),
     colors: {
 		  primary: "#0B723B",
-      secondary: "#FFFFFF"
+      secondary: "#FFFFFF",
+      variable_concept: "#FFBF00",
+      abstract_concept: "#BF00FF",
+      concrete_concept: "#4000FF",
+      new_concept: "#80FF00",
+      unmatched_parenthesis: "#FF0000"
     },
     opacity: (() => {
         return Object.fromEntries([

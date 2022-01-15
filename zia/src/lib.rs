@@ -155,6 +155,8 @@ mod delta;
 /// The errors that the users could make when making commands.
 mod errors;
 
+mod lexer;
+
 mod map_err_variant;
 
 #[cfg(test)]
@@ -171,3 +173,5 @@ mod snap_shot;
 pub mod variable_mask_list;
 
 pub use crate::errors::ZiaError;
+
+pub use crate::lexer::{Category as LexemeCategory, ConceptKind};

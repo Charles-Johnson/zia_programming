@@ -2757,6 +2757,11 @@ pub struct CssClasses<'a> {
     pub divide_none: &'a str,
     pub divide_primary: &'a str,
     pub divide_secondary: &'a str,
+    pub divide_variable_concept: &'a str,
+    pub divide_abstract_concept: &'a str,
+    pub divide_concrete_concept: &'a str,
+    pub divide_new_concept: &'a str,
+    pub divide_unmatched_parenthesis: &'a str,
     pub divide_opacity_0: &'a str,
     pub divide_opacity_10: &'a str,
     pub divide_opacity_20: &'a str,
@@ -3001,15 +3006,40 @@ pub struct CssClasses<'a> {
     pub border_none: &'a str,
     pub border_primary: &'a str,
     pub border_secondary: &'a str,
+    pub border_variable_concept: &'a str,
+    pub border_abstract_concept: &'a str,
+    pub border_concrete_concept: &'a str,
+    pub border_new_concept: &'a str,
+    pub border_unmatched_parenthesis: &'a str,
     pub group: &'a str,
     pub group_hover__border_primary: &'a str,
     pub group_hover__border_secondary: &'a str,
+    pub group_hover__border_variable_concept: &'a str,
+    pub group_hover__border_abstract_concept: &'a str,
+    pub group_hover__border_concrete_concept: &'a str,
+    pub group_hover__border_new_concept: &'a str,
+    pub group_hover__border_unmatched_parenthesis: &'a str,
     pub focus_within__border_primary: &'a str,
     pub focus_within__border_secondary: &'a str,
+    pub focus_within__border_variable_concept: &'a str,
+    pub focus_within__border_abstract_concept: &'a str,
+    pub focus_within__border_concrete_concept: &'a str,
+    pub focus_within__border_new_concept: &'a str,
+    pub focus_within__border_unmatched_parenthesis: &'a str,
     pub hover__border_primary: &'a str,
     pub hover__border_secondary: &'a str,
+    pub hover__border_variable_concept: &'a str,
+    pub hover__border_abstract_concept: &'a str,
+    pub hover__border_concrete_concept: &'a str,
+    pub hover__border_new_concept: &'a str,
+    pub hover__border_unmatched_parenthesis: &'a str,
     pub focus__border_primary: &'a str,
     pub focus__border_secondary: &'a str,
+    pub focus__border_variable_concept: &'a str,
+    pub focus__border_abstract_concept: &'a str,
+    pub focus__border_concrete_concept: &'a str,
+    pub focus__border_new_concept: &'a str,
+    pub focus__border_unmatched_parenthesis: &'a str,
     pub border_opacity_0: &'a str,
     pub border_opacity_10: &'a str,
     pub border_opacity_20: &'a str,
@@ -3067,14 +3097,39 @@ pub struct CssClasses<'a> {
     pub focus__border_opacity_100: &'a str,
     pub bg_primary: &'a str,
     pub bg_secondary: &'a str,
+    pub bg_variable_concept: &'a str,
+    pub bg_abstract_concept: &'a str,
+    pub bg_concrete_concept: &'a str,
+    pub bg_new_concept: &'a str,
+    pub bg_unmatched_parenthesis: &'a str,
     pub group_hover__bg_primary: &'a str,
     pub group_hover__bg_secondary: &'a str,
+    pub group_hover__bg_variable_concept: &'a str,
+    pub group_hover__bg_abstract_concept: &'a str,
+    pub group_hover__bg_concrete_concept: &'a str,
+    pub group_hover__bg_new_concept: &'a str,
+    pub group_hover__bg_unmatched_parenthesis: &'a str,
     pub focus_within__bg_primary: &'a str,
     pub focus_within__bg_secondary: &'a str,
+    pub focus_within__bg_variable_concept: &'a str,
+    pub focus_within__bg_abstract_concept: &'a str,
+    pub focus_within__bg_concrete_concept: &'a str,
+    pub focus_within__bg_new_concept: &'a str,
+    pub focus_within__bg_unmatched_parenthesis: &'a str,
     pub hover__bg_primary: &'a str,
     pub hover__bg_secondary: &'a str,
+    pub hover__bg_variable_concept: &'a str,
+    pub hover__bg_abstract_concept: &'a str,
+    pub hover__bg_concrete_concept: &'a str,
+    pub hover__bg_new_concept: &'a str,
+    pub hover__bg_unmatched_parenthesis: &'a str,
     pub focus__bg_primary: &'a str,
     pub focus__bg_secondary: &'a str,
+    pub focus__bg_variable_concept: &'a str,
+    pub focus__bg_abstract_concept: &'a str,
+    pub focus__bg_concrete_concept: &'a str,
+    pub focus__bg_new_concept: &'a str,
+    pub focus__bg_unmatched_parenthesis: &'a str,
     pub bg_opacity_0: &'a str,
     pub bg_opacity_10: &'a str,
     pub bg_opacity_20: &'a str,
@@ -3141,22 +3196,67 @@ pub struct CssClasses<'a> {
     pub bg_gradient_to_tl: &'a str,
     pub from_primary: &'a str,
     pub from_secondary: &'a str,
+    pub from_variable_concept: &'a str,
+    pub from_abstract_concept: &'a str,
+    pub from_concrete_concept: &'a str,
+    pub from_new_concept: &'a str,
+    pub from_unmatched_parenthesis: &'a str,
     pub hover__from_primary: &'a str,
     pub hover__from_secondary: &'a str,
+    pub hover__from_variable_concept: &'a str,
+    pub hover__from_abstract_concept: &'a str,
+    pub hover__from_concrete_concept: &'a str,
+    pub hover__from_new_concept: &'a str,
+    pub hover__from_unmatched_parenthesis: &'a str,
     pub focus__from_primary: &'a str,
     pub focus__from_secondary: &'a str,
+    pub focus__from_variable_concept: &'a str,
+    pub focus__from_abstract_concept: &'a str,
+    pub focus__from_concrete_concept: &'a str,
+    pub focus__from_new_concept: &'a str,
+    pub focus__from_unmatched_parenthesis: &'a str,
     pub via_primary: &'a str,
     pub via_secondary: &'a str,
+    pub via_variable_concept: &'a str,
+    pub via_abstract_concept: &'a str,
+    pub via_concrete_concept: &'a str,
+    pub via_new_concept: &'a str,
+    pub via_unmatched_parenthesis: &'a str,
     pub hover__via_primary: &'a str,
     pub hover__via_secondary: &'a str,
+    pub hover__via_variable_concept: &'a str,
+    pub hover__via_abstract_concept: &'a str,
+    pub hover__via_concrete_concept: &'a str,
+    pub hover__via_new_concept: &'a str,
+    pub hover__via_unmatched_parenthesis: &'a str,
     pub focus__via_primary: &'a str,
     pub focus__via_secondary: &'a str,
+    pub focus__via_variable_concept: &'a str,
+    pub focus__via_abstract_concept: &'a str,
+    pub focus__via_concrete_concept: &'a str,
+    pub focus__via_new_concept: &'a str,
+    pub focus__via_unmatched_parenthesis: &'a str,
     pub to_primary: &'a str,
     pub to_secondary: &'a str,
+    pub to_variable_concept: &'a str,
+    pub to_abstract_concept: &'a str,
+    pub to_concrete_concept: &'a str,
+    pub to_new_concept: &'a str,
+    pub to_unmatched_parenthesis: &'a str,
     pub hover__to_primary: &'a str,
     pub hover__to_secondary: &'a str,
+    pub hover__to_variable_concept: &'a str,
+    pub hover__to_abstract_concept: &'a str,
+    pub hover__to_concrete_concept: &'a str,
+    pub hover__to_new_concept: &'a str,
+    pub hover__to_unmatched_parenthesis: &'a str,
     pub focus__to_primary: &'a str,
     pub focus__to_secondary: &'a str,
+    pub focus__to_variable_concept: &'a str,
+    pub focus__to_abstract_concept: &'a str,
+    pub focus__to_concrete_concept: &'a str,
+    pub focus__to_new_concept: &'a str,
+    pub focus__to_unmatched_parenthesis: &'a str,
     pub decoration_slice: &'a str,
     pub decoration_clone: &'a str,
     pub bg_auto: &'a str,
@@ -3551,14 +3651,39 @@ pub struct CssClasses<'a> {
     pub tracking_widest: &'a str,
     pub text_primary: &'a str,
     pub text_secondary: &'a str,
+    pub text_variable_concept: &'a str,
+    pub text_abstract_concept: &'a str,
+    pub text_concrete_concept: &'a str,
+    pub text_new_concept: &'a str,
+    pub text_unmatched_parenthesis: &'a str,
     pub group_hover__text_primary: &'a str,
     pub group_hover__text_secondary: &'a str,
+    pub group_hover__text_variable_concept: &'a str,
+    pub group_hover__text_abstract_concept: &'a str,
+    pub group_hover__text_concrete_concept: &'a str,
+    pub group_hover__text_new_concept: &'a str,
+    pub group_hover__text_unmatched_parenthesis: &'a str,
     pub focus_within__text_primary: &'a str,
     pub focus_within__text_secondary: &'a str,
+    pub focus_within__text_variable_concept: &'a str,
+    pub focus_within__text_abstract_concept: &'a str,
+    pub focus_within__text_concrete_concept: &'a str,
+    pub focus_within__text_new_concept: &'a str,
+    pub focus_within__text_unmatched_parenthesis: &'a str,
     pub hover__text_primary: &'a str,
     pub hover__text_secondary: &'a str,
+    pub hover__text_variable_concept: &'a str,
+    pub hover__text_abstract_concept: &'a str,
+    pub hover__text_concrete_concept: &'a str,
+    pub hover__text_new_concept: &'a str,
+    pub hover__text_unmatched_parenthesis: &'a str,
     pub focus__text_primary: &'a str,
     pub focus__text_secondary: &'a str,
+    pub focus__text_variable_concept: &'a str,
+    pub focus__text_abstract_concept: &'a str,
+    pub focus__text_concrete_concept: &'a str,
+    pub focus__text_new_concept: &'a str,
+    pub focus__text_unmatched_parenthesis: &'a str,
     pub text_opacity_0: &'a str,
     pub text_opacity_10: &'a str,
     pub text_opacity_20: &'a str,
@@ -3633,8 +3758,18 @@ pub struct CssClasses<'a> {
     pub subpixel_antialiased: &'a str,
     pub placeholder_primary: &'a str,
     pub placeholder_secondary: &'a str,
+    pub placeholder_variable_concept: &'a str,
+    pub placeholder_abstract_concept: &'a str,
+    pub placeholder_concrete_concept: &'a str,
+    pub placeholder_new_concept: &'a str,
+    pub placeholder_unmatched_parenthesis: &'a str,
     pub focus__placeholder_primary: &'a str,
     pub focus__placeholder_secondary: &'a str,
+    pub focus__placeholder_variable_concept: &'a str,
+    pub focus__placeholder_abstract_concept: &'a str,
+    pub focus__placeholder_concrete_concept: &'a str,
+    pub focus__placeholder_new_concept: &'a str,
+    pub focus__placeholder_unmatched_parenthesis: &'a str,
     pub placeholder_opacity_0: &'a str,
     pub placeholder_opacity_10: &'a str,
     pub placeholder_opacity_20: &'a str,
@@ -3826,10 +3961,25 @@ pub struct CssClasses<'a> {
     pub focus__ring_inset: &'a str,
     pub ring_primary: &'a str,
     pub ring_secondary: &'a str,
+    pub ring_variable_concept: &'a str,
+    pub ring_abstract_concept: &'a str,
+    pub ring_concrete_concept: &'a str,
+    pub ring_new_concept: &'a str,
+    pub ring_unmatched_parenthesis: &'a str,
     pub focus_within__ring_primary: &'a str,
     pub focus_within__ring_secondary: &'a str,
+    pub focus_within__ring_variable_concept: &'a str,
+    pub focus_within__ring_abstract_concept: &'a str,
+    pub focus_within__ring_concrete_concept: &'a str,
+    pub focus_within__ring_new_concept: &'a str,
+    pub focus_within__ring_unmatched_parenthesis: &'a str,
     pub focus__ring_primary: &'a str,
     pub focus__ring_secondary: &'a str,
+    pub focus__ring_variable_concept: &'a str,
+    pub focus__ring_abstract_concept: &'a str,
+    pub focus__ring_concrete_concept: &'a str,
+    pub focus__ring_new_concept: &'a str,
+    pub focus__ring_unmatched_parenthesis: &'a str,
     pub ring_opacity_0: &'a str,
     pub ring_opacity_10: &'a str,
     pub ring_opacity_20: &'a str,
@@ -3880,10 +4030,25 @@ pub struct CssClasses<'a> {
     pub focus__ring_offset_8: &'a str,
     pub ring_offset_primary: &'a str,
     pub ring_offset_secondary: &'a str,
+    pub ring_offset_variable_concept: &'a str,
+    pub ring_offset_abstract_concept: &'a str,
+    pub ring_offset_concrete_concept: &'a str,
+    pub ring_offset_new_concept: &'a str,
+    pub ring_offset_unmatched_parenthesis: &'a str,
     pub focus_within__ring_offset_primary: &'a str,
     pub focus_within__ring_offset_secondary: &'a str,
+    pub focus_within__ring_offset_variable_concept: &'a str,
+    pub focus_within__ring_offset_abstract_concept: &'a str,
+    pub focus_within__ring_offset_concrete_concept: &'a str,
+    pub focus_within__ring_offset_new_concept: &'a str,
+    pub focus_within__ring_offset_unmatched_parenthesis: &'a str,
     pub focus__ring_offset_primary: &'a str,
     pub focus__ring_offset_secondary: &'a str,
+    pub focus__ring_offset_variable_concept: &'a str,
+    pub focus__ring_offset_abstract_concept: &'a str,
+    pub focus__ring_offset_concrete_concept: &'a str,
+    pub focus__ring_offset_new_concept: &'a str,
+    pub focus__ring_offset_unmatched_parenthesis: &'a str,
     pub filter: &'a str,
     pub filter_none: &'a str,
     pub blur_0: &'a str,
@@ -6788,6 +6953,11 @@ pub struct CssClasses<'a> {
     pub sm__divide_none: &'a str,
     pub sm__divide_primary: &'a str,
     pub sm__divide_secondary: &'a str,
+    pub sm__divide_variable_concept: &'a str,
+    pub sm__divide_abstract_concept: &'a str,
+    pub sm__divide_concrete_concept: &'a str,
+    pub sm__divide_new_concept: &'a str,
+    pub sm__divide_unmatched_parenthesis: &'a str,
     pub sm__divide_opacity_0: &'a str,
     pub sm__divide_opacity_10: &'a str,
     pub sm__divide_opacity_20: &'a str,
@@ -7032,14 +7202,39 @@ pub struct CssClasses<'a> {
     pub sm__border_none: &'a str,
     pub sm__border_primary: &'a str,
     pub sm__border_secondary: &'a str,
+    pub sm__border_variable_concept: &'a str,
+    pub sm__border_abstract_concept: &'a str,
+    pub sm__border_concrete_concept: &'a str,
+    pub sm__border_new_concept: &'a str,
+    pub sm__border_unmatched_parenthesis: &'a str,
     pub sm__group_hover__border_primary: &'a str,
     pub sm__group_hover__border_secondary: &'a str,
+    pub sm__group_hover__border_variable_concept: &'a str,
+    pub sm__group_hover__border_abstract_concept: &'a str,
+    pub sm__group_hover__border_concrete_concept: &'a str,
+    pub sm__group_hover__border_new_concept: &'a str,
+    pub sm__group_hover__border_unmatched_parenthesis: &'a str,
     pub sm__focus_within__border_primary: &'a str,
     pub sm__focus_within__border_secondary: &'a str,
+    pub sm__focus_within__border_variable_concept: &'a str,
+    pub sm__focus_within__border_abstract_concept: &'a str,
+    pub sm__focus_within__border_concrete_concept: &'a str,
+    pub sm__focus_within__border_new_concept: &'a str,
+    pub sm__focus_within__border_unmatched_parenthesis: &'a str,
     pub sm__hover__border_primary: &'a str,
     pub sm__hover__border_secondary: &'a str,
+    pub sm__hover__border_variable_concept: &'a str,
+    pub sm__hover__border_abstract_concept: &'a str,
+    pub sm__hover__border_concrete_concept: &'a str,
+    pub sm__hover__border_new_concept: &'a str,
+    pub sm__hover__border_unmatched_parenthesis: &'a str,
     pub sm__focus__border_primary: &'a str,
     pub sm__focus__border_secondary: &'a str,
+    pub sm__focus__border_variable_concept: &'a str,
+    pub sm__focus__border_abstract_concept: &'a str,
+    pub sm__focus__border_concrete_concept: &'a str,
+    pub sm__focus__border_new_concept: &'a str,
+    pub sm__focus__border_unmatched_parenthesis: &'a str,
     pub sm__border_opacity_0: &'a str,
     pub sm__border_opacity_10: &'a str,
     pub sm__border_opacity_20: &'a str,
@@ -7097,14 +7292,39 @@ pub struct CssClasses<'a> {
     pub sm__focus__border_opacity_100: &'a str,
     pub sm__bg_primary: &'a str,
     pub sm__bg_secondary: &'a str,
+    pub sm__bg_variable_concept: &'a str,
+    pub sm__bg_abstract_concept: &'a str,
+    pub sm__bg_concrete_concept: &'a str,
+    pub sm__bg_new_concept: &'a str,
+    pub sm__bg_unmatched_parenthesis: &'a str,
     pub sm__group_hover__bg_primary: &'a str,
     pub sm__group_hover__bg_secondary: &'a str,
+    pub sm__group_hover__bg_variable_concept: &'a str,
+    pub sm__group_hover__bg_abstract_concept: &'a str,
+    pub sm__group_hover__bg_concrete_concept: &'a str,
+    pub sm__group_hover__bg_new_concept: &'a str,
+    pub sm__group_hover__bg_unmatched_parenthesis: &'a str,
     pub sm__focus_within__bg_primary: &'a str,
     pub sm__focus_within__bg_secondary: &'a str,
+    pub sm__focus_within__bg_variable_concept: &'a str,
+    pub sm__focus_within__bg_abstract_concept: &'a str,
+    pub sm__focus_within__bg_concrete_concept: &'a str,
+    pub sm__focus_within__bg_new_concept: &'a str,
+    pub sm__focus_within__bg_unmatched_parenthesis: &'a str,
     pub sm__hover__bg_primary: &'a str,
     pub sm__hover__bg_secondary: &'a str,
+    pub sm__hover__bg_variable_concept: &'a str,
+    pub sm__hover__bg_abstract_concept: &'a str,
+    pub sm__hover__bg_concrete_concept: &'a str,
+    pub sm__hover__bg_new_concept: &'a str,
+    pub sm__hover__bg_unmatched_parenthesis: &'a str,
     pub sm__focus__bg_primary: &'a str,
     pub sm__focus__bg_secondary: &'a str,
+    pub sm__focus__bg_variable_concept: &'a str,
+    pub sm__focus__bg_abstract_concept: &'a str,
+    pub sm__focus__bg_concrete_concept: &'a str,
+    pub sm__focus__bg_new_concept: &'a str,
+    pub sm__focus__bg_unmatched_parenthesis: &'a str,
     pub sm__bg_opacity_0: &'a str,
     pub sm__bg_opacity_10: &'a str,
     pub sm__bg_opacity_20: &'a str,
@@ -7171,22 +7391,67 @@ pub struct CssClasses<'a> {
     pub sm__bg_gradient_to_tl: &'a str,
     pub sm__from_primary: &'a str,
     pub sm__from_secondary: &'a str,
+    pub sm__from_variable_concept: &'a str,
+    pub sm__from_abstract_concept: &'a str,
+    pub sm__from_concrete_concept: &'a str,
+    pub sm__from_new_concept: &'a str,
+    pub sm__from_unmatched_parenthesis: &'a str,
     pub sm__hover__from_primary: &'a str,
     pub sm__hover__from_secondary: &'a str,
+    pub sm__hover__from_variable_concept: &'a str,
+    pub sm__hover__from_abstract_concept: &'a str,
+    pub sm__hover__from_concrete_concept: &'a str,
+    pub sm__hover__from_new_concept: &'a str,
+    pub sm__hover__from_unmatched_parenthesis: &'a str,
     pub sm__focus__from_primary: &'a str,
     pub sm__focus__from_secondary: &'a str,
+    pub sm__focus__from_variable_concept: &'a str,
+    pub sm__focus__from_abstract_concept: &'a str,
+    pub sm__focus__from_concrete_concept: &'a str,
+    pub sm__focus__from_new_concept: &'a str,
+    pub sm__focus__from_unmatched_parenthesis: &'a str,
     pub sm__via_primary: &'a str,
     pub sm__via_secondary: &'a str,
+    pub sm__via_variable_concept: &'a str,
+    pub sm__via_abstract_concept: &'a str,
+    pub sm__via_concrete_concept: &'a str,
+    pub sm__via_new_concept: &'a str,
+    pub sm__via_unmatched_parenthesis: &'a str,
     pub sm__hover__via_primary: &'a str,
     pub sm__hover__via_secondary: &'a str,
+    pub sm__hover__via_variable_concept: &'a str,
+    pub sm__hover__via_abstract_concept: &'a str,
+    pub sm__hover__via_concrete_concept: &'a str,
+    pub sm__hover__via_new_concept: &'a str,
+    pub sm__hover__via_unmatched_parenthesis: &'a str,
     pub sm__focus__via_primary: &'a str,
     pub sm__focus__via_secondary: &'a str,
+    pub sm__focus__via_variable_concept: &'a str,
+    pub sm__focus__via_abstract_concept: &'a str,
+    pub sm__focus__via_concrete_concept: &'a str,
+    pub sm__focus__via_new_concept: &'a str,
+    pub sm__focus__via_unmatched_parenthesis: &'a str,
     pub sm__to_primary: &'a str,
     pub sm__to_secondary: &'a str,
+    pub sm__to_variable_concept: &'a str,
+    pub sm__to_abstract_concept: &'a str,
+    pub sm__to_concrete_concept: &'a str,
+    pub sm__to_new_concept: &'a str,
+    pub sm__to_unmatched_parenthesis: &'a str,
     pub sm__hover__to_primary: &'a str,
     pub sm__hover__to_secondary: &'a str,
+    pub sm__hover__to_variable_concept: &'a str,
+    pub sm__hover__to_abstract_concept: &'a str,
+    pub sm__hover__to_concrete_concept: &'a str,
+    pub sm__hover__to_new_concept: &'a str,
+    pub sm__hover__to_unmatched_parenthesis: &'a str,
     pub sm__focus__to_primary: &'a str,
     pub sm__focus__to_secondary: &'a str,
+    pub sm__focus__to_variable_concept: &'a str,
+    pub sm__focus__to_abstract_concept: &'a str,
+    pub sm__focus__to_concrete_concept: &'a str,
+    pub sm__focus__to_new_concept: &'a str,
+    pub sm__focus__to_unmatched_parenthesis: &'a str,
     pub sm__decoration_slice: &'a str,
     pub sm__decoration_clone: &'a str,
     pub sm__bg_auto: &'a str,
@@ -7581,14 +7846,39 @@ pub struct CssClasses<'a> {
     pub sm__tracking_widest: &'a str,
     pub sm__text_primary: &'a str,
     pub sm__text_secondary: &'a str,
+    pub sm__text_variable_concept: &'a str,
+    pub sm__text_abstract_concept: &'a str,
+    pub sm__text_concrete_concept: &'a str,
+    pub sm__text_new_concept: &'a str,
+    pub sm__text_unmatched_parenthesis: &'a str,
     pub sm__group_hover__text_primary: &'a str,
     pub sm__group_hover__text_secondary: &'a str,
+    pub sm__group_hover__text_variable_concept: &'a str,
+    pub sm__group_hover__text_abstract_concept: &'a str,
+    pub sm__group_hover__text_concrete_concept: &'a str,
+    pub sm__group_hover__text_new_concept: &'a str,
+    pub sm__group_hover__text_unmatched_parenthesis: &'a str,
     pub sm__focus_within__text_primary: &'a str,
     pub sm__focus_within__text_secondary: &'a str,
+    pub sm__focus_within__text_variable_concept: &'a str,
+    pub sm__focus_within__text_abstract_concept: &'a str,
+    pub sm__focus_within__text_concrete_concept: &'a str,
+    pub sm__focus_within__text_new_concept: &'a str,
+    pub sm__focus_within__text_unmatched_parenthesis: &'a str,
     pub sm__hover__text_primary: &'a str,
     pub sm__hover__text_secondary: &'a str,
+    pub sm__hover__text_variable_concept: &'a str,
+    pub sm__hover__text_abstract_concept: &'a str,
+    pub sm__hover__text_concrete_concept: &'a str,
+    pub sm__hover__text_new_concept: &'a str,
+    pub sm__hover__text_unmatched_parenthesis: &'a str,
     pub sm__focus__text_primary: &'a str,
     pub sm__focus__text_secondary: &'a str,
+    pub sm__focus__text_variable_concept: &'a str,
+    pub sm__focus__text_abstract_concept: &'a str,
+    pub sm__focus__text_concrete_concept: &'a str,
+    pub sm__focus__text_new_concept: &'a str,
+    pub sm__focus__text_unmatched_parenthesis: &'a str,
     pub sm__text_opacity_0: &'a str,
     pub sm__text_opacity_10: &'a str,
     pub sm__text_opacity_20: &'a str,
@@ -7663,8 +7953,18 @@ pub struct CssClasses<'a> {
     pub sm__subpixel_antialiased: &'a str,
     pub sm__placeholder_primary: &'a str,
     pub sm__placeholder_secondary: &'a str,
+    pub sm__placeholder_variable_concept: &'a str,
+    pub sm__placeholder_abstract_concept: &'a str,
+    pub sm__placeholder_concrete_concept: &'a str,
+    pub sm__placeholder_new_concept: &'a str,
+    pub sm__placeholder_unmatched_parenthesis: &'a str,
     pub sm__focus__placeholder_primary: &'a str,
     pub sm__focus__placeholder_secondary: &'a str,
+    pub sm__focus__placeholder_variable_concept: &'a str,
+    pub sm__focus__placeholder_abstract_concept: &'a str,
+    pub sm__focus__placeholder_concrete_concept: &'a str,
+    pub sm__focus__placeholder_new_concept: &'a str,
+    pub sm__focus__placeholder_unmatched_parenthesis: &'a str,
     pub sm__placeholder_opacity_0: &'a str,
     pub sm__placeholder_opacity_10: &'a str,
     pub sm__placeholder_opacity_20: &'a str,
@@ -7856,10 +8156,25 @@ pub struct CssClasses<'a> {
     pub sm__focus__ring_inset: &'a str,
     pub sm__ring_primary: &'a str,
     pub sm__ring_secondary: &'a str,
+    pub sm__ring_variable_concept: &'a str,
+    pub sm__ring_abstract_concept: &'a str,
+    pub sm__ring_concrete_concept: &'a str,
+    pub sm__ring_new_concept: &'a str,
+    pub sm__ring_unmatched_parenthesis: &'a str,
     pub sm__focus_within__ring_primary: &'a str,
     pub sm__focus_within__ring_secondary: &'a str,
+    pub sm__focus_within__ring_variable_concept: &'a str,
+    pub sm__focus_within__ring_abstract_concept: &'a str,
+    pub sm__focus_within__ring_concrete_concept: &'a str,
+    pub sm__focus_within__ring_new_concept: &'a str,
+    pub sm__focus_within__ring_unmatched_parenthesis: &'a str,
     pub sm__focus__ring_primary: &'a str,
     pub sm__focus__ring_secondary: &'a str,
+    pub sm__focus__ring_variable_concept: &'a str,
+    pub sm__focus__ring_abstract_concept: &'a str,
+    pub sm__focus__ring_concrete_concept: &'a str,
+    pub sm__focus__ring_new_concept: &'a str,
+    pub sm__focus__ring_unmatched_parenthesis: &'a str,
     pub sm__ring_opacity_0: &'a str,
     pub sm__ring_opacity_10: &'a str,
     pub sm__ring_opacity_20: &'a str,
@@ -7910,10 +8225,25 @@ pub struct CssClasses<'a> {
     pub sm__focus__ring_offset_8: &'a str,
     pub sm__ring_offset_primary: &'a str,
     pub sm__ring_offset_secondary: &'a str,
+    pub sm__ring_offset_variable_concept: &'a str,
+    pub sm__ring_offset_abstract_concept: &'a str,
+    pub sm__ring_offset_concrete_concept: &'a str,
+    pub sm__ring_offset_new_concept: &'a str,
+    pub sm__ring_offset_unmatched_parenthesis: &'a str,
     pub sm__focus_within__ring_offset_primary: &'a str,
     pub sm__focus_within__ring_offset_secondary: &'a str,
+    pub sm__focus_within__ring_offset_variable_concept: &'a str,
+    pub sm__focus_within__ring_offset_abstract_concept: &'a str,
+    pub sm__focus_within__ring_offset_concrete_concept: &'a str,
+    pub sm__focus_within__ring_offset_new_concept: &'a str,
+    pub sm__focus_within__ring_offset_unmatched_parenthesis: &'a str,
     pub sm__focus__ring_offset_primary: &'a str,
     pub sm__focus__ring_offset_secondary: &'a str,
+    pub sm__focus__ring_offset_variable_concept: &'a str,
+    pub sm__focus__ring_offset_abstract_concept: &'a str,
+    pub sm__focus__ring_offset_concrete_concept: &'a str,
+    pub sm__focus__ring_offset_new_concept: &'a str,
+    pub sm__focus__ring_offset_unmatched_parenthesis: &'a str,
     pub sm__filter: &'a str,
     pub sm__filter_none: &'a str,
     pub sm__blur_0: &'a str,
@@ -10815,6 +11145,11 @@ pub struct CssClasses<'a> {
     pub md__divide_none: &'a str,
     pub md__divide_primary: &'a str,
     pub md__divide_secondary: &'a str,
+    pub md__divide_variable_concept: &'a str,
+    pub md__divide_abstract_concept: &'a str,
+    pub md__divide_concrete_concept: &'a str,
+    pub md__divide_new_concept: &'a str,
+    pub md__divide_unmatched_parenthesis: &'a str,
     pub md__divide_opacity_0: &'a str,
     pub md__divide_opacity_10: &'a str,
     pub md__divide_opacity_20: &'a str,
@@ -11059,14 +11394,39 @@ pub struct CssClasses<'a> {
     pub md__border_none: &'a str,
     pub md__border_primary: &'a str,
     pub md__border_secondary: &'a str,
+    pub md__border_variable_concept: &'a str,
+    pub md__border_abstract_concept: &'a str,
+    pub md__border_concrete_concept: &'a str,
+    pub md__border_new_concept: &'a str,
+    pub md__border_unmatched_parenthesis: &'a str,
     pub md__group_hover__border_primary: &'a str,
     pub md__group_hover__border_secondary: &'a str,
+    pub md__group_hover__border_variable_concept: &'a str,
+    pub md__group_hover__border_abstract_concept: &'a str,
+    pub md__group_hover__border_concrete_concept: &'a str,
+    pub md__group_hover__border_new_concept: &'a str,
+    pub md__group_hover__border_unmatched_parenthesis: &'a str,
     pub md__focus_within__border_primary: &'a str,
     pub md__focus_within__border_secondary: &'a str,
+    pub md__focus_within__border_variable_concept: &'a str,
+    pub md__focus_within__border_abstract_concept: &'a str,
+    pub md__focus_within__border_concrete_concept: &'a str,
+    pub md__focus_within__border_new_concept: &'a str,
+    pub md__focus_within__border_unmatched_parenthesis: &'a str,
     pub md__hover__border_primary: &'a str,
     pub md__hover__border_secondary: &'a str,
+    pub md__hover__border_variable_concept: &'a str,
+    pub md__hover__border_abstract_concept: &'a str,
+    pub md__hover__border_concrete_concept: &'a str,
+    pub md__hover__border_new_concept: &'a str,
+    pub md__hover__border_unmatched_parenthesis: &'a str,
     pub md__focus__border_primary: &'a str,
     pub md__focus__border_secondary: &'a str,
+    pub md__focus__border_variable_concept: &'a str,
+    pub md__focus__border_abstract_concept: &'a str,
+    pub md__focus__border_concrete_concept: &'a str,
+    pub md__focus__border_new_concept: &'a str,
+    pub md__focus__border_unmatched_parenthesis: &'a str,
     pub md__border_opacity_0: &'a str,
     pub md__border_opacity_10: &'a str,
     pub md__border_opacity_20: &'a str,
@@ -11124,14 +11484,39 @@ pub struct CssClasses<'a> {
     pub md__focus__border_opacity_100: &'a str,
     pub md__bg_primary: &'a str,
     pub md__bg_secondary: &'a str,
+    pub md__bg_variable_concept: &'a str,
+    pub md__bg_abstract_concept: &'a str,
+    pub md__bg_concrete_concept: &'a str,
+    pub md__bg_new_concept: &'a str,
+    pub md__bg_unmatched_parenthesis: &'a str,
     pub md__group_hover__bg_primary: &'a str,
     pub md__group_hover__bg_secondary: &'a str,
+    pub md__group_hover__bg_variable_concept: &'a str,
+    pub md__group_hover__bg_abstract_concept: &'a str,
+    pub md__group_hover__bg_concrete_concept: &'a str,
+    pub md__group_hover__bg_new_concept: &'a str,
+    pub md__group_hover__bg_unmatched_parenthesis: &'a str,
     pub md__focus_within__bg_primary: &'a str,
     pub md__focus_within__bg_secondary: &'a str,
+    pub md__focus_within__bg_variable_concept: &'a str,
+    pub md__focus_within__bg_abstract_concept: &'a str,
+    pub md__focus_within__bg_concrete_concept: &'a str,
+    pub md__focus_within__bg_new_concept: &'a str,
+    pub md__focus_within__bg_unmatched_parenthesis: &'a str,
     pub md__hover__bg_primary: &'a str,
     pub md__hover__bg_secondary: &'a str,
+    pub md__hover__bg_variable_concept: &'a str,
+    pub md__hover__bg_abstract_concept: &'a str,
+    pub md__hover__bg_concrete_concept: &'a str,
+    pub md__hover__bg_new_concept: &'a str,
+    pub md__hover__bg_unmatched_parenthesis: &'a str,
     pub md__focus__bg_primary: &'a str,
     pub md__focus__bg_secondary: &'a str,
+    pub md__focus__bg_variable_concept: &'a str,
+    pub md__focus__bg_abstract_concept: &'a str,
+    pub md__focus__bg_concrete_concept: &'a str,
+    pub md__focus__bg_new_concept: &'a str,
+    pub md__focus__bg_unmatched_parenthesis: &'a str,
     pub md__bg_opacity_0: &'a str,
     pub md__bg_opacity_10: &'a str,
     pub md__bg_opacity_20: &'a str,
@@ -11198,22 +11583,67 @@ pub struct CssClasses<'a> {
     pub md__bg_gradient_to_tl: &'a str,
     pub md__from_primary: &'a str,
     pub md__from_secondary: &'a str,
+    pub md__from_variable_concept: &'a str,
+    pub md__from_abstract_concept: &'a str,
+    pub md__from_concrete_concept: &'a str,
+    pub md__from_new_concept: &'a str,
+    pub md__from_unmatched_parenthesis: &'a str,
     pub md__hover__from_primary: &'a str,
     pub md__hover__from_secondary: &'a str,
+    pub md__hover__from_variable_concept: &'a str,
+    pub md__hover__from_abstract_concept: &'a str,
+    pub md__hover__from_concrete_concept: &'a str,
+    pub md__hover__from_new_concept: &'a str,
+    pub md__hover__from_unmatched_parenthesis: &'a str,
     pub md__focus__from_primary: &'a str,
     pub md__focus__from_secondary: &'a str,
+    pub md__focus__from_variable_concept: &'a str,
+    pub md__focus__from_abstract_concept: &'a str,
+    pub md__focus__from_concrete_concept: &'a str,
+    pub md__focus__from_new_concept: &'a str,
+    pub md__focus__from_unmatched_parenthesis: &'a str,
     pub md__via_primary: &'a str,
     pub md__via_secondary: &'a str,
+    pub md__via_variable_concept: &'a str,
+    pub md__via_abstract_concept: &'a str,
+    pub md__via_concrete_concept: &'a str,
+    pub md__via_new_concept: &'a str,
+    pub md__via_unmatched_parenthesis: &'a str,
     pub md__hover__via_primary: &'a str,
     pub md__hover__via_secondary: &'a str,
+    pub md__hover__via_variable_concept: &'a str,
+    pub md__hover__via_abstract_concept: &'a str,
+    pub md__hover__via_concrete_concept: &'a str,
+    pub md__hover__via_new_concept: &'a str,
+    pub md__hover__via_unmatched_parenthesis: &'a str,
     pub md__focus__via_primary: &'a str,
     pub md__focus__via_secondary: &'a str,
+    pub md__focus__via_variable_concept: &'a str,
+    pub md__focus__via_abstract_concept: &'a str,
+    pub md__focus__via_concrete_concept: &'a str,
+    pub md__focus__via_new_concept: &'a str,
+    pub md__focus__via_unmatched_parenthesis: &'a str,
     pub md__to_primary: &'a str,
     pub md__to_secondary: &'a str,
+    pub md__to_variable_concept: &'a str,
+    pub md__to_abstract_concept: &'a str,
+    pub md__to_concrete_concept: &'a str,
+    pub md__to_new_concept: &'a str,
+    pub md__to_unmatched_parenthesis: &'a str,
     pub md__hover__to_primary: &'a str,
     pub md__hover__to_secondary: &'a str,
+    pub md__hover__to_variable_concept: &'a str,
+    pub md__hover__to_abstract_concept: &'a str,
+    pub md__hover__to_concrete_concept: &'a str,
+    pub md__hover__to_new_concept: &'a str,
+    pub md__hover__to_unmatched_parenthesis: &'a str,
     pub md__focus__to_primary: &'a str,
     pub md__focus__to_secondary: &'a str,
+    pub md__focus__to_variable_concept: &'a str,
+    pub md__focus__to_abstract_concept: &'a str,
+    pub md__focus__to_concrete_concept: &'a str,
+    pub md__focus__to_new_concept: &'a str,
+    pub md__focus__to_unmatched_parenthesis: &'a str,
     pub md__decoration_slice: &'a str,
     pub md__decoration_clone: &'a str,
     pub md__bg_auto: &'a str,
@@ -11608,14 +12038,39 @@ pub struct CssClasses<'a> {
     pub md__tracking_widest: &'a str,
     pub md__text_primary: &'a str,
     pub md__text_secondary: &'a str,
+    pub md__text_variable_concept: &'a str,
+    pub md__text_abstract_concept: &'a str,
+    pub md__text_concrete_concept: &'a str,
+    pub md__text_new_concept: &'a str,
+    pub md__text_unmatched_parenthesis: &'a str,
     pub md__group_hover__text_primary: &'a str,
     pub md__group_hover__text_secondary: &'a str,
+    pub md__group_hover__text_variable_concept: &'a str,
+    pub md__group_hover__text_abstract_concept: &'a str,
+    pub md__group_hover__text_concrete_concept: &'a str,
+    pub md__group_hover__text_new_concept: &'a str,
+    pub md__group_hover__text_unmatched_parenthesis: &'a str,
     pub md__focus_within__text_primary: &'a str,
     pub md__focus_within__text_secondary: &'a str,
+    pub md__focus_within__text_variable_concept: &'a str,
+    pub md__focus_within__text_abstract_concept: &'a str,
+    pub md__focus_within__text_concrete_concept: &'a str,
+    pub md__focus_within__text_new_concept: &'a str,
+    pub md__focus_within__text_unmatched_parenthesis: &'a str,
     pub md__hover__text_primary: &'a str,
     pub md__hover__text_secondary: &'a str,
+    pub md__hover__text_variable_concept: &'a str,
+    pub md__hover__text_abstract_concept: &'a str,
+    pub md__hover__text_concrete_concept: &'a str,
+    pub md__hover__text_new_concept: &'a str,
+    pub md__hover__text_unmatched_parenthesis: &'a str,
     pub md__focus__text_primary: &'a str,
     pub md__focus__text_secondary: &'a str,
+    pub md__focus__text_variable_concept: &'a str,
+    pub md__focus__text_abstract_concept: &'a str,
+    pub md__focus__text_concrete_concept: &'a str,
+    pub md__focus__text_new_concept: &'a str,
+    pub md__focus__text_unmatched_parenthesis: &'a str,
     pub md__text_opacity_0: &'a str,
     pub md__text_opacity_10: &'a str,
     pub md__text_opacity_20: &'a str,
@@ -11690,8 +12145,18 @@ pub struct CssClasses<'a> {
     pub md__subpixel_antialiased: &'a str,
     pub md__placeholder_primary: &'a str,
     pub md__placeholder_secondary: &'a str,
+    pub md__placeholder_variable_concept: &'a str,
+    pub md__placeholder_abstract_concept: &'a str,
+    pub md__placeholder_concrete_concept: &'a str,
+    pub md__placeholder_new_concept: &'a str,
+    pub md__placeholder_unmatched_parenthesis: &'a str,
     pub md__focus__placeholder_primary: &'a str,
     pub md__focus__placeholder_secondary: &'a str,
+    pub md__focus__placeholder_variable_concept: &'a str,
+    pub md__focus__placeholder_abstract_concept: &'a str,
+    pub md__focus__placeholder_concrete_concept: &'a str,
+    pub md__focus__placeholder_new_concept: &'a str,
+    pub md__focus__placeholder_unmatched_parenthesis: &'a str,
     pub md__placeholder_opacity_0: &'a str,
     pub md__placeholder_opacity_10: &'a str,
     pub md__placeholder_opacity_20: &'a str,
@@ -11883,10 +12348,25 @@ pub struct CssClasses<'a> {
     pub md__focus__ring_inset: &'a str,
     pub md__ring_primary: &'a str,
     pub md__ring_secondary: &'a str,
+    pub md__ring_variable_concept: &'a str,
+    pub md__ring_abstract_concept: &'a str,
+    pub md__ring_concrete_concept: &'a str,
+    pub md__ring_new_concept: &'a str,
+    pub md__ring_unmatched_parenthesis: &'a str,
     pub md__focus_within__ring_primary: &'a str,
     pub md__focus_within__ring_secondary: &'a str,
+    pub md__focus_within__ring_variable_concept: &'a str,
+    pub md__focus_within__ring_abstract_concept: &'a str,
+    pub md__focus_within__ring_concrete_concept: &'a str,
+    pub md__focus_within__ring_new_concept: &'a str,
+    pub md__focus_within__ring_unmatched_parenthesis: &'a str,
     pub md__focus__ring_primary: &'a str,
     pub md__focus__ring_secondary: &'a str,
+    pub md__focus__ring_variable_concept: &'a str,
+    pub md__focus__ring_abstract_concept: &'a str,
+    pub md__focus__ring_concrete_concept: &'a str,
+    pub md__focus__ring_new_concept: &'a str,
+    pub md__focus__ring_unmatched_parenthesis: &'a str,
     pub md__ring_opacity_0: &'a str,
     pub md__ring_opacity_10: &'a str,
     pub md__ring_opacity_20: &'a str,
@@ -11937,10 +12417,25 @@ pub struct CssClasses<'a> {
     pub md__focus__ring_offset_8: &'a str,
     pub md__ring_offset_primary: &'a str,
     pub md__ring_offset_secondary: &'a str,
+    pub md__ring_offset_variable_concept: &'a str,
+    pub md__ring_offset_abstract_concept: &'a str,
+    pub md__ring_offset_concrete_concept: &'a str,
+    pub md__ring_offset_new_concept: &'a str,
+    pub md__ring_offset_unmatched_parenthesis: &'a str,
     pub md__focus_within__ring_offset_primary: &'a str,
     pub md__focus_within__ring_offset_secondary: &'a str,
+    pub md__focus_within__ring_offset_variable_concept: &'a str,
+    pub md__focus_within__ring_offset_abstract_concept: &'a str,
+    pub md__focus_within__ring_offset_concrete_concept: &'a str,
+    pub md__focus_within__ring_offset_new_concept: &'a str,
+    pub md__focus_within__ring_offset_unmatched_parenthesis: &'a str,
     pub md__focus__ring_offset_primary: &'a str,
     pub md__focus__ring_offset_secondary: &'a str,
+    pub md__focus__ring_offset_variable_concept: &'a str,
+    pub md__focus__ring_offset_abstract_concept: &'a str,
+    pub md__focus__ring_offset_concrete_concept: &'a str,
+    pub md__focus__ring_offset_new_concept: &'a str,
+    pub md__focus__ring_offset_unmatched_parenthesis: &'a str,
     pub md__filter: &'a str,
     pub md__filter_none: &'a str,
     pub md__blur_0: &'a str,
@@ -14842,6 +15337,11 @@ pub struct CssClasses<'a> {
     pub lg__divide_none: &'a str,
     pub lg__divide_primary: &'a str,
     pub lg__divide_secondary: &'a str,
+    pub lg__divide_variable_concept: &'a str,
+    pub lg__divide_abstract_concept: &'a str,
+    pub lg__divide_concrete_concept: &'a str,
+    pub lg__divide_new_concept: &'a str,
+    pub lg__divide_unmatched_parenthesis: &'a str,
     pub lg__divide_opacity_0: &'a str,
     pub lg__divide_opacity_10: &'a str,
     pub lg__divide_opacity_20: &'a str,
@@ -15086,14 +15586,39 @@ pub struct CssClasses<'a> {
     pub lg__border_none: &'a str,
     pub lg__border_primary: &'a str,
     pub lg__border_secondary: &'a str,
+    pub lg__border_variable_concept: &'a str,
+    pub lg__border_abstract_concept: &'a str,
+    pub lg__border_concrete_concept: &'a str,
+    pub lg__border_new_concept: &'a str,
+    pub lg__border_unmatched_parenthesis: &'a str,
     pub lg__group_hover__border_primary: &'a str,
     pub lg__group_hover__border_secondary: &'a str,
+    pub lg__group_hover__border_variable_concept: &'a str,
+    pub lg__group_hover__border_abstract_concept: &'a str,
+    pub lg__group_hover__border_concrete_concept: &'a str,
+    pub lg__group_hover__border_new_concept: &'a str,
+    pub lg__group_hover__border_unmatched_parenthesis: &'a str,
     pub lg__focus_within__border_primary: &'a str,
     pub lg__focus_within__border_secondary: &'a str,
+    pub lg__focus_within__border_variable_concept: &'a str,
+    pub lg__focus_within__border_abstract_concept: &'a str,
+    pub lg__focus_within__border_concrete_concept: &'a str,
+    pub lg__focus_within__border_new_concept: &'a str,
+    pub lg__focus_within__border_unmatched_parenthesis: &'a str,
     pub lg__hover__border_primary: &'a str,
     pub lg__hover__border_secondary: &'a str,
+    pub lg__hover__border_variable_concept: &'a str,
+    pub lg__hover__border_abstract_concept: &'a str,
+    pub lg__hover__border_concrete_concept: &'a str,
+    pub lg__hover__border_new_concept: &'a str,
+    pub lg__hover__border_unmatched_parenthesis: &'a str,
     pub lg__focus__border_primary: &'a str,
     pub lg__focus__border_secondary: &'a str,
+    pub lg__focus__border_variable_concept: &'a str,
+    pub lg__focus__border_abstract_concept: &'a str,
+    pub lg__focus__border_concrete_concept: &'a str,
+    pub lg__focus__border_new_concept: &'a str,
+    pub lg__focus__border_unmatched_parenthesis: &'a str,
     pub lg__border_opacity_0: &'a str,
     pub lg__border_opacity_10: &'a str,
     pub lg__border_opacity_20: &'a str,
@@ -15151,14 +15676,39 @@ pub struct CssClasses<'a> {
     pub lg__focus__border_opacity_100: &'a str,
     pub lg__bg_primary: &'a str,
     pub lg__bg_secondary: &'a str,
+    pub lg__bg_variable_concept: &'a str,
+    pub lg__bg_abstract_concept: &'a str,
+    pub lg__bg_concrete_concept: &'a str,
+    pub lg__bg_new_concept: &'a str,
+    pub lg__bg_unmatched_parenthesis: &'a str,
     pub lg__group_hover__bg_primary: &'a str,
     pub lg__group_hover__bg_secondary: &'a str,
+    pub lg__group_hover__bg_variable_concept: &'a str,
+    pub lg__group_hover__bg_abstract_concept: &'a str,
+    pub lg__group_hover__bg_concrete_concept: &'a str,
+    pub lg__group_hover__bg_new_concept: &'a str,
+    pub lg__group_hover__bg_unmatched_parenthesis: &'a str,
     pub lg__focus_within__bg_primary: &'a str,
     pub lg__focus_within__bg_secondary: &'a str,
+    pub lg__focus_within__bg_variable_concept: &'a str,
+    pub lg__focus_within__bg_abstract_concept: &'a str,
+    pub lg__focus_within__bg_concrete_concept: &'a str,
+    pub lg__focus_within__bg_new_concept: &'a str,
+    pub lg__focus_within__bg_unmatched_parenthesis: &'a str,
     pub lg__hover__bg_primary: &'a str,
     pub lg__hover__bg_secondary: &'a str,
+    pub lg__hover__bg_variable_concept: &'a str,
+    pub lg__hover__bg_abstract_concept: &'a str,
+    pub lg__hover__bg_concrete_concept: &'a str,
+    pub lg__hover__bg_new_concept: &'a str,
+    pub lg__hover__bg_unmatched_parenthesis: &'a str,
     pub lg__focus__bg_primary: &'a str,
     pub lg__focus__bg_secondary: &'a str,
+    pub lg__focus__bg_variable_concept: &'a str,
+    pub lg__focus__bg_abstract_concept: &'a str,
+    pub lg__focus__bg_concrete_concept: &'a str,
+    pub lg__focus__bg_new_concept: &'a str,
+    pub lg__focus__bg_unmatched_parenthesis: &'a str,
     pub lg__bg_opacity_0: &'a str,
     pub lg__bg_opacity_10: &'a str,
     pub lg__bg_opacity_20: &'a str,
@@ -15225,22 +15775,67 @@ pub struct CssClasses<'a> {
     pub lg__bg_gradient_to_tl: &'a str,
     pub lg__from_primary: &'a str,
     pub lg__from_secondary: &'a str,
+    pub lg__from_variable_concept: &'a str,
+    pub lg__from_abstract_concept: &'a str,
+    pub lg__from_concrete_concept: &'a str,
+    pub lg__from_new_concept: &'a str,
+    pub lg__from_unmatched_parenthesis: &'a str,
     pub lg__hover__from_primary: &'a str,
     pub lg__hover__from_secondary: &'a str,
+    pub lg__hover__from_variable_concept: &'a str,
+    pub lg__hover__from_abstract_concept: &'a str,
+    pub lg__hover__from_concrete_concept: &'a str,
+    pub lg__hover__from_new_concept: &'a str,
+    pub lg__hover__from_unmatched_parenthesis: &'a str,
     pub lg__focus__from_primary: &'a str,
     pub lg__focus__from_secondary: &'a str,
+    pub lg__focus__from_variable_concept: &'a str,
+    pub lg__focus__from_abstract_concept: &'a str,
+    pub lg__focus__from_concrete_concept: &'a str,
+    pub lg__focus__from_new_concept: &'a str,
+    pub lg__focus__from_unmatched_parenthesis: &'a str,
     pub lg__via_primary: &'a str,
     pub lg__via_secondary: &'a str,
+    pub lg__via_variable_concept: &'a str,
+    pub lg__via_abstract_concept: &'a str,
+    pub lg__via_concrete_concept: &'a str,
+    pub lg__via_new_concept: &'a str,
+    pub lg__via_unmatched_parenthesis: &'a str,
     pub lg__hover__via_primary: &'a str,
     pub lg__hover__via_secondary: &'a str,
+    pub lg__hover__via_variable_concept: &'a str,
+    pub lg__hover__via_abstract_concept: &'a str,
+    pub lg__hover__via_concrete_concept: &'a str,
+    pub lg__hover__via_new_concept: &'a str,
+    pub lg__hover__via_unmatched_parenthesis: &'a str,
     pub lg__focus__via_primary: &'a str,
     pub lg__focus__via_secondary: &'a str,
+    pub lg__focus__via_variable_concept: &'a str,
+    pub lg__focus__via_abstract_concept: &'a str,
+    pub lg__focus__via_concrete_concept: &'a str,
+    pub lg__focus__via_new_concept: &'a str,
+    pub lg__focus__via_unmatched_parenthesis: &'a str,
     pub lg__to_primary: &'a str,
     pub lg__to_secondary: &'a str,
+    pub lg__to_variable_concept: &'a str,
+    pub lg__to_abstract_concept: &'a str,
+    pub lg__to_concrete_concept: &'a str,
+    pub lg__to_new_concept: &'a str,
+    pub lg__to_unmatched_parenthesis: &'a str,
     pub lg__hover__to_primary: &'a str,
     pub lg__hover__to_secondary: &'a str,
+    pub lg__hover__to_variable_concept: &'a str,
+    pub lg__hover__to_abstract_concept: &'a str,
+    pub lg__hover__to_concrete_concept: &'a str,
+    pub lg__hover__to_new_concept: &'a str,
+    pub lg__hover__to_unmatched_parenthesis: &'a str,
     pub lg__focus__to_primary: &'a str,
     pub lg__focus__to_secondary: &'a str,
+    pub lg__focus__to_variable_concept: &'a str,
+    pub lg__focus__to_abstract_concept: &'a str,
+    pub lg__focus__to_concrete_concept: &'a str,
+    pub lg__focus__to_new_concept: &'a str,
+    pub lg__focus__to_unmatched_parenthesis: &'a str,
     pub lg__decoration_slice: &'a str,
     pub lg__decoration_clone: &'a str,
     pub lg__bg_auto: &'a str,
@@ -15635,14 +16230,39 @@ pub struct CssClasses<'a> {
     pub lg__tracking_widest: &'a str,
     pub lg__text_primary: &'a str,
     pub lg__text_secondary: &'a str,
+    pub lg__text_variable_concept: &'a str,
+    pub lg__text_abstract_concept: &'a str,
+    pub lg__text_concrete_concept: &'a str,
+    pub lg__text_new_concept: &'a str,
+    pub lg__text_unmatched_parenthesis: &'a str,
     pub lg__group_hover__text_primary: &'a str,
     pub lg__group_hover__text_secondary: &'a str,
+    pub lg__group_hover__text_variable_concept: &'a str,
+    pub lg__group_hover__text_abstract_concept: &'a str,
+    pub lg__group_hover__text_concrete_concept: &'a str,
+    pub lg__group_hover__text_new_concept: &'a str,
+    pub lg__group_hover__text_unmatched_parenthesis: &'a str,
     pub lg__focus_within__text_primary: &'a str,
     pub lg__focus_within__text_secondary: &'a str,
+    pub lg__focus_within__text_variable_concept: &'a str,
+    pub lg__focus_within__text_abstract_concept: &'a str,
+    pub lg__focus_within__text_concrete_concept: &'a str,
+    pub lg__focus_within__text_new_concept: &'a str,
+    pub lg__focus_within__text_unmatched_parenthesis: &'a str,
     pub lg__hover__text_primary: &'a str,
     pub lg__hover__text_secondary: &'a str,
+    pub lg__hover__text_variable_concept: &'a str,
+    pub lg__hover__text_abstract_concept: &'a str,
+    pub lg__hover__text_concrete_concept: &'a str,
+    pub lg__hover__text_new_concept: &'a str,
+    pub lg__hover__text_unmatched_parenthesis: &'a str,
     pub lg__focus__text_primary: &'a str,
     pub lg__focus__text_secondary: &'a str,
+    pub lg__focus__text_variable_concept: &'a str,
+    pub lg__focus__text_abstract_concept: &'a str,
+    pub lg__focus__text_concrete_concept: &'a str,
+    pub lg__focus__text_new_concept: &'a str,
+    pub lg__focus__text_unmatched_parenthesis: &'a str,
     pub lg__text_opacity_0: &'a str,
     pub lg__text_opacity_10: &'a str,
     pub lg__text_opacity_20: &'a str,
@@ -15717,8 +16337,18 @@ pub struct CssClasses<'a> {
     pub lg__subpixel_antialiased: &'a str,
     pub lg__placeholder_primary: &'a str,
     pub lg__placeholder_secondary: &'a str,
+    pub lg__placeholder_variable_concept: &'a str,
+    pub lg__placeholder_abstract_concept: &'a str,
+    pub lg__placeholder_concrete_concept: &'a str,
+    pub lg__placeholder_new_concept: &'a str,
+    pub lg__placeholder_unmatched_parenthesis: &'a str,
     pub lg__focus__placeholder_primary: &'a str,
     pub lg__focus__placeholder_secondary: &'a str,
+    pub lg__focus__placeholder_variable_concept: &'a str,
+    pub lg__focus__placeholder_abstract_concept: &'a str,
+    pub lg__focus__placeholder_concrete_concept: &'a str,
+    pub lg__focus__placeholder_new_concept: &'a str,
+    pub lg__focus__placeholder_unmatched_parenthesis: &'a str,
     pub lg__placeholder_opacity_0: &'a str,
     pub lg__placeholder_opacity_10: &'a str,
     pub lg__placeholder_opacity_20: &'a str,
@@ -15910,10 +16540,25 @@ pub struct CssClasses<'a> {
     pub lg__focus__ring_inset: &'a str,
     pub lg__ring_primary: &'a str,
     pub lg__ring_secondary: &'a str,
+    pub lg__ring_variable_concept: &'a str,
+    pub lg__ring_abstract_concept: &'a str,
+    pub lg__ring_concrete_concept: &'a str,
+    pub lg__ring_new_concept: &'a str,
+    pub lg__ring_unmatched_parenthesis: &'a str,
     pub lg__focus_within__ring_primary: &'a str,
     pub lg__focus_within__ring_secondary: &'a str,
+    pub lg__focus_within__ring_variable_concept: &'a str,
+    pub lg__focus_within__ring_abstract_concept: &'a str,
+    pub lg__focus_within__ring_concrete_concept: &'a str,
+    pub lg__focus_within__ring_new_concept: &'a str,
+    pub lg__focus_within__ring_unmatched_parenthesis: &'a str,
     pub lg__focus__ring_primary: &'a str,
     pub lg__focus__ring_secondary: &'a str,
+    pub lg__focus__ring_variable_concept: &'a str,
+    pub lg__focus__ring_abstract_concept: &'a str,
+    pub lg__focus__ring_concrete_concept: &'a str,
+    pub lg__focus__ring_new_concept: &'a str,
+    pub lg__focus__ring_unmatched_parenthesis: &'a str,
     pub lg__ring_opacity_0: &'a str,
     pub lg__ring_opacity_10: &'a str,
     pub lg__ring_opacity_20: &'a str,
@@ -15964,10 +16609,25 @@ pub struct CssClasses<'a> {
     pub lg__focus__ring_offset_8: &'a str,
     pub lg__ring_offset_primary: &'a str,
     pub lg__ring_offset_secondary: &'a str,
+    pub lg__ring_offset_variable_concept: &'a str,
+    pub lg__ring_offset_abstract_concept: &'a str,
+    pub lg__ring_offset_concrete_concept: &'a str,
+    pub lg__ring_offset_new_concept: &'a str,
+    pub lg__ring_offset_unmatched_parenthesis: &'a str,
     pub lg__focus_within__ring_offset_primary: &'a str,
     pub lg__focus_within__ring_offset_secondary: &'a str,
+    pub lg__focus_within__ring_offset_variable_concept: &'a str,
+    pub lg__focus_within__ring_offset_abstract_concept: &'a str,
+    pub lg__focus_within__ring_offset_concrete_concept: &'a str,
+    pub lg__focus_within__ring_offset_new_concept: &'a str,
+    pub lg__focus_within__ring_offset_unmatched_parenthesis: &'a str,
     pub lg__focus__ring_offset_primary: &'a str,
     pub lg__focus__ring_offset_secondary: &'a str,
+    pub lg__focus__ring_offset_variable_concept: &'a str,
+    pub lg__focus__ring_offset_abstract_concept: &'a str,
+    pub lg__focus__ring_offset_concrete_concept: &'a str,
+    pub lg__focus__ring_offset_new_concept: &'a str,
+    pub lg__focus__ring_offset_unmatched_parenthesis: &'a str,
     pub lg__filter: &'a str,
     pub lg__filter_none: &'a str,
     pub lg__blur_0: &'a str,
@@ -18869,6 +19529,11 @@ pub struct CssClasses<'a> {
     pub xl__divide_none: &'a str,
     pub xl__divide_primary: &'a str,
     pub xl__divide_secondary: &'a str,
+    pub xl__divide_variable_concept: &'a str,
+    pub xl__divide_abstract_concept: &'a str,
+    pub xl__divide_concrete_concept: &'a str,
+    pub xl__divide_new_concept: &'a str,
+    pub xl__divide_unmatched_parenthesis: &'a str,
     pub xl__divide_opacity_0: &'a str,
     pub xl__divide_opacity_10: &'a str,
     pub xl__divide_opacity_20: &'a str,
@@ -19113,14 +19778,39 @@ pub struct CssClasses<'a> {
     pub xl__border_none: &'a str,
     pub xl__border_primary: &'a str,
     pub xl__border_secondary: &'a str,
+    pub xl__border_variable_concept: &'a str,
+    pub xl__border_abstract_concept: &'a str,
+    pub xl__border_concrete_concept: &'a str,
+    pub xl__border_new_concept: &'a str,
+    pub xl__border_unmatched_parenthesis: &'a str,
     pub xl__group_hover__border_primary: &'a str,
     pub xl__group_hover__border_secondary: &'a str,
+    pub xl__group_hover__border_variable_concept: &'a str,
+    pub xl__group_hover__border_abstract_concept: &'a str,
+    pub xl__group_hover__border_concrete_concept: &'a str,
+    pub xl__group_hover__border_new_concept: &'a str,
+    pub xl__group_hover__border_unmatched_parenthesis: &'a str,
     pub xl__focus_within__border_primary: &'a str,
     pub xl__focus_within__border_secondary: &'a str,
+    pub xl__focus_within__border_variable_concept: &'a str,
+    pub xl__focus_within__border_abstract_concept: &'a str,
+    pub xl__focus_within__border_concrete_concept: &'a str,
+    pub xl__focus_within__border_new_concept: &'a str,
+    pub xl__focus_within__border_unmatched_parenthesis: &'a str,
     pub xl__hover__border_primary: &'a str,
     pub xl__hover__border_secondary: &'a str,
+    pub xl__hover__border_variable_concept: &'a str,
+    pub xl__hover__border_abstract_concept: &'a str,
+    pub xl__hover__border_concrete_concept: &'a str,
+    pub xl__hover__border_new_concept: &'a str,
+    pub xl__hover__border_unmatched_parenthesis: &'a str,
     pub xl__focus__border_primary: &'a str,
     pub xl__focus__border_secondary: &'a str,
+    pub xl__focus__border_variable_concept: &'a str,
+    pub xl__focus__border_abstract_concept: &'a str,
+    pub xl__focus__border_concrete_concept: &'a str,
+    pub xl__focus__border_new_concept: &'a str,
+    pub xl__focus__border_unmatched_parenthesis: &'a str,
     pub xl__border_opacity_0: &'a str,
     pub xl__border_opacity_10: &'a str,
     pub xl__border_opacity_20: &'a str,
@@ -19178,14 +19868,39 @@ pub struct CssClasses<'a> {
     pub xl__focus__border_opacity_100: &'a str,
     pub xl__bg_primary: &'a str,
     pub xl__bg_secondary: &'a str,
+    pub xl__bg_variable_concept: &'a str,
+    pub xl__bg_abstract_concept: &'a str,
+    pub xl__bg_concrete_concept: &'a str,
+    pub xl__bg_new_concept: &'a str,
+    pub xl__bg_unmatched_parenthesis: &'a str,
     pub xl__group_hover__bg_primary: &'a str,
     pub xl__group_hover__bg_secondary: &'a str,
+    pub xl__group_hover__bg_variable_concept: &'a str,
+    pub xl__group_hover__bg_abstract_concept: &'a str,
+    pub xl__group_hover__bg_concrete_concept: &'a str,
+    pub xl__group_hover__bg_new_concept: &'a str,
+    pub xl__group_hover__bg_unmatched_parenthesis: &'a str,
     pub xl__focus_within__bg_primary: &'a str,
     pub xl__focus_within__bg_secondary: &'a str,
+    pub xl__focus_within__bg_variable_concept: &'a str,
+    pub xl__focus_within__bg_abstract_concept: &'a str,
+    pub xl__focus_within__bg_concrete_concept: &'a str,
+    pub xl__focus_within__bg_new_concept: &'a str,
+    pub xl__focus_within__bg_unmatched_parenthesis: &'a str,
     pub xl__hover__bg_primary: &'a str,
     pub xl__hover__bg_secondary: &'a str,
+    pub xl__hover__bg_variable_concept: &'a str,
+    pub xl__hover__bg_abstract_concept: &'a str,
+    pub xl__hover__bg_concrete_concept: &'a str,
+    pub xl__hover__bg_new_concept: &'a str,
+    pub xl__hover__bg_unmatched_parenthesis: &'a str,
     pub xl__focus__bg_primary: &'a str,
     pub xl__focus__bg_secondary: &'a str,
+    pub xl__focus__bg_variable_concept: &'a str,
+    pub xl__focus__bg_abstract_concept: &'a str,
+    pub xl__focus__bg_concrete_concept: &'a str,
+    pub xl__focus__bg_new_concept: &'a str,
+    pub xl__focus__bg_unmatched_parenthesis: &'a str,
     pub xl__bg_opacity_0: &'a str,
     pub xl__bg_opacity_10: &'a str,
     pub xl__bg_opacity_20: &'a str,
@@ -19252,22 +19967,67 @@ pub struct CssClasses<'a> {
     pub xl__bg_gradient_to_tl: &'a str,
     pub xl__from_primary: &'a str,
     pub xl__from_secondary: &'a str,
+    pub xl__from_variable_concept: &'a str,
+    pub xl__from_abstract_concept: &'a str,
+    pub xl__from_concrete_concept: &'a str,
+    pub xl__from_new_concept: &'a str,
+    pub xl__from_unmatched_parenthesis: &'a str,
     pub xl__hover__from_primary: &'a str,
     pub xl__hover__from_secondary: &'a str,
+    pub xl__hover__from_variable_concept: &'a str,
+    pub xl__hover__from_abstract_concept: &'a str,
+    pub xl__hover__from_concrete_concept: &'a str,
+    pub xl__hover__from_new_concept: &'a str,
+    pub xl__hover__from_unmatched_parenthesis: &'a str,
     pub xl__focus__from_primary: &'a str,
     pub xl__focus__from_secondary: &'a str,
+    pub xl__focus__from_variable_concept: &'a str,
+    pub xl__focus__from_abstract_concept: &'a str,
+    pub xl__focus__from_concrete_concept: &'a str,
+    pub xl__focus__from_new_concept: &'a str,
+    pub xl__focus__from_unmatched_parenthesis: &'a str,
     pub xl__via_primary: &'a str,
     pub xl__via_secondary: &'a str,
+    pub xl__via_variable_concept: &'a str,
+    pub xl__via_abstract_concept: &'a str,
+    pub xl__via_concrete_concept: &'a str,
+    pub xl__via_new_concept: &'a str,
+    pub xl__via_unmatched_parenthesis: &'a str,
     pub xl__hover__via_primary: &'a str,
     pub xl__hover__via_secondary: &'a str,
+    pub xl__hover__via_variable_concept: &'a str,
+    pub xl__hover__via_abstract_concept: &'a str,
+    pub xl__hover__via_concrete_concept: &'a str,
+    pub xl__hover__via_new_concept: &'a str,
+    pub xl__hover__via_unmatched_parenthesis: &'a str,
     pub xl__focus__via_primary: &'a str,
     pub xl__focus__via_secondary: &'a str,
+    pub xl__focus__via_variable_concept: &'a str,
+    pub xl__focus__via_abstract_concept: &'a str,
+    pub xl__focus__via_concrete_concept: &'a str,
+    pub xl__focus__via_new_concept: &'a str,
+    pub xl__focus__via_unmatched_parenthesis: &'a str,
     pub xl__to_primary: &'a str,
     pub xl__to_secondary: &'a str,
+    pub xl__to_variable_concept: &'a str,
+    pub xl__to_abstract_concept: &'a str,
+    pub xl__to_concrete_concept: &'a str,
+    pub xl__to_new_concept: &'a str,
+    pub xl__to_unmatched_parenthesis: &'a str,
     pub xl__hover__to_primary: &'a str,
     pub xl__hover__to_secondary: &'a str,
+    pub xl__hover__to_variable_concept: &'a str,
+    pub xl__hover__to_abstract_concept: &'a str,
+    pub xl__hover__to_concrete_concept: &'a str,
+    pub xl__hover__to_new_concept: &'a str,
+    pub xl__hover__to_unmatched_parenthesis: &'a str,
     pub xl__focus__to_primary: &'a str,
     pub xl__focus__to_secondary: &'a str,
+    pub xl__focus__to_variable_concept: &'a str,
+    pub xl__focus__to_abstract_concept: &'a str,
+    pub xl__focus__to_concrete_concept: &'a str,
+    pub xl__focus__to_new_concept: &'a str,
+    pub xl__focus__to_unmatched_parenthesis: &'a str,
     pub xl__decoration_slice: &'a str,
     pub xl__decoration_clone: &'a str,
     pub xl__bg_auto: &'a str,
@@ -19662,14 +20422,39 @@ pub struct CssClasses<'a> {
     pub xl__tracking_widest: &'a str,
     pub xl__text_primary: &'a str,
     pub xl__text_secondary: &'a str,
+    pub xl__text_variable_concept: &'a str,
+    pub xl__text_abstract_concept: &'a str,
+    pub xl__text_concrete_concept: &'a str,
+    pub xl__text_new_concept: &'a str,
+    pub xl__text_unmatched_parenthesis: &'a str,
     pub xl__group_hover__text_primary: &'a str,
     pub xl__group_hover__text_secondary: &'a str,
+    pub xl__group_hover__text_variable_concept: &'a str,
+    pub xl__group_hover__text_abstract_concept: &'a str,
+    pub xl__group_hover__text_concrete_concept: &'a str,
+    pub xl__group_hover__text_new_concept: &'a str,
+    pub xl__group_hover__text_unmatched_parenthesis: &'a str,
     pub xl__focus_within__text_primary: &'a str,
     pub xl__focus_within__text_secondary: &'a str,
+    pub xl__focus_within__text_variable_concept: &'a str,
+    pub xl__focus_within__text_abstract_concept: &'a str,
+    pub xl__focus_within__text_concrete_concept: &'a str,
+    pub xl__focus_within__text_new_concept: &'a str,
+    pub xl__focus_within__text_unmatched_parenthesis: &'a str,
     pub xl__hover__text_primary: &'a str,
     pub xl__hover__text_secondary: &'a str,
+    pub xl__hover__text_variable_concept: &'a str,
+    pub xl__hover__text_abstract_concept: &'a str,
+    pub xl__hover__text_concrete_concept: &'a str,
+    pub xl__hover__text_new_concept: &'a str,
+    pub xl__hover__text_unmatched_parenthesis: &'a str,
     pub xl__focus__text_primary: &'a str,
     pub xl__focus__text_secondary: &'a str,
+    pub xl__focus__text_variable_concept: &'a str,
+    pub xl__focus__text_abstract_concept: &'a str,
+    pub xl__focus__text_concrete_concept: &'a str,
+    pub xl__focus__text_new_concept: &'a str,
+    pub xl__focus__text_unmatched_parenthesis: &'a str,
     pub xl__text_opacity_0: &'a str,
     pub xl__text_opacity_10: &'a str,
     pub xl__text_opacity_20: &'a str,
@@ -19744,8 +20529,18 @@ pub struct CssClasses<'a> {
     pub xl__subpixel_antialiased: &'a str,
     pub xl__placeholder_primary: &'a str,
     pub xl__placeholder_secondary: &'a str,
+    pub xl__placeholder_variable_concept: &'a str,
+    pub xl__placeholder_abstract_concept: &'a str,
+    pub xl__placeholder_concrete_concept: &'a str,
+    pub xl__placeholder_new_concept: &'a str,
+    pub xl__placeholder_unmatched_parenthesis: &'a str,
     pub xl__focus__placeholder_primary: &'a str,
     pub xl__focus__placeholder_secondary: &'a str,
+    pub xl__focus__placeholder_variable_concept: &'a str,
+    pub xl__focus__placeholder_abstract_concept: &'a str,
+    pub xl__focus__placeholder_concrete_concept: &'a str,
+    pub xl__focus__placeholder_new_concept: &'a str,
+    pub xl__focus__placeholder_unmatched_parenthesis: &'a str,
     pub xl__placeholder_opacity_0: &'a str,
     pub xl__placeholder_opacity_10: &'a str,
     pub xl__placeholder_opacity_20: &'a str,
@@ -19937,10 +20732,25 @@ pub struct CssClasses<'a> {
     pub xl__focus__ring_inset: &'a str,
     pub xl__ring_primary: &'a str,
     pub xl__ring_secondary: &'a str,
+    pub xl__ring_variable_concept: &'a str,
+    pub xl__ring_abstract_concept: &'a str,
+    pub xl__ring_concrete_concept: &'a str,
+    pub xl__ring_new_concept: &'a str,
+    pub xl__ring_unmatched_parenthesis: &'a str,
     pub xl__focus_within__ring_primary: &'a str,
     pub xl__focus_within__ring_secondary: &'a str,
+    pub xl__focus_within__ring_variable_concept: &'a str,
+    pub xl__focus_within__ring_abstract_concept: &'a str,
+    pub xl__focus_within__ring_concrete_concept: &'a str,
+    pub xl__focus_within__ring_new_concept: &'a str,
+    pub xl__focus_within__ring_unmatched_parenthesis: &'a str,
     pub xl__focus__ring_primary: &'a str,
     pub xl__focus__ring_secondary: &'a str,
+    pub xl__focus__ring_variable_concept: &'a str,
+    pub xl__focus__ring_abstract_concept: &'a str,
+    pub xl__focus__ring_concrete_concept: &'a str,
+    pub xl__focus__ring_new_concept: &'a str,
+    pub xl__focus__ring_unmatched_parenthesis: &'a str,
     pub xl__ring_opacity_0: &'a str,
     pub xl__ring_opacity_10: &'a str,
     pub xl__ring_opacity_20: &'a str,
@@ -19991,10 +20801,25 @@ pub struct CssClasses<'a> {
     pub xl__focus__ring_offset_8: &'a str,
     pub xl__ring_offset_primary: &'a str,
     pub xl__ring_offset_secondary: &'a str,
+    pub xl__ring_offset_variable_concept: &'a str,
+    pub xl__ring_offset_abstract_concept: &'a str,
+    pub xl__ring_offset_concrete_concept: &'a str,
+    pub xl__ring_offset_new_concept: &'a str,
+    pub xl__ring_offset_unmatched_parenthesis: &'a str,
     pub xl__focus_within__ring_offset_primary: &'a str,
     pub xl__focus_within__ring_offset_secondary: &'a str,
+    pub xl__focus_within__ring_offset_variable_concept: &'a str,
+    pub xl__focus_within__ring_offset_abstract_concept: &'a str,
+    pub xl__focus_within__ring_offset_concrete_concept: &'a str,
+    pub xl__focus_within__ring_offset_new_concept: &'a str,
+    pub xl__focus_within__ring_offset_unmatched_parenthesis: &'a str,
     pub xl__focus__ring_offset_primary: &'a str,
     pub xl__focus__ring_offset_secondary: &'a str,
+    pub xl__focus__ring_offset_variable_concept: &'a str,
+    pub xl__focus__ring_offset_abstract_concept: &'a str,
+    pub xl__focus__ring_offset_concrete_concept: &'a str,
+    pub xl__focus__ring_offset_new_concept: &'a str,
+    pub xl__focus__ring_offset_unmatched_parenthesis: &'a str,
     pub xl__filter: &'a str,
     pub xl__filter_none: &'a str,
     pub xl__blur_0: &'a str,
@@ -34932,6 +35757,36 @@ pub static C: CssClasses = CssClasses {
     divide_secondary: "divide-secondary",
 
     /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-divide-opacity));
+    */
+    divide_variable_concept: "divide-variable_concept",
+
+    /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-divide-opacity));
+    */
+    divide_abstract_concept: "divide-abstract_concept",
+
+    /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-divide-opacity));
+    */
+    divide_concrete_concept: "divide-concrete_concept",
+
+    /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-divide-opacity));
+    */
+    divide_new_concept: "divide-new_concept",
+
+    /**
+        --tw-divide-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-divide-opacity));
+    */
+    divide_unmatched_parenthesis: "divide-unmatched_parenthesis",
+
+    /**
         --tw-divide-opacity: 0;
     */
     divide_opacity_0: "divide-opacity-0",
@@ -36226,8 +37081,43 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+    */
+    border_variable_concept: "border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+    */
+    border_abstract_concept: "border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+    */
+    border_concrete_concept: "border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+    */
+    border_new_concept: "border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
+    */
+    border_unmatched_parenthesis: "border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
         --tw-border-opacity: 0;
         --tw-border-opacity: 0.1px;
         --tw-border-opacity: 0.2px;
@@ -36242,6 +37132,11 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
         --tw-bg-opacity: 0;
         --tw-bg-opacity: 0.1px;
         --tw-bg-opacity: 0.2px;
@@ -36256,6 +37151,11 @@ pub static C: CssClasses = CssClasses {
         --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
         color: rgba(255, 255, 255, var(--tw-text-opacity));
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
         --tw-text-opacity: 0;
         --tw-text-opacity: 0.1px;
         --tw-text-opacity: 0.2px;
@@ -36295,6 +37195,11 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
         --tw-border-opacity: 0;    @media (min-width: 569px)
         --tw-border-opacity: 0.1px;    @media (min-width: 569px)
         --tw-border-opacity: 0.2px;    @media (min-width: 569px)
@@ -36309,6 +37214,11 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
         --tw-bg-opacity: 0;    @media (min-width: 569px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 569px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 569px)
@@ -36323,6 +37233,11 @@ pub static C: CssClasses = CssClasses {
         --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
         --tw-text-opacity: 0;    @media (min-width: 569px)
         --tw-text-opacity: 0.1px;    @media (min-width: 569px)
         --tw-text-opacity: 0.2px;    @media (min-width: 569px)
@@ -36362,6 +37277,11 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
         --tw-border-opacity: 0;    @media (min-width: 769px)
         --tw-border-opacity: 0.1px;    @media (min-width: 769px)
         --tw-border-opacity: 0.2px;    @media (min-width: 769px)
@@ -36376,6 +37296,11 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
         --tw-bg-opacity: 0;    @media (min-width: 769px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 769px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 769px)
@@ -36390,6 +37315,11 @@ pub static C: CssClasses = CssClasses {
         --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
         --tw-text-opacity: 0;    @media (min-width: 769px)
         --tw-text-opacity: 0.1px;    @media (min-width: 769px)
         --tw-text-opacity: 0.2px;    @media (min-width: 769px)
@@ -36429,6 +37359,11 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
         --tw-border-opacity: 0;    @media (min-width: 1025px)
         --tw-border-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-border-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36443,6 +37378,11 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
         --tw-bg-opacity: 0;    @media (min-width: 1025px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36457,6 +37397,11 @@ pub static C: CssClasses = CssClasses {
         --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
         --tw-text-opacity: 0;    @media (min-width: 1025px)
         --tw-text-opacity: 0.1px;    @media (min-width: 1025px)
         --tw-text-opacity: 0.2px;    @media (min-width: 1025px)
@@ -36496,6 +37441,11 @@ pub static C: CssClasses = CssClasses {
         --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
         --tw-border-opacity: 0;    @media (min-width: 1701px)
         --tw-border-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-border-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36510,6 +37460,11 @@ pub static C: CssClasses = CssClasses {
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
         --tw-bg-opacity: 0;    @media (min-width: 1701px)
         --tw-bg-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-bg-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36524,6 +37479,11 @@ pub static C: CssClasses = CssClasses {
         --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
         --tw-text-opacity: 0;    @media (min-width: 1701px)
         --tw-text-opacity: 0.1px;    @media (min-width: 1701px)
         --tw-text-opacity: 0.2px;    @media (min-width: 1701px)
@@ -36577,6 +37537,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+    */
+    group_hover__border_variable_concept: "group-hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+    */
+    group_hover__border_abstract_concept: "group-hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+    */
+    group_hover__border_concrete_concept: "group-hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+    */
+    group_hover__border_new_concept: "group-hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
+    */
+    group_hover__border_unmatched_parenthesis: "group-hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
     */
     focus_within__border_primary: "focus-within:border-primary",
@@ -36586,6 +37576,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));
     */
     focus_within__border_secondary: "focus-within:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+    */
+    focus_within__border_variable_concept: "focus-within:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+    */
+    focus_within__border_abstract_concept: "focus-within:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+    */
+    focus_within__border_concrete_concept: "focus-within:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+    */
+    focus_within__border_new_concept: "focus-within:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
+    */
+    focus_within__border_unmatched_parenthesis: "focus-within:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 1;
@@ -36601,6 +37621,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+    */
+    hover__border_variable_concept: "hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+    */
+    hover__border_abstract_concept: "hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+    */
+    hover__border_concrete_concept: "hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+    */
+    hover__border_new_concept: "hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
+    */
+    hover__border_unmatched_parenthesis: "hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));
     */
     focus__border_primary: "focus:border-primary",
@@ -36610,6 +37660,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));
     */
     focus__border_secondary: "focus:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));
+    */
+    focus__border_variable_concept: "focus:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));
+    */
+    focus__border_abstract_concept: "focus:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));
+    */
+    focus__border_concrete_concept: "focus:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));
+    */
+    focus__border_new_concept: "focus:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));
+    */
+    focus__border_unmatched_parenthesis: "focus:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 0;
@@ -36900,6 +37980,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+    */
+    bg_variable_concept: "bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+    */
+    bg_abstract_concept: "bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+    */
+    bg_concrete_concept: "bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+    */
+    bg_new_concept: "bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
+    */
+    bg_unmatched_parenthesis: "bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     group_hover__bg_primary: "group-hover:bg-primary",
@@ -36909,6 +38019,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
     */
     group_hover__bg_secondary: "group-hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+    */
+    group_hover__bg_variable_concept: "group-hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+    */
+    group_hover__bg_abstract_concept: "group-hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+    */
+    group_hover__bg_concrete_concept: "group-hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+    */
+    group_hover__bg_new_concept: "group-hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
+    */
+    group_hover__bg_unmatched_parenthesis: "group-hover:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 1;
@@ -36924,6 +38064,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+    */
+    focus_within__bg_variable_concept: "focus-within:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+    */
+    focus_within__bg_abstract_concept: "focus-within:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+    */
+    focus_within__bg_concrete_concept: "focus-within:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+    */
+    focus_within__bg_new_concept: "focus-within:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
+    */
+    focus_within__bg_unmatched_parenthesis: "focus-within:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     hover__bg_primary: "hover:bg-primary",
@@ -36936,6 +38106,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+    */
+    hover__bg_variable_concept: "hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+    */
+    hover__bg_abstract_concept: "hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+    */
+    hover__bg_concrete_concept: "hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+    */
+    hover__bg_new_concept: "hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
+    */
+    hover__bg_unmatched_parenthesis: "hover:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));
     */
     focus__bg_primary: "focus:bg-primary",
@@ -36945,6 +38145,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
     */
     focus__bg_secondary: "focus:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));
+    */
+    focus__bg_variable_concept: "focus:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));
+    */
+    focus__bg_abstract_concept: "focus:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));
+    */
+    focus__bg_concrete_concept: "focus:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));
+    */
+    focus__bg_new_concept: "focus:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));
+    */
+    focus__bg_unmatched_parenthesis: "focus:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 0;
@@ -37279,6 +38509,36 @@ pub static C: CssClasses = CssClasses {
     from_secondary: "from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    from_variable_concept: "from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    from_abstract_concept: "from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    from_concrete_concept: "from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    from_new_concept: "from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    from_unmatched_parenthesis: "from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-from: #0B723B;
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
@@ -37289,6 +38549,36 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));
     */
     hover__from_secondary: "hover:from-secondary",
+
+    /**
+        --tw-gradient-from: #FFBF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    hover__from_variable_concept: "hover:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    hover__from_abstract_concept: "hover:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    hover__from_concrete_concept: "hover:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    hover__from_new_concept: "hover:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    hover__from_unmatched_parenthesis: "hover:from-unmatched_parenthesis",
 
     /**
         --tw-gradient-from: #0B723B;
@@ -37303,6 +38593,36 @@ pub static C: CssClasses = CssClasses {
     focus__from_secondary: "focus:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    focus__from_variable_concept: "focus:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    focus__from_abstract_concept: "focus:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    focus__from_concrete_concept: "focus:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    focus__from_new_concept: "focus:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    focus__from_unmatched_parenthesis: "focus:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
     via_primary: "via-primary",
@@ -37311,6 +38631,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));
     */
     via_secondary: "via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    via_variable_concept: "via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    via_abstract_concept: "via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    via_concrete_concept: "via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    via_new_concept: "via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    via_unmatched_parenthesis: "via-unmatched_parenthesis",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
@@ -37323,6 +38668,31 @@ pub static C: CssClasses = CssClasses {
     hover__via_secondary: "hover:via-secondary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    hover__via_variable_concept: "hover:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    hover__via_abstract_concept: "hover:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    hover__via_concrete_concept: "hover:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    hover__via_new_concept: "hover:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    hover__via_unmatched_parenthesis: "hover:via-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));
     */
     focus__via_primary: "focus:via-primary",
@@ -37331,6 +38701,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));
     */
     focus__via_secondary: "focus:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));
+    */
+    focus__via_variable_concept: "focus:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));
+    */
+    focus__via_abstract_concept: "focus:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));
+    */
+    focus__via_concrete_concept: "focus:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));
+    */
+    focus__via_new_concept: "focus:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));
+    */
+    focus__via_unmatched_parenthesis: "focus:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-to: #0B723B;
@@ -37343,6 +38738,31 @@ pub static C: CssClasses = CssClasses {
     to_secondary: "to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;
+    */
+    to_variable_concept: "to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;
+    */
+    to_abstract_concept: "to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;
+    */
+    to_concrete_concept: "to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;
+    */
+    to_new_concept: "to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;
+    */
+    to_unmatched_parenthesis: "to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;
     */
     hover__to_primary: "hover:to-primary",
@@ -37353,6 +38773,31 @@ pub static C: CssClasses = CssClasses {
     hover__to_secondary: "hover:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;
+    */
+    hover__to_variable_concept: "hover:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;
+    */
+    hover__to_abstract_concept: "hover:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;
+    */
+    hover__to_concrete_concept: "hover:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;
+    */
+    hover__to_new_concept: "hover:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;
+    */
+    hover__to_unmatched_parenthesis: "hover:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;
     */
     focus__to_primary: "focus:to-primary",
@@ -37361,6 +38806,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-to: #FFFFFF;
     */
     focus__to_secondary: "focus:to-secondary",
+
+    /**
+        --tw-gradient-to: #FFBF00;
+    */
+    focus__to_variable_concept: "focus:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;
+    */
+    focus__to_abstract_concept: "focus:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;
+    */
+    focus__to_concrete_concept: "focus:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;
+    */
+    focus__to_new_concept: "focus:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;
+    */
+    focus__to_unmatched_parenthesis: "focus:to-unmatched_parenthesis",
 
     /**
         box-decoration-break: slice;
@@ -39456,6 +40926,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+    */
+    text_variable_concept: "text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+    */
+    text_abstract_concept: "text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+    */
+    text_concrete_concept: "text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+    */
+    text_new_concept: "text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
+    */
+    text_unmatched_parenthesis: "text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     group_hover__text_primary: "group-hover:text-primary",
@@ -39465,6 +40965,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));
     */
     group_hover__text_secondary: "group-hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+    */
+    group_hover__text_variable_concept: "group-hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+    */
+    group_hover__text_abstract_concept: "group-hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+    */
+    group_hover__text_concrete_concept: "group-hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+    */
+    group_hover__text_new_concept: "group-hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
+    */
+    group_hover__text_unmatched_parenthesis: "group-hover:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 1;
@@ -39480,6 +41010,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+    */
+    focus_within__text_variable_concept: "focus-within:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+    */
+    focus_within__text_abstract_concept: "focus-within:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+    */
+    focus_within__text_concrete_concept: "focus-within:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+    */
+    focus_within__text_new_concept: "focus-within:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
+    */
+    focus_within__text_unmatched_parenthesis: "focus-within:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     hover__text_primary: "hover:text-primary",
@@ -39492,6 +41052,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+    */
+    hover__text_variable_concept: "hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+    */
+    hover__text_abstract_concept: "hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+    */
+    hover__text_concrete_concept: "hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+    */
+    hover__text_new_concept: "hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
+    */
+    hover__text_unmatched_parenthesis: "hover:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-text-opacity));
     */
     focus__text_primary: "focus:text-primary",
@@ -39501,6 +41091,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));
     */
     focus__text_secondary: "focus:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-text-opacity));
+    */
+    focus__text_variable_concept: "focus:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-text-opacity));
+    */
+    focus__text_abstract_concept: "focus:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-text-opacity));
+    */
+    focus__text_concrete_concept: "focus:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-text-opacity));
+    */
+    focus__text_new_concept: "focus:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-text-opacity));
+    */
+    focus__text_unmatched_parenthesis: "focus:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 0;
@@ -39878,6 +41498,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));
+    */
+    placeholder_variable_concept: "placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));
+    */
+    placeholder_abstract_concept: "placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));
+    */
+    placeholder_concrete_concept: "placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));
+    */
+    placeholder_new_concept: "placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));
+    */
+    placeholder_unmatched_parenthesis: "placeholder-unmatched_parenthesis",
+
+    /**
+        --tw-placeholder-opacity: 1;
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));
     */
     focus__placeholder_primary: "focus:placeholder-primary",
@@ -39887,6 +41537,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-placeholder-opacity));
     */
     focus__placeholder_secondary: "focus:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_variable_concept: "focus:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_abstract_concept: "focus:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_concrete_concept: "focus:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_new_concept: "focus:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));
+    */
+    focus__placeholder_unmatched_parenthesis: "focus:placeholder-unmatched_parenthesis",
 
     /**
         --tw-placeholder-opacity: 0;
@@ -40942,6 +42622,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));
+    */
+    ring_variable_concept: "ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));
+    */
+    ring_abstract_concept: "ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));
+    */
+    ring_concrete_concept: "ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));
+    */
+    ring_new_concept: "ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));
+    */
+    ring_unmatched_parenthesis: "ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));
     */
     focus_within__ring_primary: "focus-within:ring-primary",
@@ -40954,6 +42664,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));
+    */
+    focus_within__ring_variable_concept: "focus-within:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));
+    */
+    focus_within__ring_abstract_concept: "focus-within:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));
+    */
+    focus_within__ring_concrete_concept: "focus-within:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));
+    */
+    focus_within__ring_new_concept: "focus-within:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));
+    */
+    focus_within__ring_unmatched_parenthesis: "focus-within:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));
     */
     focus__ring_primary: "focus:ring-primary",
@@ -40963,6 +42703,36 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));
     */
     focus__ring_secondary: "focus:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));
+    */
+    focus__ring_variable_concept: "focus:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));
+    */
+    focus__ring_abstract_concept: "focus:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));
+    */
+    focus__ring_concrete_concept: "focus:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));
+    */
+    focus__ring_new_concept: "focus:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));
+    */
+    focus__ring_unmatched_parenthesis: "focus:ring-unmatched_parenthesis",
 
     /**
         --tw-ring-opacity: 0;
@@ -41215,6 +42985,31 @@ pub static C: CssClasses = CssClasses {
     ring_offset_secondary: "ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;
+    */
+    ring_offset_variable_concept: "ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;
+    */
+    ring_offset_abstract_concept: "ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;
+    */
+    ring_offset_concrete_concept: "ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;
+    */
+    ring_offset_new_concept: "ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;
+    */
+    ring_offset_unmatched_parenthesis: "ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;
     */
     focus_within__ring_offset_primary: "focus-within:ring-offset-primary",
@@ -41225,6 +43020,31 @@ pub static C: CssClasses = CssClasses {
     focus_within__ring_offset_secondary: "focus-within:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;
+    */
+    focus_within__ring_offset_variable_concept: "focus-within:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;
+    */
+    focus_within__ring_offset_abstract_concept: "focus-within:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;
+    */
+    focus_within__ring_offset_concrete_concept: "focus-within:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;
+    */
+    focus_within__ring_offset_new_concept: "focus-within:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;
+    */
+    focus_within__ring_offset_unmatched_parenthesis: "focus-within:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;
     */
     focus__ring_offset_primary: "focus:ring-offset-primary",
@@ -41233,6 +43053,31 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-offset-color: #FFFFFF;
     */
     focus__ring_offset_secondary: "focus:ring-offset-secondary",
+
+    /**
+        --tw-ring-offset-color: #FFBF00;
+    */
+    focus__ring_offset_variable_concept: "focus:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;
+    */
+    focus__ring_offset_abstract_concept: "focus:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;
+    */
+    focus__ring_offset_concrete_concept: "focus:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;
+    */
+    focus__ring_offset_new_concept: "focus:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;
+    */
+    focus__ring_offset_unmatched_parenthesis: "focus:ring-offset-unmatched_parenthesis",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);
@@ -56801,6 +58646,36 @@ pub static C: CssClasses = CssClasses {
     sm__divide_secondary: "sm:divide-secondary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_variable_concept: "sm:divide-variable_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_abstract_concept: "sm:divide-abstract_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_concrete_concept: "sm:divide-concrete_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_new_concept: "sm:divide-new_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-divide-opacity));    @media (min-width: 569px)
+    */
+    sm__divide_unmatched_parenthesis: "sm:divide-unmatched_parenthesis",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 569px)
     */
     sm__divide_opacity_0: "sm:divide-opacity-0",
@@ -58095,6 +59970,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_variable_concept: "sm:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_abstract_concept: "sm:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_concrete_concept: "sm:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_new_concept: "sm:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__border_unmatched_parenthesis: "sm:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__border_primary: "sm:group-hover:border-primary",
@@ -58104,6 +60009,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__border_secondary: "sm:group-hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_variable_concept: "sm:group-hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_abstract_concept: "sm:group-hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_concrete_concept: "sm:group-hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_new_concept: "sm:group-hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__border_unmatched_parenthesis: "sm:group-hover:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
@@ -58119,6 +60054,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_variable_concept: "sm:focus-within:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_abstract_concept: "sm:focus-within:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_concrete_concept: "sm:focus-within:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_new_concept: "sm:focus-within:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__border_unmatched_parenthesis: "sm:focus-within:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__hover__border_primary: "sm:hover:border-primary",
@@ -58131,6 +60096,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_variable_concept: "sm:hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_abstract_concept: "sm:hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_concrete_concept: "sm:hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_new_concept: "sm:hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__border_unmatched_parenthesis: "sm:hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__focus__border_primary: "sm:focus:border-primary",
@@ -58140,6 +60135,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 569px)
     */
     sm__focus__border_secondary: "sm:focus:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_variable_concept: "sm:focus:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_abstract_concept: "sm:focus:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_concrete_concept: "sm:focus:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_new_concept: "sm:focus:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 569px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__border_unmatched_parenthesis: "sm:focus:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 569px)
@@ -58430,6 +60455,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_variable_concept: "sm:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_abstract_concept: "sm:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_concrete_concept: "sm:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_new_concept: "sm:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__bg_unmatched_parenthesis: "sm:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__bg_primary: "sm:group-hover:bg-primary",
@@ -58439,6 +60494,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__bg_secondary: "sm:group-hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_variable_concept: "sm:group-hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_abstract_concept: "sm:group-hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_concrete_concept: "sm:group-hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_new_concept: "sm:group-hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__bg_unmatched_parenthesis: "sm:group-hover:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
@@ -58454,6 +60539,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_variable_concept: "sm:focus-within:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_abstract_concept: "sm:focus-within:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_concrete_concept: "sm:focus-within:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_new_concept: "sm:focus-within:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__bg_unmatched_parenthesis: "sm:focus-within:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__hover__bg_primary: "sm:hover:bg-primary",
@@ -58466,6 +60581,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_variable_concept: "sm:hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_abstract_concept: "sm:hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_concrete_concept: "sm:hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_new_concept: "sm:hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__bg_unmatched_parenthesis: "sm:hover:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__focus__bg_primary: "sm:focus:bg-primary",
@@ -58475,6 +60620,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
     */
     sm__focus__bg_secondary: "sm:focus:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_variable_concept: "sm:focus:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_abstract_concept: "sm:focus:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_concrete_concept: "sm:focus:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_new_concept: "sm:focus:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 569px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__bg_unmatched_parenthesis: "sm:focus:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 569px)
@@ -58809,6 +60984,36 @@ pub static C: CssClasses = CssClasses {
     sm__from_secondary: "sm:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__from_variable_concept: "sm:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__from_abstract_concept: "sm:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__from_concrete_concept: "sm:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__from_new_concept: "sm:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__from_unmatched_parenthesis: "sm:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 569px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
@@ -58819,6 +61024,36 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
     */
     sm__hover__from_secondary: "sm:hover:from-secondary",
+
+    /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_variable_concept: "sm:hover:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_abstract_concept: "sm:hover:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_concrete_concept: "sm:hover:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_new_concept: "sm:hover:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__from_unmatched_parenthesis: "sm:hover:from-unmatched_parenthesis",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 569px)
@@ -58833,6 +61068,36 @@ pub static C: CssClasses = CssClasses {
     sm__focus__from_secondary: "sm:focus:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_variable_concept: "sm:focus:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_abstract_concept: "sm:focus:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_concrete_concept: "sm:focus:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_new_concept: "sm:focus:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 569px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__from_unmatched_parenthesis: "sm:focus:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
     sm__via_primary: "sm:via-primary",
@@ -58841,6 +61106,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
     */
     sm__via_secondary: "sm:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__via_variable_concept: "sm:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__via_abstract_concept: "sm:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__via_concrete_concept: "sm:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__via_new_concept: "sm:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__via_unmatched_parenthesis: "sm:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
@@ -58853,6 +61143,31 @@ pub static C: CssClasses = CssClasses {
     sm__hover__via_secondary: "sm:hover:via-secondary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_variable_concept: "sm:hover:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_abstract_concept: "sm:hover:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_concrete_concept: "sm:hover:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_new_concept: "sm:hover:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__hover__via_unmatched_parenthesis: "sm:hover:via-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 569px)
     */
     sm__focus__via_primary: "sm:focus:via-primary",
@@ -58861,6 +61176,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 569px)
     */
     sm__focus__via_secondary: "sm:focus:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_variable_concept: "sm:focus:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_abstract_concept: "sm:focus:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_concrete_concept: "sm:focus:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_new_concept: "sm:focus:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 569px)
+    */
+    sm__focus__via_unmatched_parenthesis: "sm:focus:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
@@ -58873,6 +61213,31 @@ pub static C: CssClasses = CssClasses {
     sm__to_secondary: "sm:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__to_variable_concept: "sm:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__to_abstract_concept: "sm:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 569px)
+    */
+    sm__to_concrete_concept: "sm:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 569px)
+    */
+    sm__to_new_concept: "sm:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 569px)
+    */
+    sm__to_unmatched_parenthesis: "sm:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
     */
     sm__hover__to_primary: "sm:hover:to-primary",
@@ -58883,6 +61248,31 @@ pub static C: CssClasses = CssClasses {
     sm__hover__to_secondary: "sm:hover:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__hover__to_variable_concept: "sm:hover:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__hover__to_abstract_concept: "sm:hover:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 569px)
+    */
+    sm__hover__to_concrete_concept: "sm:hover:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 569px)
+    */
+    sm__hover__to_new_concept: "sm:hover:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 569px)
+    */
+    sm__hover__to_unmatched_parenthesis: "sm:hover:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 569px)
     */
     sm__focus__to_primary: "sm:focus:to-primary",
@@ -58891,6 +61281,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-to: #FFFFFF;    @media (min-width: 569px)
     */
     sm__focus__to_secondary: "sm:focus:to-secondary",
+
+    /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__focus__to_variable_concept: "sm:focus:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__focus__to_abstract_concept: "sm:focus:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 569px)
+    */
+    sm__focus__to_concrete_concept: "sm:focus:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 569px)
+    */
+    sm__focus__to_new_concept: "sm:focus:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 569px)
+    */
+    sm__focus__to_unmatched_parenthesis: "sm:focus:to-unmatched_parenthesis",
 
     /**
         box-decoration-break: slice;    @media (min-width: 569px)
@@ -60986,6 +63401,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_variable_concept: "sm:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_abstract_concept: "sm:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_concrete_concept: "sm:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_new_concept: "sm:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__text_unmatched_parenthesis: "sm:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__text_primary: "sm:group-hover:text-primary",
@@ -60995,6 +63440,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__group_hover__text_secondary: "sm:group-hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_variable_concept: "sm:group-hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_abstract_concept: "sm:group-hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_concrete_concept: "sm:group-hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_new_concept: "sm:group-hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__group_hover__text_unmatched_parenthesis: "sm:group-hover:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
@@ -61010,6 +63485,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_variable_concept: "sm:focus-within:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_abstract_concept: "sm:focus-within:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_concrete_concept: "sm:focus-within:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_new_concept: "sm:focus-within:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__text_unmatched_parenthesis: "sm:focus-within:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__hover__text_primary: "sm:hover:text-primary",
@@ -61022,6 +63527,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_variable_concept: "sm:hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_abstract_concept: "sm:hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_concrete_concept: "sm:hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_new_concept: "sm:hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__hover__text_unmatched_parenthesis: "sm:hover:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__focus__text_primary: "sm:focus:text-primary",
@@ -61031,6 +63566,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 569px)
     */
     sm__focus__text_secondary: "sm:focus:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_variable_concept: "sm:focus:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_abstract_concept: "sm:focus:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_concrete_concept: "sm:focus:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_new_concept: "sm:focus:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__text_unmatched_parenthesis: "sm:focus:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 569px)
@@ -61408,6 +63973,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_variable_concept: "sm:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_abstract_concept: "sm:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_concrete_concept: "sm:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_new_concept: "sm:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__placeholder_unmatched_parenthesis: "sm:placeholder-unmatched_parenthesis",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 569px)
     */
     sm__focus__placeholder_primary: "sm:focus:placeholder-primary",
@@ -61417,6 +64012,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
     */
     sm__focus__placeholder_secondary: "sm:focus:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_variable_concept: "sm:focus:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_abstract_concept: "sm:focus:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_concrete_concept: "sm:focus:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_new_concept: "sm:focus:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 569px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_unmatched_parenthesis: "sm:focus:placeholder-unmatched_parenthesis",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 569px)
@@ -62472,6 +65097,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_variable_concept: "sm:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_abstract_concept: "sm:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_concrete_concept: "sm:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_new_concept: "sm:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__ring_unmatched_parenthesis: "sm:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 569px)
     */
     sm__focus_within__ring_primary: "sm:focus-within:ring-primary",
@@ -62484,6 +65139,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_variable_concept: "sm:focus-within:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_abstract_concept: "sm:focus-within:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_concrete_concept: "sm:focus-within:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_new_concept: "sm:focus-within:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_unmatched_parenthesis: "sm:focus-within:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 569px)
     */
     sm__focus__ring_primary: "sm:focus:ring-primary",
@@ -62493,6 +65178,36 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
     */
     sm__focus__ring_secondary: "sm:focus:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_variable_concept: "sm:focus:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_abstract_concept: "sm:focus:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_concrete_concept: "sm:focus:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_new_concept: "sm:focus:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 569px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 569px)
+    */
+    sm__focus__ring_unmatched_parenthesis: "sm:focus:ring-unmatched_parenthesis",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 569px)
@@ -62745,6 +65460,31 @@ pub static C: CssClasses = CssClasses {
     sm__ring_offset_secondary: "sm:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__ring_offset_variable_concept: "sm:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__ring_offset_abstract_concept: "sm:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 569px)
+    */
+    sm__ring_offset_concrete_concept: "sm:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 569px)
+    */
+    sm__ring_offset_new_concept: "sm:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 569px)
+    */
+    sm__ring_offset_unmatched_parenthesis: "sm:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 569px)
     */
     sm__focus_within__ring_offset_primary: "sm:focus-within:ring-offset-primary",
@@ -62755,6 +65495,31 @@ pub static C: CssClasses = CssClasses {
     sm__focus_within__ring_offset_secondary: "sm:focus-within:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_variable_concept: "sm:focus-within:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_abstract_concept: "sm:focus-within:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_concrete_concept: "sm:focus-within:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_new_concept: "sm:focus-within:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 569px)
+    */
+    sm__focus_within__ring_offset_unmatched_parenthesis: "sm:focus-within:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 569px)
     */
     sm__focus__ring_offset_primary: "sm:focus:ring-offset-primary",
@@ -62763,6 +65528,31 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-offset-color: #FFFFFF;    @media (min-width: 569px)
     */
     sm__focus__ring_offset_secondary: "sm:focus:ring-offset-secondary",
+
+    /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_variable_concept: "sm:focus:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_abstract_concept: "sm:focus:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_concrete_concept: "sm:focus:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_new_concept: "sm:focus:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 569px)
+    */
+    sm__focus__ring_offset_unmatched_parenthesis: "sm:focus:ring-offset-unmatched_parenthesis",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 569px)
@@ -78315,6 +81105,36 @@ pub static C: CssClasses = CssClasses {
     md__divide_secondary: "md:divide-secondary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_variable_concept: "md:divide-variable_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_abstract_concept: "md:divide-abstract_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_concrete_concept: "md:divide-concrete_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_new_concept: "md:divide-new_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-divide-opacity));    @media (min-width: 769px)
+    */
+    md__divide_unmatched_parenthesis: "md:divide-unmatched_parenthesis",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 769px)
     */
     md__divide_opacity_0: "md:divide-opacity-0",
@@ -79609,6 +82429,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_variable_concept: "md:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_abstract_concept: "md:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_concrete_concept: "md:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_new_concept: "md:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__border_unmatched_parenthesis: "md:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__group_hover__border_primary: "md:group-hover:border-primary",
@@ -79618,6 +82468,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__group_hover__border_secondary: "md:group-hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_variable_concept: "md:group-hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_abstract_concept: "md:group-hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_concrete_concept: "md:group-hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_new_concept: "md:group-hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__border_unmatched_parenthesis: "md:group-hover:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
@@ -79633,6 +82513,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_variable_concept: "md:focus-within:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_abstract_concept: "md:focus-within:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_concrete_concept: "md:focus-within:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_new_concept: "md:focus-within:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__border_unmatched_parenthesis: "md:focus-within:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__hover__border_primary: "md:hover:border-primary",
@@ -79645,6 +82555,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_variable_concept: "md:hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_abstract_concept: "md:hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_concrete_concept: "md:hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_new_concept: "md:hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__hover__border_unmatched_parenthesis: "md:hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__focus__border_primary: "md:focus:border-primary",
@@ -79654,6 +82594,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 769px)
     */
     md__focus__border_secondary: "md:focus:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_variable_concept: "md:focus:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_abstract_concept: "md:focus:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_concrete_concept: "md:focus:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_new_concept: "md:focus:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 769px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 769px)
+    */
+    md__focus__border_unmatched_parenthesis: "md:focus:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 769px)
@@ -79944,6 +82914,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_variable_concept: "md:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_abstract_concept: "md:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_concrete_concept: "md:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_new_concept: "md:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__bg_unmatched_parenthesis: "md:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__group_hover__bg_primary: "md:group-hover:bg-primary",
@@ -79953,6 +82953,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__group_hover__bg_secondary: "md:group-hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_variable_concept: "md:group-hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_abstract_concept: "md:group-hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_concrete_concept: "md:group-hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_new_concept: "md:group-hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__bg_unmatched_parenthesis: "md:group-hover:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
@@ -79968,6 +82998,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_variable_concept: "md:focus-within:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_abstract_concept: "md:focus-within:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_concrete_concept: "md:focus-within:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_new_concept: "md:focus-within:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__bg_unmatched_parenthesis: "md:focus-within:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__hover__bg_primary: "md:hover:bg-primary",
@@ -79980,6 +83040,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_variable_concept: "md:hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_abstract_concept: "md:hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_concrete_concept: "md:hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_new_concept: "md:hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__hover__bg_unmatched_parenthesis: "md:hover:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__focus__bg_primary: "md:focus:bg-primary",
@@ -79989,6 +83079,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
     */
     md__focus__bg_secondary: "md:focus:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_variable_concept: "md:focus:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_abstract_concept: "md:focus:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_concrete_concept: "md:focus:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_new_concept: "md:focus:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 769px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 769px)
+    */
+    md__focus__bg_unmatched_parenthesis: "md:focus:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 769px)
@@ -80323,6 +83443,36 @@ pub static C: CssClasses = CssClasses {
     md__from_secondary: "md:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__from_variable_concept: "md:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__from_abstract_concept: "md:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__from_concrete_concept: "md:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__from_new_concept: "md:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__from_unmatched_parenthesis: "md:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 769px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
@@ -80333,6 +83483,36 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
     */
     md__hover__from_secondary: "md:hover:from-secondary",
+
+    /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_variable_concept: "md:hover:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_abstract_concept: "md:hover:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_concrete_concept: "md:hover:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_new_concept: "md:hover:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__from_unmatched_parenthesis: "md:hover:from-unmatched_parenthesis",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 769px)
@@ -80347,6 +83527,36 @@ pub static C: CssClasses = CssClasses {
     md__focus__from_secondary: "md:focus:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_variable_concept: "md:focus:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_abstract_concept: "md:focus:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_concrete_concept: "md:focus:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_new_concept: "md:focus:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 769px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__from_unmatched_parenthesis: "md:focus:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
     md__via_primary: "md:via-primary",
@@ -80355,6 +83565,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
     */
     md__via_secondary: "md:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__via_variable_concept: "md:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__via_abstract_concept: "md:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__via_concrete_concept: "md:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__via_new_concept: "md:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__via_unmatched_parenthesis: "md:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
@@ -80367,6 +83602,31 @@ pub static C: CssClasses = CssClasses {
     md__hover__via_secondary: "md:hover:via-secondary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_variable_concept: "md:hover:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_abstract_concept: "md:hover:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_concrete_concept: "md:hover:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_new_concept: "md:hover:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__hover__via_unmatched_parenthesis: "md:hover:via-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 769px)
     */
     md__focus__via_primary: "md:focus:via-primary",
@@ -80375,6 +83635,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 769px)
     */
     md__focus__via_secondary: "md:focus:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_variable_concept: "md:focus:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_abstract_concept: "md:focus:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_concrete_concept: "md:focus:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_new_concept: "md:focus:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 769px)
+    */
+    md__focus__via_unmatched_parenthesis: "md:focus:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
@@ -80387,6 +83672,31 @@ pub static C: CssClasses = CssClasses {
     md__to_secondary: "md:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 769px)
+    */
+    md__to_variable_concept: "md:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 769px)
+    */
+    md__to_abstract_concept: "md:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 769px)
+    */
+    md__to_concrete_concept: "md:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 769px)
+    */
+    md__to_new_concept: "md:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 769px)
+    */
+    md__to_unmatched_parenthesis: "md:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
     */
     md__hover__to_primary: "md:hover:to-primary",
@@ -80397,6 +83707,31 @@ pub static C: CssClasses = CssClasses {
     md__hover__to_secondary: "md:hover:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 769px)
+    */
+    md__hover__to_variable_concept: "md:hover:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 769px)
+    */
+    md__hover__to_abstract_concept: "md:hover:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 769px)
+    */
+    md__hover__to_concrete_concept: "md:hover:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 769px)
+    */
+    md__hover__to_new_concept: "md:hover:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 769px)
+    */
+    md__hover__to_unmatched_parenthesis: "md:hover:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 769px)
     */
     md__focus__to_primary: "md:focus:to-primary",
@@ -80405,6 +83740,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-to: #FFFFFF;    @media (min-width: 769px)
     */
     md__focus__to_secondary: "md:focus:to-secondary",
+
+    /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 769px)
+    */
+    md__focus__to_variable_concept: "md:focus:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 769px)
+    */
+    md__focus__to_abstract_concept: "md:focus:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 769px)
+    */
+    md__focus__to_concrete_concept: "md:focus:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 769px)
+    */
+    md__focus__to_new_concept: "md:focus:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 769px)
+    */
+    md__focus__to_unmatched_parenthesis: "md:focus:to-unmatched_parenthesis",
 
     /**
         box-decoration-break: slice;    @media (min-width: 769px)
@@ -82500,6 +85860,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_variable_concept: "md:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_abstract_concept: "md:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_concrete_concept: "md:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_new_concept: "md:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__text_unmatched_parenthesis: "md:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__group_hover__text_primary: "md:group-hover:text-primary",
@@ -82509,6 +85899,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__group_hover__text_secondary: "md:group-hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_variable_concept: "md:group-hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_abstract_concept: "md:group-hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_concrete_concept: "md:group-hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_new_concept: "md:group-hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__group_hover__text_unmatched_parenthesis: "md:group-hover:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
@@ -82524,6 +85944,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_variable_concept: "md:focus-within:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_abstract_concept: "md:focus-within:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_concrete_concept: "md:focus-within:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_new_concept: "md:focus-within:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__text_unmatched_parenthesis: "md:focus-within:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__hover__text_primary: "md:hover:text-primary",
@@ -82536,6 +85986,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_variable_concept: "md:hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_abstract_concept: "md:hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_concrete_concept: "md:hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_new_concept: "md:hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__hover__text_unmatched_parenthesis: "md:hover:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__focus__text_primary: "md:focus:text-primary",
@@ -82545,6 +86025,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 769px)
     */
     md__focus__text_secondary: "md:focus:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_variable_concept: "md:focus:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_abstract_concept: "md:focus:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_concrete_concept: "md:focus:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_new_concept: "md:focus:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 769px)
+    */
+    md__focus__text_unmatched_parenthesis: "md:focus:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 769px)
@@ -82922,6 +86432,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_variable_concept: "md:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_abstract_concept: "md:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_concrete_concept: "md:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_new_concept: "md:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__placeholder_unmatched_parenthesis: "md:placeholder-unmatched_parenthesis",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 769px)
     */
     md__focus__placeholder_primary: "md:focus:placeholder-primary",
@@ -82931,6 +86471,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
     */
     md__focus__placeholder_secondary: "md:focus:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_variable_concept: "md:focus:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_abstract_concept: "md:focus:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_concrete_concept: "md:focus:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_new_concept: "md:focus:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 769px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 769px)
+    */
+    md__focus__placeholder_unmatched_parenthesis: "md:focus:placeholder-unmatched_parenthesis",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 769px)
@@ -83986,6 +87556,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_variable_concept: "md:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_abstract_concept: "md:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_concrete_concept: "md:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_new_concept: "md:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__ring_unmatched_parenthesis: "md:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 769px)
     */
     md__focus_within__ring_primary: "md:focus-within:ring-primary",
@@ -83998,6 +87598,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_variable_concept: "md:focus-within:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_abstract_concept: "md:focus-within:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_concrete_concept: "md:focus-within:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_new_concept: "md:focus-within:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus_within__ring_unmatched_parenthesis: "md:focus-within:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 769px)
     */
     md__focus__ring_primary: "md:focus:ring-primary",
@@ -84007,6 +87637,36 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
     */
     md__focus__ring_secondary: "md:focus:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_variable_concept: "md:focus:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_abstract_concept: "md:focus:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_concrete_concept: "md:focus:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_new_concept: "md:focus:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 769px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 769px)
+    */
+    md__focus__ring_unmatched_parenthesis: "md:focus:ring-unmatched_parenthesis",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 769px)
@@ -84259,6 +87919,31 @@ pub static C: CssClasses = CssClasses {
     md__ring_offset_secondary: "md:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 769px)
+    */
+    md__ring_offset_variable_concept: "md:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 769px)
+    */
+    md__ring_offset_abstract_concept: "md:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 769px)
+    */
+    md__ring_offset_concrete_concept: "md:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 769px)
+    */
+    md__ring_offset_new_concept: "md:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 769px)
+    */
+    md__ring_offset_unmatched_parenthesis: "md:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 769px)
     */
     md__focus_within__ring_offset_primary: "md:focus-within:ring-offset-primary",
@@ -84269,6 +87954,31 @@ pub static C: CssClasses = CssClasses {
     md__focus_within__ring_offset_secondary: "md:focus-within:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_variable_concept: "md:focus-within:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_abstract_concept: "md:focus-within:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_concrete_concept: "md:focus-within:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_new_concept: "md:focus-within:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 769px)
+    */
+    md__focus_within__ring_offset_unmatched_parenthesis: "md:focus-within:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 769px)
     */
     md__focus__ring_offset_primary: "md:focus:ring-offset-primary",
@@ -84277,6 +87987,31 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-offset-color: #FFFFFF;    @media (min-width: 769px)
     */
     md__focus__ring_offset_secondary: "md:focus:ring-offset-secondary",
+
+    /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_variable_concept: "md:focus:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_abstract_concept: "md:focus:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_concrete_concept: "md:focus:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_new_concept: "md:focus:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 769px)
+    */
+    md__focus__ring_offset_unmatched_parenthesis: "md:focus:ring-offset-unmatched_parenthesis",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 769px)
@@ -99829,6 +103564,36 @@ pub static C: CssClasses = CssClasses {
     lg__divide_secondary: "lg:divide-secondary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_variable_concept: "lg:divide-variable_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_abstract_concept: "lg:divide-abstract_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_concrete_concept: "lg:divide-concrete_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_new_concept: "lg:divide-new_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-divide-opacity));    @media (min-width: 1025px)
+    */
+    lg__divide_unmatched_parenthesis: "lg:divide-unmatched_parenthesis",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 1025px)
     */
     lg__divide_opacity_0: "lg:divide-opacity-0",
@@ -101123,6 +104888,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_variable_concept: "lg:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_abstract_concept: "lg:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_concrete_concept: "lg:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_new_concept: "lg:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__border_unmatched_parenthesis: "lg:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__border_primary: "lg:group-hover:border-primary",
@@ -101132,6 +104927,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__border_secondary: "lg:group-hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_variable_concept: "lg:group-hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_abstract_concept: "lg:group-hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_concrete_concept: "lg:group-hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_new_concept: "lg:group-hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__border_unmatched_parenthesis: "lg:group-hover:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
@@ -101147,6 +104972,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_variable_concept: "lg:focus-within:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_abstract_concept: "lg:focus-within:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_concrete_concept: "lg:focus-within:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_new_concept: "lg:focus-within:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__border_unmatched_parenthesis: "lg:focus-within:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__hover__border_primary: "lg:hover:border-primary",
@@ -101159,6 +105014,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_variable_concept: "lg:hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_abstract_concept: "lg:hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_concrete_concept: "lg:hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_new_concept: "lg:hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__border_unmatched_parenthesis: "lg:hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__focus__border_primary: "lg:focus:border-primary",
@@ -101168,6 +105053,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
     */
     lg__focus__border_secondary: "lg:focus:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_variable_concept: "lg:focus:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_abstract_concept: "lg:focus:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_concrete_concept: "lg:focus:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_new_concept: "lg:focus:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1025px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__border_unmatched_parenthesis: "lg:focus:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 1025px)
@@ -101458,6 +105373,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_variable_concept: "lg:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_abstract_concept: "lg:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_concrete_concept: "lg:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_new_concept: "lg:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__bg_unmatched_parenthesis: "lg:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__bg_primary: "lg:group-hover:bg-primary",
@@ -101467,6 +105412,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__bg_secondary: "lg:group-hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_variable_concept: "lg:group-hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_abstract_concept: "lg:group-hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_concrete_concept: "lg:group-hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_new_concept: "lg:group-hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__bg_unmatched_parenthesis: "lg:group-hover:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
@@ -101482,6 +105457,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_variable_concept: "lg:focus-within:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_abstract_concept: "lg:focus-within:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_concrete_concept: "lg:focus-within:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_new_concept: "lg:focus-within:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__bg_unmatched_parenthesis: "lg:focus-within:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__hover__bg_primary: "lg:hover:bg-primary",
@@ -101494,6 +105499,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_variable_concept: "lg:hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_abstract_concept: "lg:hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_concrete_concept: "lg:hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_new_concept: "lg:hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__bg_unmatched_parenthesis: "lg:hover:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__focus__bg_primary: "lg:focus:bg-primary",
@@ -101503,6 +105538,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
     */
     lg__focus__bg_secondary: "lg:focus:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_variable_concept: "lg:focus:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_abstract_concept: "lg:focus:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_concrete_concept: "lg:focus:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_new_concept: "lg:focus:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1025px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__bg_unmatched_parenthesis: "lg:focus:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 1025px)
@@ -101837,6 +105902,36 @@ pub static C: CssClasses = CssClasses {
     lg__from_secondary: "lg:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__from_variable_concept: "lg:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__from_abstract_concept: "lg:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__from_concrete_concept: "lg:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__from_new_concept: "lg:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__from_unmatched_parenthesis: "lg:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1025px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
@@ -101847,6 +105942,36 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
     */
     lg__hover__from_secondary: "lg:hover:from-secondary",
+
+    /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_variable_concept: "lg:hover:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_abstract_concept: "lg:hover:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_concrete_concept: "lg:hover:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_new_concept: "lg:hover:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__from_unmatched_parenthesis: "lg:hover:from-unmatched_parenthesis",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1025px)
@@ -101861,6 +105986,36 @@ pub static C: CssClasses = CssClasses {
     lg__focus__from_secondary: "lg:focus:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_variable_concept: "lg:focus:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_abstract_concept: "lg:focus:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_concrete_concept: "lg:focus:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_new_concept: "lg:focus:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1025px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__from_unmatched_parenthesis: "lg:focus:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
     lg__via_primary: "lg:via-primary",
@@ -101869,6 +106024,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
     */
     lg__via_secondary: "lg:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__via_variable_concept: "lg:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__via_abstract_concept: "lg:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__via_concrete_concept: "lg:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__via_new_concept: "lg:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__via_unmatched_parenthesis: "lg:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
@@ -101881,6 +106061,31 @@ pub static C: CssClasses = CssClasses {
     lg__hover__via_secondary: "lg:hover:via-secondary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_variable_concept: "lg:hover:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_abstract_concept: "lg:hover:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_concrete_concept: "lg:hover:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_new_concept: "lg:hover:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__hover__via_unmatched_parenthesis: "lg:hover:via-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1025px)
     */
     lg__focus__via_primary: "lg:focus:via-primary",
@@ -101889,6 +106094,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1025px)
     */
     lg__focus__via_secondary: "lg:focus:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_variable_concept: "lg:focus:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_abstract_concept: "lg:focus:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_concrete_concept: "lg:focus:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_new_concept: "lg:focus:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1025px)
+    */
+    lg__focus__via_unmatched_parenthesis: "lg:focus:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
@@ -101901,6 +106131,31 @@ pub static C: CssClasses = CssClasses {
     lg__to_secondary: "lg:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__to_variable_concept: "lg:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__to_abstract_concept: "lg:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__to_concrete_concept: "lg:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__to_new_concept: "lg:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__to_unmatched_parenthesis: "lg:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
     */
     lg__hover__to_primary: "lg:hover:to-primary",
@@ -101911,6 +106166,31 @@ pub static C: CssClasses = CssClasses {
     lg__hover__to_secondary: "lg:hover:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__hover__to_variable_concept: "lg:hover:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__hover__to_abstract_concept: "lg:hover:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__hover__to_concrete_concept: "lg:hover:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__hover__to_new_concept: "lg:hover:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__hover__to_unmatched_parenthesis: "lg:hover:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus__to_primary: "lg:focus:to-primary",
@@ -101919,6 +106199,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-to: #FFFFFF;    @media (min-width: 1025px)
     */
     lg__focus__to_secondary: "lg:focus:to-secondary",
+
+    /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__focus__to_variable_concept: "lg:focus:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__focus__to_abstract_concept: "lg:focus:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__focus__to_concrete_concept: "lg:focus:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__focus__to_new_concept: "lg:focus:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__focus__to_unmatched_parenthesis: "lg:focus:to-unmatched_parenthesis",
 
     /**
         box-decoration-break: slice;    @media (min-width: 1025px)
@@ -104014,6 +108319,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_variable_concept: "lg:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_abstract_concept: "lg:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_concrete_concept: "lg:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_new_concept: "lg:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__text_unmatched_parenthesis: "lg:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__text_primary: "lg:group-hover:text-primary",
@@ -104023,6 +108358,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__group_hover__text_secondary: "lg:group-hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_variable_concept: "lg:group-hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_abstract_concept: "lg:group-hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_concrete_concept: "lg:group-hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_new_concept: "lg:group-hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__group_hover__text_unmatched_parenthesis: "lg:group-hover:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
@@ -104038,6 +108403,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_variable_concept: "lg:focus-within:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_abstract_concept: "lg:focus-within:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_concrete_concept: "lg:focus-within:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_new_concept: "lg:focus-within:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__text_unmatched_parenthesis: "lg:focus-within:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__hover__text_primary: "lg:hover:text-primary",
@@ -104050,6 +108445,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_variable_concept: "lg:hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_abstract_concept: "lg:hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_concrete_concept: "lg:hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_new_concept: "lg:hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__hover__text_unmatched_parenthesis: "lg:hover:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__focus__text_primary: "lg:focus:text-primary",
@@ -104059,6 +108484,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
     */
     lg__focus__text_secondary: "lg:focus:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_variable_concept: "lg:focus:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_abstract_concept: "lg:focus:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_concrete_concept: "lg:focus:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_new_concept: "lg:focus:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__text_unmatched_parenthesis: "lg:focus:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 1025px)
@@ -104436,6 +108891,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_variable_concept: "lg:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_abstract_concept: "lg:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_concrete_concept: "lg:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_new_concept: "lg:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__placeholder_unmatched_parenthesis: "lg:placeholder-unmatched_parenthesis",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
     */
     lg__focus__placeholder_primary: "lg:focus:placeholder-primary",
@@ -104445,6 +108930,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
     */
     lg__focus__placeholder_secondary: "lg:focus:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_variable_concept: "lg:focus:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_abstract_concept: "lg:focus:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_concrete_concept: "lg:focus:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_new_concept: "lg:focus:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1025px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_unmatched_parenthesis: "lg:focus:placeholder-unmatched_parenthesis",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 1025px)
@@ -105500,6 +110015,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_variable_concept: "lg:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_abstract_concept: "lg:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_concrete_concept: "lg:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_new_concept: "lg:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__ring_unmatched_parenthesis: "lg:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1025px)
     */
     lg__focus_within__ring_primary: "lg:focus-within:ring-primary",
@@ -105512,6 +110057,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_variable_concept: "lg:focus-within:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_abstract_concept: "lg:focus-within:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_concrete_concept: "lg:focus-within:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_new_concept: "lg:focus-within:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_unmatched_parenthesis: "lg:focus-within:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1025px)
     */
     lg__focus__ring_primary: "lg:focus:ring-primary",
@@ -105521,6 +110096,36 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
     */
     lg__focus__ring_secondary: "lg:focus:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_variable_concept: "lg:focus:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_abstract_concept: "lg:focus:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_concrete_concept: "lg:focus:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_new_concept: "lg:focus:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1025px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1025px)
+    */
+    lg__focus__ring_unmatched_parenthesis: "lg:focus:ring-unmatched_parenthesis",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 1025px)
@@ -105773,6 +110378,31 @@ pub static C: CssClasses = CssClasses {
     lg__ring_offset_secondary: "lg:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_variable_concept: "lg:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_abstract_concept: "lg:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_concrete_concept: "lg:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_new_concept: "lg:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__ring_offset_unmatched_parenthesis: "lg:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus_within__ring_offset_primary: "lg:focus-within:ring-offset-primary",
@@ -105783,6 +110413,31 @@ pub static C: CssClasses = CssClasses {
     lg__focus_within__ring_offset_secondary: "lg:focus-within:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_variable_concept: "lg:focus-within:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_abstract_concept: "lg:focus-within:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_concrete_concept: "lg:focus-within:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_new_concept: "lg:focus-within:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__focus_within__ring_offset_unmatched_parenthesis: "lg:focus-within:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1025px)
     */
     lg__focus__ring_offset_primary: "lg:focus:ring-offset-primary",
@@ -105791,6 +110446,31 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1025px)
     */
     lg__focus__ring_offset_secondary: "lg:focus:ring-offset-secondary",
+
+    /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_variable_concept: "lg:focus:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_abstract_concept: "lg:focus:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_concrete_concept: "lg:focus:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_new_concept: "lg:focus:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1025px)
+    */
+    lg__focus__ring_offset_unmatched_parenthesis: "lg:focus:ring-offset-unmatched_parenthesis",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 1025px)
@@ -121343,6 +126023,36 @@ pub static C: CssClasses = CssClasses {
     xl__divide_secondary: "xl:divide-secondary",
 
     /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_variable_concept: "xl:divide-variable_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_abstract_concept: "xl:divide-abstract_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_concrete_concept: "xl:divide-concrete_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_new_concept: "xl:divide-new_concept",
+
+    /**
+        --tw-divide-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-divide-opacity));    @media (min-width: 1701px)
+    */
+    xl__divide_unmatched_parenthesis: "xl:divide-unmatched_parenthesis",
+
+    /**
         --tw-divide-opacity: 0;    @media (min-width: 1701px)
     */
     xl__divide_opacity_0: "xl:divide-opacity-0",
@@ -122637,6 +127347,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_variable_concept: "xl:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_abstract_concept: "xl:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_concrete_concept: "xl:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_new_concept: "xl:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__border_unmatched_parenthesis: "xl:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__border_primary: "xl:group-hover:border-primary",
@@ -122646,6 +127386,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__border_secondary: "xl:group-hover:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_variable_concept: "xl:group-hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_abstract_concept: "xl:group-hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_concrete_concept: "xl:group-hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_new_concept: "xl:group-hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__border_unmatched_parenthesis: "xl:group-hover:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
@@ -122661,6 +127431,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_variable_concept: "xl:focus-within:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_abstract_concept: "xl:focus-within:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_concrete_concept: "xl:focus-within:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_new_concept: "xl:focus-within:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__border_unmatched_parenthesis: "xl:focus-within:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__hover__border_primary: "xl:hover:border-primary",
@@ -122673,6 +127473,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_variable_concept: "xl:hover:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_abstract_concept: "xl:hover:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_concrete_concept: "xl:hover:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_new_concept: "xl:hover:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__border_unmatched_parenthesis: "xl:hover:border-unmatched_parenthesis",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
         border-color: rgba(11, 114, 59, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__focus__border_primary: "xl:focus:border-primary",
@@ -122682,6 +127512,36 @@ pub static C: CssClasses = CssClasses {
         border-color: rgba(255, 255, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
     */
     xl__focus__border_secondary: "xl:focus:border-secondary",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 191, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_variable_concept: "xl:focus:border-variable_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(191, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_abstract_concept: "xl:focus:border-abstract_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(64, 0, 255, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_concrete_concept: "xl:focus:border-concrete_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(128, 255, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_new_concept: "xl:focus:border-new_concept",
+
+    /**
+        --tw-border-opacity: 1;    @media (min-width: 1701px)
+        border-color: rgba(255, 0, 0, var(--tw-border-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__border_unmatched_parenthesis: "xl:focus:border-unmatched_parenthesis",
 
     /**
         --tw-border-opacity: 0;    @media (min-width: 1701px)
@@ -122972,6 +127832,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_variable_concept: "xl:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_abstract_concept: "xl:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_concrete_concept: "xl:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_new_concept: "xl:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__bg_unmatched_parenthesis: "xl:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__bg_primary: "xl:group-hover:bg-primary",
@@ -122981,6 +127871,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__bg_secondary: "xl:group-hover:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_variable_concept: "xl:group-hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_abstract_concept: "xl:group-hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_concrete_concept: "xl:group-hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_new_concept: "xl:group-hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__bg_unmatched_parenthesis: "xl:group-hover:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
@@ -122996,6 +127916,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_variable_concept: "xl:focus-within:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_abstract_concept: "xl:focus-within:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_concrete_concept: "xl:focus-within:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_new_concept: "xl:focus-within:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__bg_unmatched_parenthesis: "xl:focus-within:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__hover__bg_primary: "xl:hover:bg-primary",
@@ -123008,6 +127958,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_variable_concept: "xl:hover:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_abstract_concept: "xl:hover:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_concrete_concept: "xl:hover:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_new_concept: "xl:hover:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__bg_unmatched_parenthesis: "xl:hover:bg-unmatched_parenthesis",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
         background-color: rgba(11, 114, 59, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__focus__bg_primary: "xl:focus:bg-primary",
@@ -123017,6 +127997,36 @@ pub static C: CssClasses = CssClasses {
         background-color: rgba(255, 255, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
     */
     xl__focus__bg_secondary: "xl:focus:bg-secondary",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 191, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_variable_concept: "xl:focus:bg-variable_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(191, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_abstract_concept: "xl:focus:bg-abstract_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(64, 0, 255, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_concrete_concept: "xl:focus:bg-concrete_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(128, 255, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_new_concept: "xl:focus:bg-new_concept",
+
+    /**
+        --tw-bg-opacity: 1;    @media (min-width: 1701px)
+        background-color: rgba(255, 0, 0, var(--tw-bg-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__bg_unmatched_parenthesis: "xl:focus:bg-unmatched_parenthesis",
 
     /**
         --tw-bg-opacity: 0;    @media (min-width: 1701px)
@@ -123351,6 +128361,36 @@ pub static C: CssClasses = CssClasses {
     xl__from_secondary: "xl:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__from_variable_concept: "xl:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__from_abstract_concept: "xl:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__from_concrete_concept: "xl:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__from_new_concept: "xl:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__from_unmatched_parenthesis: "xl:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1701px)
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
@@ -123361,6 +128401,36 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
     */
     xl__hover__from_secondary: "xl:hover:from-secondary",
+
+    /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_variable_concept: "xl:hover:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_abstract_concept: "xl:hover:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_concrete_concept: "xl:hover:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_new_concept: "xl:hover:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__from_unmatched_parenthesis: "xl:hover:from-unmatched_parenthesis",
 
     /**
         --tw-gradient-from: #0B723B;    @media (min-width: 1701px)
@@ -123375,6 +128445,36 @@ pub static C: CssClasses = CssClasses {
     xl__focus__from_secondary: "xl:focus:from-secondary",
 
     /**
+        --tw-gradient-from: #FFBF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_variable_concept: "xl:focus:from-variable_concept",
+
+    /**
+        --tw-gradient-from: #BF00FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_abstract_concept: "xl:focus:from-abstract_concept",
+
+    /**
+        --tw-gradient-from: #4000FF;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_concrete_concept: "xl:focus:from-concrete_concept",
+
+    /**
+        --tw-gradient-from: #80FF00;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_new_concept: "xl:focus:from-new_concept",
+
+    /**
+        --tw-gradient-from: #FF0000;    @media (min-width: 1701px)
+        --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__from_unmatched_parenthesis: "xl:focus:from-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
     xl__via_primary: "xl:via-primary",
@@ -123383,6 +128483,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
     */
     xl__via_secondary: "xl:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__via_variable_concept: "xl:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__via_abstract_concept: "xl:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__via_concrete_concept: "xl:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__via_new_concept: "xl:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__via_unmatched_parenthesis: "xl:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
@@ -123395,6 +128520,31 @@ pub static C: CssClasses = CssClasses {
     xl__hover__via_secondary: "xl:hover:via-secondary",
 
     /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_variable_concept: "xl:hover:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_abstract_concept: "xl:hover:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_concrete_concept: "xl:hover:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_new_concept: "xl:hover:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__hover__via_unmatched_parenthesis: "xl:hover:via-unmatched_parenthesis",
+
+    /**
         --tw-gradient-stops: var(--tw-gradient-from), #0B723B, var(--tw-gradient-to, rgba(11, 114, 59, 0));    @media (min-width: 1701px)
     */
     xl__focus__via_primary: "xl:focus:via-primary",
@@ -123403,6 +128553,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-stops: var(--tw-gradient-from), #FFFFFF, var(--tw-gradient-to, rgba(255, 255, 255, 0));    @media (min-width: 1701px)
     */
     xl__focus__via_secondary: "xl:focus:via-secondary",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FFBF00, var(--tw-gradient-to, rgba(255, 191, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_variable_concept: "xl:focus:via-variable_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #BF00FF, var(--tw-gradient-to, rgba(191, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_abstract_concept: "xl:focus:via-abstract_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #4000FF, var(--tw-gradient-to, rgba(64, 0, 255, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_concrete_concept: "xl:focus:via-concrete_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #80FF00, var(--tw-gradient-to, rgba(128, 255, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_new_concept: "xl:focus:via-new_concept",
+
+    /**
+        --tw-gradient-stops: var(--tw-gradient-from), #FF0000, var(--tw-gradient-to, rgba(255, 0, 0, 0));    @media (min-width: 1701px)
+    */
+    xl__focus__via_unmatched_parenthesis: "xl:focus:via-unmatched_parenthesis",
 
     /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
@@ -123415,6 +128590,31 @@ pub static C: CssClasses = CssClasses {
     xl__to_secondary: "xl:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__to_variable_concept: "xl:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__to_abstract_concept: "xl:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__to_concrete_concept: "xl:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__to_new_concept: "xl:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__to_unmatched_parenthesis: "xl:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
     */
     xl__hover__to_primary: "xl:hover:to-primary",
@@ -123425,6 +128625,31 @@ pub static C: CssClasses = CssClasses {
     xl__hover__to_secondary: "xl:hover:to-secondary",
 
     /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__hover__to_variable_concept: "xl:hover:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__hover__to_abstract_concept: "xl:hover:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__hover__to_concrete_concept: "xl:hover:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__hover__to_new_concept: "xl:hover:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__hover__to_unmatched_parenthesis: "xl:hover:to-unmatched_parenthesis",
+
+    /**
         --tw-gradient-to: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus__to_primary: "xl:focus:to-primary",
@@ -123433,6 +128658,31 @@ pub static C: CssClasses = CssClasses {
         --tw-gradient-to: #FFFFFF;    @media (min-width: 1701px)
     */
     xl__focus__to_secondary: "xl:focus:to-secondary",
+
+    /**
+        --tw-gradient-to: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__focus__to_variable_concept: "xl:focus:to-variable_concept",
+
+    /**
+        --tw-gradient-to: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__focus__to_abstract_concept: "xl:focus:to-abstract_concept",
+
+    /**
+        --tw-gradient-to: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__focus__to_concrete_concept: "xl:focus:to-concrete_concept",
+
+    /**
+        --tw-gradient-to: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__focus__to_new_concept: "xl:focus:to-new_concept",
+
+    /**
+        --tw-gradient-to: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__focus__to_unmatched_parenthesis: "xl:focus:to-unmatched_parenthesis",
 
     /**
         box-decoration-break: slice;    @media (min-width: 1701px)
@@ -125528,6 +130778,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_variable_concept: "xl:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_abstract_concept: "xl:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_concrete_concept: "xl:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_new_concept: "xl:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__text_unmatched_parenthesis: "xl:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__text_primary: "xl:group-hover:text-primary",
@@ -125537,6 +130817,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__group_hover__text_secondary: "xl:group-hover:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_variable_concept: "xl:group-hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_abstract_concept: "xl:group-hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_concrete_concept: "xl:group-hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_new_concept: "xl:group-hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__group_hover__text_unmatched_parenthesis: "xl:group-hover:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
@@ -125552,6 +130862,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_variable_concept: "xl:focus-within:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_abstract_concept: "xl:focus-within:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_concrete_concept: "xl:focus-within:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_new_concept: "xl:focus-within:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__text_unmatched_parenthesis: "xl:focus-within:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__hover__text_primary: "xl:hover:text-primary",
@@ -125564,6 +130904,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_variable_concept: "xl:hover:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_abstract_concept: "xl:hover:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_concrete_concept: "xl:hover:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_new_concept: "xl:hover:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__hover__text_unmatched_parenthesis: "xl:hover:text-unmatched_parenthesis",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__focus__text_primary: "xl:focus:text-primary",
@@ -125573,6 +130943,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
     */
     xl__focus__text_secondary: "xl:focus:text-secondary",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_variable_concept: "xl:focus:text-variable_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_abstract_concept: "xl:focus:text-abstract_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_concrete_concept: "xl:focus:text-concrete_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_new_concept: "xl:focus:text-new_concept",
+
+    /**
+        --tw-text-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-text-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__text_unmatched_parenthesis: "xl:focus:text-unmatched_parenthesis",
 
     /**
         --tw-text-opacity: 0;    @media (min-width: 1701px)
@@ -125950,6 +131350,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_variable_concept: "xl:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_abstract_concept: "xl:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_concrete_concept: "xl:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_new_concept: "xl:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__placeholder_unmatched_parenthesis: "xl:placeholder-unmatched_parenthesis",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
         color: rgba(11, 114, 59, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
     */
     xl__focus__placeholder_primary: "xl:focus:placeholder-primary",
@@ -125959,6 +131389,36 @@ pub static C: CssClasses = CssClasses {
         color: rgba(255, 255, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
     */
     xl__focus__placeholder_secondary: "xl:focus:placeholder-secondary",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 191, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_variable_concept: "xl:focus:placeholder-variable_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(191, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_abstract_concept: "xl:focus:placeholder-abstract_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(64, 0, 255, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_concrete_concept: "xl:focus:placeholder-concrete_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(128, 255, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_new_concept: "xl:focus:placeholder-new_concept",
+
+    /**
+        --tw-placeholder-opacity: 1;    @media (min-width: 1701px)
+        color: rgba(255, 0, 0, var(--tw-placeholder-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_unmatched_parenthesis: "xl:focus:placeholder-unmatched_parenthesis",
 
     /**
         --tw-placeholder-opacity: 0;    @media (min-width: 1701px)
@@ -127014,6 +132474,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_variable_concept: "xl:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_abstract_concept: "xl:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_concrete_concept: "xl:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_new_concept: "xl:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__ring_unmatched_parenthesis: "xl:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1701px)
     */
     xl__focus_within__ring_primary: "xl:focus-within:ring-primary",
@@ -127026,6 +132516,36 @@ pub static C: CssClasses = CssClasses {
 
     /**
         --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_variable_concept: "xl:focus-within:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_abstract_concept: "xl:focus-within:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_concrete_concept: "xl:focus-within:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_new_concept: "xl:focus-within:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_unmatched_parenthesis: "xl:focus-within:ring-unmatched_parenthesis",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
         --tw-ring-color: rgba(11, 114, 59, var(--tw-ring-opacity));    @media (min-width: 1701px)
     */
     xl__focus__ring_primary: "xl:focus:ring-primary",
@@ -127035,6 +132555,36 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-color: rgba(255, 255, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
     */
     xl__focus__ring_secondary: "xl:focus:ring-secondary",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 191, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_variable_concept: "xl:focus:ring-variable_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(191, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_abstract_concept: "xl:focus:ring-abstract_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(64, 0, 255, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_concrete_concept: "xl:focus:ring-concrete_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(128, 255, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_new_concept: "xl:focus:ring-new_concept",
+
+    /**
+        --tw-ring-opacity: 1;    @media (min-width: 1701px)
+        --tw-ring-color: rgba(255, 0, 0, var(--tw-ring-opacity));    @media (min-width: 1701px)
+    */
+    xl__focus__ring_unmatched_parenthesis: "xl:focus:ring-unmatched_parenthesis",
 
     /**
         --tw-ring-opacity: 0;    @media (min-width: 1701px)
@@ -127287,6 +132837,31 @@ pub static C: CssClasses = CssClasses {
     xl__ring_offset_secondary: "xl:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_variable_concept: "xl:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_abstract_concept: "xl:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_concrete_concept: "xl:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_new_concept: "xl:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__ring_offset_unmatched_parenthesis: "xl:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus_within__ring_offset_primary: "xl:focus-within:ring-offset-primary",
@@ -127297,6 +132872,31 @@ pub static C: CssClasses = CssClasses {
     xl__focus_within__ring_offset_secondary: "xl:focus-within:ring-offset-secondary",
 
     /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_variable_concept: "xl:focus-within:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_abstract_concept: "xl:focus-within:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_concrete_concept: "xl:focus-within:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_new_concept: "xl:focus-within:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__focus_within__ring_offset_unmatched_parenthesis: "xl:focus-within:ring-offset-unmatched_parenthesis",
+
+    /**
         --tw-ring-offset-color: #0B723B;    @media (min-width: 1701px)
     */
     xl__focus__ring_offset_primary: "xl:focus:ring-offset-primary",
@@ -127305,6 +132905,31 @@ pub static C: CssClasses = CssClasses {
         --tw-ring-offset-color: #FFFFFF;    @media (min-width: 1701px)
     */
     xl__focus__ring_offset_secondary: "xl:focus:ring-offset-secondary",
+
+    /**
+        --tw-ring-offset-color: #FFBF00;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_variable_concept: "xl:focus:ring-offset-variable_concept",
+
+    /**
+        --tw-ring-offset-color: #BF00FF;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_abstract_concept: "xl:focus:ring-offset-abstract_concept",
+
+    /**
+        --tw-ring-offset-color: #4000FF;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_concrete_concept: "xl:focus:ring-offset-concrete_concept",
+
+    /**
+        --tw-ring-offset-color: #80FF00;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_new_concept: "xl:focus:ring-offset-new_concept",
+
+    /**
+        --tw-ring-offset-color: #FF0000;    @media (min-width: 1701px)
+    */
+    xl__focus__ring_offset_unmatched_parenthesis: "xl:focus:ring-offset-unmatched_parenthesis",
 
     /**
         --tw-blur: var(--tw-empty,/*!*/ /*!*/);    @media (min-width: 1701px)

@@ -61,9 +61,9 @@ impl From<Url> for Page {
 // ------ ------
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    orders
-        .subscribe(Msg::UrlChanged)
-        .after_next_render(|_| Msg::Home(home::Msg::SetCommandInput("".into())));
+    orders.subscribe(Msg::UrlChanged).after_next_render(|_| {
+        Msg::Home(home::Msg::SetCommandInput("".into()))
+    });
 
     Model {
         page: url.into(),

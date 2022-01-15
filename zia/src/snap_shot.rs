@@ -5,6 +5,7 @@ use crate::{
         Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
         NewDirectConceptDelta, ValueChange,
     },
+    context_snap_shot::Uncommitted,
     errors::{ZiaError, ZiaResult},
 };
 use std::{
@@ -12,8 +13,6 @@ use std::{
     fmt::{Debug, Display},
     hash::Hash,
 };
-
-pub type UncommittedConceptId = usize;
 
 pub trait Reader<SDCD>
 where
@@ -30,7 +29,7 @@ where
         + Debug
         + Send
         + Sync
-        + From<UncommittedConceptId>;
+        + From<Uncommitted>;
     type CommittedConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
     type MixedConcept<'a>: ConceptTrait<Id = Self::ConceptId>
         + Clone
@@ -132,11 +131,8 @@ where
                             },
                         },
                         ConceptDelta::Indirect(delta) => {
-                            if let Some(c) = &mut concept {
-                                c.apply_indirect(delta);
-                            } else {
-                                panic!("Concept doesn't exist");
-                            }
+                            let c = concept.as_mut().expect("Concept doesn't exist");
+                            c.apply_indirect(delta);
                         },
                     }
                 }

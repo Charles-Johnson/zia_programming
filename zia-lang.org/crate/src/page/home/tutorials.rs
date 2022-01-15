@@ -33,12 +33,12 @@ pub const TUTORIALS: (Tutorial<5>, Tutorial<0>) = (
 pub struct Model {
     pub steps: &'static [TutorialStep],
     pub current_step_index: usize,
-    pub showing_evaluation: bool
+    pub showing_evaluation: bool,
 }
 
 pub struct Tutorial<const N: usize> {
     pub title: &'static str,
-    pub steps: [TutorialStep; N]
+    pub steps: [TutorialStep; N],
 }
 
 pub struct TutorialStep {
