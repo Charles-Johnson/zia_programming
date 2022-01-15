@@ -192,6 +192,7 @@ where
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
+                a = self.context_search().expand(&a);
                 self.create_variable_concepts(Syntax::<C>::make_mut(&mut a));
                 self.call(&a)
             })
@@ -591,19 +592,6 @@ where
         }
     }
 
-    /// If the abstract syntax tree can be expanded, then `call` is called with this expansion. If not then an `Err(ZiaError::NotAProgram)` is returned
-    fn try_expanding_then_call(
-        &mut self,
-        ast: &SharedSyntax<C>,
-    ) -> ZiaResult<String> {
-        let expansion = &self.context_search().expand(ast);
-        if expansion == ast {
-            Err(ZiaError::CannotExpandFurther)
-        } else {
-            self.call(expansion)
-        }
-    }
-
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
@@ -648,13 +636,7 @@ where
                         .unwrap_or_else(|| {
                             self.try_reducing_then_call(ast).map_err_variant(
                                 &ZiaError::CannotReduceFurther,
-                                || {
-                                    self.try_expanding_then_call(ast)
-                                        .map_err_variant(
-                                            &ZiaError::CannotExpandFurther,
-                                            || Ok(ast.to_string()),
-                                        )
-                                },
+                                || Ok(ast.to_string()),
                             )
                         })
                 },
@@ -784,49 +766,51 @@ where
         new: &SharedSyntax<C>,
         old: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
-        if new.get_expansion().is_some() {
-            Err(ZiaError::BadComposition)
-        } else {
-            let mut updater = ContextUpdater {
-                snap_shot: &self.snap_shot,
-                delta: &mut self.delta,
-                cache: &mut self.cache,
-            };
-            match (new.get_concept(), old.get_concept(), old.get_expansion()) {
-                (_, None, None) => Err(ZiaError::RedundantRefactor),
-                (None, Some(b), None) => updater.relabel(b, &new.to_string()),
-                (None, Some(b), Some(_)) => {
-                    if self
-                        .snap_shot
-                        .get_concept_of_label(updater.delta, b)
-                        .is_none()
-                    {
-                        updater.label(b, &new.to_string())
-                    } else {
-                        updater.relabel(b, &new.to_string())
-                    }
-                },
-                (None, None, Some((ref left, ref right))) => {
-                    self.define_new_syntax(&new.to_string(), left, right)
-                },
-                (Some(a), Some(b), None) => {
-                    if a == b {
-                        self.cleanly_delete_composition(a)
-                    } else {
-                        Err(ZiaError::CompositionCollision)
-                    }
-                },
-                (Some(a), Some(b), Some(_)) => {
-                    if a == b {
-                        Err(ZiaError::RedundantComposition)
-                    } else {
-                        Err(ZiaError::CompositionCollision)
-                    }
-                },
-                (Some(a), None, Some((ref left, ref right))) => {
-                    self.redefine(a, left, right)
-                },
-            }
+        let mut updater = ContextUpdater {
+            snap_shot: &self.snap_shot,
+            delta: &mut self.delta,
+            cache: &mut self.cache,
+        };
+        match (
+            new.get_concept(),
+            new.get_expansion(),
+            old.get_concept(),
+            old.get_expansion(),
+        ) {
+            (_, Some(_), None, None) => Err(ZiaError::BadComposition),
+            (_, None, None, None) => Err(ZiaError::RedundantRefactor),
+            (None, _, Some(b), None) => updater.relabel(b, &new.to_string()),
+            (None, _, Some(b), Some(_)) => {
+                if self
+                    .snap_shot
+                    .get_concept_of_label(updater.delta, b)
+                    .is_none()
+                {
+                    updater.label(b, &new.to_string())
+                } else {
+                    updater.relabel(b, &new.to_string())
+                }
+            },
+            (None, _, None, Some((ref left, ref right))) => {
+                self.define_new_syntax(&new.to_string(), left, right)
+            },
+            (Some(a), _, Some(b), None) => {
+                if a == b {
+                    self.cleanly_delete_composition(a)
+                } else {
+                    Err(ZiaError::CompositionCollision)
+                }
+            },
+            (Some(a), _, Some(b), Some(_)) => {
+                if a == b {
+                    Err(ZiaError::RedundantComposition)
+                } else {
+                    Err(ZiaError::CompositionCollision)
+                }
+            },
+            (Some(a), _, None, Some((ref left, ref right))) => {
+                self.redefine(a, left, right)
+            },
         }
     }
 
