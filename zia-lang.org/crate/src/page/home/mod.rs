@@ -87,8 +87,12 @@ pub fn update(
                 if let Some(tutorial_model) = &mut model.active_tutorial {
                     if output.is_empty() {
                         tutorial_model.current_step_index += 1;
+                        if (tutorial_model.current_step_index < tutorial_model.steps.len()) {
                         tutorial_model.steps[tutorial_model.current_step_index]
                             .command
+                        } else {
+                            ""
+                        }
                     } else {
                         tutorial_model.showing_evaluation = true;
                         ""
