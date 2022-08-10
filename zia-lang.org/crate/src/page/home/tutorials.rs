@@ -1,10 +1,16 @@
-pub const TUTORIALS: (Tutorial<5>, Tutorial<0>) = (
+pub const TUTORIALS: (Tutorial<8>, Tutorial<0>) = (
     Tutorial {
         title: "Factorial",
         steps: [
             TutorialStep {
                 command: "let 1 ! -> 1",
                 explanation: "You can first define the factorial operator, !, for one",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let assoc +1 -> left",
+                explanation: "and define the increment operator +1 to be left associative",
                 #[cfg(test)]
                 expected_evaluation: ""
             },
@@ -31,6 +37,18 @@ pub const TUTORIALS: (Tutorial<5>, Tutorial<0>) = (
                 explanation: "Finally you can evaluate two factorial!",
                 #[cfg(test)]
                 expected_evaluation: "2"
+            },
+            TutorialStep {
+                command: "let 3 := 2 +1",
+                explanation: "Next let's define three",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "3 !",
+                explanation: "Now check what three factorial is",
+                #[cfg(test)]
+                expected_evaluation: "3 * 2"
             }
         ]
     },
