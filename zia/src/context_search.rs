@@ -1126,14 +1126,21 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> String {
-        let left_string = left.get_expansion().map_or_else(
-            || left.to_string(),
-            |(l, r)| self.get_associativity(&r).display_joint_left(l, r),
-        );
-        let right_string = right.get_expansion().map_or_else(
-            || right.to_string(),
-            |(l, r)| self.get_associativity(&l).display_joint_right(l, r),
-        );
+        // TODO: find a better way of checking that a syntax tree does not a have a labeled root concept
+        let mut left_string = left.to_string();
+        if left_string.chars().any(char::is_whitespace) {
+            left_string = left.get_expansion().map_or_else(
+                || left.to_string(),
+                |(l, r)| self.get_associativity(&r).display_joint_left(l, r),
+            );
+        }
+        let mut right_string = right.to_string();
+        if right_string.chars().any(char::is_whitespace) {
+            right_string = right.get_expansion().map_or(
+                right_string,
+                |(l, r)| self.get_associativity(&l).display_joint_right(l, r),
+            );
+        }
         left_string + " " + &right_string
     }
 
