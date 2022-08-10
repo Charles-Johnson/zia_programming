@@ -83,24 +83,27 @@ pub fn update(
             let mut input = String::new();
             swap(&mut input, &mut model.input);
             let output = model.context.execute(&input);
-            let new_input =
-                if let Some(tutorial_model) = &mut model.active_tutorial {
-                    if output.is_empty() {
-                        tutorial_model.current_step_index += 1;
-                        if (tutorial_model.current_step_index < tutorial_model.steps.len()) {
+            let new_input = if let Some(tutorial_model) =
+                &mut model.active_tutorial
+            {
+                if output.is_empty() {
+                    tutorial_model.current_step_index += 1;
+                    if (tutorial_model.current_step_index
+                        < tutorial_model.steps.len())
+                    {
                         tutorial_model.steps[tutorial_model.current_step_index]
                             .command
-                        } else {
-                            ""
-                        }
                     } else {
-                        tutorial_model.showing_evaluation = true;
                         ""
                     }
                 } else {
+                    tutorial_model.showing_evaluation = true;
                     ""
                 }
-                .into();
+            } else {
+                ""
+            }
+            .into();
             model.history.push(InterpreterHistoryEntry {
                 value: input,
                 kind: EntryKind::Command,
