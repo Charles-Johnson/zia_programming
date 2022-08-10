@@ -119,6 +119,8 @@ mod and_also;
 
 mod associativity;
 
+pub use associativity::Associativity;
+
 /// Abstract syntax tree. Relates syntax to concepts.
 mod ast;
 
