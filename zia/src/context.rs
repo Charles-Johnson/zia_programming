@@ -253,8 +253,9 @@ where
                     positions: lp_indices,
                 } = self.lowest_precedence_info(tokens)?;
                 if lp_indices.is_empty() {
-                    return Err(ZiaError::AmbiguousExpression);
+                    return Err(ZiaError::LowestPrecendenceNotFound{tokens: tokens.to_vec()});
                 }
+                // TODO: redesign how opposing associativity is handled. Refer to this issue: 
                 let assoc =
                     lp_syntax.iter().try_fold(None, |assoc, syntax| match (
                         self.context_search().get_associativity(syntax),
@@ -264,7 +265,7 @@ where
                             if x == y {
                                 Ok(Some(x))
                             } else {
-                                Err(ZiaError::AmbiguousExpression)
+                                Err(ZiaError::DifferentAssociativityAmongstLowestPrecendenceTokens{token: syntax.to_string(), associativity: x, other_associativity: y})
                             }
                         },
                         (x, None) => Ok(Some(x)),
@@ -282,7 +283,7 @@ where
                                             tokens,
                                             state.ok(),
                                             *lp_index,
-                                            &Associativity::Right,
+                                            Associativity::Right,
                                         )?))
                                 },
                             )??
@@ -305,7 +306,7 @@ where
                                 tokens,
                                 state,
                                 *lp_index,
-                                &Associativity::Left,
+                                Associativity::Left,
                             ))
                             .transpose()
                         })?
@@ -324,7 +325,7 @@ where
         tokens: &[String],
         state: Option<(SharedSyntax<C>, usize)>,
         lp_index: usize,
-        assoc: &Associativity,
+        assoc: Associativity,
     ) -> ZiaResult<(SharedSyntax<C>, usize)> {
         let mut prev_lp_index = None;
         let mut edge = None;
@@ -574,7 +575,8 @@ where
             "let ((_y_ exists_such_that) (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
         );
         self.execute("let default > prec ->");
-        self.execute("let (prec ->) > prec let");
+        self.execute("let (prec ->) > prec :=");
+        self.execute("let (prec :=) > prec let");
     }
 
     fn reduce_and_call_pair(

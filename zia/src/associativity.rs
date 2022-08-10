@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Associativity {
     Left,
     Right,
@@ -8,7 +8,7 @@ pub enum Associativity {
 
 impl Associativity {
     pub fn display_joint_left(
-        &self,
+        self,
         leftleft: impl Display,
         leftright: impl Display,
     ) -> String {
@@ -19,7 +19,7 @@ impl Associativity {
     }
 
     pub fn display_joint_right(
-        &self,
+        self,
         rightleft: impl Display,
         rightright: impl Display,
     ) -> String {
