@@ -29,6 +29,7 @@ impl Associativity {
         }
     }
 
+    #[must_use]
     pub fn slice_tokens<'a>(
         &self,
         tokens: &'a [String],
