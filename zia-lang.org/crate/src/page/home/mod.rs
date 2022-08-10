@@ -88,8 +88,8 @@ pub fn update(
             {
                 if output.is_empty() {
                     tutorial_model.current_step_index += 1;
-                    if (tutorial_model.current_step_index
-                        < tutorial_model.steps.len())
+                    if tutorial_model.current_step_index
+                        < tutorial_model.steps.len()
                     {
                         tutorial_model.steps[tutorial_model.current_step_index]
                             .command
