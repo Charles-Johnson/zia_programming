@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<11>, Tutorial<0>) = (
+pub const TUTORIALS: (Tutorial<12>, Tutorial<0>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -51,8 +51,14 @@ pub const TUTORIALS: (Tutorial<11>, Tutorial<0>) = (
                 expected_evaluation: "3 * 2"
             },
             TutorialStep {
-                command: "let prec * > prec +",
+                command: "let (prec *) > prec +",
                 explanation: "We can reduce a multiplication expression to an addition expression but first we define the relative operator precendence",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let (prec +) > (prec ->)",
+                explanation: "This allows reduction rules to not need as many parentheses",
                 #[cfg(test)]
                 expected_evaluation: ""
             },
