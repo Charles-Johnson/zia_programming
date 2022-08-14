@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<8>, Tutorial<0>) = (
+pub const TUTORIALS: (Tutorial<11>, Tutorial<0>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -49,6 +49,24 @@ pub const TUTORIALS: (Tutorial<8>, Tutorial<0>) = (
                 explanation: "Now check what three factorial is",
                 #[cfg(test)]
                 expected_evaluation: "3 * 2"
+            },
+            TutorialStep {
+                command: "let prec * > prec +",
+                explanation: "We can reduce a multiplication expression to an addition expression but first we define the relative operator precendence",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let (_x_ * (_y_ +1) -> _x_ * _y_ + _x_)",
+                explanation: "Now let's define how to reduce a multiplication expression",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "3 !",
+                explanation: "Now three factorial can be broken down further",
+                #[cfg(test)]
+                expected_evaluation: "3 + 3"
             }
         ]
     },
