@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<12>, Tutorial<0>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<0>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -73,7 +73,43 @@ pub const TUTORIALS: (Tutorial<12>, Tutorial<0>) = (
                 explanation: "Now three factorial can be broken down further",
                 #[cfg(test)]
                 expected_evaluation: "3 + 3"
-            }
+            },
+            TutorialStep {
+                command: "let _x_ + 1 -> (_x_ +1)",
+                explanation: "Adding one to a number increments that number",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let _x_ + (_y_ +1) -> (_x_ +1) + _y_",
+                explanation: "Helps to reduce addition expressions",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let 4 := 3 +1",
+                explanation: "Define four",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let 5 := 4 +1",
+                explanation: "Define five",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let 6 := 5 +1",
+                explanation: "Define six",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "3 !",
+                explanation: "Now three factorial can be broken down even further",
+                #[cfg(test)]
+                expected_evaluation: "6"
+            },
         ]
     },
     Tutorial {
@@ -110,7 +146,7 @@ mod test {
     fn factorial_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.0.steps {
-            assert_eq!(context.execute(step.command), step.expected_evaluation);
+            assert_eq!(context.execute(step.command), step.expected_evaluation, "Failed at {0}", step.command);
         }
     }
 }
