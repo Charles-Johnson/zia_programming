@@ -4,7 +4,7 @@ use crate::{
     page::home::{tutorials, OUTER_PADDING},
     Msg as GlobalMsg,
 };
-use seed::{attrs, div, empty, p, prelude::*, span, style, textarea, Attrs, C};
+use seed::{attrs, div, empty, p, prelude::*, span, style, textarea, Attrs, C, button};
 use zia::{ConceptKind, LexemeCategory};
 
 pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
@@ -17,21 +17,40 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
     );
     // prevents bottom part of history being obscured by command input
     let bottom_buffer = div![style![St::Height => height],];
-    let possible_explanation = if let Some(tutorials::Model {
-        showing_evaluation: false,
-        current_step_index,
-        steps,
-    }) = model.active_tutorial
+    let tutorial_explanation_style = style! {
+        St::BackgroundColor => "rgba(255,255,255,0.5)"
+    };
+    let possible_explanation = match model.active_tutorial
     {
-        let explanation = steps[current_step_index].explanation;
-        p![
-            style! {
-                St::BackgroundColor => "rgba(255,255,255,0.5)"
-            },
-            explanation
-        ]
-    } else {
-        empty!()
+        Some(tutorials::Model {
+            showing_evaluation: false,
+            current_step_index,
+            steps,
+        }) => {
+            let explanation = steps[current_step_index].explanation;
+            p![
+                tutorial_explanation_style,
+                explanation
+            ]
+        },
+        Some(tutorials::Model {
+            showing_evaluation: true,
+            current_step_index,
+            steps,
+        }) if current_step_index + 1 < steps.len() => {
+            let onclick = ev(Ev::Click, move |_| GlobalMsg::Home(HomeMsg::SkipToTutorialStep{
+                steps,
+                current_step_index
+            }));
+            button![
+                onclick,
+                p![
+                    tutorial_explanation_style,
+                    "Click here for next step"
+                ]
+            ]
+        },
+        _ => empty!()
     };
 
     let textarea_class =
@@ -81,7 +100,11 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
             span![C![colour, C.whitespace_pre_wrap], lexeme.text]
         })
         .collect();
-    let syntax_colouring = div![
+    vec![bottom_buffer, syntax_colouring(&height, spans, &textarea_class), textarea]
+}
+
+fn syntax_colouring<T>(height: &str, spans: Vec<Node<T>>, textarea_class: &Attrs) -> Node<T> {
+    div![
         style! {
             St::Height => height,
             St::Position => "fixed",
@@ -101,8 +124,7 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
             C.border_2,
         ],
         spans
-    ];
-    vec![bottom_buffer, syntax_colouring, textarea]
+    ]
 }
 
 fn textarea_view(
