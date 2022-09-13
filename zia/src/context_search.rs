@@ -990,7 +990,7 @@ where
                     .filter_map(|(generalised_hand, composition)| {
                         equivalence_set_of_composition
                             .contains(&composition)
-                            .then(|| generalised_hand)
+                            .then_some(generalised_hand)
                     })
                     .filter_map(|generalised_hand| {
                         Syntax::<C>::check_example(
@@ -1136,10 +1136,10 @@ where
         }
         let mut right_string = right.to_string();
         if right_string.chars().any(char::is_whitespace) {
-            right_string = right.get_expansion().map_or(
-                right_string,
-                |(l, r)| self.get_associativity(&l).display_joint_right(l, r),
-            );
+            right_string =
+                right.get_expansion().map_or(right_string, |(l, r)| {
+                    self.get_associativity(&l).display_joint_right(l, r)
+                });
         }
         left_string + " " + &right_string
     }
@@ -1348,7 +1348,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Example<Syntax: SyntaxTree, RR: ReductionReason> {
     generalisation: Syntax::SharedSyntax,
     substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax, RR>>,
@@ -1357,14 +1357,14 @@ pub struct Example<Syntax: SyntaxTree, RR: ReductionReason> {
 type MaybeReducedSyntaxWithReason<RR> =
     (ReductionReasonSharedSyntax<RR>, Option<RR>);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
     value: Syntax::SharedSyntax,
     reduction: Syntax::SharedSyntax,
     reason: RR,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
     GreaterThan,
     LessThan,
@@ -1374,7 +1374,7 @@ pub enum Comparison {
     LessThanOrEqualTo,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ComparisonReason<RR: ReductionReason> {
     SameSyntax,
     Reduction {

@@ -19,10 +19,10 @@ use crate::{
     associativity::Associativity,
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
-    context_cache::ContextCache,
+    context_cache::{self, ContextCache},
     context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta},
     context_search::{
-        Comparison, ContextReferences, ContextSearch,
+        self, Comparison, ContextReferences, ContextSearch,
         Iteration as ContextSearchIteration, SharedSyntax, Syntax,
     },
     context_updater::ContextUpdater,
@@ -62,7 +62,7 @@ where
     _phantom: PhantomData<VML>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TokenSubsequence<SharedSyntax> {
     pub syntax: Vec<SharedSyntax>,
     pub positions: Vec<usize>,
@@ -75,6 +75,7 @@ where
     for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as context_search::ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
@@ -164,9 +165,9 @@ where
         if symbol.starts_with('_') && symbol.ends_with('_') {
             return ConceptKind::Variable;
         }
-        match self.snap_shot.concept_from_label(&self.delta, symbol) {
-            None => ConceptKind::New,
-            Some(id) => {
+        self.snap_shot.concept_from_label(&self.delta, symbol).map_or(
+            ConceptKind::New,
+            |id| {
                 if self
                     .snap_shot
                     .read_concept(&self.delta, id)
@@ -178,7 +179,7 @@ where
                     ConceptKind::Abstract
                 }
             },
-        }
+        )
     }
 
     pub fn execute(&mut self, command: &str) -> String {
@@ -253,9 +254,11 @@ where
                     positions: lp_indices,
                 } = self.lowest_precedence_info(tokens)?;
                 if lp_indices.is_empty() {
-                    return Err(ZiaError::LowestPrecendenceNotFound{tokens: tokens.to_vec()});
+                    return Err(ZiaError::LowestPrecendenceNotFound {
+                        tokens: tokens.to_vec(),
+                    });
                 }
-                // TODO: redesign how opposing associativity is handled. Refer to this issue: 
+                // TODO: redesign how opposing associativity is handled. Refer to this issue #69
                 let assoc =
                     lp_syntax.iter().try_fold(None, |assoc, syntax| match (
                         self.context_search().get_associativity(syntax),
@@ -684,7 +687,7 @@ where
                             .concrete_ast(ConcreteConceptType::True)
                             .map(|ast| self.execute_reduction(right, &ast))
                     })
-                    .map(|r| r.map(|()| "".to_string())),
+                    .map(|r| r.map(|()| String::new())),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
                     + &right
                         .get_concept()
@@ -940,12 +943,12 @@ where
     }
 }
 
-impl<S, C: Default, SDCD, VML> Default for Context<S, C, SDCD, VML>
+impl<S, C, SDCD, VML> Default for Context<S, C, SDCD, VML>
 where
     S: Default + SnapShotReader<SDCD>,
     for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
-    C: ContextCache,
+    C: Default + ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
@@ -965,14 +968,14 @@ where
     }
 }
 
-impl<S, C: Default, SDCD, VML> From<S> for Context<S, C, SDCD, VML>
+impl<S, C, SDCD, VML> From<S> for Context<S, C, SDCD, VML>
 where
     S: Default + SnapShotReader<SDCD>,
     S::ConceptId: Default,
     VML: VariableMaskList,
     for<'a> ContextSearch<'a, S, C, SDCD, VML>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
-    C: ContextCache,
+    C: Default + ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>

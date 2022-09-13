@@ -14,7 +14,6 @@ where
         + Eq
         + for<'a> From<&'a str>
         + From<String>
-        + for<'a> From<&'a String>
         + Hash
         + PartialEq<Self::SharedSyntax>,
 {

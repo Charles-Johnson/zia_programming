@@ -10,7 +10,7 @@ use seed::{div, log, prelude::*, style, window, C};
 use web_sys::HtmlTextAreaElement;
 use zia::single_threaded::Context;
 
-use self::tutorials::{TutorialStep};
+use self::tutorials::TutorialStep;
 
 pub struct Model {
     context: Context,
@@ -51,10 +51,10 @@ pub enum Msg {
     StartEmptySession,
     StartTutorial(&'static [TutorialStep]),
     SetCommandInput(String),
-    SkipToTutorialStep{
+    SkipToTutorialStep {
         steps: &'static [TutorialStep],
-        current_step_index: usize
-    }
+        current_step_index: usize,
+    },
 }
 
 pub fn update(
@@ -63,22 +63,22 @@ pub fn update(
     orders: &mut impl Orders<GlobalMsg>,
 ) {
     match msg {
-        Msg::SkipToTutorialStep{
+        Msg::SkipToTutorialStep {
             steps,
-            current_step_index
+            current_step_index,
         } => {
             let next_step_index = current_step_index + 1;
             model.active_tutorial = Some(tutorials::Model {
                 steps,
                 current_step_index: next_step_index,
-                showing_evaluation: false
+                showing_evaluation: false,
             });
             let new_input = steps[next_step_index].command.to_string();
             let textarea_element = model.command_input.get().unwrap();
             textarea_element.set_value(&new_input);
             textarea_element.focus().unwrap();
             model.input = new_input;
-        }
+        },
         Msg::SetCommandInput(s) => {
             let textarea_element = model.command_input.get().unwrap();
             textarea_element.set_value(&s);

@@ -21,7 +21,7 @@ use crate::associativity::Associativity;
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
 /// All the expected ways a Zia command could be invalid.
-#[derive(Debug, PartialEq, Clone, Snafu)]
+#[derive(Debug, PartialEq, Eq, Clone, Snafu)]
 pub enum ZiaError {
     /// When specifying a reduction rule that already exists.
     #[snafu(display("That reduction rule already exists."))]
@@ -73,9 +73,15 @@ pub enum ZiaError {
     #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]
     AmbiguousExpression,
     #[snafu(display("Could not find lowest precendence for `{tokens:?}`"))]
-    LowestPrecendenceNotFound{tokens: Vec<String>},
+    LowestPrecendenceNotFound {
+        tokens: Vec<String>,
+    },
     #[snafu(display("Tokens with the lowest precendence don't all have the same associativity. The token `{token}` is `{associativity:?}` associative whereas the rest of the tokens are `{other_associativity:?}` associative"))]
-    DifferentAssociativityAmongstLowestPrecendenceTokens{token: String, associativity: Associativity, other_associativity: Associativity},
+    DifferentAssociativityAmongstLowestPrecendenceTokens {
+        token: String,
+        associativity: Associativity,
+        other_associativity: Associativity,
+    },
     /// When trying to refactor a used symbol as another used symbol or expression.
     #[snafu(display(
         "Cannot define a used symbol as another used symbol or expression."

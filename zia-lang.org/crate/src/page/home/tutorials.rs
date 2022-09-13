@@ -146,7 +146,12 @@ mod test {
     fn factorial_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.0.steps {
-            assert_eq!(context.execute(step.command), step.expected_evaluation, "Failed at {0}", step.command);
+            assert_eq!(
+                context.execute(step.command),
+                step.expected_evaluation,
+                "Failed at {0}",
+                step.command
+            );
         }
     }
 }

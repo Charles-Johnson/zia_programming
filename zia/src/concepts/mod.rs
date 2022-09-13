@@ -33,7 +33,7 @@ use std::{
 };
 
 /// Data type for any type of concept.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Concept<Id: Eq + Hash> {
     id: Id,
     concrete_part: ConcreteConcept<Id>,
@@ -291,7 +291,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
         }
     }
 
-    pub fn get_hand_of(&self, hand: Hand) -> &HashMap<Id, Id> {
+    pub const fn get_hand_of(&self, hand: Hand) -> &HashMap<Id, Id> {
         match hand {
             Hand::Left => &self.concrete_part.lefthand_of,
             Hand::Right => &self.concrete_part.righthand_of,
@@ -609,11 +609,11 @@ impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
     }
 }
 
-fn copy_pair_elements<T: Copy>((x, y): (&T, &T)) -> (T, T) {
+const fn copy_pair_elements<T: Copy>((x, y): (&T, &T)) -> (T, T) {
     (*x, *y)
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SpecificPart<Id: Eq + Hash> {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete(ConcreteConceptType),
@@ -715,14 +715,14 @@ impl<Id: Copy + Eq + Hash> From<&NewConceptDelta<Id>> for SpecificPart<Id> {
 }
 
 impl<Id: Copy + Debug + Eq + Hash> SpecificPart<Id> {
-    pub fn free_variable() -> Self {
+    pub const fn free_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::FreeVariable),
             reduces_to: None,
         })
     }
 
-    pub fn bound_variable() -> Self {
+    pub const fn bound_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::BoundVariable),
             reduces_to: None,
@@ -791,7 +791,7 @@ impl<Id: Eq + Hash> From<(String, Id)> for Concept<Id> {
 }
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AbstractPart<Id: Eq + Hash> {
     /// The concept may be defined as a composition of two other concepts.
     composition: MaybeComposition<Id>,
@@ -799,7 +799,7 @@ pub struct AbstractPart<Id: Eq + Hash> {
     reduces_to: Option<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompositePart<Id: Eq + Hash> {
     /// concept id for lefthand part of the composition
     pub lefthand: Id,
@@ -811,14 +811,14 @@ pub struct CompositePart<Id: Eq + Hash> {
     binding_variables: HashSet<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MaybeComposition<Id: Eq + Hash> {
     Composition(CompositePart<Id>),
     // true if concept is variable
     Leaf(LeafCharacter),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LeafCharacter {
     Constant,      // Has a constant meaning regardless of the context search
     FreeVariable, /* Can substitute consistently with any other concept within a context search when finding generalisations */
@@ -830,7 +830,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
         &self,
     ) -> MaybeComposition<NewId> {
         match self {
-            MaybeComposition::Composition(cp) => {
+            Self::Composition(cp) => {
                 MaybeComposition::Composition(CompositePart {
                     lefthand: cp.lefthand.into(),
                     righthand: cp.righthand.into(),
@@ -838,7 +838,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                     free_variables: hashset! {},
                 })
             },
-            MaybeComposition::Leaf(l) => MaybeComposition::Leaf(*l),
+            Self::Leaf(l) => MaybeComposition::Leaf(*l),
         }
     }
 
@@ -963,7 +963,7 @@ impl<Id: Eq + Hash> Default for AbstractPart<Id> {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ConcreteConcept<Id: Eq + Hash> {
     /// Maps each concept that is the righthand of a composition with the current concept being the lefthand to that composition's concept
     lefthand_of: HashMap<Id, Id>,

@@ -62,7 +62,7 @@ impl From<Url> for Page {
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.subscribe(Msg::UrlChanged).after_next_render(|_| {
-        Msg::Home(home::Msg::SetCommandInput("".into()))
+        Msg::Home(home::Msg::SetCommandInput(String::new()))
     });
 
     Model {
@@ -109,7 +109,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     let prerendered = true;
     div![
         C![
-            (!prerendered).then(|| C.fade_in),
+            (!prerendered).then_some(C.fade_in),
             C.h_screen,
             C.flex,
             C.flex_col,
