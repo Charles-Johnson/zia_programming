@@ -1,5 +1,7 @@
 mod command_input;
 mod history;
+mod menu;
+mod tutorials;
 
 use std::mem::swap;
 
@@ -8,19 +10,15 @@ use seed::{div, log, prelude::*, style, window, C};
 use web_sys::HtmlTextAreaElement;
 use zia::single_threaded::Context;
 
+use self::tutorials::TutorialStep;
+
 pub struct Model {
     context: Context,
     input: String,
     history: Vec<InterpreterHistoryEntry>,
     command_input: ElRef<HtmlTextAreaElement>,
-}
-
-impl Model {
-    pub fn clear_command_input(&self) {
-        let textarea_element = self.command_input.get().unwrap();
-        textarea_element.set_value("");
-        textarea_element.focus().unwrap();
-    }
+    menu: menu::Model,
+    active_tutorial: Option<tutorials::Model>,
 }
 
 impl Default for Model {
@@ -30,6 +28,8 @@ impl Default for Model {
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),
+            menu: menu::Model::default(),
+            active_tutorial: None,
         }
     }
 }
@@ -48,6 +48,13 @@ enum EntryKind {
 pub enum Msg {
     Input(String),
     Submit,
+    StartEmptySession,
+    StartTutorial(&'static [TutorialStep]),
+    SetCommandInput(String),
+    SkipToTutorialStep {
+        steps: &'static [TutorialStep],
+        current_step_index: usize,
+    },
 }
 
 pub fn update(
@@ -56,11 +63,67 @@ pub fn update(
     orders: &mut impl Orders<GlobalMsg>,
 ) {
     match msg {
+        Msg::SkipToTutorialStep {
+            steps,
+            current_step_index,
+        } => {
+            let next_step_index = current_step_index + 1;
+            model.active_tutorial = Some(tutorials::Model {
+                steps,
+                current_step_index: next_step_index,
+                showing_evaluation: false,
+            });
+            let new_input = steps[next_step_index].command.to_string();
+            let textarea_element = model.command_input.get().unwrap();
+            textarea_element.set_value(&new_input);
+            textarea_element.focus().unwrap();
+            model.input = new_input;
+        },
+        Msg::SetCommandInput(s) => {
+            let textarea_element = model.command_input.get().unwrap();
+            textarea_element.set_value(&s);
+            textarea_element.focus().unwrap();
+            model.input = s;
+        },
         Msg::Input(s) => model.input = s,
+        Msg::StartEmptySession => model.menu.is_open = false,
+        Msg::StartTutorial(steps) => {
+            model.menu.is_open = false;
+            let new_input = steps[0].command.to_string();
+            model.active_tutorial = Some(tutorials::Model {
+                current_step_index: 0,
+                steps,
+                showing_evaluation: false,
+            });
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
+        },
         Msg::Submit => {
             let mut input = String::new();
             swap(&mut input, &mut model.input);
             let output = model.context.execute(&input);
+            let new_input = if let Some(tutorial_model) =
+                &mut model.active_tutorial
+            {
+                if output.is_empty() {
+                    tutorial_model.current_step_index += 1;
+                    if tutorial_model.current_step_index
+                        < tutorial_model.steps.len()
+                    {
+                        tutorial_model.steps[tutorial_model.current_step_index]
+                            .command
+                    } else {
+                        ""
+                    }
+                } else {
+                    tutorial_model.showing_evaluation = true;
+                    ""
+                }
+            } else {
+                ""
+            }
+            .into();
             model.history.push(InterpreterHistoryEntry {
                 value: input,
                 kind: EntryKind::Command,
@@ -71,7 +134,9 @@ pub fn update(
             });
             log!(&model.input);
             orders
-                .after_next_render(|_| GlobalMsg::ClearCommandInput)
+                .after_next_render(|_| {
+                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
+                })
                 .after_next_render(|_| {
                     let app = window()
                         .document()
@@ -97,5 +162,6 @@ pub fn view(model: &Model) -> impl IntoNodes<GlobalMsg> {
         style! {St::Padding => OUTER_PADDING},
         history::view(model).into_nodes(),
         command_input::view(model).into_nodes(),
+        menu::view(&model.menu).into_nodes()
     ]
 }

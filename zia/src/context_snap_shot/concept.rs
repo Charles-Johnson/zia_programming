@@ -61,14 +61,8 @@ impl<'a, 'b> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>>
 
 impl<'a> ConceptTrait for Mixed<'a> {
     type Id = ConceptId;
-    type IdIterator<'b>
-    where
-        Self: 'b,
-    = Box<dyn Iterator<Item = Self::Id> + 'b>;
-    type IdPairIterator<'b>
-    where
-        Self: 'b,
-    = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>;
+    type IdIterator<'b> = Box<dyn Iterator<Item = Self::Id> + 'b> where Self: 'b;
+    type IdPairIterator<'b> = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b> where Self: 'b;
 
     fn id(&self) -> Self::Id {
         match self {
@@ -303,13 +297,11 @@ impl<'a> ConceptTrait for Mixed<'a> {
                     Some(Some(c)) => return Some(*c),
                     None => (),
                 };
-                if let Ok(other_id) = other_id.try_into() {
+                other_id.try_into().map_or(None, |other_id| {
                     original_concept
                         .find_as_hand_in_composition_with(other_id, hand)
                         .map(Into::into)
-                } else {
-                    None
-                }
+                })
             },
             Self::Uncommitted(c) => {
                 c.find_as_hand_in_composition_with(other_id, hand)

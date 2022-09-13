@@ -177,7 +177,7 @@ where
             .read_concept(self.delta, concept)
             .get_reduction()
             .and_then(|r| {
-                (r == reduction).then(|| Err(ZiaError::RedundantReduction))
+                (r == reduction).then_some(Err(ZiaError::RedundantReduction))
             })
         {
             result

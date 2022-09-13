@@ -3,7 +3,7 @@ pub struct Lexeme {
     pub category: Category,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Category {
     Concept(ConceptKind),
     Whitespace,
@@ -15,7 +15,7 @@ pub enum Category {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ConceptKind {
     Concrete,
     Abstract,

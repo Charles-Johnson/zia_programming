@@ -164,17 +164,17 @@ where
         concept_id
     }
 
-    pub fn concepts_to_apply_in_order(
+    pub const fn concepts_to_apply_in_order(
         &self,
     ) -> &Vec<(ConceptId, SharedDirectConceptDelta)> {
         &self.concepts_to_apply_in_order
     }
 
-    pub fn string(&self) -> &HashMap<String, ValueChange<ConceptId>> {
+    pub const fn string(&self) -> &HashMap<String, ValueChange<ConceptId>> {
         &self.string
     }
 
-    pub fn concept(
+    pub const fn concept(
         &self,
     ) -> &HashMap<
         ConceptId,
@@ -403,7 +403,7 @@ pub enum ConceptDelta<Id, SharedDirectConceptDelta> {
 impl<Id: Clone + Display, SharedDirectConceptDelta>
     ConceptDelta<Id, SharedDirectConceptDelta>
 {
-    pub fn try_direct(&self) -> Option<&SharedDirectConceptDelta> {
+    pub const fn try_direct(&self) -> Option<&SharedDirectConceptDelta> {
         if let Self::Direct(dcd) = &self {
             Some(dcd)
         } else {

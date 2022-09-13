@@ -1,7 +1,7 @@
 #![allow(clippy::redundant_pub_crate)]
 
 mod r#macro;
-mod r#trait;
+pub(crate) mod r#trait;
 
 use crate::{
     ast::SyntaxTree,
