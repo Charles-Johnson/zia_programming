@@ -46,10 +46,8 @@ module.exports = {
       new_concept: "#80FF00",
       unmatched_parenthesis: "#FF0000"
     },
-    extend: {
-      borderRadius: {
-        '28px': '28px'
-      }
+    borderRadius: {
+      '28px': '28px'
     }
   },
   variants: {},

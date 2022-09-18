@@ -1244,95 +1244,14 @@ pub struct CssClasses<'a> {
     pub break_normal: &'a str,
     pub break_words: &'a str,
     pub break_all: &'a str,
-    pub rounded_none: &'a str,
-    pub rounded_sm: &'a str,
-    pub rounded: &'a str,
-    pub rounded_md: &'a str,
-    pub rounded_lg: &'a str,
-    pub rounded_xl: &'a str,
-    pub rounded_2xl: &'a str,
-    pub rounded_3xl: &'a str,
-    pub rounded_full: &'a str,
     pub rounded_28px: &'a str,
-    pub rounded_t_none: &'a str,
-    pub rounded_t_sm: &'a str,
-    pub rounded_t: &'a str,
-    pub rounded_t_md: &'a str,
-    pub rounded_t_lg: &'a str,
-    pub rounded_t_xl: &'a str,
-    pub rounded_t_2xl: &'a str,
-    pub rounded_t_3xl: &'a str,
-    pub rounded_t_full: &'a str,
     pub rounded_t_28px: &'a str,
-    pub rounded_r_none: &'a str,
-    pub rounded_r_sm: &'a str,
-    pub rounded_r: &'a str,
-    pub rounded_r_md: &'a str,
-    pub rounded_r_lg: &'a str,
-    pub rounded_r_xl: &'a str,
-    pub rounded_r_2xl: &'a str,
-    pub rounded_r_3xl: &'a str,
-    pub rounded_r_full: &'a str,
     pub rounded_r_28px: &'a str,
-    pub rounded_b_none: &'a str,
-    pub rounded_b_sm: &'a str,
-    pub rounded_b: &'a str,
-    pub rounded_b_md: &'a str,
-    pub rounded_b_lg: &'a str,
-    pub rounded_b_xl: &'a str,
-    pub rounded_b_2xl: &'a str,
-    pub rounded_b_3xl: &'a str,
-    pub rounded_b_full: &'a str,
     pub rounded_b_28px: &'a str,
-    pub rounded_l_none: &'a str,
-    pub rounded_l_sm: &'a str,
-    pub rounded_l: &'a str,
-    pub rounded_l_md: &'a str,
-    pub rounded_l_lg: &'a str,
-    pub rounded_l_xl: &'a str,
-    pub rounded_l_2xl: &'a str,
-    pub rounded_l_3xl: &'a str,
-    pub rounded_l_full: &'a str,
     pub rounded_l_28px: &'a str,
-    pub rounded_tl_none: &'a str,
-    pub rounded_tl_sm: &'a str,
-    pub rounded_tl: &'a str,
-    pub rounded_tl_md: &'a str,
-    pub rounded_tl_lg: &'a str,
-    pub rounded_tl_xl: &'a str,
-    pub rounded_tl_2xl: &'a str,
-    pub rounded_tl_3xl: &'a str,
-    pub rounded_tl_full: &'a str,
     pub rounded_tl_28px: &'a str,
-    pub rounded_tr_none: &'a str,
-    pub rounded_tr_sm: &'a str,
-    pub rounded_tr: &'a str,
-    pub rounded_tr_md: &'a str,
-    pub rounded_tr_lg: &'a str,
-    pub rounded_tr_xl: &'a str,
-    pub rounded_tr_2xl: &'a str,
-    pub rounded_tr_3xl: &'a str,
-    pub rounded_tr_full: &'a str,
     pub rounded_tr_28px: &'a str,
-    pub rounded_br_none: &'a str,
-    pub rounded_br_sm: &'a str,
-    pub rounded_br: &'a str,
-    pub rounded_br_md: &'a str,
-    pub rounded_br_lg: &'a str,
-    pub rounded_br_xl: &'a str,
-    pub rounded_br_2xl: &'a str,
-    pub rounded_br_3xl: &'a str,
-    pub rounded_br_full: &'a str,
     pub rounded_br_28px: &'a str,
-    pub rounded_bl_none: &'a str,
-    pub rounded_bl_sm: &'a str,
-    pub rounded_bl: &'a str,
-    pub rounded_bl_md: &'a str,
-    pub rounded_bl_lg: &'a str,
-    pub rounded_bl_xl: &'a str,
-    pub rounded_bl_2xl: &'a str,
-    pub rounded_bl_3xl: &'a str,
-    pub rounded_bl_full: &'a str,
     pub rounded_bl_28px: &'a str,
     pub border_0: &'a str,
     pub border_2: &'a str,
@@ -3666,95 +3585,14 @@ pub struct CssClasses<'a> {
     pub sm__break_normal: &'a str,
     pub sm__break_words: &'a str,
     pub sm__break_all: &'a str,
-    pub sm__rounded_none: &'a str,
-    pub sm__rounded_sm: &'a str,
-    pub sm__rounded: &'a str,
-    pub sm__rounded_md: &'a str,
-    pub sm__rounded_lg: &'a str,
-    pub sm__rounded_xl: &'a str,
-    pub sm__rounded_2xl: &'a str,
-    pub sm__rounded_3xl: &'a str,
-    pub sm__rounded_full: &'a str,
     pub sm__rounded_28px: &'a str,
-    pub sm__rounded_t_none: &'a str,
-    pub sm__rounded_t_sm: &'a str,
-    pub sm__rounded_t: &'a str,
-    pub sm__rounded_t_md: &'a str,
-    pub sm__rounded_t_lg: &'a str,
-    pub sm__rounded_t_xl: &'a str,
-    pub sm__rounded_t_2xl: &'a str,
-    pub sm__rounded_t_3xl: &'a str,
-    pub sm__rounded_t_full: &'a str,
     pub sm__rounded_t_28px: &'a str,
-    pub sm__rounded_r_none: &'a str,
-    pub sm__rounded_r_sm: &'a str,
-    pub sm__rounded_r: &'a str,
-    pub sm__rounded_r_md: &'a str,
-    pub sm__rounded_r_lg: &'a str,
-    pub sm__rounded_r_xl: &'a str,
-    pub sm__rounded_r_2xl: &'a str,
-    pub sm__rounded_r_3xl: &'a str,
-    pub sm__rounded_r_full: &'a str,
     pub sm__rounded_r_28px: &'a str,
-    pub sm__rounded_b_none: &'a str,
-    pub sm__rounded_b_sm: &'a str,
-    pub sm__rounded_b: &'a str,
-    pub sm__rounded_b_md: &'a str,
-    pub sm__rounded_b_lg: &'a str,
-    pub sm__rounded_b_xl: &'a str,
-    pub sm__rounded_b_2xl: &'a str,
-    pub sm__rounded_b_3xl: &'a str,
-    pub sm__rounded_b_full: &'a str,
     pub sm__rounded_b_28px: &'a str,
-    pub sm__rounded_l_none: &'a str,
-    pub sm__rounded_l_sm: &'a str,
-    pub sm__rounded_l: &'a str,
-    pub sm__rounded_l_md: &'a str,
-    pub sm__rounded_l_lg: &'a str,
-    pub sm__rounded_l_xl: &'a str,
-    pub sm__rounded_l_2xl: &'a str,
-    pub sm__rounded_l_3xl: &'a str,
-    pub sm__rounded_l_full: &'a str,
     pub sm__rounded_l_28px: &'a str,
-    pub sm__rounded_tl_none: &'a str,
-    pub sm__rounded_tl_sm: &'a str,
-    pub sm__rounded_tl: &'a str,
-    pub sm__rounded_tl_md: &'a str,
-    pub sm__rounded_tl_lg: &'a str,
-    pub sm__rounded_tl_xl: &'a str,
-    pub sm__rounded_tl_2xl: &'a str,
-    pub sm__rounded_tl_3xl: &'a str,
-    pub sm__rounded_tl_full: &'a str,
     pub sm__rounded_tl_28px: &'a str,
-    pub sm__rounded_tr_none: &'a str,
-    pub sm__rounded_tr_sm: &'a str,
-    pub sm__rounded_tr: &'a str,
-    pub sm__rounded_tr_md: &'a str,
-    pub sm__rounded_tr_lg: &'a str,
-    pub sm__rounded_tr_xl: &'a str,
-    pub sm__rounded_tr_2xl: &'a str,
-    pub sm__rounded_tr_3xl: &'a str,
-    pub sm__rounded_tr_full: &'a str,
     pub sm__rounded_tr_28px: &'a str,
-    pub sm__rounded_br_none: &'a str,
-    pub sm__rounded_br_sm: &'a str,
-    pub sm__rounded_br: &'a str,
-    pub sm__rounded_br_md: &'a str,
-    pub sm__rounded_br_lg: &'a str,
-    pub sm__rounded_br_xl: &'a str,
-    pub sm__rounded_br_2xl: &'a str,
-    pub sm__rounded_br_3xl: &'a str,
-    pub sm__rounded_br_full: &'a str,
     pub sm__rounded_br_28px: &'a str,
-    pub sm__rounded_bl_none: &'a str,
-    pub sm__rounded_bl_sm: &'a str,
-    pub sm__rounded_bl: &'a str,
-    pub sm__rounded_bl_md: &'a str,
-    pub sm__rounded_bl_lg: &'a str,
-    pub sm__rounded_bl_xl: &'a str,
-    pub sm__rounded_bl_2xl: &'a str,
-    pub sm__rounded_bl_3xl: &'a str,
-    pub sm__rounded_bl_full: &'a str,
     pub sm__rounded_bl_28px: &'a str,
     pub sm__border_0: &'a str,
     pub sm__border_2: &'a str,
@@ -6084,95 +5922,14 @@ pub struct CssClasses<'a> {
     pub lg__break_normal: &'a str,
     pub lg__break_words: &'a str,
     pub lg__break_all: &'a str,
-    pub lg__rounded_none: &'a str,
-    pub lg__rounded_sm: &'a str,
-    pub lg__rounded: &'a str,
-    pub lg__rounded_md: &'a str,
-    pub lg__rounded_lg: &'a str,
-    pub lg__rounded_xl: &'a str,
-    pub lg__rounded_2xl: &'a str,
-    pub lg__rounded_3xl: &'a str,
-    pub lg__rounded_full: &'a str,
     pub lg__rounded_28px: &'a str,
-    pub lg__rounded_t_none: &'a str,
-    pub lg__rounded_t_sm: &'a str,
-    pub lg__rounded_t: &'a str,
-    pub lg__rounded_t_md: &'a str,
-    pub lg__rounded_t_lg: &'a str,
-    pub lg__rounded_t_xl: &'a str,
-    pub lg__rounded_t_2xl: &'a str,
-    pub lg__rounded_t_3xl: &'a str,
-    pub lg__rounded_t_full: &'a str,
     pub lg__rounded_t_28px: &'a str,
-    pub lg__rounded_r_none: &'a str,
-    pub lg__rounded_r_sm: &'a str,
-    pub lg__rounded_r: &'a str,
-    pub lg__rounded_r_md: &'a str,
-    pub lg__rounded_r_lg: &'a str,
-    pub lg__rounded_r_xl: &'a str,
-    pub lg__rounded_r_2xl: &'a str,
-    pub lg__rounded_r_3xl: &'a str,
-    pub lg__rounded_r_full: &'a str,
     pub lg__rounded_r_28px: &'a str,
-    pub lg__rounded_b_none: &'a str,
-    pub lg__rounded_b_sm: &'a str,
-    pub lg__rounded_b: &'a str,
-    pub lg__rounded_b_md: &'a str,
-    pub lg__rounded_b_lg: &'a str,
-    pub lg__rounded_b_xl: &'a str,
-    pub lg__rounded_b_2xl: &'a str,
-    pub lg__rounded_b_3xl: &'a str,
-    pub lg__rounded_b_full: &'a str,
     pub lg__rounded_b_28px: &'a str,
-    pub lg__rounded_l_none: &'a str,
-    pub lg__rounded_l_sm: &'a str,
-    pub lg__rounded_l: &'a str,
-    pub lg__rounded_l_md: &'a str,
-    pub lg__rounded_l_lg: &'a str,
-    pub lg__rounded_l_xl: &'a str,
-    pub lg__rounded_l_2xl: &'a str,
-    pub lg__rounded_l_3xl: &'a str,
-    pub lg__rounded_l_full: &'a str,
     pub lg__rounded_l_28px: &'a str,
-    pub lg__rounded_tl_none: &'a str,
-    pub lg__rounded_tl_sm: &'a str,
-    pub lg__rounded_tl: &'a str,
-    pub lg__rounded_tl_md: &'a str,
-    pub lg__rounded_tl_lg: &'a str,
-    pub lg__rounded_tl_xl: &'a str,
-    pub lg__rounded_tl_2xl: &'a str,
-    pub lg__rounded_tl_3xl: &'a str,
-    pub lg__rounded_tl_full: &'a str,
     pub lg__rounded_tl_28px: &'a str,
-    pub lg__rounded_tr_none: &'a str,
-    pub lg__rounded_tr_sm: &'a str,
-    pub lg__rounded_tr: &'a str,
-    pub lg__rounded_tr_md: &'a str,
-    pub lg__rounded_tr_lg: &'a str,
-    pub lg__rounded_tr_xl: &'a str,
-    pub lg__rounded_tr_2xl: &'a str,
-    pub lg__rounded_tr_3xl: &'a str,
-    pub lg__rounded_tr_full: &'a str,
     pub lg__rounded_tr_28px: &'a str,
-    pub lg__rounded_br_none: &'a str,
-    pub lg__rounded_br_sm: &'a str,
-    pub lg__rounded_br: &'a str,
-    pub lg__rounded_br_md: &'a str,
-    pub lg__rounded_br_lg: &'a str,
-    pub lg__rounded_br_xl: &'a str,
-    pub lg__rounded_br_2xl: &'a str,
-    pub lg__rounded_br_3xl: &'a str,
-    pub lg__rounded_br_full: &'a str,
     pub lg__rounded_br_28px: &'a str,
-    pub lg__rounded_bl_none: &'a str,
-    pub lg__rounded_bl_sm: &'a str,
-    pub lg__rounded_bl: &'a str,
-    pub lg__rounded_bl_md: &'a str,
-    pub lg__rounded_bl_lg: &'a str,
-    pub lg__rounded_bl_xl: &'a str,
-    pub lg__rounded_bl_2xl: &'a str,
-    pub lg__rounded_bl_3xl: &'a str,
-    pub lg__rounded_bl_full: &'a str,
     pub lg__rounded_bl_28px: &'a str,
     pub lg__border_0: &'a str,
     pub lg__border_2: &'a str,
@@ -13845,108 +13602,9 @@ pub static C: CssClasses = CssClasses {
     break_all: "break-all",
 
     /**
-        border-radius: 0px;
-    */
-    rounded_none: "rounded-none",
-
-    /**
-        border-radius: 0.125rem;
-    */
-    rounded_sm: "rounded-sm",
-
-    /**
-        border-radius: 0.25rem;
-    */
-    rounded: "rounded",
-
-    /**
-        border-radius: 0.375rem;
-    */
-    rounded_md: "rounded-md",
-
-    /**
-        border-radius: 0.5rem;
-    */
-    rounded_lg: "rounded-lg",
-
-    /**
-        border-radius: 0.75rem;
-    */
-    rounded_xl: "rounded-xl",
-
-    /**
-        border-radius: 1rem;
-    */
-    rounded_2xl: "rounded-2xl",
-
-    /**
-        border-radius: 1.5rem;
-    */
-    rounded_3xl: "rounded-3xl",
-
-    /**
-        border-radius: 9999px;
-    */
-    rounded_full: "rounded-full",
-
-    /**
         border-radius: 28px;
     */
     rounded_28px: "rounded-28px",
-
-    /**
-        border-top-left-radius: 0px;
-        border-top-right-radius: 0px;
-    */
-    rounded_t_none: "rounded-t-none",
-
-    /**
-        border-top-left-radius: 0.125rem;
-        border-top-right-radius: 0.125rem;
-    */
-    rounded_t_sm: "rounded-t-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;
-        border-top-right-radius: 0.25rem;
-    */
-    rounded_t: "rounded-t",
-
-    /**
-        border-top-left-radius: 0.375rem;
-        border-top-right-radius: 0.375rem;
-    */
-    rounded_t_md: "rounded-t-md",
-
-    /**
-        border-top-left-radius: 0.5rem;
-        border-top-right-radius: 0.5rem;
-    */
-    rounded_t_lg: "rounded-t-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;
-        border-top-right-radius: 0.75rem;
-    */
-    rounded_t_xl: "rounded-t-xl",
-
-    /**
-        border-top-left-radius: 1rem;
-        border-top-right-radius: 1rem;
-    */
-    rounded_t_2xl: "rounded-t-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;
-        border-top-right-radius: 1.5rem;
-    */
-    rounded_t_3xl: "rounded-t-3xl",
-
-    /**
-        border-top-left-radius: 9999px;
-        border-top-right-radius: 9999px;
-    */
-    rounded_t_full: "rounded-t-full",
 
     /**
         border-top-left-radius: 28px;
@@ -13955,118 +13613,10 @@ pub static C: CssClasses = CssClasses {
     rounded_t_28px: "rounded-t-28px",
 
     /**
-        border-top-right-radius: 0px;
-        border-bottom-right-radius: 0px;
-    */
-    rounded_r_none: "rounded-r-none",
-
-    /**
-        border-top-right-radius: 0.125rem;
-        border-bottom-right-radius: 0.125rem;
-    */
-    rounded_r_sm: "rounded-r-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;
-        border-bottom-right-radius: 0.25rem;
-    */
-    rounded_r: "rounded-r",
-
-    /**
-        border-top-right-radius: 0.375rem;
-        border-bottom-right-radius: 0.375rem;
-    */
-    rounded_r_md: "rounded-r-md",
-
-    /**
-        border-top-right-radius: 0.5rem;
-        border-bottom-right-radius: 0.5rem;
-    */
-    rounded_r_lg: "rounded-r-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;
-        border-bottom-right-radius: 0.75rem;
-    */
-    rounded_r_xl: "rounded-r-xl",
-
-    /**
-        border-top-right-radius: 1rem;
-        border-bottom-right-radius: 1rem;
-    */
-    rounded_r_2xl: "rounded-r-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;
-        border-bottom-right-radius: 1.5rem;
-    */
-    rounded_r_3xl: "rounded-r-3xl",
-
-    /**
-        border-top-right-radius: 9999px;
-        border-bottom-right-radius: 9999px;
-    */
-    rounded_r_full: "rounded-r-full",
-
-    /**
         border-top-right-radius: 28px;
         border-bottom-right-radius: 28px;
     */
     rounded_r_28px: "rounded-r-28px",
-
-    /**
-        border-bottom-right-radius: 0px;
-        border-bottom-left-radius: 0px;
-    */
-    rounded_b_none: "rounded-b-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;
-        border-bottom-left-radius: 0.125rem;
-    */
-    rounded_b_sm: "rounded-b-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;
-        border-bottom-left-radius: 0.25rem;
-    */
-    rounded_b: "rounded-b",
-
-    /**
-        border-bottom-right-radius: 0.375rem;
-        border-bottom-left-radius: 0.375rem;
-    */
-    rounded_b_md: "rounded-b-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;
-        border-bottom-left-radius: 0.5rem;
-    */
-    rounded_b_lg: "rounded-b-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;
-        border-bottom-left-radius: 0.75rem;
-    */
-    rounded_b_xl: "rounded-b-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;
-        border-bottom-left-radius: 1rem;
-    */
-    rounded_b_2xl: "rounded-b-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;
-        border-bottom-left-radius: 1.5rem;
-    */
-    rounded_b_3xl: "rounded-b-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;
-        border-bottom-left-radius: 9999px;
-    */
-    rounded_b_full: "rounded-b-full",
 
     /**
         border-bottom-right-radius: 28px;
@@ -14075,109 +13625,10 @@ pub static C: CssClasses = CssClasses {
     rounded_b_28px: "rounded-b-28px",
 
     /**
-        border-top-left-radius: 0px;
-        border-bottom-left-radius: 0px;
-    */
-    rounded_l_none: "rounded-l-none",
-
-    /**
-        border-top-left-radius: 0.125rem;
-        border-bottom-left-radius: 0.125rem;
-    */
-    rounded_l_sm: "rounded-l-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;
-        border-bottom-left-radius: 0.25rem;
-    */
-    rounded_l: "rounded-l",
-
-    /**
-        border-top-left-radius: 0.375rem;
-        border-bottom-left-radius: 0.375rem;
-    */
-    rounded_l_md: "rounded-l-md",
-
-    /**
-        border-top-left-radius: 0.5rem;
-        border-bottom-left-radius: 0.5rem;
-    */
-    rounded_l_lg: "rounded-l-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;
-        border-bottom-left-radius: 0.75rem;
-    */
-    rounded_l_xl: "rounded-l-xl",
-
-    /**
-        border-top-left-radius: 1rem;
-        border-bottom-left-radius: 1rem;
-    */
-    rounded_l_2xl: "rounded-l-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;
-        border-bottom-left-radius: 1.5rem;
-    */
-    rounded_l_3xl: "rounded-l-3xl",
-
-    /**
-        border-top-left-radius: 9999px;
-        border-bottom-left-radius: 9999px;
-    */
-    rounded_l_full: "rounded-l-full",
-
-    /**
         border-top-left-radius: 28px;
         border-bottom-left-radius: 28px;
     */
     rounded_l_28px: "rounded-l-28px",
-
-    /**
-        border-top-left-radius: 0px;
-    */
-    rounded_tl_none: "rounded-tl-none",
-
-    /**
-        border-top-left-radius: 0.125rem;
-    */
-    rounded_tl_sm: "rounded-tl-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;
-    */
-    rounded_tl: "rounded-tl",
-
-    /**
-        border-top-left-radius: 0.375rem;
-    */
-    rounded_tl_md: "rounded-tl-md",
-
-    /**
-        border-top-left-radius: 0.5rem;
-    */
-    rounded_tl_lg: "rounded-tl-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;
-    */
-    rounded_tl_xl: "rounded-tl-xl",
-
-    /**
-        border-top-left-radius: 1rem;
-    */
-    rounded_tl_2xl: "rounded-tl-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;
-    */
-    rounded_tl_3xl: "rounded-tl-3xl",
-
-    /**
-        border-top-left-radius: 9999px;
-    */
-    rounded_tl_full: "rounded-tl-full",
 
     /**
         border-top-left-radius: 28px;
@@ -14185,149 +13636,14 @@ pub static C: CssClasses = CssClasses {
     rounded_tl_28px: "rounded-tl-28px",
 
     /**
-        border-top-right-radius: 0px;
-    */
-    rounded_tr_none: "rounded-tr-none",
-
-    /**
-        border-top-right-radius: 0.125rem;
-    */
-    rounded_tr_sm: "rounded-tr-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;
-    */
-    rounded_tr: "rounded-tr",
-
-    /**
-        border-top-right-radius: 0.375rem;
-    */
-    rounded_tr_md: "rounded-tr-md",
-
-    /**
-        border-top-right-radius: 0.5rem;
-    */
-    rounded_tr_lg: "rounded-tr-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;
-    */
-    rounded_tr_xl: "rounded-tr-xl",
-
-    /**
-        border-top-right-radius: 1rem;
-    */
-    rounded_tr_2xl: "rounded-tr-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;
-    */
-    rounded_tr_3xl: "rounded-tr-3xl",
-
-    /**
-        border-top-right-radius: 9999px;
-    */
-    rounded_tr_full: "rounded-tr-full",
-
-    /**
         border-top-right-radius: 28px;
     */
     rounded_tr_28px: "rounded-tr-28px",
 
     /**
-        border-bottom-right-radius: 0px;
-    */
-    rounded_br_none: "rounded-br-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;
-    */
-    rounded_br_sm: "rounded-br-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;
-    */
-    rounded_br: "rounded-br",
-
-    /**
-        border-bottom-right-radius: 0.375rem;
-    */
-    rounded_br_md: "rounded-br-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;
-    */
-    rounded_br_lg: "rounded-br-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;
-    */
-    rounded_br_xl: "rounded-br-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;
-    */
-    rounded_br_2xl: "rounded-br-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;
-    */
-    rounded_br_3xl: "rounded-br-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;
-    */
-    rounded_br_full: "rounded-br-full",
-
-    /**
         border-bottom-right-radius: 28px;
     */
     rounded_br_28px: "rounded-br-28px",
-
-    /**
-        border-bottom-left-radius: 0px;
-    */
-    rounded_bl_none: "rounded-bl-none",
-
-    /**
-        border-bottom-left-radius: 0.125rem;
-    */
-    rounded_bl_sm: "rounded-bl-sm",
-
-    /**
-        border-bottom-left-radius: 0.25rem;
-    */
-    rounded_bl: "rounded-bl",
-
-    /**
-        border-bottom-left-radius: 0.375rem;
-    */
-    rounded_bl_md: "rounded-bl-md",
-
-    /**
-        border-bottom-left-radius: 0.5rem;
-    */
-    rounded_bl_lg: "rounded-bl-lg",
-
-    /**
-        border-bottom-left-radius: 0.75rem;
-    */
-    rounded_bl_xl: "rounded-bl-xl",
-
-    /**
-        border-bottom-left-radius: 1rem;
-    */
-    rounded_bl_2xl: "rounded-bl-2xl",
-
-    /**
-        border-bottom-left-radius: 1.5rem;
-    */
-    rounded_bl_3xl: "rounded-bl-3xl",
-
-    /**
-        border-bottom-left-radius: 9999px;
-    */
-    rounded_bl_full: "rounded-bl-full",
 
     /**
         border-bottom-left-radius: 28px;
@@ -26990,108 +26306,9 @@ pub static C: CssClasses = CssClasses {
     sm__break_all: "sm:break-all",
 
     /**
-        border-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_none: "sm:rounded-none",
-
-    /**
-        border-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_sm: "sm:rounded-sm",
-
-    /**
-        border-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded: "sm:rounded",
-
-    /**
-        border-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_md: "sm:rounded-md",
-
-    /**
-        border-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_lg: "sm:rounded-lg",
-
-    /**
-        border-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_xl: "sm:rounded-xl",
-
-    /**
-        border-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_2xl: "sm:rounded-2xl",
-
-    /**
-        border-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_3xl: "sm:rounded-3xl",
-
-    /**
-        border-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_full: "sm:rounded-full",
-
-    /**
         border-radius: 28px;    @media (min-width: 569px)
     */
     sm__rounded_28px: "sm:rounded-28px",
-
-    /**
-        border-top-left-radius: 0px;    @media (min-width: 569px)
-        border-top-right-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_t_none: "sm:rounded-t-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 569px)
-        border-top-right-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_sm: "sm:rounded-t-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 569px)
-        border-top-right-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t: "sm:rounded-t",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 569px)
-        border-top-right-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_md: "sm:rounded-t-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 569px)
-        border-top-right-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_lg: "sm:rounded-t-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 569px)
-        border-top-right-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_xl: "sm:rounded-t-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 569px)
-        border-top-right-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_2xl: "sm:rounded-t-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 569px)
-        border-top-right-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_t_3xl: "sm:rounded-t-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 569px)
-        border-top-right-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_t_full: "sm:rounded-t-full",
 
     /**
         border-top-left-radius: 28px;    @media (min-width: 569px)
@@ -27100,118 +26317,10 @@ pub static C: CssClasses = CssClasses {
     sm__rounded_t_28px: "sm:rounded-t-28px",
 
     /**
-        border-top-right-radius: 0px;    @media (min-width: 569px)
-        border-bottom-right-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_r_none: "sm:rounded-r-none",
-
-    /**
-        border-top-right-radius: 0.125rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_sm: "sm:rounded-r-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r: "sm:rounded-r",
-
-    /**
-        border-top-right-radius: 0.375rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_md: "sm:rounded-r-md",
-
-    /**
-        border-top-right-radius: 0.5rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_lg: "sm:rounded-r-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_xl: "sm:rounded-r-xl",
-
-    /**
-        border-top-right-radius: 1rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_2xl: "sm:rounded-r-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;    @media (min-width: 569px)
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_r_3xl: "sm:rounded-r-3xl",
-
-    /**
-        border-top-right-radius: 9999px;    @media (min-width: 569px)
-        border-bottom-right-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_r_full: "sm:rounded-r-full",
-
-    /**
         border-top-right-radius: 28px;    @media (min-width: 569px)
         border-bottom-right-radius: 28px;    @media (min-width: 569px)
     */
     sm__rounded_r_28px: "sm:rounded-r-28px",
-
-    /**
-        border-bottom-right-radius: 0px;    @media (min-width: 569px)
-        border-bottom-left-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_b_none: "sm:rounded-b-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_sm: "sm:rounded-b-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b: "sm:rounded-b",
-
-    /**
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_md: "sm:rounded-b-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_lg: "sm:rounded-b-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_xl: "sm:rounded-b-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_2xl: "sm:rounded-b-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_b_3xl: "sm:rounded-b-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;    @media (min-width: 569px)
-        border-bottom-left-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_b_full: "sm:rounded-b-full",
 
     /**
         border-bottom-right-radius: 28px;    @media (min-width: 569px)
@@ -27220,109 +26329,10 @@ pub static C: CssClasses = CssClasses {
     sm__rounded_b_28px: "sm:rounded-b-28px",
 
     /**
-        border-top-left-radius: 0px;    @media (min-width: 569px)
-        border-bottom-left-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_l_none: "sm:rounded-l-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_sm: "sm:rounded-l-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l: "sm:rounded-l",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_md: "sm:rounded-l-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_lg: "sm:rounded-l-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_xl: "sm:rounded-l-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_2xl: "sm:rounded-l-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 569px)
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_l_3xl: "sm:rounded-l-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 569px)
-        border-bottom-left-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_l_full: "sm:rounded-l-full",
-
-    /**
         border-top-left-radius: 28px;    @media (min-width: 569px)
         border-bottom-left-radius: 28px;    @media (min-width: 569px)
     */
     sm__rounded_l_28px: "sm:rounded-l-28px",
-
-    /**
-        border-top-left-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_none: "sm:rounded-tl-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_sm: "sm:rounded-tl-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl: "sm:rounded-tl",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_md: "sm:rounded-tl-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_lg: "sm:rounded-tl-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_xl: "sm:rounded-tl-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_2xl: "sm:rounded-tl-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_3xl: "sm:rounded-tl-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_tl_full: "sm:rounded-tl-full",
 
     /**
         border-top-left-radius: 28px;    @media (min-width: 569px)
@@ -27330,149 +26340,14 @@ pub static C: CssClasses = CssClasses {
     sm__rounded_tl_28px: "sm:rounded-tl-28px",
 
     /**
-        border-top-right-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_none: "sm:rounded-tr-none",
-
-    /**
-        border-top-right-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_sm: "sm:rounded-tr-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr: "sm:rounded-tr",
-
-    /**
-        border-top-right-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_md: "sm:rounded-tr-md",
-
-    /**
-        border-top-right-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_lg: "sm:rounded-tr-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_xl: "sm:rounded-tr-xl",
-
-    /**
-        border-top-right-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_2xl: "sm:rounded-tr-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_3xl: "sm:rounded-tr-3xl",
-
-    /**
-        border-top-right-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_tr_full: "sm:rounded-tr-full",
-
-    /**
         border-top-right-radius: 28px;    @media (min-width: 569px)
     */
     sm__rounded_tr_28px: "sm:rounded-tr-28px",
 
     /**
-        border-bottom-right-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_br_none: "sm:rounded-br-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_sm: "sm:rounded-br-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br: "sm:rounded-br",
-
-    /**
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_md: "sm:rounded-br-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_lg: "sm:rounded-br-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_xl: "sm:rounded-br-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_2xl: "sm:rounded-br-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_br_3xl: "sm:rounded-br-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_br_full: "sm:rounded-br-full",
-
-    /**
         border-bottom-right-radius: 28px;    @media (min-width: 569px)
     */
     sm__rounded_br_28px: "sm:rounded-br-28px",
-
-    /**
-        border-bottom-left-radius: 0px;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_none: "sm:rounded-bl-none",
-
-    /**
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_sm: "sm:rounded-bl-sm",
-
-    /**
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl: "sm:rounded-bl",
-
-    /**
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_md: "sm:rounded-bl-md",
-
-    /**
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_lg: "sm:rounded-bl-lg",
-
-    /**
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_xl: "sm:rounded-bl-xl",
-
-    /**
-        border-bottom-left-radius: 1rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_2xl: "sm:rounded-bl-2xl",
-
-    /**
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_3xl: "sm:rounded-bl-3xl",
-
-    /**
-        border-bottom-left-radius: 9999px;    @media (min-width: 569px)
-    */
-    sm__rounded_bl_full: "sm:rounded-bl-full",
 
     /**
         border-bottom-left-radius: 28px;    @media (min-width: 569px)
@@ -39836,108 +38711,9 @@ pub static C: CssClasses = CssClasses {
     lg__break_all: "lg:break-all",
 
     /**
-        border-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_none: "lg:rounded-none",
-
-    /**
-        border-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_sm: "lg:rounded-sm",
-
-    /**
-        border-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded: "lg:rounded",
-
-    /**
-        border-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_md: "lg:rounded-md",
-
-    /**
-        border-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_lg: "lg:rounded-lg",
-
-    /**
-        border-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_xl: "lg:rounded-xl",
-
-    /**
-        border-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_2xl: "lg:rounded-2xl",
-
-    /**
-        border-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_3xl: "lg:rounded-3xl",
-
-    /**
-        border-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_full: "lg:rounded-full",
-
-    /**
         border-radius: 28px;    @media (min-width: 1025px)
     */
     lg__rounded_28px: "lg:rounded-28px",
-
-    /**
-        border-top-left-radius: 0px;    @media (min-width: 1025px)
-        border-top-right-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_none: "lg:rounded-t-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 1025px)
-        border-top-right-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_sm: "lg:rounded-t-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 1025px)
-        border-top-right-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t: "lg:rounded-t",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 1025px)
-        border-top-right-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_md: "lg:rounded-t-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 1025px)
-        border-top-right-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_lg: "lg:rounded-t-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 1025px)
-        border-top-right-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_xl: "lg:rounded-t-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 1025px)
-        border-top-right-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_2xl: "lg:rounded-t-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 1025px)
-        border-top-right-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_3xl: "lg:rounded-t-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 1025px)
-        border-top-right-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_t_full: "lg:rounded-t-full",
 
     /**
         border-top-left-radius: 28px;    @media (min-width: 1025px)
@@ -39946,118 +38722,10 @@ pub static C: CssClasses = CssClasses {
     lg__rounded_t_28px: "lg:rounded-t-28px",
 
     /**
-        border-top-right-radius: 0px;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_none: "lg:rounded-r-none",
-
-    /**
-        border-top-right-radius: 0.125rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_sm: "lg:rounded-r-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r: "lg:rounded-r",
-
-    /**
-        border-top-right-radius: 0.375rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_md: "lg:rounded-r-md",
-
-    /**
-        border-top-right-radius: 0.5rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_lg: "lg:rounded-r-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_xl: "lg:rounded-r-xl",
-
-    /**
-        border-top-right-radius: 1rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_2xl: "lg:rounded-r-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;    @media (min-width: 1025px)
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_3xl: "lg:rounded-r-3xl",
-
-    /**
-        border-top-right-radius: 9999px;    @media (min-width: 1025px)
-        border-bottom-right-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_r_full: "lg:rounded-r-full",
-
-    /**
         border-top-right-radius: 28px;    @media (min-width: 1025px)
         border-bottom-right-radius: 28px;    @media (min-width: 1025px)
     */
     lg__rounded_r_28px: "lg:rounded-r-28px",
-
-    /**
-        border-bottom-right-radius: 0px;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_none: "lg:rounded-b-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_sm: "lg:rounded-b-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b: "lg:rounded-b",
-
-    /**
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_md: "lg:rounded-b-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_lg: "lg:rounded-b-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_xl: "lg:rounded-b-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_2xl: "lg:rounded-b-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_3xl: "lg:rounded-b-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;    @media (min-width: 1025px)
-        border-bottom-left-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_b_full: "lg:rounded-b-full",
 
     /**
         border-bottom-right-radius: 28px;    @media (min-width: 1025px)
@@ -40066,109 +38734,10 @@ pub static C: CssClasses = CssClasses {
     lg__rounded_b_28px: "lg:rounded-b-28px",
 
     /**
-        border-top-left-radius: 0px;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_none: "lg:rounded-l-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_sm: "lg:rounded-l-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l: "lg:rounded-l",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_md: "lg:rounded-l-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_lg: "lg:rounded-l-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_xl: "lg:rounded-l-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_2xl: "lg:rounded-l-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 1025px)
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_3xl: "lg:rounded-l-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 1025px)
-        border-bottom-left-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_l_full: "lg:rounded-l-full",
-
-    /**
         border-top-left-radius: 28px;    @media (min-width: 1025px)
         border-bottom-left-radius: 28px;    @media (min-width: 1025px)
     */
     lg__rounded_l_28px: "lg:rounded-l-28px",
-
-    /**
-        border-top-left-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_none: "lg:rounded-tl-none",
-
-    /**
-        border-top-left-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_sm: "lg:rounded-tl-sm",
-
-    /**
-        border-top-left-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl: "lg:rounded-tl",
-
-    /**
-        border-top-left-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_md: "lg:rounded-tl-md",
-
-    /**
-        border-top-left-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_lg: "lg:rounded-tl-lg",
-
-    /**
-        border-top-left-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_xl: "lg:rounded-tl-xl",
-
-    /**
-        border-top-left-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_2xl: "lg:rounded-tl-2xl",
-
-    /**
-        border-top-left-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_3xl: "lg:rounded-tl-3xl",
-
-    /**
-        border-top-left-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_tl_full: "lg:rounded-tl-full",
 
     /**
         border-top-left-radius: 28px;    @media (min-width: 1025px)
@@ -40176,149 +38745,14 @@ pub static C: CssClasses = CssClasses {
     lg__rounded_tl_28px: "lg:rounded-tl-28px",
 
     /**
-        border-top-right-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_none: "lg:rounded-tr-none",
-
-    /**
-        border-top-right-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_sm: "lg:rounded-tr-sm",
-
-    /**
-        border-top-right-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr: "lg:rounded-tr",
-
-    /**
-        border-top-right-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_md: "lg:rounded-tr-md",
-
-    /**
-        border-top-right-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_lg: "lg:rounded-tr-lg",
-
-    /**
-        border-top-right-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_xl: "lg:rounded-tr-xl",
-
-    /**
-        border-top-right-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_2xl: "lg:rounded-tr-2xl",
-
-    /**
-        border-top-right-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_3xl: "lg:rounded-tr-3xl",
-
-    /**
-        border-top-right-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_tr_full: "lg:rounded-tr-full",
-
-    /**
         border-top-right-radius: 28px;    @media (min-width: 1025px)
     */
     lg__rounded_tr_28px: "lg:rounded-tr-28px",
 
     /**
-        border-bottom-right-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_none: "lg:rounded-br-none",
-
-    /**
-        border-bottom-right-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_sm: "lg:rounded-br-sm",
-
-    /**
-        border-bottom-right-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br: "lg:rounded-br",
-
-    /**
-        border-bottom-right-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_md: "lg:rounded-br-md",
-
-    /**
-        border-bottom-right-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_lg: "lg:rounded-br-lg",
-
-    /**
-        border-bottom-right-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_xl: "lg:rounded-br-xl",
-
-    /**
-        border-bottom-right-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_2xl: "lg:rounded-br-2xl",
-
-    /**
-        border-bottom-right-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_3xl: "lg:rounded-br-3xl",
-
-    /**
-        border-bottom-right-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_br_full: "lg:rounded-br-full",
-
-    /**
         border-bottom-right-radius: 28px;    @media (min-width: 1025px)
     */
     lg__rounded_br_28px: "lg:rounded-br-28px",
-
-    /**
-        border-bottom-left-radius: 0px;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_none: "lg:rounded-bl-none",
-
-    /**
-        border-bottom-left-radius: 0.125rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_sm: "lg:rounded-bl-sm",
-
-    /**
-        border-bottom-left-radius: 0.25rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl: "lg:rounded-bl",
-
-    /**
-        border-bottom-left-radius: 0.375rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_md: "lg:rounded-bl-md",
-
-    /**
-        border-bottom-left-radius: 0.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_lg: "lg:rounded-bl-lg",
-
-    /**
-        border-bottom-left-radius: 0.75rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_xl: "lg:rounded-bl-xl",
-
-    /**
-        border-bottom-left-radius: 1rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_2xl: "lg:rounded-bl-2xl",
-
-    /**
-        border-bottom-left-radius: 1.5rem;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_3xl: "lg:rounded-bl-3xl",
-
-    /**
-        border-bottom-left-radius: 9999px;    @media (min-width: 1025px)
-    */
-    lg__rounded_bl_full: "lg:rounded-bl-full",
 
     /**
         border-bottom-left-radius: 28px;    @media (min-width: 1025px)
