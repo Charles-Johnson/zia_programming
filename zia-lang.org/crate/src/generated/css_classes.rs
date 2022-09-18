@@ -3223,27 +3223,27 @@ pub static C: CssClasses = CssClasses {
     rounded_bl_28px: "rounded-bl-28px",
 
     /**
-        border-width: 0.5rem;
+        border-width: 2px;
     */
     border_2: "border-2",
 
     /**
-        border-top-width: 0.5rem;
+        border-top-width: 2px;
     */
     border_t_2: "border-t-2",
 
     /**
-        border-right-width: 0.5rem;
+        border-right-width: 2px;
     */
     border_r_2: "border-r-2",
 
     /**
-        border-bottom-width: 0.5rem;
+        border-bottom-width: 2px;
     */
     border_b_2: "border-b-2",
 
     /**
-        border-left-width: 0.5rem;
+        border-left-width: 2px;
     */
     border_l_2: "border-l-2",
 
@@ -6196,27 +6196,27 @@ pub static C: CssClasses = CssClasses {
     sm__rounded_bl_28px: "sm:rounded-bl-28px",
 
     /**
-        border-width: 0.5rem;    @media (min-width: 569px)
+        border-width: 2px;    @media (min-width: 569px)
     */
     sm__border_2: "sm:border-2",
 
     /**
-        border-top-width: 0.5rem;    @media (min-width: 569px)
+        border-top-width: 2px;    @media (min-width: 569px)
     */
     sm__border_t_2: "sm:border-t-2",
 
     /**
-        border-right-width: 0.5rem;    @media (min-width: 569px)
+        border-right-width: 2px;    @media (min-width: 569px)
     */
     sm__border_r_2: "sm:border-r-2",
 
     /**
-        border-bottom-width: 0.5rem;    @media (min-width: 569px)
+        border-bottom-width: 2px;    @media (min-width: 569px)
     */
     sm__border_b_2: "sm:border-b-2",
 
     /**
-        border-left-width: 0.5rem;    @media (min-width: 569px)
+        border-left-width: 2px;    @media (min-width: 569px)
     */
     sm__border_l_2: "sm:border-l-2",
 
@@ -9082,27 +9082,27 @@ pub static C: CssClasses = CssClasses {
     lg__rounded_bl_28px: "lg:rounded-bl-28px",
 
     /**
-        border-width: 0.5rem;    @media (min-width: 1025px)
+        border-width: 2px;    @media (min-width: 1025px)
     */
     lg__border_2: "lg:border-2",
 
     /**
-        border-top-width: 0.5rem;    @media (min-width: 1025px)
+        border-top-width: 2px;    @media (min-width: 1025px)
     */
     lg__border_t_2: "lg:border-t-2",
 
     /**
-        border-right-width: 0.5rem;    @media (min-width: 1025px)
+        border-right-width: 2px;    @media (min-width: 1025px)
     */
     lg__border_r_2: "lg:border-r-2",
 
     /**
-        border-bottom-width: 0.5rem;    @media (min-width: 1025px)
+        border-bottom-width: 2px;    @media (min-width: 1025px)
     */
     lg__border_b_2: "lg:border-b-2",
 
     /**
-        border-left-width: 0.5rem;    @media (min-width: 1025px)
+        border-left-width: 2px;    @media (min-width: 1025px)
     */
     lg__border_l_2: "lg:border-l-2",
 

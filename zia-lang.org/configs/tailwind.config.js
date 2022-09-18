@@ -66,7 +66,7 @@ const theme = {
   borderOpacity: {},
   borderSpacing: {},
   borderWidth: {
-    2: spacing[2],
+    2: "2px"
   },
   boxShadow: {},
   boxShadowColor: {},
