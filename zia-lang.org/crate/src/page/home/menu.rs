@@ -24,7 +24,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
         div![
             C![
                 C.flex,
-                C.sm__flex_col,
+                C.flex_col,
                 C.border_2,
                 C.border_primary,
                 EDGE_STYLE,
