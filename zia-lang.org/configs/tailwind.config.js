@@ -15,6 +15,16 @@ Object.fromEntries = Object.fromEntries || ((iterable) => {
 
 module.exports = {
   theme: {
+    spacing: {
+      2: "2px",
+      5: "5px",
+      6: "6px",
+      8: "8px",
+      10: "10px",
+      16: "16px",
+      20: "20px",
+      24: "24px"
+    },
     screens: {
       'sm': '569px',
       // => @media (min-width: 569px) { ... }
