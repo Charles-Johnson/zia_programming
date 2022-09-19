@@ -76,11 +76,9 @@ pub fn update(
                 showing_evaluation: false,
             });
             let new_input = steps[next_step_index].command.to_string();
-            orders
-                .after_next_render(|_| {
-                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
-                });
-
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
         },
         Msg::SetCommandInput(s) => {
             let textarea_element = model.command_input.get().unwrap();
@@ -147,10 +145,9 @@ pub fn update(
                 kind: EntryKind::Evaluation,
             });
             log!(&model.input);
-            orders
-                .after_next_render(|_| {
-                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
-                });
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
         },
     };
 }

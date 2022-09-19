@@ -17,16 +17,18 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
         // subsequent renders should set the height just enough to fit the text
         |e| e.scroll_height(),
     );
-    let top_of_explanation_scroll_height = px(model.possible_explanation.get().map_or(
-        // render the bottom of the history at the bottom of the view port
-        0,
-        // subsequent renders should set the height just enough to see the latest command's result
-        // after execution
-        |e| e.scroll_height(),
-    ) + height);
+    let top_of_explanation_scroll_height =
+        px(model.possible_explanation.get().map_or(
+            // render the bottom of the history at the bottom of the view port
+            0,
+            // subsequent renders should set the height just enough to see the latest command's result
+            // after execution
+            |e| e.scroll_height(),
+        ) + height);
     let height = px(height);
     // prevents bottom part of history being obscured by command input
-    let bottom_buffer = div![style![St::Height => top_of_explanation_scroll_height],];
+    let bottom_buffer =
+        div![style![St::Height => top_of_explanation_scroll_height],];
     let possible_explanation = div![
         el_ref(&model.possible_explanation),
         match model.active_tutorial {
