@@ -113,7 +113,6 @@
 //! assert_eq!(context.execute("let _x_ or true -> true"), "");
 //! assert_eq!(context.execute("false or true"), "true");
 //! ```
-#![feature(generic_associated_types)]
 
 mod and_also;
 

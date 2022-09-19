@@ -7,7 +7,7 @@ use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
 use seed::{div, log, prelude::*, style, window, C};
-use web_sys::HtmlTextAreaElement;
+use web_sys::{HtmlDivElement, HtmlTextAreaElement};
 use zia::single_threaded::Context;
 
 use self::tutorials::TutorialStep;
@@ -17,6 +17,7 @@ pub struct Model {
     input: String,
     history: Vec<InterpreterHistoryEntry>,
     command_input: ElRef<HtmlTextAreaElement>,
+    possible_explanation: ElRef<HtmlDivElement>,
     menu: menu::Model,
     active_tutorial: Option<tutorials::Model>,
 }
@@ -28,6 +29,7 @@ impl Default for Model {
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),
+            possible_explanation: ElRef::new(),
             menu: menu::Model::default(),
             active_tutorial: None,
         }
@@ -74,16 +76,26 @@ pub fn update(
                 showing_evaluation: false,
             });
             let new_input = steps[next_step_index].command.to_string();
-            let textarea_element = model.command_input.get().unwrap();
-            textarea_element.set_value(&new_input);
-            textarea_element.focus().unwrap();
-            model.input = new_input;
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
         },
         Msg::SetCommandInput(s) => {
             let textarea_element = model.command_input.get().unwrap();
             textarea_element.set_value(&s);
             textarea_element.focus().unwrap();
             model.input = s;
+            orders.after_next_render(|_| {
+                let app = window()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("app")
+                    .unwrap();
+                let scroll_height = app.scroll_height();
+                // Prevents latest history from being displayed underneath command input
+                // Doesn't seem to work in android browsers but works in android PWA
+                app.set_scroll_top(scroll_height);
+            });
         },
         Msg::Input(s) => model.input = s,
         Msg::StartEmptySession => model.menu.is_open = false,
@@ -133,21 +145,9 @@ pub fn update(
                 kind: EntryKind::Evaluation,
             });
             log!(&model.input);
-            orders
-                .after_next_render(|_| {
-                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
-                })
-                .after_next_render(|_| {
-                    let app = window()
-                        .document()
-                        .unwrap()
-                        .get_element_by_id("app")
-                        .unwrap();
-                    let scroll_height = app.scroll_height();
-                    // Prevents latest history from being displayed underneath command input
-                    // Doesn't seem to work in android browsers but works in android PWA
-                    app.set_scroll_top(scroll_height);
-                });
+            orders.after_next_render(|_| {
+                GlobalMsg::Home(Msg::SetCommandInput(new_input))
+            });
         },
     };
 }
