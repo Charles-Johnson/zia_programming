@@ -10,45 +10,53 @@ use seed::{
 use zia::{ConceptKind, LexemeCategory};
 
 pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
-    let height = model.command_input.get().map_or_else(
+    let height = model.command_input.get().map_or(
         // flatten textarea on first render to prevent it being
         // too tall on subsequent renders
-        || "0".to_owned(),
+        0,
         // subsequent renders should set the height just enough to fit the text
-        |e| px(e.scroll_height()),
+        |e| e.scroll_height(),
     );
+    let top_of_explanation_scroll_height = px(model.possible_explanation.get().map_or(
+        // render the bottom of the history at the bottom of the view port
+        0,
+        // subsequent renders should set the height just enough to see the latest command's result
+        // after execution
+        |e| e.scroll_height(),
+    ) + height);
+    let height = px(height);
     // prevents bottom part of history being obscured by command input
-    let bottom_buffer = div![style![St::Height => height],];
-    let tutorial_explanation_style = style! {
-        St::BackgroundColor => "rgba(255,255,255,0.5)"
-    };
-    let possible_explanation = match model.active_tutorial {
-        Some(tutorials::Model {
-            showing_evaluation: false,
-            current_step_index,
-            steps,
-        }) => {
-            let explanation = steps[current_step_index].explanation;
-            p![tutorial_explanation_style, explanation]
-        },
-        Some(tutorials::Model {
-            showing_evaluation: true,
-            current_step_index,
-            steps,
-        }) if current_step_index + 1 < steps.len() => {
-            let onclick = ev(Ev::Click, move |_| {
-                GlobalMsg::Home(HomeMsg::SkipToTutorialStep {
-                    steps,
-                    current_step_index,
-                })
-            });
-            button![
-                onclick,
-                p![tutorial_explanation_style, "Click here for next step"]
-            ]
-        },
-        _ => empty!(),
-    };
+    let bottom_buffer = div![style![St::Height => top_of_explanation_scroll_height],];
+    let possible_explanation = div![
+        el_ref(&model.possible_explanation),
+        match model.active_tutorial {
+            Some(tutorials::Model {
+                showing_evaluation: false,
+                current_step_index,
+                steps,
+            }) => {
+                let explanation = steps[current_step_index].explanation;
+                p![explanation]
+            },
+            Some(tutorials::Model {
+                showing_evaluation: true,
+                current_step_index,
+                steps,
+            }) if current_step_index + 1 < steps.len() => {
+                let onclick = ev(Ev::Click, move |_| {
+                    GlobalMsg::Home(HomeMsg::SkipToTutorialStep {
+                        steps,
+                        current_step_index,
+                    })
+                });
+                button![
+                    onclick,
+                    p!["Click here for next step or type and enter a command"]
+                ]
+            },
+            _ => empty!(),
+        }
+    ];
 
     let textarea_class =
         C![EDGE_STYLE, TEXT_PADDING, C.outline_none, C.overflow_hidden];

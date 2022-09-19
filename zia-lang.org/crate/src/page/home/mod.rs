@@ -7,7 +7,7 @@ use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
 use seed::{div, log, prelude::*, style, window, C};
-use web_sys::HtmlTextAreaElement;
+use web_sys::{HtmlDivElement, HtmlTextAreaElement};
 use zia::single_threaded::Context;
 
 use self::tutorials::TutorialStep;
@@ -17,6 +17,7 @@ pub struct Model {
     input: String,
     history: Vec<InterpreterHistoryEntry>,
     command_input: ElRef<HtmlTextAreaElement>,
+    possible_explanation: ElRef<HtmlDivElement>,
     menu: menu::Model,
     active_tutorial: Option<tutorials::Model>,
 }
@@ -28,6 +29,7 @@ impl Default for Model {
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),
+            possible_explanation: ElRef::new(),
             menu: menu::Model::default(),
             active_tutorial: None,
         }
