@@ -76,16 +76,28 @@ pub fn update(
                 showing_evaluation: false,
             });
             let new_input = steps[next_step_index].command.to_string();
-            let textarea_element = model.command_input.get().unwrap();
-            textarea_element.set_value(&new_input);
-            textarea_element.focus().unwrap();
-            model.input = new_input;
+            orders
+                .after_next_render(|_| {
+                    GlobalMsg::Home(Msg::SetCommandInput(new_input))
+                });
+
         },
         Msg::SetCommandInput(s) => {
             let textarea_element = model.command_input.get().unwrap();
             textarea_element.set_value(&s);
             textarea_element.focus().unwrap();
             model.input = s;
+            orders.after_next_render(|_| {
+                let app = window()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("app")
+                    .unwrap();
+                let scroll_height = app.scroll_height();
+                // Prevents latest history from being displayed underneath command input
+                // Doesn't seem to work in android browsers but works in android PWA
+                app.set_scroll_top(scroll_height);
+            });
         },
         Msg::Input(s) => model.input = s,
         Msg::StartEmptySession => model.menu.is_open = false,
@@ -138,17 +150,6 @@ pub fn update(
             orders
                 .after_next_render(|_| {
                     GlobalMsg::Home(Msg::SetCommandInput(new_input))
-                })
-                .after_next_render(|_| {
-                    let app = window()
-                        .document()
-                        .unwrap()
-                        .get_element_by_id("app")
-                        .unwrap();
-                    let scroll_height = app.scroll_height();
-                    // Prevents latest history from being displayed underneath command input
-                    // Doesn't seem to work in android browsers but works in android PWA
-                    app.set_scroll_top(scroll_height);
                 });
         },
     };
