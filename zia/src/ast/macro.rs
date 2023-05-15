@@ -13,7 +13,7 @@ macro_rules! impl_syntax_tree {
             ast::{is_variable, SyntaxLeaf, SyntaxNode},
             consistent_merge::ConsistentMerge
         };
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub struct $syntax_tree<ConceptId> {
             /// The root of this syntax tree, represented as a `String`.
             syntax: Option<String>,
@@ -21,12 +21,6 @@ macro_rules! impl_syntax_tree {
             concept: Option<ConceptId>,
             ///
             node: SyntaxNode<$refcounter<Self>>,
-        }
-
-        impl<ConceptId> Debug for $syntax_tree<ConceptId> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
-            }
         }
 
         impl<ConceptId: PartialEq> PartialEq<Self> for $syntax_tree<ConceptId> {

@@ -2,10 +2,11 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::DirectConceptDelta,
+    context_delta::{DirectConceptDelta, ContextDelta},
     context_search::{
-        ContextSearch, Generalisations, Iteration as ContextSearchIteration,
+        ContextSearch, Generalisations,
     },
+    iteration::Iteration as ContextSearchIteration,
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
@@ -24,34 +25,70 @@ pub type Context = GenericContext<
     MultiThreadedContextCache<
         MultiThreadedReductionReason<MultiThreadedSyntaxTree<ContextConceptId>>,
     >,
-    SharedDirectConceptDelta<ContextConceptId>,
+    SharedDirectConceptDelta,
     MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ContextConceptId>>,
+    SharedContextDelta
 >;
 
 // Saves having to construct a new `Context` each time.
 lazy_static! {
-    pub static ref NEW_CONTEXT: Context = Context::new();
+    pub static ref NEW_CONTEXT: Context = Context::new().unwrap();
 }
 
-pub type SharedDirectConceptDelta<ConceptId> =
-    Arc<DirectConceptDelta<ConceptId>>;
+type MultiThreadedContextDelta = ContextDelta<ContextConceptId, SharedDirectConceptDelta>;
 
-impl<'a, S, SDCD> ContextSearchIteration
+#[derive(Clone, Default)]
+pub struct SharedContextDelta(Arc<MultiThreadedContextDelta>);
+
+impl<'a> From<&'a mut SharedContextDelta> for Option<&'a mut MultiThreadedContextDelta> {
+    fn from(scd: &'a mut SharedContextDelta) -> Self {
+        Arc::get_mut(&mut scd.0)
+    }
+}
+
+impl From<MultiThreadedContextDelta> for SharedContextDelta {
+    fn from(mtcd: MultiThreadedContextDelta) -> Self {
+        Self(mtcd.into())
+    }
+}
+
+impl From<SharedContextDelta> for MultiThreadedContextDelta {
+    fn from(scd: SharedContextDelta) -> Self {
+        Arc::try_unwrap(scd.0).unwrap()
+    }
+}
+
+impl From<SharedContextDelta> for Option<MultiThreadedContextDelta> {
+    fn from(scd: SharedContextDelta) -> Self {
+        Arc::try_unwrap(scd.0).ok()
+    }
+}
+
+impl AsRef<MultiThreadedContextDelta> for SharedContextDelta {
+    fn as_ref(&self) -> &MultiThreadedContextDelta {
+        self.0.as_ref()
+    }
+}
+
+
+pub type SharedDirectConceptDelta =
+    Arc<DirectConceptDelta<ContextConceptId>>;
+
+
+impl<'s, 'v, S> ContextSearchIteration
     for ContextSearch<
-        'a,
+        's,
+        'v,
         S,
         MultiThreadedContextCache<
             MultiThreadedReductionReason<MultiThreadedSyntaxTree<S::ConceptId>>,
         >,
-        SDCD,
         MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<S::ConceptId>>,
+        SharedDirectConceptDelta,
+        SharedContextDelta
     >
 where
-    S: SnapShotReader<SDCD> + Sync + Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Sync,
+    S: SnapShotReader<SharedDirectConceptDelta, ConceptId = ContextConceptId> + Sync + Debug,
 {
     type ConceptId = S::ConceptId;
     type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;

@@ -29,6 +29,13 @@ fn simple_condition() {
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "true");
 }
+#[test]
+fn negated_condition() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let a => (b -> false)"), "");
+    assert_eq!(context.execute("let a"), "");
+    assert_eq!(context.execute("b"), "false");
+}
 
 fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();

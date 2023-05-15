@@ -18,7 +18,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
-    context_search::{ReductionReason, Syntax},
+    reduction_reason::{Syntax, ReductionReason}, context_snap_shot::Uncommitted
 };
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -53,7 +53,7 @@ impl<ConceptId, SharedDirectConceptDelta> Default
 impl<ConceptId, SharedDirectConceptDelta>
     ContextDelta<ConceptId, SharedDirectConceptDelta>
 where
-    ConceptId: Clone + Copy + Display + Eq + Hash + From<usize>,
+    ConceptId: Clone + Copy + Display + Eq + Hash + From<Uncommitted>,
     SharedDirectConceptDelta: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>,
@@ -311,7 +311,7 @@ where
         );
     }
 
-    fn insert_delta_for_new_concept(
+    pub fn insert_delta_for_new_concept(
         &mut self,
         cd: NewConceptDelta<ConceptId>,
     ) -> ConceptId {

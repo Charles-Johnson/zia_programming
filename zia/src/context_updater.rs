@@ -6,7 +6,7 @@ use crate::{
         Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
         ValueChange,
     },
-    context_search::{ReductionReason, Syntax},
+    reduction_reason::{Syntax, ReductionReason},
     errors::ZiaResult,
     snap_shot::Reader,
     ZiaError,
@@ -20,9 +20,9 @@ pub struct ContextUpdater<
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
 > {
-    pub snap_shot: &'a S,
     pub cache: &'a mut C,
     pub delta: &'a mut ContextDelta<S::ConceptId, SDCD>,
+    pub snap_shot: &'a S,
 }
 
 impl<

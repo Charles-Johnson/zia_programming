@@ -137,7 +137,6 @@ mod context_cache;
 
 mod context_delta;
 
-#[macro_use]
 mod context_search;
 
 #[cfg(test)]
@@ -165,14 +164,22 @@ mod mock_snap_shot;
 
 mod parser;
 
+#[macro_use]
+mod reduction_reason;
+
 pub mod single_threaded;
 
 pub mod multi_threaded;
 
 mod snap_shot;
 
+mod iteration;
+
+mod substitute;
+
 pub mod variable_mask_list;
 
 pub use crate::errors::ZiaError;
 
 pub use crate::lexer::{Category as LexemeCategory, ConceptKind};
+

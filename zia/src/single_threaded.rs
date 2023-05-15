@@ -2,11 +2,12 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::DirectConceptDelta,
+    context_delta::{DirectConceptDelta, ContextDelta},
     context_search::{
-        ContextSearch, Generalisations, Iteration as ContextSearchIteration,
+        ContextSearch, Generalisations,
     },
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
+    iteration::Iteration as ContextSearchIteration,
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
 };
@@ -26,27 +27,62 @@ pub type Context = GenericContext<
     >,
     SharedDirectConceptDelta,
     SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
+    Rc<ContextDelta<ContextConceptId, SharedDirectConceptDelta>>
 >;
+
+type SingleThreadedContextDelta = ContextDelta<ContextConceptId, SharedDirectConceptDelta>;
+
+#[derive(Clone, Default)]
+pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
+
+impl<'a> From<&'a mut SharedContextDelta> for Option<&'a mut SingleThreadedContextDelta> {
+    fn from(scd: &'a mut SharedContextDelta) -> Self {
+        Rc::get_mut(&mut scd.0)
+    }
+}
+
+impl From<SingleThreadedContextDelta> for SharedContextDelta {
+    fn from(mtcd: SingleThreadedContextDelta) -> Self {
+        Self(mtcd.into())
+    }
+}
+
+impl From<SharedContextDelta> for SingleThreadedContextDelta {
+    fn from(scd: SharedContextDelta) -> Self {
+        Rc::try_unwrap(scd.0).unwrap()
+    }
+}
+
+impl From<SharedContextDelta> for Option<SingleThreadedContextDelta> {
+    fn from(scd: SharedContextDelta) -> Self {
+        Rc::try_unwrap(scd.0).ok()
+    }
+}
+
+impl AsRef<SingleThreadedContextDelta> for SharedContextDelta {
+    fn as_ref(&self) -> &SingleThreadedContextDelta {
+        self.0.as_ref()
+    }
+}
 
 type SharedDirectConceptDelta = Rc<DirectConceptDelta<ContextConceptId>>;
 
-impl<'a, S, SDCD> ContextSearchIteration
+impl<'s, 'v, S> ContextSearchIteration
     for ContextSearch<
-        'a,
+        's,
+        'v,
         S,
         SingleThreadedContextCache<
             SingleThreadedReductionReason<
                 SingleThreadedSyntaxTree<S::ConceptId>,
             >,
         >,
-        SDCD,
         SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<S::ConceptId>>,
+        SharedDirectConceptDelta,
+        SharedContextDelta
     >
 where
-    S: SnapShotReader<SDCD, ConceptId = ContextConceptId> + Sync + Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<ContextConceptId>>
-        + From<DirectConceptDelta<ContextConceptId>>,
+    S: SnapShotReader<SharedDirectConceptDelta, ConceptId = ContextConceptId> + Sync + Debug,
 {
     type ConceptId = S::ConceptId;
     type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;

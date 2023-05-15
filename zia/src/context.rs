@@ -22,17 +22,18 @@ use crate::{
     context_cache::{self, ContextCache},
     context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta},
     context_search::{
-        self, Comparison, ContextReferences, ContextSearch,
-        Iteration as ContextSearchIteration, SharedSyntax, Syntax,
+        Comparison, ContextReferences, ContextSearch,
     },
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
+    iteration::Iteration as ContextSearchIteration,
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     parser::parse_line,
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
+    reduction_reason::{SharedSyntax, Syntax, ReductionReason},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -42,24 +43,31 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct Context<S, C, SDCD, VML>
+pub struct Context<S, C, SDCD, VML, D>
 where
-    S: SnapShotReader<SDCD>,
+    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
-    C: ContextCache,
+    C: Default + ContextCache,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
+        + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList,
+    VML: VariableMaskList<Syntax = Syntax<C>>,
+    D: Clone + From<ContextDelta<S::ConceptId, SDCD>> + Default + AsRef<ContextDelta<S::ConceptId, SDCD>>,
+    for <'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
+    Option<ContextDelta<S::ConceptId, SDCD>>: From<D>,
+    ContextDelta<S::ConceptId, SDCD>: From<D>
 {
     snap_shot: S,
-    delta: ContextDelta<S::ConceptId, SDCD>,
+    delta: D,
     cache: C,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
     bounded_variable_syntax: HashSet<SharedSyntax<C>>,
     _phantom: PhantomData<VML>,
+    phantom: PhantomData<SDCD>
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -68,25 +76,28 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub positions: Vec<usize>,
 }
 
-impl<S, C, SDCD, VML> Context<S, C, SDCD, VML>
+impl<S, C, SDCD, VML, D> Context<S, C, SDCD, VML, D>
 where
     S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as context_search::ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
+    D: Clone + From<ContextDelta<S::ConceptId, SDCD>> + AsRef<ContextDelta<S::ConceptId, SDCD>> + Default + Into<Option<ContextDelta<S::ConceptId, SDCD>>>,
+    for <'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
+    Option<ContextDelta<S::ConceptId, SDCD>>: From<D>,
+    ContextDelta<S::ConceptId, SDCD>: From<D>
 {
-    #[must_use]
-    pub fn new() -> Self {
+    pub fn new() -> ZiaResult<Self> {
         let mut cont = Self::default();
-        cont.setup();
-        cont
+        cont.setup()?;
+        Ok(cont)
     }
 
     pub fn lex(&self, command: &str) -> Vec<Lexeme> {
@@ -165,12 +176,12 @@ where
         if symbol.starts_with('_') && symbol.ends_with('_') {
             return ConceptKind::Variable;
         }
-        self.snap_shot.concept_from_label(&self.delta, symbol).map_or(
+        self.snap_shot.concept_from_label(self.delta.as_ref(), symbol).map_or(
             ConceptKind::New,
             |id| {
                 if self
                     .snap_shot
-                    .read_concept(&self.delta, id)
+                    .read_concept(self.delta.as_ref(), id)
                     .get_concrete_concept_type()
                     .is_some()
                 {
@@ -186,32 +197,32 @@ where
         let string = self.execute_without_closing_scope(command);
         self.new_variable_concepts_by_label = HashMap::new();
         self.bounded_variable_syntax = HashSet::new();
-        string
+        string.unwrap()
     }
 
-    fn execute_without_closing_scope(&mut self, command: &str) -> String {
+    fn execute_without_closing_scope(&mut self, command: &str) -> ZiaResult<String> {
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
                 a = self.context_search().expand(&a);
-                self.create_variable_concepts(Syntax::<C>::make_mut(&mut a));
-                self.call(&a)
+                self.create_variable_concepts(Syntax::<C>::make_mut(&mut a)).unwrap();
+                self.call(dbg!(&a))
             })
             .unwrap_or_else(|e| e.to_string());
-        self.commit();
-        string
+        self.commit()?;
+        Ok(string)
     }
 
-    pub fn create_variable_concepts(&mut self, ast: &mut Syntax<C>) {
+    pub fn create_variable_concepts(&mut self, ast: &mut Syntax<C>) -> ZiaResult<()> {
         if let Some((left, right)) = ast.get_expansion_mut() {
-            self.create_variable_concepts(left);
-            self.create_variable_concepts(right);
+            self.create_variable_concepts(left)?;
+            self.create_variable_concepts(right)?;
         } else if ast.is_variable() {
             let concept_id = self
                 .new_variable_concepts_by_label
                 .get(&ast.to_string())
                 .copied()
-                .unwrap_or_else(|| {
+                .or_else(|| {
                     let direct_delta = DirectConceptDelta::New(
                         if self.bounded_variable_syntax.contains(ast) {
                             NewConceptDelta::BoundVariable
@@ -219,15 +230,21 @@ where
                             NewConceptDelta::FreeVariable
                         },
                     );
-                    let concept_id = self
-                        .delta
+                    let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+                    let Some(delta) = maybe_inner_delta else {
+                        return None;
+                    };
+                    // This might lead to variables being committed to snap shot unnecessarily
+                    let concept_id = delta
                         .update_concept_delta(direct_delta, &mut self.cache);
                     self.new_variable_concepts_by_label
                         .insert(ast.to_string(), concept_id);
-                    concept_id
-                });
+                    Some(concept_id)
+                })
+                .ok_or(ZiaError::MultiplePointersToDelta)?;
             ast.bind_nonquantifier_concept_as_ref(concept_id);
         }
+        Ok(())
     }
 
     pub fn ast_from_expression(
@@ -409,7 +426,7 @@ where
                 let raw_syntax_of_token = Syntax::<C>::from(token).share();
                 let (precedence_of_token, syntax_of_token) = self
                     .snap_shot
-                    .concept_from_label(&self.delta, token)
+                    .concept_from_label(self.delta.as_ref(), token)
                     .map_or_else(
                         || {
                             (
@@ -422,7 +439,7 @@ where
                             let syntax_of_token = self
                                 .snap_shot
                                 .bind_concept_to_syntax(
-                                    &self.delta,
+                                    self.delta.as_ref(),
                                     raw_syntax_of_token.as_ref().clone(),
                                     c,
                                 )
@@ -528,16 +545,22 @@ where
             self.ast_from_expression(t)
         } else {
             let ast =
-                self.snap_shot.ast_from_symbol::<Syntax<C>>(&self.delta, t);
+                self.snap_shot.ast_from_symbol::<Syntax<C>>(self.delta.as_ref(), t);
             Ok(ast.share())
         }
     }
 
-    fn commit(&mut self) {
-        self.snap_shot.apply(std::mem::take(&mut self.delta));
+    fn commit(&mut self) -> ZiaResult<()> {
+        let taken_delta = std::mem::take(&mut self.delta);
+        let maybe_inner_delta: Option<ContextDelta<S::ConceptId, SDCD>> = taken_delta.into();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
+        self.snap_shot.apply(delta);
+        Ok(())
     }
 
-    fn setup(&mut self) {
+    fn setup(&mut self) -> ZiaResult<()> {
         let labels = vec![
             (":=", ConcreteConceptType::Define),
             ("->", ConcreteConceptType::Reduction),
@@ -553,9 +576,13 @@ where
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
         ];
+        let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
         let mut updater = ContextUpdater {
             snap_shot: &self.snap_shot,
-            delta: &mut self.delta,
+            delta,
             cache: &mut self.cache,
         };
         let label_id = updater.new_labelled_concept(
@@ -570,7 +597,7 @@ where
                 Some(label_id),
             );
         }
-        self.commit();
+        self.commit()?;
         self.execute("let (true and true) -> true");
         self.execute("let (false and _y_) -> false");
         self.execute("let (_x_ and false) -> false");
@@ -580,6 +607,7 @@ where
         self.execute("let default > prec ->");
         self.execute("let (prec ->) > prec :=");
         self.execute("let (prec :=) > prec let");
+        Ok(())
     }
 
     fn reduce_and_call_pair(
@@ -614,7 +642,7 @@ where
     fn call(&mut self, ast: &SharedSyntax<C>) -> ZiaResult<String> {
         ast.get_concept()
             .and_then(|c| {
-                self.snap_shot.read_concept(&self.delta, c).get_string()
+                self.snap_shot.read_concept(self.delta.as_ref(), c).get_string()
             })
             .map_or_else(
                 || {
@@ -653,7 +681,7 @@ where
         &self,
         concept_id: S::ConceptId,
     ) -> Option<ConcreteConceptType> {
-        self.snap_shot.concrete_concept_type(&self.delta, concept_id)
+        self.snap_shot.concrete_concept_type(self.delta.as_ref(), concept_id)
     }
 
     fn concrete_type_of_ast(
@@ -691,7 +719,7 @@ where
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
                     + &right
                         .get_concept()
-                        .and_then(|c| self.snap_shot.get_label(&self.delta, c))
+                        .and_then(|c| self.snap_shot.get_label(self.delta.as_ref(), c))
                         .unwrap_or_else(|| right.to_string())
                     + "'")),
                 _ => None,
@@ -738,7 +766,7 @@ where
                 _ => {
                     let rightleft_reduction = self
                         .snap_shot
-                        .read_concept(&self.delta, c)
+                        .read_concept(self.delta.as_ref(), c)
                         .get_reduction();
                     rightleft_reduction.map_or(
                         Err(ZiaError::CannotReduceFurther),
@@ -771,9 +799,13 @@ where
         new: &SharedSyntax<C>,
         old: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
+        let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
         let mut updater = ContextUpdater {
             snap_shot: &self.snap_shot,
-            delta: &mut self.delta,
+            delta,
             cache: &mut self.cache,
         };
         match (
@@ -825,14 +857,18 @@ where
     ) -> ZiaResult<()> {
         match self
             .snap_shot
-            .read_concept(&self.delta, concept)
+            .read_concept(self.delta.as_ref(), concept)
             .get_composition()
         {
             None => Err(ZiaError::RedundantCompositionRemoval),
             Some((left, right)) => {
+                let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+                let Some(delta) = maybe_inner_delta else {
+                    return Err(ZiaError::MultiplePointersToDelta);
+                };
                 let mut updater = ContextUpdater {
                     snap_shot: &self.snap_shot,
-                    delta: &mut self.delta,
+                    delta,
                     cache: &mut self.cache,
                 };
                 updater.try_delete_concept(concept)?;
@@ -848,9 +884,13 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
+        let delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+        let Some(delta) = delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
         let mut updater = ContextUpdater {
             snap_shot: &self.snap_shot,
-            delta: &mut self.delta,
+            delta,
             cache: &mut self.cache,
         };
         if let Some((left_concept, right_concept)) = self
@@ -879,12 +919,12 @@ where
             .and_also(&right.get_concept())
             .and_then(|(l, r)| {
                 self.snap_shot
-                    .read_concept(&self.delta, *l)
+                    .read_concept(self.delta.as_ref(), *l)
                     .find_as_hand_in_composition_with(*r, Hand::Left)
                     .map(|concept| {
                         let syntax = Syntax::<C>::from(syntax);
                         self.snap_shot.bind_concept_to_syntax(
-                            &self.delta,
+                            self.delta.as_ref(),
                             syntax,
                             concept,
                         )
@@ -892,9 +932,13 @@ where
             })
             .unwrap_or_else(|| syntax.into())
             .bind_pair(left.clone(), right.clone());
+        let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
         ContextUpdater {
             snap_shot: &self.snap_shot,
-            delta: &mut self.delta,
+            delta,
             cache: &mut self.cache,
         }
         .concept_from_ast(&new_syntax_tree)?;
@@ -911,9 +955,13 @@ where
         } else if syntax == normal_form {
             self.try_removing_reduction(syntax)
         } else {
+            let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+            let Some(delta) = maybe_inner_delta else {
+                return Err(ZiaError::MultiplePointersToDelta);
+            };
             let mut updater = ContextUpdater {
                 snap_shot: &self.snap_shot,
-                delta: &mut self.delta,
+                delta,
                 cache: &mut self.cache,
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
@@ -923,63 +971,81 @@ where
     }
 
     fn try_removing_reduction(&mut self, syntax: &Syntax<C>) -> ZiaResult<()> {
+        let maybe_inner_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut self.delta).into();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
+        let snap_shot = &self.snap_shot;
+        let cache = &mut self.cache;
         syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
             ContextUpdater {
-                snap_shot: &self.snap_shot,
-                delta: &mut self.delta,
-                cache: &mut self.cache,
+                cache,
+                delta,
+                snap_shot,
             }
             .delete_reduction(c)
         })
     }
 
-    fn context_search(&self) -> ContextSearch<S, C, SDCD, VML> {
+    fn context_search(&self) -> ContextSearch<S, C, VML, SDCD, D> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
-            delta: &self.delta,
+            delta: self.delta.clone(),
             cache: &self.cache,
             bound_variable_syntax: &self.bounded_variable_syntax,
         })
     }
 }
 
-impl<S, C, SDCD, VML> Default for Context<S, C, SDCD, VML>
+impl<S, C, SDCD, VML, D> Default for Context<S, C, SDCD, VML, D>
 where
-    S: Default + SnapShotReader<SDCD>,
-    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
+    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
+        + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList,
+    VML: VariableMaskList<Syntax = Syntax<C>>,
+    D: Clone + From<ContextDelta<S::ConceptId, SDCD>> + Default + AsRef<ContextDelta<S::ConceptId, SDCD>>,
+    for <'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
+    Option<ContextDelta<S::ConceptId, SDCD>>: From<D>,
+    ContextDelta<S::ConceptId, SDCD>: From<D>
 {
     #[must_use]
     fn default() -> Self {
         Self {
             snap_shot: S::default(),
-            delta: ContextDelta::default(),
+            delta: D::default(),
             cache: C::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
             _phantom: PhantomData,
+            phantom: PhantomData
         }
     }
 }
 
-impl<S, C, SDCD, VML> From<S> for Context<S, C, SDCD, VML>
+impl<S, C, SDCD, VML, D> From<S> for Context<S, C, SDCD, VML, D>
 where
-    S: Default + SnapShotReader<SDCD>,
-    S::ConceptId: Default,
-    VML: VariableMaskList,
-    for<'a> ContextSearch<'a, S, C, SDCD, VML>:
+    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
+        + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList<Syntax = Syntax<C>>,
+    D: Clone + From<ContextDelta<S::ConceptId, SDCD>> + Default + AsRef<ContextDelta<S::ConceptId, SDCD>>,
+    for <'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
+    Option<ContextDelta<S::ConceptId, SDCD>>: From<D>,
+    ContextDelta<S::ConceptId, SDCD>: From<D>
 {
     fn from(snap_shot: S) -> Self {
         Self {

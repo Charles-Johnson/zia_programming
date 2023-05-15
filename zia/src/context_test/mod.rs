@@ -7,7 +7,7 @@ use crate::{
     multi_threaded::{
         MultiThreadedContextCache, MultiThreadedReductionReason,
         MultiThreadedSyntaxTree, MultiThreadedVariableMaskList,
-        SharedDirectConceptDelta,
+        SharedDirectConceptDelta, SharedContextDelta
     },
 };
 
@@ -16,8 +16,9 @@ pub type Context = GenericContext<
     MultiThreadedContextCache<
         MultiThreadedReductionReason<MultiThreadedSyntaxTree<ConceptId>>,
     >,
-    SharedDirectConceptDelta<ConceptId>,
+    SharedDirectConceptDelta,
     MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ConceptId>>,
+    SharedContextDelta
 >;
 
 type Syntax = MultiThreadedSyntaxTree<ConceptId>;

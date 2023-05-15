@@ -6,7 +6,7 @@ macro_rules! impl_cache {
             ast::SyntaxTree,
             concepts::ConceptTrait,
             context_cache::{ContextCache, ReductionCache, ConceptId, SharedSyntax},
-            context_search::ReductionResult,
+            reduction_reason::{ReductionReason, ReductionResult}
         };
         use dashmap::DashMap;
         use log::debug;
