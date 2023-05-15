@@ -6,7 +6,7 @@ use crate::{
     },
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta, SharedContextDelta},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ fn comparison_existence_implication_rule_test() {
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
-        delta: &context_delta,
+        delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
         bound_variable_syntax: &bound_variables,
     });

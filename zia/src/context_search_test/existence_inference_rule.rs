@@ -7,7 +7,7 @@ use crate::{
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
         MultiThreadedContextCache, MultiThreadedReductionReason,
-        SharedDirectConceptDelta,
+        SharedDirectConceptDelta, SharedContextDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -37,7 +37,7 @@ fn existence_inference_rule() {
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
-        delta: &context_delta,
+        delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
         bound_variable_syntax: &bound_variables,
     });

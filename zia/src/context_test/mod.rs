@@ -16,9 +16,10 @@ pub type Context = GenericContext<
     MultiThreadedContextCache<
         MultiThreadedReductionReason<MultiThreadedSyntaxTree<ConceptId>>,
     >,
-    SharedDirectConceptDelta,
+    SharedDirectConceptDelta<ConceptId>,
     MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ConceptId>>,
-    SharedContextDelta
+    SharedContextDelta<ConceptId>,
+    ConceptId
 >;
 
 type Syntax = MultiThreadedSyntaxTree<ConceptId>;

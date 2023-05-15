@@ -6,7 +6,7 @@ use crate::{
     snap_shot::Reader,
 };
 use bimap::BiMap;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 pub type ConceptId = usize;
 
@@ -38,19 +38,12 @@ impl MockSnapShot {
     }
 }
 
-impl<SDCD> Apply<SDCD> for MockSnapShot
+impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot
 where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>,
 {
-    fn apply(&mut self, _: ContextDelta<ConceptId, SDCD>) {}
+    fn apply(&mut self, _: ContextDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>>) {}
 }
-impl<SDCD> Reader<SDCD> for MockSnapShot
-where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>,
+impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot
 {
     type CommittedConceptId = ConceptId;
     type ConceptId = ConceptId;
@@ -65,7 +58,7 @@ where
 
     fn get_label(
         &self,
-        _: &ContextDelta<Self::ConceptId, SDCD>,
+        _: &ContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>>,
         concept_id: Self::ConceptId,
     ) -> Option<String> {
         self.concept_labels.get_by_left(&concept_id).map(|s| s.to_string())
@@ -73,7 +66,7 @@ where
 
     fn concept_from_label(
         &self,
-        _: &ContextDelta<Self::ConceptId, SDCD>,
+        _: &ContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.concept_labels.get_by_right(&s).cloned()
@@ -81,7 +74,7 @@ where
 
     fn concrete_concept_id(
         &self,
-        _: &ContextDelta<Self::ConceptId, SDCD>,
+        _: &ContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).cloned()
@@ -89,7 +82,7 @@ where
 
     fn concrete_concept_type(
         &self,
-        _: &ContextDelta<Self::ConceptId, SDCD>,
+        _: &ContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.concrete_concepts.get_by_left(&concept_id).cloned()

@@ -25,7 +25,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            context: Context::new(),
+            context: Context::new().unwrap(),
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),

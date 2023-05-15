@@ -38,16 +38,17 @@ use crate::{
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
-    fmt::Debug,
+    fmt::{Debug, Display},
     marker::PhantomData,
+    hash::Hash
 };
 
 #[derive(Clone)]
-pub struct Context<S, C, SDCD, VML, D>
+pub struct Context<S, C, SDCD, VML, D, CCI: Clone + Display>
 where
-    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
@@ -76,11 +77,11 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub positions: Vec<usize>,
 }
 
-impl<S, C, SDCD, VML, D> Context<S, C, SDCD, VML, D>
+impl<S, C, SDCD, VML, D, CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug> Context<S, C, SDCD, VML, D, CCI>
 where
-    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
@@ -987,7 +988,7 @@ where
         })
     }
 
-    fn context_search(&self) -> ContextSearch<S, C, VML, SDCD, D> {
+    fn context_search(&self) -> ContextSearch<S, C, VML, SDCD, D, CCI> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: self.delta.clone(),
@@ -997,11 +998,11 @@ where
     }
 }
 
-impl<S, C, SDCD, VML, D> Default for Context<S, C, SDCD, VML, D>
+impl<S, C, SDCD, VML, D, CCI: Clone + Display> Default for Context<S, C, SDCD, VML, D, CCI>
 where
-    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
@@ -1029,11 +1030,11 @@ where
     }
 }
 
-impl<S, C, SDCD, VML, D> From<S> for Context<S, C, SDCD, VML, D>
+impl<S, C, SDCD, VML, D, CCI: Clone + Display> From<S> for Context<S, C, SDCD, VML, D, CCI>
 where
-    S: SnapShotReader<SDCD> + Default + Sync + Apply<SDCD> + Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D>:
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
         ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,

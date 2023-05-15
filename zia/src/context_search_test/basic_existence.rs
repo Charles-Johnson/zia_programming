@@ -6,7 +6,7 @@ use crate::{
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta, SharedContextDelta},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -22,7 +22,7 @@ fn basic_existence() {
     let bound_variables = hashset! {variable_syntax.clone()};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: &delta,
+        delta: SharedContextDelta(delta.into()),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });

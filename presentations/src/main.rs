@@ -153,7 +153,7 @@ fn main() {
         block += "```\n";
         blocks.push(block);
     }
-    let mut context = Context::new();
+    let mut context = Context::new().unwrap();
     for command in commands {
         context.execute(&command);
     }

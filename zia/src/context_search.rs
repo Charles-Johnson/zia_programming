@@ -31,13 +31,14 @@ use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug, marker::PhantomData,
+    fmt::{Debug, Display}, marker::PhantomData,
+    hash::Hash,
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D>
+pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: Clone + Display + Copy>
 where
-    S: SnapShotReader<SDCD> + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -54,12 +55,13 @@ where
     caches: C,
     syntax_evaluating: HashSet<SharedSyntax<C>>,
     bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
-    phantom: PhantomData<SDCD>
+    phantom: PhantomData<SDCD>,
+    phantom2: PhantomData<CCI>
 }
 
-impl<'s, 'v, S, C, SDCD, VML, D> ContextSearch<'s, 'v, S, C, VML, SDCD, D>
+impl<'s, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
-    S: SnapShotReader<SDCD> + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -1046,7 +1048,7 @@ where
         &'b self,
         cache: &'c <C as ContextCache>::SharedReductionCache,
         delta: D
-    ) -> ContextSearch::<'s, 'v, S, C, VML, SDCD, D>
+    ) -> ContextSearch::<'s, 'v, S, C, VML, SDCD, D, CCI>
     where VML: VariableMaskList,
 
     {
@@ -1057,7 +1059,8 @@ where
             snap_shot: self.snap_shot,
             syntax_evaluating: self.syntax_evaluating.clone(),
             variable_mask: self.variable_mask.clone(),
-            phantom: self.phantom
+            phantom: self.phantom,
+            phantom2: self.phantom2
         }
     }
 
@@ -1129,10 +1132,10 @@ pub enum ComparisonReason<RR: ReductionReason> {
     NoGreaterThanConcept,
 }
 
-impl<'c, 's, 'v, S, C, SDCD, VML, D> From<ContextReferences<'c, 's, 'v, S, C, D>>
-    for ContextSearch<'s, 'v, S, C, VML, SDCD, D>
+impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy> From<ContextReferences<'c, 's, 'v, S, C, D>>
+    for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
-    S: SnapShotReader<SDCD> + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -1159,7 +1162,8 @@ where
             delta,
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
-            phantom: PhantomData::default()
+            phantom: PhantomData::default(),
+            phantom2: PhantomData::default()
         }
     }
 }
