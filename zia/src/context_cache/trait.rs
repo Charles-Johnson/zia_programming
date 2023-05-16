@@ -1,7 +1,7 @@
 use crate::{
     ast::SyntaxTree,
     concepts::ConceptTrait,
-    reduction_reason::{ReductionResult, ReductionReason}
+    reduction_reason::{ReductionReason, ReductionResult},
 };
 use std::fmt::Debug;
 

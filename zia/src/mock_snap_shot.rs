@@ -38,13 +38,14 @@ impl MockSnapShot {
     }
 }
 
-impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot
-where
-{
-    fn apply(&mut self, _: ContextDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>>) {}
+impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
+    fn apply(
+        &mut self,
+        _: ContextDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>>,
+    ) {
+    }
 }
-impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot
-{
+impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
     type CommittedConceptId = ConceptId;
     type ConceptId = ConceptId;
     type MixedConcept<'a> = Concept<ConceptId>;

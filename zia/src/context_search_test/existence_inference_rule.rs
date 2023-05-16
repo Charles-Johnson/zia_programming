@@ -7,7 +7,7 @@ use crate::{
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
         MultiThreadedContextCache, MultiThreadedReductionReason,
-        SharedDirectConceptDelta, SharedContextDelta,
+        SharedContextDelta, SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};

@@ -2,10 +2,8 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{DirectConceptDelta, ContextDelta},
-    context_search::{
-        ContextSearch, Generalisations,
-    },
+    context_delta::{ContextDelta, DirectConceptDelta},
+    context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
     snap_shot::Reader as SnapShotReader,
@@ -28,15 +26,18 @@ pub type Context = GenericContext<
     SharedDirectConceptDelta,
     SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
     SharedContextDelta,
-    ContextConceptId
+    ContextConceptId,
 >;
 
-type SingleThreadedContextDelta = ContextDelta<ContextConceptId, SharedDirectConceptDelta>;
+type SingleThreadedContextDelta =
+    ContextDelta<ContextConceptId, SharedDirectConceptDelta>;
 
 #[derive(Clone, Default)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
 
-impl<'a> From<&'a mut SharedContextDelta> for Option<&'a mut SingleThreadedContextDelta> {
+impl<'a> From<&'a mut SharedContextDelta>
+    for Option<&'a mut SingleThreadedContextDelta>
+{
     fn from(scd: &'a mut SharedContextDelta) -> Self {
         Rc::get_mut(&mut scd.0)
     }
@@ -81,10 +82,12 @@ impl<'s, 'v, S> ContextSearchIteration
         SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<S::ConceptId>>,
         SharedDirectConceptDelta,
         SharedContextDelta,
-        ContextConceptId
+        ContextConceptId,
     >
 where
-    S: SnapShotReader<SharedDirectConceptDelta, ConceptId = ContextConceptId> + Sync + Debug,
+    S: SnapShotReader<SharedDirectConceptDelta, ConceptId = ContextConceptId>
+        + Sync
+        + Debug,
 {
     type ConceptId = S::ConceptId;
     type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;

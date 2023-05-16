@@ -6,8 +6,8 @@ use crate::{
         Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
         ValueChange,
     },
-    reduction_reason::{Syntax, ReductionReason},
     errors::ZiaResult,
+    reduction_reason::{ReductionReason, Syntax},
     snap_shot::Reader,
     ZiaError,
 };

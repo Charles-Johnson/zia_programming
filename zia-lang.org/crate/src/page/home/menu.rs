@@ -44,7 +44,16 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
             p![C![C.flex_1], "A programming language that defines itself"],
             div![
                 C![C.flex, C.flex_2, C.flex_row],
-                p![C![C.flex, C.flex_1, C.text_center, C.justify_center, C.self_center],"Tutorials"],
+                p![
+                    C![
+                        C.flex,
+                        C.flex_1,
+                        C.text_center,
+                        C.justify_center,
+                        C.self_center
+                    ],
+                    "Tutorials"
+                ],
                 div![
                     C![C.flex, C.flex_1, C.flex_col],
                     button![

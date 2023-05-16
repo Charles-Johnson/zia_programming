@@ -21,9 +21,7 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::{self, ContextCache},
     context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta},
-    context_search::{
-        Comparison, ContextReferences, ContextSearch,
-    },
+    context_search::{Comparison, ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -31,16 +29,16 @@ use crate::{
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     parser::parse_line,
+    reduction_reason::{ReductionReason, SharedSyntax, Syntax},
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
-    reduction_reason::{SharedSyntax, Syntax, ReductionReason},
 };
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
     fmt::{Debug, Display},
+    hash::Hash,
     marker::PhantomData,
-    hash::Hash
 };
 
 #[derive(Clone)]

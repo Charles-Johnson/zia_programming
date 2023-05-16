@@ -1,6 +1,12 @@
-use std::{fmt::Debug, collections::HashMap};
+use std::{collections::HashMap, fmt::Debug};
 
-use crate::{ast::SyntaxTree, context_search::{ComparisonReason, ReductionTruthResult}, substitute::Substitutions, variable_mask_list::VariableMask, context_cache::ContextCache};
+use crate::{
+    ast::SyntaxTree,
+    context_cache::ContextCache,
+    context_search::{ComparisonReason, ReductionTruthResult},
+    substitute::Substitutions,
+    variable_mask_list::VariableMask,
+};
 
 pub trait ReductionReason
 where
@@ -30,10 +36,7 @@ where
         generalisation: RRSharedSyntax<Self>,
     ) -> Self;
 
-    fn inference(
-        implication: RRSharedSyntax<Self>,
-        reason: Self,
-    ) -> Self;
+    fn inference(implication: RRSharedSyntax<Self>, reason: Self) -> Self;
 
     fn explicit() -> Self;
 
@@ -46,10 +49,7 @@ where
     ) -> Self;
 
     fn partial(
-        partial_reductions: HashMap<
-            RRSharedSyntax<Self>,
-            Reduction<Self>,
-        >,
+        partial_reductions: HashMap<RRSharedSyntax<Self>, Reduction<Self>>,
     ) -> Self;
 }
 
@@ -57,10 +57,8 @@ pub type Reduction<RR> = (RRSharedSyntax<RR>, RR);
 
 pub type ReductionResult<RR> = Option<Reduction<RR>>;
 
-pub type RRSharedSyntax<RR> =
-    <RRSyntax<RR> as SyntaxTree>::SharedSyntax;
-type ReductionReasonConceptId<RR> =
-    <RRSyntax<RR> as SyntaxTree>::ConceptId;
+pub type RRSharedSyntax<RR> = <RRSyntax<RR> as SyntaxTree>::SharedSyntax;
+type ReductionReasonConceptId<RR> = <RRSyntax<RR> as SyntaxTree>::ConceptId;
 pub type RRSyntax<RR> = <RR as ReductionReason>::Syntax;
 pub type SharedSyntax<C> = <Syntax<C> as SyntaxTree>::SharedSyntax;
 pub type Syntax<C> = RRSyntax<<C as ContextCache>::RR>;
@@ -68,11 +66,9 @@ pub type Syntax<C> = RRSyntax<<C as ContextCache>::RR>;
 macro_rules! impl_reduction_reason {
     ($refcounter:tt, $reduction_reason:tt) => {
         use crate::{
-            context_search::{
-                ComparisonReason, ReductionTruthResult,
-            },
-            substitute::Substitutions,
+            context_search::{ComparisonReason, ReductionTruthResult},
             reduction_reason::Reduction,
+            substitute::Substitutions,
         };
         #[derive(Clone, PartialEq, Debug)]
         pub enum $reduction_reason<S: SyntaxTree> {

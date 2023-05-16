@@ -30,14 +30,10 @@ pub enum ZiaError {
     #[error("That definition already exists.")]
     RedundantComposition,
     /// When refactoring a symbol that hasn't been used.
-    #[error(
-        "Relabelling something that doesn't yet exist has no effect."
-    )]
+    #[error("Relabelling something that doesn't yet exist has no effect.")]
     RedundantRefactor,
     /// When removing a definition from a concept with no definition.
-    #[error(
-        "Removing a definition that doesn't exist is redundant."
-    )]
+    #[error("Removing a definition that doesn't exist is redundant.")]
     RedundantCompositionRemoval,
     /// When defining an expanded expression.
     #[error("Cannot define expressions.")]
@@ -52,9 +48,7 @@ pub enum ZiaError {
     #[error("Cannot reduce syntax further")]
     CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.
-    #[error(
-        "Cannot reduce a concept to an expression containing itself."
-    )]
+    #[error("Cannot reduce a concept to an expression containing itself.")]
     ExpandingReduction,
     /// When a required symbol is missing from a command
     #[error("Missing {}", symbol)]
@@ -97,18 +91,12 @@ pub enum ZiaError {
     #[error("Concept is already composed of concepts with their own reduction rules.")]
     MultipleReductionPaths,
     /// When symbol is expected to be used by a concept but isn't.
-    #[error(
-        "Symbol was expected to be used to label a concept but isn't."
-    )]
+    #[error("Symbol was expected to be used to label a concept but isn't.")]
     UnusedSymbol,
-    #[error(
-        "Tried to label a concept without a concept of a label."
-    )]
+    #[error("Tried to label a concept without a concept of a label.")]
     NoLabelConcept,
-    #[error(
-        "Cannot quantify over compound expressions or constant concepts"
-    )]
+    #[error("Cannot quantify over compound expressions or constant concepts")]
     CanOnlyQuantifyOverVariables,
     #[error("Multiple smart pointers to context delta")]
-    MultiplePointersToDelta
+    MultiplePointersToDelta,
 }

@@ -21,24 +21,35 @@ use crate::{
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{ContextDelta, DirectConceptDelta, NewConceptDelta},
-    snap_shot::Reader as SnapShotReader,
-    variable_mask_list::{VariableMask, VariableMaskList},
     iteration::Iteration,
-    substitute::{Substitutions, substitute},
-    reduction_reason::{ReductionReason, RRSharedSyntax, ReductionResult, Syntax, SharedSyntax},
+    reduction_reason::{
+        RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
+    },
+    snap_shot::Reader as SnapShotReader,
+    substitute::{substitute, Substitutions},
+    variable_mask_list::{VariableMask, VariableMaskList},
 };
 use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
     collections::{HashMap, HashSet},
-    fmt::{Debug, Display}, marker::PhantomData,
+    fmt::{Debug, Display},
     hash::Hash,
+    marker::PhantomData,
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: Clone + Display + Copy>
-where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
+pub struct ContextSearch<
+    's,
+    'v,
+    S,
+    C,
+    VML,
+    SDCD,
+    D,
+    CCI: Clone + Display + Copy,
+> where
+    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -47,7 +58,7 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: Clone + AsRef<ContextDelta<S::ConceptId, SDCD>>,
-    ContextDelta<S::ConceptId, SDCD>: From<D>
+    ContextDelta<S::ConceptId, SDCD>: From<D>,
 {
     snap_shot: &'s S,
     variable_mask: VML::Shared,
@@ -56,12 +67,21 @@ where
     syntax_evaluating: HashSet<SharedSyntax<C>>,
     bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
     phantom: PhantomData<SDCD>,
-    phantom2: PhantomData<CCI>
+    phantom2: PhantomData<CCI>,
 }
 
-impl<'s, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+impl<
+        's,
+        'v,
+        S,
+        C,
+        SDCD,
+        VML,
+        D,
+        CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug,
+    > ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -70,8 +90,8 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: Clone + AsRef<ContextDelta<S::ConceptId, SDCD>>,
-    for <'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
-    ContextDelta<S::ConceptId, SDCD>: From<D>
+    for<'a> Option<&'a mut ContextDelta<S::ConceptId, SDCD>>: From<&'a mut D>,
+    ContextDelta<S::ConceptId, SDCD>: From<D>,
 {
     fn infer_reduction(
         &self,
@@ -106,7 +126,7 @@ where
         result.or_else(|| {
             let reduction_operator = self.concrete_ast(ConcreteConceptType::Reduction)?;
             let mut delta_clone = self.delta.clone();
-            let borrowed_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut delta_clone).into(); 
+            let borrowed_delta: Option<&mut ContextDelta<S::ConceptId, SDCD>> = (&mut delta_clone).into();
             let safely_borrowed_delta = borrowed_delta.unwrap();
             let variable_reduction_id = safely_borrowed_delta.insert_delta_for_new_concept(NewConceptDelta::FreeVariable);
             let variable_reduction_syntax = Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
@@ -327,7 +347,8 @@ where
                 .filter_generalisations_for_pair(left, right)
                 .iter()
                 .find_map(|(generalisation, variable_mask)| {
-                    let mut context_search = self.spawn(&cache, self.delta.clone());
+                    let mut context_search =
+                        self.spawn(&cache, self.delta.clone());
                     // Stack overflow occurs if you remove this
                     context_search
                         .insert_variable_mask(variable_mask.clone())
@@ -425,7 +446,8 @@ where
             .get_concept()
             .and_also(&righthand.get_concept())
             .and_then(|(lc, rc)| {
-                let left_concept = self.snap_shot.read_concept(self.delta.as_ref(), *lc);
+                let left_concept =
+                    self.snap_shot.read_concept(self.delta.as_ref(), *lc);
                 left_concept
                     .find_as_hand_in_composition_with(*rc, Hand::Left)
                     .map(|def| {
@@ -436,8 +458,11 @@ where
                                     self.display_joint(lefthand, righthand)
                                 }),
                         );
-                        self.snap_shot
-                            .bind_concept_to_syntax(self.delta.as_ref(), syntax, def)
+                        self.snap_shot.bind_concept_to_syntax(
+                            self.delta.as_ref(),
+                            syntax,
+                            def,
+                        )
                     })
             })
             .unwrap_or_else(|| self.display_joint(lefthand, righthand).into())
@@ -454,7 +479,9 @@ where
         (self.is_free_variable(generalisation)
             && !self.bound_variable_syntax.contains(ast)
             && !ast.get_concept().map_or(false, |c| {
-                self.snap_shot.read_concept(self.delta.as_ref(), c).bounded_variable()
+                self.snap_shot
+                    .read_concept(self.delta.as_ref(), c)
+                    .bounded_variable()
             }))
         .then(|| {
             if let Some((gl, gr)) = self
@@ -548,7 +575,10 @@ where
     }
 
     fn is_leaf_concept(&self, l: S::ConceptId) -> bool {
-        self.snap_shot.read_concept(self.delta.as_ref(), l).get_composition().is_none()
+        self.snap_shot
+            .read_concept(self.delta.as_ref(), l)
+            .get_composition()
+            .is_none()
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
@@ -724,8 +754,9 @@ where
         non_generalised_part.get_concept().map_or_else(
             Vec::new,
             |non_generalised_id| {
-                let non_generalised_concept =
-                    self.snap_shot.read_concept(self.delta.as_ref(), non_generalised_id);
+                let non_generalised_concept = self
+                    .snap_shot
+                    .read_concept(self.delta.as_ref(), non_generalised_id);
                 let examples =
                     non_generalised_concept.iter_hand_of(non_generalised_hand);
                 examples
@@ -743,9 +774,11 @@ where
                             // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
                             let mut equivalence_set =
                                 hashset! {generalised_hand};
-                            let non_generalised_hand_concept = self
-                                .snap_shot
-                                .read_concept(self.delta.as_ref(), generalised_hand);
+                            let non_generalised_hand_concept =
+                                self.snap_shot.read_concept(
+                                    self.delta.as_ref(),
+                                    generalised_hand,
+                                );
                             equivalence_set.extend(
                                 non_generalised_hand_concept
                                     .find_what_reduces_to_it(),
@@ -842,13 +875,17 @@ where
         ast.get_concept()
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
-                let left_concept = self.snap_shot.read_concept(self.delta.as_ref(), *l);
+                let left_concept =
+                    self.snap_shot.read_concept(self.delta.as_ref(), *l);
                 left_concept
                     .find_as_hand_in_composition_with(*r, Hand::Left)
                     .map(|concept| {
                         let syntax = self.join(ast, other);
-                        self.snap_shot
-                            .bind_concept_to_syntax(self.delta.as_ref(), syntax, concept)
+                        self.snap_shot.bind_concept_to_syntax(
+                            self.delta.as_ref(),
+                            syntax,
+                            concept,
+                        )
                     })
             })
             .unwrap_or_else(|| self.join(ast, other))
@@ -1047,10 +1084,10 @@ where
     pub fn spawn<'b, 'c>(
         &'b self,
         cache: &'c <C as ContextCache>::SharedReductionCache,
-        delta: D
-    ) -> ContextSearch::<'s, 'v, S, C, VML, SDCD, D, CCI>
-    where VML: VariableMaskList,
-
+        delta: D,
+    ) -> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+    where
+        VML: VariableMaskList,
     {
         ContextSearch::<'s, 'v> {
             bound_variable_syntax: self.bound_variable_syntax,
@@ -1060,7 +1097,7 @@ where
             syntax_evaluating: self.syntax_evaluating.clone(),
             variable_mask: self.variable_mask.clone(),
             phantom: self.phantom,
-            phantom2: self.phantom2
+            phantom2: self.phantom2,
         }
     }
 
@@ -1102,8 +1139,7 @@ pub struct Example<Syntax: SyntaxTree, RR: ReductionReason> {
     substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax, RR>>,
 }
 
-type MaybeReducedSyntaxWithReason<RR> =
-    (RRSharedSyntax<RR>, Option<RR>);
+type MaybeReducedSyntaxWithReason<RR> = (RRSharedSyntax<RR>, Option<RR>);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
@@ -1132,10 +1168,11 @@ pub enum ComparisonReason<RR: ReductionReason> {
     NoGreaterThanConcept,
 }
 
-impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy> From<ContextReferences<'c, 's, 'v, S, C, D>>
+impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy>
+    From<ContextReferences<'c, 's, 'v, S, C, D>>
     for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Sync + std::fmt::Debug,
+    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -1144,7 +1181,7 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: Clone + AsRef<ContextDelta<S::ConceptId, SDCD>>,
-    ContextDelta<S::ConceptId, SDCD>: From<D>
+    ContextDelta<S::ConceptId, SDCD>: From<D>,
 {
     fn from(
         ContextReferences {
@@ -1163,13 +1200,12 @@ where
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
             phantom: PhantomData::default(),
-            phantom2: PhantomData::default()
+            phantom2: PhantomData::default(),
         }
     }
 }
 
-pub struct ContextReferences<'c, 's, 'v, S, C: ContextCache, D>
-{
+pub struct ContextReferences<'c, 's, 'v, S, C: ContextCache, D> {
     pub snap_shot: &'s S,
     pub delta: D,
     pub cache: &'c C,

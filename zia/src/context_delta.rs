@@ -18,7 +18,8 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
-    reduction_reason::{Syntax, ReductionReason}, context_snap_shot::Uncommitted
+    context_snap_shot::Uncommitted,
+    reduction_reason::{ReductionReason, Syntax},
 };
 use std::{
     collections::{hash_map::Entry, HashMap},

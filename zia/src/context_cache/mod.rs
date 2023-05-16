@@ -5,7 +5,7 @@ pub(crate) mod r#trait;
 
 use crate::{
     ast::SyntaxTree,
-    reduction_reason::{ReductionResult, ReductionReason}
+    reduction_reason::{ReductionReason, ReductionResult},
 };
 use dashmap::DashMap;
 pub(crate) use r#macro::impl_cache;
