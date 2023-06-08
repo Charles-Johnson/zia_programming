@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 fn basic_inference() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
         );
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
@@ -30,7 +30,7 @@ fn basic_inference() {
     let true_syntax = || Syntax::from("true").bind_nonquantifier_concept(1);
     let result_syntax = || Syntax::from("b").bind_nonquantifier_concept(3);
     let reduction_reason = ReductionReason::Inference {
-        implication: context_search.to_ast(5),
+        implication: context_search.to_ast(&5),
         reason: ReductionReason::Explicit.into(),
     };
     assert_eq!(

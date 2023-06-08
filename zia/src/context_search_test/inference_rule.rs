@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -65,7 +65,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 fn inference_rule() {
     let context_cache = MultiThreadedContextCache::default();
     let context_delta =
-        ContextDelta::<_, SharedDirectConceptDelta<ConceptId>>::default();
+        NestedContextDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
@@ -85,12 +85,12 @@ fn inference_rule() {
             true_syntax.into(),
             ReductionReason::Rule {
                 reason: ReductionReason::Inference {
-                    implication: context_search.to_ast(6),
+                    implication: context_search.to_ast(&6),
                     reason: ReductionReason::Explicit.into()
                 }
                 .into(),
-                generalisation: context_search.to_ast(2),
-                variable_mask: hashmap! {9 => context_search.to_ast(7)}
+                generalisation: context_search.to_ast(&2),
+                variable_mask: hashmap! {9 => context_search.to_ast(&7)}
             }
         ))
     );

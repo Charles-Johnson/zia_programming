@@ -8,6 +8,7 @@ use crate::{
 use maplit::hashmap;
 use std::collections::HashMap;
 
+#[allow(clippy::too_many_lines)]
 fn concepts() -> [Concept<ConceptId>; 36] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
@@ -97,43 +98,43 @@ fn concepts() -> [Concept<ConceptId>; 36] {
     );
     reduction_preceeds_let.make_reduce_to(&mut true_concept);
     [
-            true_concept,
-            greater_than_concept,
-            exists_such_that_concept,
-            implication_concept,
-            x,
-            y,
-            z,
-            greater_than_z,
-            y_greater_than_z,
-            and_concept,
-            and_true,
-            true_and_true,
-            and_y_greater_than_z,
-            greater_than_y,
-            x_greater_than_y,
-            x_greater_than_y_and_y_greater_than_z,
-            y_exists_such_that,
-            y_exists_such_that_x_greater_than_y_and_y_greater_than_z,
-            x_greater_than_z,
-            implies_x_greater_than_z,
-            y_exists_such_that_x_greater_than_y_and_y_greater_than_z_implies_x_greater_than_z,
-            let_concept,
-            reduction_concept,
-            precedence_concept,
-            default_concept,
-            let_precedence,
-            reduction_precedence,
-            greater_than_let_precedence,
-            assoc_concept,
-            right_id_concept,
-            greater_than_reduction_precedence,
-            default_greater_than_reduction_precedence,
-            reduction_preceeds_let,
-            (ConcreteConceptType::False, 33).into(), // false
-            (ConcreteConceptType::Left, 34).into(), // left
-            (ConcreteConceptType::Label, 35).into() // label_of
-        ]
+        true_concept,
+        greater_than_concept,
+        exists_such_that_concept,
+        implication_concept,
+        x,
+        y,
+        z,
+        greater_than_z,
+        y_greater_than_z,
+        and_concept,
+        and_true,
+        true_and_true,
+        and_y_greater_than_z,
+        greater_than_y,
+        x_greater_than_y,
+        x_greater_than_y_and_y_greater_than_z,
+        y_exists_such_that,
+        y_exists_such_that_x_greater_than_y_and_y_greater_than_z,
+        x_greater_than_z,
+        implies_x_greater_than_z,
+        y_exists_such_that_x_greater_than_y_and_y_greater_than_z_implies_x_greater_than_z,
+        let_concept,
+        reduction_concept,
+        precedence_concept,
+        default_concept,
+        let_precedence,
+        reduction_precedence,
+        greater_than_let_precedence,
+        assoc_concept,
+        right_id_concept,
+        greater_than_reduction_precedence,
+        default_greater_than_reduction_precedence,
+        reduction_preceeds_let,
+        (ConcreteConceptType::False, 33).into(), // false
+        (ConcreteConceptType::Left, 34).into(), // left
+        (ConcreteConceptType::Label, 35).into() // label_of
+    ]
 }
 
 fn concept_labels() -> HashMap<ConceptId, &'static str> {

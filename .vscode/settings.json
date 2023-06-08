@@ -1,6 +1,6 @@
 {
     "files.autoSave": "onFocusChange",
-    "rust-analyzer.checkOnSave.overrideCommand": ["cargo", "+nightly", "clippy", "--message-format=json", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"],
+    "rust-analyzer.checkOnSave.overrideCommand]": ["cargo", "clippy", "--fix", "--allow-dirty", "--message-format=json", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"],
     "files.watcherExclude": {
         "**/target": true
     },

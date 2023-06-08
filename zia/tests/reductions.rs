@@ -64,7 +64,7 @@ fn broken_end_chain() {
     assert_eq!(cont.execute("let a b -> c d"), "");
     assert_eq!(cont.execute("let c d -> e"), "");
     assert_eq!(cont.execute("let c d -> c d"), "");
-    assert_eq!(cont.execute(&"a b"), "c d");
+    assert_eq!(cont.execute("a b"), "c d");
 }
 // A concept that used to triply reduce but whose second reduction no longer reduces should triply reduce to its second reduction.
 #[test]

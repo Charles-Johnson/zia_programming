@@ -3,8 +3,8 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{
-        Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
-        ValueChange,
+        Composition, DirectConceptDelta, NewConceptDelta,
+        ValueChange, NestedContextDelta,
     },
     errors::ZiaResult,
     reduction_reason::{ReductionReason, Syntax},
@@ -12,17 +12,21 @@ use crate::{
     ZiaError,
 };
 
+use std::{fmt::Debug, marker::PhantomData};
+
 pub struct ContextUpdater<
     'a,
     S: Reader<SDCD>,
     C: ContextCache,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
+        + From<DirectConceptDelta<S::ConceptId>> + Debug,
+    D: Debug + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
 > {
     pub cache: &'a mut C,
-    pub delta: &'a mut ContextDelta<S::ConceptId, SDCD>,
+    pub delta: &'a mut NestedContextDelta<S::ConceptId, SDCD, D>,
     pub snap_shot: &'a S,
+    pub phantom: PhantomData<D>
 }
 
 impl<
@@ -31,8 +35,9 @@ impl<
         C: ContextCache,
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
-            + From<DirectConceptDelta<S::ConceptId>>,
-    > ContextUpdater<'a, S, C, SDCD>
+            + From<DirectConceptDelta<S::ConceptId>> + Debug,
+        D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug
+    > ContextUpdater<'a, S, C, SDCD, D>
 where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
         SyntaxTree<ConceptId = S::ConceptId>,
@@ -267,10 +272,9 @@ where
     }
 
     fn remove_string(&mut self, string: &str) {
-        let index = *(self
+        let index = self
             .delta
-            .string()
-            .get(string)
+            .get_string(string)
             .and_then(|sd| match sd {
                 ValueChange::Update {
                     after,
@@ -279,7 +283,7 @@ where
                 ValueChange::Create(index) => Some(index),
                 ValueChange::Remove(_) => None,
             })
-            .expect("string already removed or doesn't exist"));
+            .expect("string already removed or doesn't exist");
         self.blindly_remove_concept(index);
     }
 

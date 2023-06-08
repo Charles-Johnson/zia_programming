@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 fn basic_reduction() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
         );
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
@@ -56,8 +56,8 @@ fn basic_reduction() {
         concrete_syntax().into()
     );
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(1), abstract_syntax().into());
+    assert_eq!(context_search.to_ast(&0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(&1), abstract_syntax().into());
 }
 
 fn labels() -> HashMap<ConceptId, &'static str> {

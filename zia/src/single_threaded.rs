@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{ContextDelta, DirectConceptDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
@@ -30,9 +30,9 @@ pub type Context = GenericContext<
 >;
 
 type SingleThreadedContextDelta =
-    ContextDelta<ContextConceptId, SharedDirectConceptDelta>;
+    NestedContextDelta<ContextConceptId, SharedDirectConceptDelta, SharedContextDelta>;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
 
 impl<'a> From<&'a mut SharedContextDelta>
@@ -100,7 +100,7 @@ where
         candidates
             .iter()
             .filter_map(|gc| {
-                self.check_generalisation(example, *gc).and_then(|vm| {
+                self.check_generalisation(example, gc).and_then(|vm| {
                     if vm.is_empty() {
                         None
                     } else {

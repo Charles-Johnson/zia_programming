@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 fn basic_existence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
         );
     let cache = MultiThreadedContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
@@ -28,7 +28,7 @@ fn basic_existence() {
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
-    let exists_such_that_syntax = context_search.to_ast(0);
+    let exists_such_that_syntax = context_search.to_ast(&0);
     let variable_exists_such_that_variable_is_true_syntax = context_search
         .combine(
             &context_search
@@ -37,15 +37,15 @@ fn basic_existence() {
             &variable_syntax,
         )
         .into();
-    let true_syntax = context_search.to_ast(1);
+    let true_syntax = context_search.to_ast(&1);
     assert_eq!(
         context_search
             .reduce(&variable_exists_such_that_variable_is_true_syntax),
         Some((
-            true_syntax.clone(),
+            true_syntax,
             ReductionReason::Existence {
                 generalisation: variable_syntax.clone(),
-                substitutions: hashmap! {variable_syntax => context_search.to_ast(2)},
+                substitutions: hashmap! {variable_syntax => context_search.to_ast(&2)},
             }
         ))
     );

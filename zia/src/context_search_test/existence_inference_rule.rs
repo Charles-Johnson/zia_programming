@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
@@ -32,7 +32,7 @@ type ReductionReason = MultiThreadedReductionReason<Syntax>;
 fn existence_inference_rule() {
     let context_cache = MultiThreadedContextCache::default();
     let context_delta =
-        ContextDelta::<_, SharedDirectConceptDelta<_>>::default();
+        NestedContextDelta::<_, SharedDirectConceptDelta<_>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
@@ -42,24 +42,24 @@ fn existence_inference_rule() {
         bound_variable_syntax: &bound_variables,
     });
     let example_syntax =
-        Syntax::new_pair(context_search.to_ast(7), context_search.to_ast(10))
+        Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10))
             .share();
     let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
-    let variable_mask = hashmap! {9 => context_search.to_ast(7)};
+    let variable_mask = hashmap! {9 => context_search.to_ast(&7)};
     assert_eq!(
         context_search.reduce(&example_syntax),
         Some((
             true_syntax.into(),
             ReductionReason::Rule {
-                generalisation: context_search.to_ast(2),
+                generalisation: context_search.to_ast(&2),
                 variable_mask: variable_mask.clone(),
                 reason: ReductionReason::Inference {
                     implication: context_search
-                        .substitute(&context_search.to_ast(6), &variable_mask),
+                        .substitute(&context_search.to_ast(&6), &variable_mask),
                     reason: ReductionReason::Existence{
                         generalisation: context_search
-                            .substitute(&context_search.to_ast(13), &variable_mask),
-                        substitutions: hashmap!{context_search.to_ast(11) => context_search.to_ast(3)},
+                            .substitute(&context_search.to_ast(&13), &variable_mask),
+                        substitutions: hashmap!{context_search.to_ast(&11) => context_search.to_ast(&3)},
                     }
                     .into()
                 }

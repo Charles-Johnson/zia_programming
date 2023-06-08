@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -57,7 +57,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<_, SharedDirectConceptDelta<ConceptId>>::default();
+        NestedContextDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
@@ -82,11 +82,11 @@ fn basic_rule() {
     )
     .into();
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(2), left_syntax);
+    assert_eq!(context_search.to_ast(&0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(&2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
-        generalisation: context_search.to_ast(1),
+        generalisation: context_search.to_ast(&1),
         variable_mask: hashmap! {4 => Syntax::from("random").into()},
         reason: ReductionReason::Explicit.into(),
     };

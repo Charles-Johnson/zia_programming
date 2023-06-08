@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{ContextDelta, DirectConceptDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
@@ -39,20 +39,20 @@ lazy_static! {
 }
 
 type MultiThreadedContextDelta<CCI> =
-    ContextDelta<CCI, SharedDirectConceptDelta<CCI>>;
+    NestedContextDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
 
-#[derive(Clone)]
-pub struct SharedContextDelta<CCI: Clone + Display>(
+#[derive(Clone, Debug)]
+pub struct SharedContextDelta<CCI: Clone + Display + Debug + Eq + Hash>(
     pub Arc<MultiThreadedContextDelta<CCI>>,
 );
 
-impl<CCI: Clone + Display> Default for SharedContextDelta<CCI> {
+impl<CCI: Clone + Display + Debug + Eq + Hash> Default for SharedContextDelta<CCI> {
     fn default() -> Self {
         Self(MultiThreadedContextDelta::default().into())
     }
 }
 
-impl<'a, CCI: Clone + Display> From<&'a mut SharedContextDelta<CCI>>
+impl<'a, CCI: Clone + Display + Debug + Eq + Hash> From<&'a mut SharedContextDelta<CCI>>
     for Option<&'a mut MultiThreadedContextDelta<CCI>>
 {
     fn from(scd: &'a mut SharedContextDelta<CCI>) -> Self {
@@ -60,7 +60,7 @@ impl<'a, CCI: Clone + Display> From<&'a mut SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: Clone + Display> From<MultiThreadedContextDelta<CCI>>
+impl<CCI: Clone + Display + Debug + Eq + Hash> From<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {
     fn from(mtcd: MultiThreadedContextDelta<CCI>) -> Self {
@@ -76,7 +76,7 @@ impl<CCI: Clone + Debug + Display + Eq + Hash> From<SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: Clone + Display> From<SharedContextDelta<CCI>>
+impl<CCI: Clone + Display + Debug + Eq + Hash> From<SharedContextDelta<CCI>>
     for Option<MultiThreadedContextDelta<CCI>>
 {
     fn from(scd: SharedContextDelta<CCI>) -> Self {
@@ -84,7 +84,7 @@ impl<CCI: Clone + Display> From<SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: Clone + Display> AsRef<MultiThreadedContextDelta<CCI>>
+impl<CCI: Clone + Display + Debug + Eq + Hash> AsRef<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {
     fn as_ref(&self) -> &MultiThreadedContextDelta<CCI> {
@@ -130,7 +130,7 @@ where
         candidates
             .par_iter()
             .filter_map(|gc| {
-                self.check_generalisation(example, *gc).and_then(|vm| {
+                self.check_generalisation(example, gc).and_then(|vm| {
                     if vm.is_empty() {
                         None
                     } else {

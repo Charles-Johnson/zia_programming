@@ -26,8 +26,8 @@ use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType, SpecificPart},
     context_delta,
     context_delta::{
-        Composition, ConceptDelta, ContextDelta, DirectConceptDelta,
-        NewConceptDelta, NewDirectConceptDelta, ValueChange,
+        Composition, ConceptDelta, DirectConceptDelta,
+        NewConceptDelta, NewDirectConceptDelta, ValueChange, NestedContextDelta,
     },
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
@@ -248,13 +248,14 @@ impl ContextSnapShot {
     fn get_string_concept<
         SDCD: Clone
             + AsRef<DirectConceptDelta<ConceptId>>
-            + From<DirectConceptDelta<ConceptId>>,
+            + From<DirectConceptDelta<ConceptId>> + Debug,
+            D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug
     >(
         &self,
-        delta: &ContextDelta<ConceptId, SDCD>,
+        delta: &NestedContextDelta<ConceptId, SDCD, D>,
         s: &str,
     ) -> Option<ConceptId> {
-        delta.string().get(s).map_or_else(
+        delta.get_string(s).map_or_else(
             || self.string_map.get(s).copied().map(ConceptId::Committed),
             |string_delta| match string_delta {
                 context_delta::ValueChange::Update {
@@ -266,18 +267,18 @@ impl ContextSnapShot {
                             .get(s)
                             .copied()
                             .map(ConceptId::Committed),
-                        Some(*before)
+                        Some(before)
                     );
-                    Some(*after)
+                    Some(after)
                 },
-                context_delta::ValueChange::Create(concept) => Some(*concept),
+                context_delta::ValueChange::Create(concept) => Some(concept),
                 context_delta::ValueChange::Remove(before) => {
                     debug_assert_eq!(
                         self.string_map
                             .get(s)
                             .copied()
                             .map(ConceptId::Committed),
-                        Some(*before)
+                        Some(before)
                     );
                     None
                 },
@@ -288,10 +289,11 @@ impl ContextSnapShot {
     fn get_labellee<
         SDCD: Clone
             + AsRef<DirectConceptDelta<ConceptId>>
-            + From<DirectConceptDelta<ConceptId>>,
+            + From<DirectConceptDelta<ConceptId>> + Debug,
+            D: AsRef<NestedContextDelta<ConceptId, SDCD, D>> + Debug
     >(
         &self,
-        delta: &ContextDelta<ConceptId, SDCD>,
+        delta: &NestedContextDelta<ConceptId, SDCD, D>,
         c: ConceptId,
     ) -> Option<ConceptId> {
         let concept = self.read_concept(delta, c);
@@ -321,15 +323,15 @@ impl<SDCD> SnapShotReader<SDCD> for ContextSnapShot
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>,
+        + From<DirectConceptDelta<ConceptId>> + Debug,
 {
     type CommittedConceptId = Committed;
     type ConceptId = ConceptId;
     type MixedConcept<'a> = Mixed<'a>;
 
-    fn concept_from_label(
+    fn concept_from_label<D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug>(
         &self,
-        delta: &ContextDelta<Self::ConceptId, SDCD>,
+        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.get_string_concept(delta, s)
@@ -344,9 +346,9 @@ where
         }
     }
 
-    fn get_label(
+    fn get_label<D: AsRef<NestedContextDelta<Self::ConceptId, SDCD, D>> + Debug>(
         &self,
-        delta: &ContextDelta<Self::ConceptId, SDCD>,
+        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
@@ -362,18 +364,18 @@ where
         )
     }
 
-    fn concrete_concept_id(
+    fn concrete_concept_id<D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug>(
         &self,
-        delta: &ContextDelta<Self::ConceptId, SDCD>,
+        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         let mut id = None;
         for (concept_id, cdv) in
-            delta.concept().iter().filter(|(concept_id, _)| {
+            delta.iter_concepts().filter(|(concept_id, _)| {
                 self.concrete_concept_type(delta, **concept_id) == Some(cc)
             })
         {
-            for dcd in cdv.iter().filter_map(ConceptDelta::try_direct) {
+            for dcd in cdv.filter_map(ConceptDelta::try_direct) {
                 match dcd.as_ref() {
                     DirectConceptDelta::New(_) => id = Some(Some(*concept_id)),
                     DirectConceptDelta::Remove(concept_id) => {
@@ -392,9 +394,9 @@ where
         })
     }
 
-    fn concrete_concept_type(
+    fn concrete_concept_type<D: AsRef<NestedContextDelta<Self::ConceptId, SDCD, D>> + Debug>(
         &self,
-        delta: &ContextDelta<Self::ConceptId, SDCD>,
+        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()
@@ -405,25 +407,25 @@ impl<SDCD> Apply<SDCD> for ContextSnapShot
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>,
+        + From<DirectConceptDelta<ConceptId>> + Debug,
     Uncommitted: TryFrom<Self::ConceptId, Error = ()>,
 {
     #[allow(clippy::too_many_lines)]
-    fn apply(&mut self, delta: ContextDelta<Self::ConceptId, SDCD>) {
+    fn apply<D: Debug + AsRef<NestedContextDelta<ConceptId, SDCD, D>>>(&mut self, delta: NestedContextDelta<Self::ConceptId, SDCD, D>) {
         debug_assert!(self.previously_uncommitted_concepts.is_empty());
         for (concept_id, concept_delta) in delta.concepts_to_apply_in_order() {
             match concept_delta.as_ref() {
                 DirectConceptDelta::New(delta) => {
                     self.apply_new_concept(&NewDirectConceptDelta {
                         delta: delta.clone(),
-                        new_concept_id: (*concept_id).try_into().unwrap(),
+                        new_concept_id: concept_id.try_into().unwrap(),
                     });
                 },
                 DirectConceptDelta::Compose {
                     change,
                     composition_id,
                 } => {
-                    debug_assert_eq!(concept_id, composition_id);
+                    debug_assert_eq!(&concept_id, composition_id);
                     match change {
                         ValueChange::Create(Composition {
                             left_id,
@@ -493,7 +495,7 @@ where
                     change,
                     unreduced_id,
                 } => {
-                    debug_assert_eq!(concept_id, unreduced_id);
+                    debug_assert_eq!(&concept_id, unreduced_id);
                     match change {
                         ValueChange::Create(reduced_id) => {
                             let [unreduced_concept, reduced_concept] = self
@@ -530,23 +532,23 @@ where
                 DirectConceptDelta::Remove(_) => todo!(),
             }
         }
-        delta.string().iter().for_each(|(s, sd)| match sd {
+        delta.iter_string().for_each(|(s, sd)| match sd {
             context_delta::ValueChange::Update {
                 after,
                 before,
             } => {
                 let [after, before] =
-                    self.convert_to_committed_concept_ids([*after, *before]);
+                    self.convert_to_committed_concept_ids([after, before]);
                 debug_assert_eq!(self.string_map.get(s).copied(), Some(before));
                 self.string_map.insert(s.to_string(), after);
             },
             context_delta::ValueChange::Create(id) => {
-                self.add_string(self.convert_to_committed_concept_id(*id), s);
+                self.add_string(self.convert_to_committed_concept_id(id), s);
             },
             context_delta::ValueChange::Remove(before) => {
                 debug_assert_eq!(
                     self.string_map.get(s).copied(),
-                    Some(self.convert_to_committed_concept_id(*before))
+                    Some(self.convert_to_committed_concept_id(before))
                 );
                 self.remove_string(s);
             },

@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{ContextDelta, NestedContextDelta},
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
         );
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
@@ -43,9 +43,9 @@ fn basic_composition() {
         composite_syntax
     );
 
-    assert_eq!(context_search.to_ast(0), composite_syntax);
-    assert_eq!(context_search.to_ast(1), left_syntax);
-    assert_eq!(context_search.to_ast(2), right_syntax);
+    assert_eq!(context_search.to_ast(&0), composite_syntax);
+    assert_eq!(context_search.to_ast(&1), left_syntax);
+    assert_eq!(context_search.to_ast(&2), right_syntax);
 }
 
 fn labels() -> HashMap<ConceptId, &'static str> {

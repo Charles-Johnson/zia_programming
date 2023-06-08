@@ -1,6 +1,6 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::{NestedContextDelta},
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
+        NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
         );
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
@@ -27,9 +27,9 @@ fn basic_comparison() {
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
-    let left_syntax = context_search.to_ast(1);
-    let right_syntax = context_search.to_ast(2);
-    let another_syntax = context_search.to_ast(8);
+    let left_syntax = context_search.to_ast(&1);
+    let right_syntax = context_search.to_ast(&2);
+    let another_syntax = context_search.to_ast(&8);
 
     assert_eq!(
         context_search.compare(&left_syntax, &right_syntax),
@@ -88,7 +88,7 @@ fn basic_comparison() {
                 reversed_reason: None
             }
         )
-    )
+    );
 }
 
 fn labels() -> HashMap<ConceptId, &'static str> {

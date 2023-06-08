@@ -4,8 +4,6 @@ newline_style = "Unix"
 use_field_init_shorthand = true
 use_try_shorthand = true
 
-# nightly
-
 ignore = [
     "src/generated",
 ]
