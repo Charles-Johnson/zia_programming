@@ -40,6 +40,71 @@ pub struct Concept<Id: Eq + Hash> {
     specific_part: SpecificPart<Id>,
 }
 
+#[cfg(test)]
+impl From<Concept<usize>> for Concept<crate::mock_snap_shot::ConceptId> {
+    fn from(value: Concept<usize>) -> Self {
+        Self {
+            id: value.id.into(),
+            concrete_part: value.concrete_part.into(),
+            specific_part: value.specific_part.into()
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<ConcreteConcept<usize>> for ConcreteConcept<crate::mock_snap_shot::ConceptId> {
+    fn from(value: ConcreteConcept<usize>) -> Self {
+        Self {
+            lefthand_of: value.lefthand_of.into_iter().map(|(k, v)| (k.into(), v.into())).collect(),
+            righthand_of: value.righthand_of.into_iter().map(|(k, v)| (k.into(), v.into())).collect(),
+            reduces_from: value.reduces_from.into_iter().map(|v| v.into()).collect()
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<SpecificPart<usize>> for SpecificPart<crate::mock_snap_shot::ConceptId> {
+    fn from(value: SpecificPart<usize>) -> Self {
+        match value {
+            SpecificPart::Abstract(a) => SpecificPart::Abstract(a.into()),
+            SpecificPart::Concrete(c) => SpecificPart::Concrete(c),
+            SpecificPart::String(s) => SpecificPart::String(s)
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<AbstractPart<usize>> for AbstractPart<crate::mock_snap_shot::ConceptId> {
+    fn from(value: AbstractPart<usize>) -> Self {
+        Self {
+            composition: value.composition.into(),
+            reduces_to: value.reduces_to.map(|id| id.into())
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<MaybeComposition<usize>> for MaybeComposition<crate::mock_snap_shot::ConceptId> {
+    fn from(value: MaybeComposition<usize>) -> Self {
+        match value {
+            MaybeComposition::Composition(cp) => MaybeComposition::Composition(cp.into()),
+            MaybeComposition::Leaf(lc) => MaybeComposition::Leaf(lc)
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<CompositePart<usize>> for CompositePart<crate::mock_snap_shot::ConceptId> {
+    fn from(value: CompositePart<usize>) -> Self {
+        Self {
+            lefthand: value.lefthand.into(),
+            righthand: value.righthand.into(),
+            free_variables: value.free_variables.into_iter().map(|v| v.into()).collect(),
+            binding_variables: value.binding_variables.into_iter().map(|v| v.into()).collect()
+        }
+    }
+}
+
 impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
     pub fn make_reduce_to(&mut self, other: &mut Self) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {

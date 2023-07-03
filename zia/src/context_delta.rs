@@ -175,14 +175,6 @@ where
         self.string.get(key)
     }
 
-    pub fn iter_string(&self) -> impl Iterator<Item=(&String, &ValueChange<ConceptId>)> {
-        self.string.iter()
-    }
-
-    fn concepts(&self) -> &HashMap<ConceptId, Vec<ConceptDelta<ConceptId, SharedDirectConceptDelta>>> {
-        &self.concept
-    }
-
     pub fn get_concept(&self, key: &ConceptId) -> Option<impl Iterator<Item=&ConceptDelta<ConceptId, SharedDirectConceptDelta>>> {
         self.concept.get(key).map(|v| v.iter())
     }
@@ -323,6 +315,7 @@ where
         &mut self,
         cd: NewConceptDelta<ConceptId>,
     ) -> ConceptId {
+        // TODO: Explicitly convert to uncommitted concept
         let concept_id: ConceptId = self.number_of_uncommitted_concepts.into();
         self.number_of_uncommitted_concepts += 1;
         self.insert_delta_for_concept(
@@ -568,41 +561,11 @@ where
         concepts
     }
 
-    fn update_new_concept_delta<Syntax>(
-        &mut self,
-        delta: &NewConceptDelta<ConceptId>,
-    ) -> ConceptId
-    where
-        Syntax: SyntaxTree<ConceptId = ConceptId>,
-    {
-        self.overlay_delta.update_new_concept_delta::<Syntax>(delta)
-    }
-
-    fn insert_delta_for_existing_concept(
-        &mut self,
-        concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
-    ) {
-        self.overlay_delta.insert_delta_for_existing_concept(concept_id, cd)
-    }
-
     pub fn insert_delta_for_new_concept(
         &mut self,
         cd: NewConceptDelta<ConceptId>,
     ) -> ConceptId {
         self.overlay_delta.insert_delta_for_new_concept(cd)
-    }
-
-    fn insert_delta_for_concept(
-        &mut self,
-        concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
-        sanity_check: impl Fn(
-            &ConceptDelta<ConceptId, SharedDirectConceptDelta>,
-            ConceptId,
-        ),
-    ) {
-        self.overlay_delta.insert_delta_for_concept(concept_id, cd, sanity_check)
     }
 }
 
@@ -729,7 +692,7 @@ pub enum NewConceptDelta<Id> {
 
 pub type ValueChange<T> = ValueAndTypeChange<T, T>;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ValueAndTypeChange<T, U> {
     Create(U),
     Update {

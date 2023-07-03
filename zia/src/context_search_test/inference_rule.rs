@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -13,7 +13,7 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<ConceptId>; 15] {
+fn concepts() -> [Concept<usize>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
@@ -57,7 +57,7 @@ fn concepts() -> [Concept<ConceptId>; 15] {
     ]
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {}
 }
 
@@ -90,7 +90,7 @@ fn inference_rule() {
                 }
                 .into(),
                 generalisation: context_search.to_ast(&2),
-                variable_mask: hashmap! {9 => context_search.to_ast(&7)}
+                variable_mask: hashmap! {9.into() => context_search.to_ast(&7)}
             }
         ))
     );

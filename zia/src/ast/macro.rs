@@ -114,10 +114,10 @@ macro_rules! impl_syntax_tree {
                 matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
             }
 
-            fn new_constant_concept(concept_id: Self::ConceptId) -> Self {
+            fn new_constant_concept(concept_id: impl Into<Self::ConceptId>) -> Self {
                 Self {
                     syntax: None,
-                    concept: Some(concept_id),
+                    concept: Some(concept_id.into()),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Constant),
                 }
             }
@@ -146,8 +146,8 @@ macro_rules! impl_syntax_tree {
                 }
             }
 
-            fn bind_nonquantifier_concept(mut self, concept: Self::ConceptId) -> Self {
-                self.concept = Some(concept);
+            fn bind_nonquantifier_concept(mut self, concept: impl Into<Self::ConceptId>) -> Self {
+                self.concept = Some(concept.into());
                 self
             }
 

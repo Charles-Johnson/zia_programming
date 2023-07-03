@@ -836,13 +836,14 @@ where
     }
 
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
-    pub fn to_ast(&self, concept_id: &S::ConceptId) -> SharedSyntax<C> {
-        self.variable_mask.get(*concept_id).cloned().unwrap_or_else(|| {
-            self.caches.get_syntax_tree_or_else(*concept_id, || {
+    pub fn to_ast(&self, concept_id: &(impl Into<S::ConceptId> + Copy)) -> SharedSyntax<C> {
+        let concept_id = (*concept_id).into();
+        self.variable_mask.get(concept_id).cloned().unwrap_or_else(|| {
+            self.caches.get_syntax_tree_or_else(concept_id, || {
                 let concept =
-                    self.snap_shot.read_concept(self.delta.as_ref(), *concept_id);
+                    self.snap_shot.read_concept(self.delta.as_ref(), concept_id);
                 let syntax = concept.get_string().map_or_else(
-                    || self.snap_shot.get_label(self.delta.as_ref(), *concept_id),
+                    || self.snap_shot.get_label(self.delta.as_ref(), concept_id),
                     |s| Some(format_string(&s)),
                 ).map_or_else(|| {
                     if let Some((left, right)) = concept.get_composition() {
@@ -856,7 +857,7 @@ where
                         .bind_concept_to_syntax(
                             self.delta.as_ref(),
                             Syntax::<C>::from(s),
-                            *concept_id,
+                            concept_id,
                         )
                 }).share();
                 self.caches.insert_syntax_tree(&concept, &syntax);

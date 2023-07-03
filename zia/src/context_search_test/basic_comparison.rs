@@ -91,7 +91,7 @@ fn basic_comparison() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => ">",
         1 => "2",
@@ -104,7 +104,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 11] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 0).into();
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();

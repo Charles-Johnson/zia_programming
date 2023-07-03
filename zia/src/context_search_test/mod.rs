@@ -15,13 +15,13 @@ use crate::{
     multi_threaded::{MultiThreadedReductionReason, MultiThreadedSyntaxTree},
 };
 
-pub fn check_order(concepts: &[Concept<ConceptId>]) -> Vec<Concept<ConceptId>> {
+pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
     concepts
         .iter()
         .enumerate()
         .map(|(i, c)| {
             assert_eq!(i, c.id());
-            c.clone()
+            c.clone().into()
         })
         .collect::<Vec<Concept<ConceptId>>>()
 }

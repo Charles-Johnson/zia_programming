@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -44,7 +44,7 @@ fn basic_inference() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "implication",
         1 => "true",
@@ -53,10 +53,10 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 10] {
+fn concepts() -> [Concept<usize>; 10] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut condition_concept: Concept<ConceptId> =
+    let mut condition_concept: Concept<usize> =
         (SpecificPart::default(), 2).into();
     let mut result_concept = (SpecificPart::default(), 3).into();
     condition_concept.make_reduce_to(&mut true_concept);

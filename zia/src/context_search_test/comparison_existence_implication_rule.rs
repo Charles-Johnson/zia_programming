@@ -1,11 +1,11 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
     context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
+    mock_snap_shot::MockSnapShot,
     multi_threaded::{
         MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
     },
@@ -29,8 +29,8 @@ fn comparison_existence_implication_rule_test() {
     let a_syntax = context_search.to_ast(&21);
     let c_syntax = context_search.to_ast(&23);
     let variable_mask = hashmap! {
-        4 => a_syntax.clone(), // x=a
-        6 => c_syntax.clone() //z=c
+        4.into() => a_syntax.clone(), // x=a
+        6.into() => c_syntax.clone() //z=c
     };
     let comparison_reason = Some(ReductionReason::Rule{
         generalisation: context_search.to_ast(&18),
@@ -72,7 +72,7 @@ fn comparison_existence_implication_rule_test() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "true",
         1 => ">",
@@ -90,7 +90,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 }
 
 #[allow(clippy::too_many_lines)]
-fn concepts() -> [Concept<ConceptId>; 31] {
+fn concepts() -> [Concept<usize>; 31] {
     let mut true_concept = (ConcreteConceptType::True, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut exists_such_that_concept =

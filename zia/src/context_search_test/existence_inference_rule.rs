@@ -2,9 +2,9 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
-    mock_snap_shot::{ConceptId, MockSnapShot},
+    mock_snap_shot::MockSnapShot,
     multi_threaded::{
         MultiThreadedContextCache, MultiThreadedReductionReason,
         SharedContextDelta, SharedDirectConceptDelta,
@@ -13,7 +13,7 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "=>",
         1 => "true",
@@ -45,7 +45,7 @@ fn existence_inference_rule() {
         Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10))
             .share();
     let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
-    let variable_mask = hashmap! {9 => context_search.to_ast(&7)};
+    let variable_mask = hashmap! {9.into() => context_search.to_ast(&7)};
     assert_eq!(
         context_search.reduce(&example_syntax),
         Some((
@@ -69,7 +69,7 @@ fn existence_inference_rule() {
     );
 }
 
-fn concepts() -> [Concept<ConceptId>; 17] {
+fn concepts() -> [Concept<usize>; 17] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();

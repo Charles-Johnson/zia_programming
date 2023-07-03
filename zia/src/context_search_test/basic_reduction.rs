@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -60,16 +60,16 @@ fn basic_reduction() {
     assert_eq!(context_search.to_ast(&1), abstract_syntax().into());
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "concrete",
         1 => "abstract",
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 2] {
+fn concepts() -> [Concept<usize>; 2] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
-    let mut abstract_concept: Concept<ConceptId> =
+    let mut abstract_concept: Concept<usize> =
         (SpecificPart::default(), 1).into();
     abstract_concept.make_reduce_to(&mut concrete_concept);
     [concrete_concept, abstract_concept]

@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{ContextDelta, NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -40,7 +40,7 @@ fn basic_rule() {
 
     let reduction_reason = ReductionReason::Rule {
         generalisation: context_search.to_ast(&1),
-        variable_mask: hashmap! {3 => Syntax::from("random").into()},
+        variable_mask: hashmap! {3.into() => Syntax::from("random").into()},
         reason: ReductionReason::Explicit.into(),
     };
 
@@ -55,14 +55,14 @@ fn basic_rule() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "concrete",
         2 => "left",
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 4] {
+fn concepts() -> [Concept<usize>; 4] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_concept_variable = (SpecificPart::free_variable(), 3).into();

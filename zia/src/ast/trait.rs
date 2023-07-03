@@ -32,7 +32,7 @@ where
 
     fn is_leaf_variable(&self) -> bool;
 
-    fn new_constant_concept(concept_id: Self::ConceptId) -> Self;
+    fn new_constant_concept(concept_id: impl Into<Self::ConceptId>) -> Self;
 
     fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self;
 
@@ -40,7 +40,7 @@ where
 
     fn new_leaf_variable(concept_id: Self::ConceptId) -> Self;
 
-    fn bind_nonquantifier_concept(self, concept: Self::ConceptId) -> Self;
+    fn bind_nonquantifier_concept(self, concept: impl Into<Self::ConceptId>) -> Self;
 
     fn bind_nonquantifier_concept_as_ref(&mut self, concept: Self::ConceptId);
 
