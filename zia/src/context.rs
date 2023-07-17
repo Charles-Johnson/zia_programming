@@ -28,6 +28,7 @@ use crate::{
     iteration::Iteration as ContextSearchIteration,
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
+    mixed_concept::MixedConcept,
     parser::parse_line,
     reduction_reason::{ReductionReason, SharedSyntax, Syntax},
     snap_shot::Reader as SnapShotReader,
@@ -36,13 +37,12 @@ use crate::{
 use std::{
     collections::{HashMap, HashSet},
     default::Default,
-    fmt::{Debug, Display},
-    hash::Hash,
+    fmt::Debug,
     marker::PhantomData,
 };
 
 #[derive(Clone)]
-pub struct Context<S, C, SDCD, VML, D, CCI: Clone + Display + Debug + Eq + Hash>
+pub struct Context<S, C, SDCD, VML, D, CCI: MixedConcept>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -75,7 +75,7 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub positions: Vec<usize>,
 }
 
-impl<S, C, SDCD, VML, D, CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug> Context<S, C, SDCD, VML, D, CCI>
+impl<S, C, SDCD, VML, D, CCI: MixedConcept> Context<S, C, SDCD, VML, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -1003,7 +1003,7 @@ where
     }
 }
 
-impl<S, C, SDCD, VML, D, CCI: Clone + Display + Debug + Eq + Hash> Default for Context<S, C, SDCD, VML, D, CCI>
+impl<S, C, SDCD, VML, D, CCI: MixedConcept> Default for Context<S, C, SDCD, VML, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
@@ -1035,7 +1035,7 @@ where
     }
 }
 
-impl<S, C, SDCD, VML, D, CCI: Clone + Display + Debug + Eq + Hash> From<S> for Context<S, C, SDCD, VML, D, CCI>
+impl<S, C, SDCD, VML, D, CCI: MixedConcept> From<S> for Context<S, C, SDCD, VML, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,

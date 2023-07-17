@@ -3,6 +3,8 @@ use std::{
     fmt::{Debug, Display},
 };
 
+use crate::mixed_concept::MixedConcept;
+
 use slotmap::new_key_type;
 
 impl Display for Committed {
@@ -19,6 +21,12 @@ new_key_type! {
 pub enum ConceptId {
     Committed(Committed),
     Uncommitted(Uncommitted),
+}
+
+impl MixedConcept for ConceptId {
+    fn uncommitted(id: usize) -> Self {
+        Self::Uncommitted(id)
+    }
 }
 
 pub type Uncommitted = usize;

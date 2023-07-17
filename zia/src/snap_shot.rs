@@ -5,8 +5,8 @@ use crate::{
         Composition, ConceptDelta, DirectConceptDelta,
         NewDirectConceptDelta, ValueChange, NestedContextDelta,
     },
-    context_snap_shot::Uncommitted,
     errors::{ZiaError, ZiaResult},
+    mixed_concept::MixedConcept,
 };
 use std::{
     convert::TryFrom,
@@ -23,14 +23,9 @@ where
     Self::CommittedConceptId: TryFrom<Self::ConceptId>,
     Self::ConceptId: From<Self::CommittedConceptId>,
 {
-    type ConceptId: Copy
-        + Eq
-        + Hash
-        + Display
-        + Debug
+    type ConceptId: MixedConcept
         + Send
-        + Sync
-        + From<Uncommitted>;
+        + Sync;
     type CommittedConceptId: Copy + Eq + Hash + Display + Debug + Send + Sync;
     type MixedConcept<'a>: ConceptTrait<Id = Self::ConceptId>
         + Clone

@@ -18,7 +18,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
-    context_snap_shot::Uncommitted,
+    mixed_concept::MixedConcept,
     reduction_reason::{ReductionReason, Syntax},
 };
 use std::{
@@ -54,7 +54,7 @@ impl<ConceptId, SharedDirectConceptDelta> Default
 impl<ConceptId, SharedDirectConceptDelta>
     ContextDelta<ConceptId, SharedDirectConceptDelta>
 where
-    ConceptId: Clone + Copy + Display + Eq + Hash + From<Uncommitted>,
+    ConceptId: MixedConcept,
     SharedDirectConceptDelta: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>,
@@ -316,7 +316,7 @@ where
         cd: NewConceptDelta<ConceptId>,
     ) -> ConceptId {
         // TODO: Explicitly convert to uncommitted concept
-        let concept_id: ConceptId = self.number_of_uncommitted_concepts.into();
+        let concept_id: ConceptId = ConceptId::uncommitted(self.number_of_uncommitted_concepts);
         self.number_of_uncommitted_concepts += 1;
         self.insert_delta_for_concept(
             concept_id,
@@ -398,7 +398,7 @@ where
 #[derive(Debug)]
 pub struct NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
-    ConceptId: Clone + Debug + Display + Eq + Hash,
+    ConceptId: MixedConcept,
     SharedDirectConceptDelta: Debug,
     D: Debug + AsRef<NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>,
 {
@@ -409,7 +409,7 @@ where
 impl<ConceptId: Clone, SharedDirectConceptDelta, D: Debug + AsRef<NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>> Default
     for NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
-    ConceptId: Clone + Debug + Display + Eq + Hash,
+    ConceptId: MixedConcept,
     SharedDirectConceptDelta: Debug,
 {
     fn default() -> Self {
@@ -423,7 +423,7 @@ where
 impl<ConceptId, SharedDirectConceptDelta, D>
     NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
-    ConceptId: Clone + Copy + Display + Eq + Hash + From<Uncommitted> + Debug,
+    ConceptId: MixedConcept,
     SharedDirectConceptDelta: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>

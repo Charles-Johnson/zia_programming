@@ -22,6 +22,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::{DirectConceptDelta, NewConceptDelta, NestedContextDelta},
     iteration::Iteration,
+    mixed_concept::MixedConcept,
     reduction_reason::{
         RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
     },
@@ -33,8 +34,7 @@ use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
     collections::{HashMap, HashSet},
-    fmt::{Debug, Display},
-    hash::Hash,
+    fmt::Debug,
     marker::PhantomData,
 };
 
@@ -47,7 +47,7 @@ pub struct ContextSearch<
     VML,
     SDCD,
     D,
-    CCI: Clone + Display + Copy + Debug + Eq + Hash,
+    CCI: MixedConcept,
 > where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
@@ -77,7 +77,7 @@ impl<
         SDCD,
         VML,
         D,
-        CCI: Clone + Display + Copy + Eq + Hash + From<usize> + Debug,
+        CCI: MixedConcept,
     > ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
@@ -1167,7 +1167,7 @@ pub enum ComparisonReason<RR: ReductionReason> {
     NoGreaterThanConcept,
 }
 
-impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: Clone + Display + Copy + Debug + Eq + Hash>
+impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
     From<ContextReferences<'c, 's, 'v, S, C, D>>
     for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where

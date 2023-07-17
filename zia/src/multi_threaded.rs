@@ -6,6 +6,7 @@ use crate::{
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
+    mixed_concept::MixedConcept,
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
 };
@@ -13,7 +14,7 @@ use lazy_static::lazy_static;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
     collections::HashSet,
-    fmt::{Debug, Display},
+    fmt::Debug,
     sync::Arc,
 };
 
@@ -42,17 +43,17 @@ type MultiThreadedContextDelta<CCI> =
     NestedContextDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
 
 #[derive(Clone, Debug)]
-pub struct SharedContextDelta<CCI: Clone + Display + Debug + Eq + Hash>(
+pub struct SharedContextDelta<CCI: MixedConcept>(
     pub Arc<MultiThreadedContextDelta<CCI>>,
 );
 
-impl<CCI: Clone + Display + Debug + Eq + Hash> Default for SharedContextDelta<CCI> {
+impl<CCI: MixedConcept> Default for SharedContextDelta<CCI> {
     fn default() -> Self {
         Self(MultiThreadedContextDelta::default().into())
     }
 }
 
-impl<'a, CCI: Clone + Display + Debug + Eq + Hash> From<&'a mut SharedContextDelta<CCI>>
+impl<'a, CCI: MixedConcept> From<&'a mut SharedContextDelta<CCI>>
     for Option<&'a mut MultiThreadedContextDelta<CCI>>
 {
     fn from(scd: &'a mut SharedContextDelta<CCI>) -> Self {
@@ -60,7 +61,7 @@ impl<'a, CCI: Clone + Display + Debug + Eq + Hash> From<&'a mut SharedContextDel
     }
 }
 
-impl<CCI: Clone + Display + Debug + Eq + Hash> From<MultiThreadedContextDelta<CCI>>
+impl<CCI: MixedConcept> From<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {
     fn from(mtcd: MultiThreadedContextDelta<CCI>) -> Self {
@@ -68,7 +69,7 @@ impl<CCI: Clone + Display + Debug + Eq + Hash> From<MultiThreadedContextDelta<CC
     }
 }
 
-impl<CCI: Clone + Debug + Display + Eq + Hash> From<SharedContextDelta<CCI>>
+impl<CCI: MixedConcept> From<SharedContextDelta<CCI>>
     for MultiThreadedContextDelta<CCI>
 {
     fn from(scd: SharedContextDelta<CCI>) -> Self {
@@ -76,7 +77,7 @@ impl<CCI: Clone + Debug + Display + Eq + Hash> From<SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: Clone + Display + Debug + Eq + Hash> From<SharedContextDelta<CCI>>
+impl<CCI: MixedConcept> From<SharedContextDelta<CCI>>
     for Option<MultiThreadedContextDelta<CCI>>
 {
     fn from(scd: SharedContextDelta<CCI>) -> Self {
@@ -84,7 +85,7 @@ impl<CCI: Clone + Display + Debug + Eq + Hash> From<SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: Clone + Display + Debug + Eq + Hash> AsRef<MultiThreadedContextDelta<CCI>>
+impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {
     fn as_ref(&self) -> &MultiThreadedContextDelta<CCI> {
@@ -98,7 +99,7 @@ impl<
         's,
         'v,
         S,
-        CCI: Clone + Display + Copy + Debug + Eq + Hash + Send + Sync + From<usize>,
+        CCI: MixedConcept + Send + Sync,
     > ContextSearchIteration
     for ContextSearch<
         's,

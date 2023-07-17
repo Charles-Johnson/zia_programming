@@ -3,6 +3,7 @@ use crate::{
     context_delta::{DirectConceptDelta, NestedContextDelta, ValueChange},
     context_search_test::check_order,
     delta::Apply,
+    mixed_concept::MixedConcept,
     snap_shot::Reader,
 };
 use bimap::BiMap;
@@ -12,6 +13,12 @@ use std::{collections::HashMap, sync::Arc, fmt::{Debug, Display}, convert::TryFr
 pub enum ConceptId {
     Committed(usize),
     Uncommitted(usize),
+}
+
+impl MixedConcept for ConceptId {
+    fn uncommitted(id: usize) -> Self {
+        Self::Uncommitted(id)
+    }
 }
 
 impl From<usize> for ConceptId {

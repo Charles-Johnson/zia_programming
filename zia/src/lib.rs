@@ -162,6 +162,8 @@ mod map_err_variant;
 #[cfg(test)]
 mod mock_snap_shot;
 
+mod mixed_concept;
+
 mod parser;
 
 #[macro_use]
