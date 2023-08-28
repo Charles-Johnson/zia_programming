@@ -43,6 +43,24 @@ where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
         SyntaxTree<ConceptId = S::ConceptId>,
 {
+    pub fn cleanly_delete_composition(
+        &mut self,
+        concept: &S::ConceptId,
+    ) -> ZiaResult<()> {
+        match self
+            .snap_shot
+            .read_concept(self.delta, *concept)
+            .get_composition()
+        {
+            None => Err(ZiaError::RedundantCompositionRemoval),
+            Some((left, right)) => {
+                self.try_delete_concept(*concept)?;
+                self.try_delete_concept(left)?;
+                self.try_delete_concept(right)
+            },
+        }
+    }
+
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
     pub fn define_new_syntax(
         &mut self,

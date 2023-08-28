@@ -836,7 +836,7 @@ where
             },
             (Some(a), _, Some(b), None) => {
                 if a == b {
-                    self.cleanly_delete_composition(&a)
+                    updater.cleanly_delete_composition(&a)
                 } else {
                     Err(ZiaError::CompositionCollision)
                 }
@@ -850,34 +850,6 @@ where
             },
             (Some(a), _, None, Some((ref left, ref right))) => {
                 self.redefine(&a, left, right)
-            },
-        }
-    }
-
-    fn cleanly_delete_composition(
-        &mut self,
-        concept: &S::ConceptId,
-    ) -> ZiaResult<()> {
-        match self
-            .snap_shot
-            .read_concept(self.delta.as_ref(), *concept)
-            .get_composition()
-        {
-            None => Err(ZiaError::RedundantCompositionRemoval),
-            Some((left, right)) => {
-                let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
-                let Some(delta) = maybe_inner_delta else {
-                    return Err(ZiaError::MultiplePointersToDelta);
-                };
-                let mut updater = ContextUpdater {
-                    snap_shot: &self.snap_shot,
-                    delta,
-                    cache: &mut self.cache,
-                    phantom: PhantomData
-                };
-                updater.try_delete_concept(*concept)?;
-                updater.try_delete_concept(left)?;
-                updater.try_delete_concept(right)
             },
         }
     }
