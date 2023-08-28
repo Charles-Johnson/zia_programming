@@ -18,7 +18,7 @@ use crate::{
     and_also::AndAlso,
     associativity::Associativity,
     ast::SyntaxTree,
-    concepts::{ConceptTrait, ConcreteConceptType, Hand},
+    concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::{self, ContextCache},
     context_delta::{NestedContextDelta, DirectConceptDelta, NewConceptDelta},
     context_search::{Comparison, ContextReferences, ContextSearch},
@@ -597,6 +597,8 @@ where
                 Some(label_id),
             );
         }
+        drop(updater);
+        drop(delta);
         self.commit()?;
         self.execute("let (true and true) -> true");
         self.execute("let (false and _y_) -> false");
@@ -830,7 +832,7 @@ where
                 }
             },
             (None, _, None, Some((ref left, ref right))) => {
-                self.define_new_syntax(&new.to_string(), left, right)
+                updater.define_new_syntax(&new.to_string(), left, right)
             },
             (Some(a), _, Some(b), None) => {
                 if a == b {
@@ -908,45 +910,6 @@ where
             let right_concept = updater.concept_from_ast(right)?;
             updater.insert_composition(*concept, left_concept, right_concept)
         }
-    }
-
-    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
-    fn define_new_syntax(
-        &mut self,
-        syntax: &str,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> ZiaResult<()> {
-        let new_syntax_tree = left
-            .get_concept()
-            .and_also(&right.get_concept())
-            .and_then(|(l, r)| {
-                self.snap_shot
-                    .read_concept(self.delta.as_ref(), *l)
-                    .find_as_hand_in_composition_with(*r, Hand::Left)
-                    .map(|concept| {
-                        let syntax = Syntax::<C>::from(syntax);
-                        self.snap_shot.bind_concept_to_syntax(
-                            self.delta.as_ref(),
-                            syntax,
-                            concept,
-                        )
-                    })
-            })
-            .unwrap_or_else(|| syntax.into())
-            .bind_pair(left.clone(), right.clone());
-        let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
-        ContextUpdater {
-            snap_shot: &self.snap_shot,
-            delta,
-            cache: &mut self.cache,
-            phantom: PhantomData
-        }
-        .concept_from_ast(&new_syntax_tree)?;
-        Ok(())
     }
 
     fn execute_reduction(

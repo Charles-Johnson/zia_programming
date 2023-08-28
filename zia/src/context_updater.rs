@@ -1,4 +1,5 @@
 use crate::{
+    and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
@@ -7,7 +8,7 @@ use crate::{
         ValueChange, NestedContextDelta,
     },
     errors::ZiaResult,
-    reduction_reason::{ReductionReason, Syntax},
+    reduction_reason::{ReductionReason, Syntax, SharedSyntax},
     snap_shot::Reader,
     ZiaError,
 };
@@ -42,6 +43,35 @@ where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
         SyntaxTree<ConceptId = S::ConceptId>,
 {
+    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
+    pub fn define_new_syntax(
+        &mut self,
+        syntax: &str,
+        left: &SharedSyntax<C>,
+        right: &SharedSyntax<C>,
+    ) -> ZiaResult<()> {
+        let new_syntax_tree = left
+            .get_concept()
+            .and_also(&right.get_concept())
+            .and_then(|(l, r)| {
+                self.snap_shot
+                    .read_concept(self.delta, *l)
+                    .find_as_hand_in_composition_with(*r, Hand::Left)
+                    .map(|concept| {
+                        let syntax = Syntax::<C>::from(syntax);
+                        self.snap_shot.bind_concept_to_syntax(
+                            self.delta,
+                            syntax,
+                            concept,
+                        )
+                    })
+            })
+            .unwrap_or_else(|| syntax.into())
+            .bind_pair(left.clone(), right.clone());
+        self.concept_from_ast(&new_syntax_tree)?;
+        Ok(())
+    }
+
     pub fn concept_from_ast(
         &mut self,
         ast: &Syntax<C>,
