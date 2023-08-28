@@ -43,6 +43,26 @@ where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
         SyntaxTree<ConceptId = S::ConceptId>,
 {
+    pub fn redefine(
+        &mut self,
+        concept: &S::ConceptId,
+        left: &SharedSyntax<C>,
+        right: &SharedSyntax<C>,
+    ) -> ZiaResult<()> {
+        if let Some((left_concept, right_concept)) = self
+            .snap_shot
+            .read_concept(self.delta, *concept)
+            .get_composition()
+        {
+            self.relabel(left_concept, &left.to_string())?;
+            self.relabel(right_concept, &right.to_string())
+        } else {
+            let left_concept = self.concept_from_ast(left)?;
+            let right_concept = self.concept_from_ast(right)?;
+            self.insert_composition(*concept, left_concept, right_concept)
+        }
+    }
+
     pub fn cleanly_delete_composition(
         &mut self,
         concept: &S::ConceptId,

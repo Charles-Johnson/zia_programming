@@ -849,38 +849,8 @@ where
                 }
             },
             (Some(a), _, None, Some((ref left, ref right))) => {
-                self.redefine(&a, left, right)
+                updater.redefine(&a, left, right)
             },
-        }
-    }
-
-    fn redefine(
-        &mut self,
-        concept: &S::ConceptId,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> ZiaResult<()> {
-        let delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
-        let Some(delta) = delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
-        let mut updater = ContextUpdater {
-            snap_shot: &self.snap_shot,
-            delta,
-            cache: &mut self.cache,
-            phantom: PhantomData
-        };
-        if let Some((left_concept, right_concept)) = self
-            .snap_shot
-            .read_concept(updater.delta, *concept)
-            .get_composition()
-        {
-            updater.relabel(left_concept, &left.to_string())?;
-            updater.relabel(right_concept, &right.to_string())
-        } else {
-            let left_concept = updater.concept_from_ast(left)?;
-            let right_concept = updater.concept_from_ast(right)?;
-            updater.insert_composition(*concept, left_concept, right_concept)
         }
     }
 
