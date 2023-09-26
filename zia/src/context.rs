@@ -20,7 +20,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::{self, ContextCache},
-    context_delta::{NestedContextDelta, DirectConceptDelta, NewConceptDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta, NewConceptDelta},
     context_search::{Comparison, ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,
@@ -559,7 +559,7 @@ where
         Ok(())
     }
 
-    fn setup(&mut self) -> ZiaResult<()> {
+    fn label_concrete_concepts(&mut self) -> ZiaResult<()> {
         let labels = vec![
             (":=", ConcreteConceptType::Define),
             ("->", ConcreteConceptType::Reduction),
@@ -597,8 +597,11 @@ where
                 Some(label_id),
             );
         }
-        drop(updater);
-        drop(delta);
+        Ok(())
+    }
+
+    fn setup(&mut self) -> ZiaResult<()> {
+        self.label_concrete_concepts()?;
         self.commit()?;
         self.execute("let (true and true) -> true");
         self.execute("let (false and _y_) -> false");
