@@ -40,6 +40,9 @@ impl SharedDelta for SharedContextDelta {
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
         Rc::get_mut(&mut self.0)
     }
+    fn from_nested(nested: Self::NestedDelta) -> Self {
+        Self(nested.into())
+    }
 }
 
 impl From<SingleThreadedContextDelta> for SharedContextDelta {

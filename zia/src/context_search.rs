@@ -20,7 +20,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
-    context_delta::{DirectConceptDelta, NewConceptDelta, NestedContextDelta},
+    context_delta::{DirectConceptDelta, NewConceptDelta, NestedContextDelta, SharedDelta},
     iteration::Iteration,
     mixed_concept::MixedConcept,
     reduction_reason::{
@@ -57,7 +57,7 @@ pub struct ContextSearch<
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>> + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug + From<NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
 {
     snap_shot: &'s S,
     variable_mask: VML::Shared,
@@ -88,7 +88,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>> + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug + From<NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
 {
     fn infer_reduction(
         &self,
@@ -128,7 +128,7 @@ where
             let variable_condition_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::FreeVariable);
             let variable_condition_syntax = Syntax::<C>::new_leaf_variable(variable_condition_id).share();
             let cache = <C as ContextCache>::SharedReductionCache::default();
-            let spawned_context_search = self.spawn(&cache, spawned_delta.into());
+            let spawned_context_search = self.spawn(&cache, D::from_nested(spawned_delta));
             let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
                 Syntax::<C>::new_pair(
                     condition.clone(),
@@ -1180,7 +1180,7 @@ where
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug + From<NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
 {
     fn from(
         ContextReferences {

@@ -58,13 +58,8 @@ impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
         Arc::get_mut(&mut self.0)
     }
-}
-
-impl<CCI: MixedConcept> From<MultiThreadedContextDelta<CCI>>
-    for SharedContextDelta<CCI>
-{
-    fn from(mtcd: MultiThreadedContextDelta<CCI>) -> Self {
-        Self(mtcd.into())
+    fn from_nested(nested: Self::NestedDelta) -> Self {
+        Self(nested.into())
     }
 }
 

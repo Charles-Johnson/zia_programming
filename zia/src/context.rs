@@ -55,7 +55,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -87,7 +87,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>> ,
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>> ,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -922,7 +922,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -953,7 +953,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
