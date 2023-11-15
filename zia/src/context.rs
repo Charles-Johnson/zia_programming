@@ -41,7 +41,6 @@ use std::{
     marker::PhantomData,
 };
 
-#[derive(Clone)]
 pub struct Context<S, C, SDCD, VML, D, CCI: MixedConcept>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
@@ -70,6 +69,33 @@ where
 pub struct TokenSubsequence<SharedSyntax> {
     pub syntax: Vec<SharedSyntax>,
     pub positions: Vec<usize>,
+}
+impl<S, C, SDCD, VML, D, CCI: MixedConcept> Clone for Context<S, C, SDCD, VML, D, CCI>
+where
+    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug + Clone,
+    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
+        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
+    C: Default + ContextCache,
+    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    SDCD: Clone
+        + Debug
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>,
+    VML: VariableMaskList<Syntax = Syntax<C>>,
+    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            delta: D::default(),
+            _phantom: self._phantom,
+            phantom: self.phantom,
+            bounded_variable_syntax: self.bounded_variable_syntax.clone(),
+            cache: self.cache.clone(),
+            new_variable_concepts_by_label: self.new_variable_concepts_by_label.clone(),
+            snap_shot: self.snap_shot.clone()
+        }
+    }
 }
 
 impl<S, C, SDCD, VML, D, CCI: MixedConcept> Context<S, C, SDCD, VML, D, CCI>
