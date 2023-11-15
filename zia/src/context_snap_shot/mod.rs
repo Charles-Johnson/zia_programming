@@ -27,7 +27,7 @@ use crate::{
     context_delta,
     context_delta::{
         Composition, ConceptDelta, DirectConceptDelta,
-        NewConceptDelta, NewDirectConceptDelta, ValueChange, NestedContextDelta,
+        NewConceptDelta, NewDirectConceptDelta, ValueChange, NestedContextDelta, SharedDelta,
     },
     delta::Apply,
     snap_shot::Reader as SnapShotReader,
@@ -249,7 +249,7 @@ impl ContextSnapShot {
         SDCD: Clone
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>> + Debug,
-            D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug
+            D: SharedDelta<NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>>
     >(
         &self,
         delta: &NestedContextDelta<ConceptId, SDCD, D>,
@@ -290,7 +290,7 @@ impl ContextSnapShot {
         SDCD: Clone
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>> + Debug,
-            D: AsRef<NestedContextDelta<ConceptId, SDCD, D>> + Debug
+            D: SharedDelta<NestedDelta = NestedContextDelta<ConceptId, SDCD, D>>
     >(
         &self,
         delta: &NestedContextDelta<ConceptId, SDCD, D>,
@@ -329,7 +329,7 @@ where
     type ConceptId = ConceptId;
     type MixedConcept<'a> = Mixed<'a>;
 
-    fn concept_from_label<D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug>(
+    fn concept_from_label<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, SDCD, D>>>(
         &self,
         delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         s: &str,
@@ -346,7 +346,7 @@ where
         }
     }
 
-    fn get_label<D: AsRef<NestedContextDelta<Self::ConceptId, SDCD, D>> + Debug>(
+    fn get_label<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, SDCD, D>>>(
         &self,
         delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         concept: Self::ConceptId,
@@ -364,7 +364,7 @@ where
         )
     }
 
-    fn concrete_concept_id<D: AsRef<NestedContextDelta<concept_id::ConceptId, SDCD, D>> + Debug>(
+    fn concrete_concept_id<D: SharedDelta<NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>>>(
         &self,
         delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         cc: ConcreteConceptType,
@@ -394,7 +394,7 @@ where
         })
     }
 
-    fn concrete_concept_type<D: AsRef<NestedContextDelta<Self::ConceptId, SDCD, D>> + Debug>(
+    fn concrete_concept_type<D: SharedDelta<NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>>>(
         &self,
         delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
         concept_id: Self::ConceptId,
@@ -411,7 +411,7 @@ where
     Uncommitted: TryFrom<Self::ConceptId, Error = ()>,
 {
     #[allow(clippy::too_many_lines)]
-    fn apply<D: Debug + AsRef<NestedContextDelta<ConceptId, SDCD, D>>>(&mut self, delta: NestedContextDelta<Self::ConceptId, SDCD, D>) {
+    fn apply<D: SharedDelta<NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>>>(&mut self, delta: NestedContextDelta<Self::ConceptId, SDCD, D>) {
         debug_assert!(self.previously_uncommitted_concepts.is_empty());
         for (concept_id, concept_delta) in delta.concepts_to_apply_in_order() {
             match concept_delta.as_ref() {

@@ -5,7 +5,7 @@ use crate::{
     context_cache::ContextCache,
     context_delta::{
         Composition, DirectConceptDelta, NewConceptDelta,
-        ValueChange, NestedContextDelta,
+        ValueChange, NestedContextDelta, SharedDelta,
     },
     errors::ZiaResult,
     reduction_reason::{ReductionReason, Syntax, SharedSyntax},
@@ -22,7 +22,7 @@ pub struct ContextUpdater<
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>> + Debug,
-    D: Debug + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
 > {
     pub cache: &'a mut C,
     pub delta: &'a mut NestedContextDelta<S::ConceptId, SDCD, D>,
@@ -37,7 +37,7 @@ impl<
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
             + From<DirectConceptDelta<S::ConceptId>> + Debug,
-        D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug
+        D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
     > ContextUpdater<'a, S, C, SDCD, D>
 where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:

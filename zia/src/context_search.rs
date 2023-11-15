@@ -57,7 +57,7 @@ pub struct ContextSearch<
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>> + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
 {
     snap_shot: &'s S,
     variable_mask: VML::Shared,

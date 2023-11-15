@@ -38,7 +38,7 @@ pub struct ContextDelta<ConceptId, SharedDirectConceptDelta> {
     >,
 }
 
-pub trait SharedDelta: Clone + Default + Debug {
+pub trait SharedDelta: Clone + Default + Debug + AsRef<Self::NestedDelta>{
     type NestedDelta;
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta>;
     fn from_nested(nested: Self::NestedDelta) -> Self;
@@ -407,13 +407,13 @@ pub struct NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
     ConceptId: MixedConcept,
     SharedDirectConceptDelta: Debug,
-    D: Debug + AsRef<NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>,
+    D: SharedDelta<NestedDelta = NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>,
 {
     inner_delta: Option<D>,
     overlay_delta: ContextDelta<ConceptId, SharedDirectConceptDelta>,
 }
 
-impl<ConceptId: Clone, SharedDirectConceptDelta, D: Debug + AsRef<NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>> Default
+impl<ConceptId: Clone, SharedDirectConceptDelta, D: SharedDelta<NestedDelta=NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>> Default
     for NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
     ConceptId: MixedConcept,
@@ -435,7 +435,7 @@ where
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>
         + Debug,
-    D: AsRef<NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>> + Debug,
+    D: SharedDelta<NestedDelta = NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>>,
 {
     pub fn spawn(inner_delta: D) -> Self {
         Self {

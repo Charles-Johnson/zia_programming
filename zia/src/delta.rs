@@ -1,5 +1,5 @@
 use crate::{
-    context_delta::{NestedContextDelta, DirectConceptDelta},
+    context_delta::{NestedContextDelta, DirectConceptDelta, SharedDelta},
     snap_shot::Reader,
 };
 use std::fmt::Debug;
@@ -25,5 +25,5 @@ where
         + AsRef<DirectConceptDelta<Self::ConceptId>>
         + From<DirectConceptDelta<Self::ConceptId>> + Debug,
 {
-    fn apply<D: Debug + AsRef<NestedContextDelta<Self::ConceptId, SDCD, D>>>(&mut self, _: NestedContextDelta<Self::ConceptId, SDCD, D>);
+    fn apply<D: SharedDelta<NestedDelta=NestedContextDelta<Self::ConceptId, SDCD, D>>>(&mut self, _: NestedContextDelta<Self::ConceptId, SDCD, D>);
 }
