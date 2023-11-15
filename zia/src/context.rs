@@ -56,7 +56,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     snap_shot: S,
@@ -88,7 +87,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>> ,
-    Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     pub fn new() -> ZiaResult<Self> {
@@ -923,7 +921,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     #[must_use]
@@ -954,7 +951,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     fn from(snap_shot: S) -> Self {

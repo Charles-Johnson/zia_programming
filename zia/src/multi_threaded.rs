@@ -71,14 +71,6 @@ impl<CCI: MixedConcept> From<SharedContextDelta<CCI>>
     }
 }
 
-impl<CCI: MixedConcept> From<SharedContextDelta<CCI>>
-    for Option<MultiThreadedContextDelta<CCI>>
-{
-    fn from(scd: SharedContextDelta<CCI>) -> Self {
-        Arc::try_unwrap(scd.0).ok()
-    }
-}
-
 impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {

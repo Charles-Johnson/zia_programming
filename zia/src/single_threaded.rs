@@ -57,12 +57,6 @@ impl From<SharedContextDelta> for SingleThreadedContextDelta {
     }
 }
 
-impl From<SharedContextDelta> for Option<SingleThreadedContextDelta> {
-    fn from(scd: SharedContextDelta) -> Self {
-        Rc::try_unwrap(scd.0).ok()
-    }
-}
-
 impl AsRef<SingleThreadedContextDelta> for SharedContextDelta {
     fn as_ref(&self) -> &SingleThreadedContextDelta {
         self.0.as_ref()
