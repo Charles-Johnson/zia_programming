@@ -38,6 +38,11 @@ pub struct ContextDelta<ConceptId, SharedDirectConceptDelta> {
     >,
 }
 
+pub trait SharedDelta: Clone + Default + Debug {
+    type NestedDelta;
+    fn get_mut(&mut self) -> Option<&mut Self::NestedDelta>;
+}
+
 impl<ConceptId, SharedDirectConceptDelta> Default
     for ContextDelta<ConceptId, SharedDirectConceptDelta>
 {

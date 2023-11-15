@@ -20,7 +20,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::{self, ContextCache},
-    context_delta::{DirectConceptDelta, NestedContextDelta, NewConceptDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta},
     context_search::{Comparison, ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,
@@ -55,8 +55,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + From<NestedContextDelta<S::ConceptId, SDCD, D>> + Default + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug,
-    for <'a> Option<&'a mut NestedContextDelta<S::ConceptId, SDCD, D>>: From<&'a mut D>,
+    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -88,8 +87,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Default + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + Debug,
-    for <'a> Option<&'a mut NestedContextDelta<S::ConceptId, SDCD, D>>: From<&'a mut D>,
+    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>> ,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -229,7 +227,7 @@ where
                             NewConceptDelta::FreeVariable
                         },
                     );
-                    let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
+                    let maybe_inner_delta = self.delta.get_mut();
                     let Some(delta) = maybe_inner_delta else {
                         return None;
                     };
@@ -575,7 +573,7 @@ where
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
         ];
-        let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
+        let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
             return Err(ZiaError::MultiplePointersToDelta);
         };
@@ -804,7 +802,7 @@ where
         new: &SharedSyntax<C>,
         old: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
-        let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
+        let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
             return Err(ZiaError::MultiplePointersToDelta);
         };
@@ -867,7 +865,7 @@ where
         } else if syntax == normal_form {
             self.try_removing_reduction(syntax)
         } else {
-            let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
+            let maybe_inner_delta = self.delta.get_mut();
             let Some(delta) = maybe_inner_delta else {
                 return Err(ZiaError::MultiplePointersToDelta);
             };
@@ -884,7 +882,7 @@ where
     }
 
     fn try_removing_reduction(&mut self, syntax: &Syntax<C>) -> ZiaResult<()> {
-        let maybe_inner_delta: Option<&mut NestedContextDelta<S::ConceptId, SDCD, D>> = (&mut self.delta).into();
+        let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
             return Err(ZiaError::MultiplePointersToDelta);
         };
@@ -924,8 +922,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + From<NestedContextDelta<S::ConceptId, SDCD, D>> + Default + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug,
-    for <'a> Option<&'a mut NestedContextDelta<S::ConceptId, SDCD, D>>: From<&'a mut D>,
+    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
@@ -956,8 +953,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: Clone + From<NestedContextDelta<S::ConceptId, SDCD, D>> + Default + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Debug,
-    for <'a> Option<&'a mut NestedContextDelta<S::ConceptId, SDCD, D>>: From<&'a mut D>,
+    D: From<NestedContextDelta<S::ConceptId, SDCD, D>> + AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     Option<NestedContextDelta<S::ConceptId, SDCD, D>>: From<D>,
     NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {

@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{DirectConceptDelta, NestedContextDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
@@ -35,11 +35,10 @@ type SingleThreadedContextDelta =
 #[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
 
-impl<'a> From<&'a mut SharedContextDelta>
-    for Option<&'a mut SingleThreadedContextDelta>
-{
-    fn from(scd: &'a mut SharedContextDelta) -> Self {
-        Rc::get_mut(&mut scd.0)
+impl SharedDelta for SharedContextDelta {
+    type NestedDelta = SingleThreadedContextDelta;
+    fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
+        Rc::get_mut(&mut self.0)
     }
 }
 

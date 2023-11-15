@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{DirectConceptDelta, NestedContextDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
@@ -53,11 +53,10 @@ impl<CCI: MixedConcept> Default for SharedContextDelta<CCI> {
     }
 }
 
-impl<'a, CCI: MixedConcept> From<&'a mut SharedContextDelta<CCI>>
-    for Option<&'a mut MultiThreadedContextDelta<CCI>>
-{
-    fn from(scd: &'a mut SharedContextDelta<CCI>) -> Self {
-        Arc::get_mut(&mut scd.0)
+impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
+    type NestedDelta = MultiThreadedContextDelta<CCI>;
+    fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
+        Arc::get_mut(&mut self.0)
     }
 }
 
