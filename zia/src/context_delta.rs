@@ -19,7 +19,7 @@ use crate::{
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::ContextCache,
     mixed_concept::MixedConcept,
-    reduction_reason::{ReductionReason, Syntax},
+    reduction_reason::{ReductionReason, Syntax}, errors::ZiaResult,
 };
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -42,6 +42,7 @@ pub trait SharedDelta: Clone + Default + Debug {
     type NestedDelta;
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta>;
     fn from_nested(nested: Self::NestedDelta) -> Self;
+    fn into_nested(self) -> ZiaResult<Self::NestedDelta>;
 }
 
 impl<ConceptId, SharedDirectConceptDelta> Default

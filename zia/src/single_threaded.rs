@@ -7,7 +7,7 @@ use crate::{
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
     snap_shot::Reader as SnapShotReader,
-    variable_mask_list::impl_variable_mask_list,
+    variable_mask_list::impl_variable_mask_list, errors::ZiaResult,
 };
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
@@ -43,17 +43,8 @@ impl SharedDelta for SharedContextDelta {
     fn from_nested(nested: Self::NestedDelta) -> Self {
         Self(nested.into())
     }
-}
-
-impl From<SingleThreadedContextDelta> for SharedContextDelta {
-    fn from(mtcd: SingleThreadedContextDelta) -> Self {
-        Self(mtcd.into())
-    }
-}
-
-impl From<SharedContextDelta> for SingleThreadedContextDelta {
-    fn from(scd: SharedContextDelta) -> Self {
-        Rc::try_unwrap(scd.0).unwrap()
+    fn into_nested(self) -> ZiaResult<Self::NestedDelta> {
+        Rc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
     }
 }
 

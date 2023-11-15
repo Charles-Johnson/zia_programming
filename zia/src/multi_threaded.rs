@@ -61,13 +61,8 @@ impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
     fn from_nested(nested: Self::NestedDelta) -> Self {
         Self(nested.into())
     }
-}
-
-impl<CCI: MixedConcept> From<SharedContextDelta<CCI>>
-    for MultiThreadedContextDelta<CCI>
-{
-    fn from(scd: SharedContextDelta<CCI>) -> Self {
-        Arc::try_unwrap(scd.0).unwrap()
+    fn into_nested(self) -> crate::errors::ZiaResult<Self::NestedDelta> {
+        Arc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
     }
 }
 

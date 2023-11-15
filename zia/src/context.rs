@@ -56,7 +56,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     snap_shot: S,
     delta: D,
@@ -86,8 +85,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + Into<Option<NestedContextDelta<S::ConceptId, SDCD, D>>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>> ,
-    NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
 {
     pub fn new() -> ZiaResult<Self> {
         let mut cont = Self::default();
@@ -547,10 +545,7 @@ where
 
     fn commit(&mut self) -> ZiaResult<()> {
         let taken_delta = std::mem::take(&mut self.delta);
-        let maybe_inner_delta: Option<NestedContextDelta<S::ConceptId, SDCD, D>> = taken_delta.into();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
+        let delta = taken_delta.into_nested()?;
         self.snap_shot.apply(delta);
         Ok(())
     }
@@ -921,7 +916,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     #[must_use]
     fn default() -> Self {
@@ -951,7 +945,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
     D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
-    NestedContextDelta<S::ConceptId, SDCD, D>: From<D>
 {
     fn from(snap_shot: S) -> Self {
         Self {
