@@ -86,29 +86,35 @@ where
         debug!("infer_reduction({:#?})", concept);
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
-        let composition_id = concept
-            .find_as_hand_in_composition_with(implication_id, Hand::Right)?;
-        let composition_concept =
-            self.snap_shot.read_concept(self.delta.as_ref(), composition_id);
-        // TODO: check if implication is actually true
-        // TODO: check for any concepts that are the reduction of `concept`
-        let result = composition_concept.iter_hand_of(Hand::Right).find_map(
-            |(condition_id, implication_rule_id)| {
-                let condition = self.to_ast(&condition_id);
-                let (reduced_condition, reason) = self.reduce(&condition)?;
-                let x = reduced_condition.get_concept()?;
-                self.is_concrete_type(ConcreteConceptType::True, &x).map(|x| {
-                    (
-                        // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
-                        self.to_ast(&x),
-                        C::RR::inference(
-                            self.to_ast(&implication_rule_id),
-                            reason,
-                        ),
-                    )
-                })
-            },
-        );
+        let result = concept
+            .find_as_hand_in_composition_with(implication_id, Hand::Right)
+            .and_then(|composition_id| {
+                let composition_concept = self
+                    .snap_shot
+                    .read_concept(self.delta.as_ref(), composition_id);
+                // TODO: check if implication is actually true
+                // TODO: check for any concepts that are the reduction of `concept`
+                let result = composition_concept
+                    .iter_hand_of(Hand::Right)
+                    .find_map(|(condition_id, implication_rule_id)| {
+                        let condition = self.to_ast(&condition_id);
+                        let (reduced_condition, reason) =
+                            self.reduce(&condition)?;
+                        let x = reduced_condition.get_concept()?;
+                        self.is_concrete_type(ConcreteConceptType::True, &x)
+                            .map(|x| {
+                                (
+                                    // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
+                                    self.to_ast(&x),
+                                    C::RR::inference(
+                                        self.to_ast(&implication_rule_id),
+                                        reason,
+                                    ),
+                                )
+                            })
+                    });
+                result
+            });
         result.or_else(|| {
             let reduction_operator = self.concrete_ast(ConcreteConceptType::Reduction)?;
             let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
