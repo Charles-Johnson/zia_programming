@@ -20,7 +20,9 @@ use crate::{
     ast::SyntaxTree,
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
-    context_delta::{DirectConceptDelta, NewConceptDelta, NestedContextDelta, SharedDelta},
+    context_delta::{
+        DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta,
+    },
     iteration::Iteration,
     mixed_concept::MixedConcept,
     reduction_reason::{
@@ -39,25 +41,18 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ContextSearch<
-    's,
-    'v,
-    S,
-    C,
-    VML,
-    SDCD,
-    D,
-    CCI: MixedConcept,
-> where
+pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: MixedConcept>
+where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>> + Debug,
+        + From<DirectConceptDelta<S::ConceptId>>
+        + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
 {
     snap_shot: &'s S,
     variable_mask: VML::Shared,
@@ -69,16 +64,8 @@ pub struct ContextSearch<
     phantom2: PhantomData<CCI>,
 }
 
-impl<
-        's,
-        'v,
-        S,
-        C,
-        SDCD,
-        VML,
-        D,
-        CCI: MixedConcept,
-    > ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+impl<'s, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
+    ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
     Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
@@ -86,9 +73,11 @@ where
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>> + Debug,
+        + From<DirectConceptDelta<S::ConceptId>>
+        + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
+        + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
 {
     fn infer_reduction(
         &self,
@@ -836,7 +825,10 @@ where
     }
 
     /// Returns the syntax for a concept. Panics if there is no concept with the given `concept_id`
-    pub fn to_ast(&self, concept_id: &(impl Into<S::ConceptId> + Copy)) -> SharedSyntax<C> {
+    pub fn to_ast(
+        &self,
+        concept_id: &(impl Into<S::ConceptId> + Copy),
+    ) -> SharedSyntax<C> {
         let concept_id = (*concept_id).into();
         self.variable_mask.get(concept_id).cloned().unwrap_or_else(|| {
             self.caches.get_syntax_tree_or_else(concept_id, || {
@@ -1180,7 +1172,8 @@ where
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>> + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
+        + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
 {
     fn from(
         ContextReferences {
