@@ -5,9 +5,10 @@ use crate::{
     context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
+    errors::ZiaResult,
     iteration::Iteration as ContextSearchIteration,
     snap_shot::Reader as SnapShotReader,
-    variable_mask_list::impl_variable_mask_list, errors::ZiaResult,
+    variable_mask_list::impl_variable_mask_list,
 };
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
@@ -29,23 +30,31 @@ pub type Context = GenericContext<
     ContextConceptId,
 >;
 
-type SingleThreadedContextDelta =
-    NestedContextDelta<ContextConceptId, SharedDirectConceptDelta, SharedContextDelta>;
+type SingleThreadedContextDelta = NestedContextDelta<
+    ContextConceptId,
+    SharedDirectConceptDelta,
+    SharedContextDelta,
+>;
 
 #[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
 
 impl SharedDelta for SharedContextDelta {
     type NestedDelta = SingleThreadedContextDelta;
+
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
         Rc::get_mut(&mut self.0)
     }
+
     fn from_nested(nested: Self::NestedDelta) -> Self {
         Self(nested.into())
     }
+
     fn into_nested(self) -> ZiaResult<Self::NestedDelta> {
-        Rc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
+        Rc::try_unwrap(self.0)
+            .map_err(|_| crate::ZiaError::MultiplePointersToDelta)
     }
+
     fn strong_count(&self) -> usize {
         Rc::strong_count(&self.0)
     }

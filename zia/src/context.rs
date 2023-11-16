@@ -20,7 +20,9 @@ use crate::{
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::{self, ContextCache},
-    context_delta::{DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta},
+    context_delta::{
+        DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta,
+    },
     context_search::{Comparison, ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,

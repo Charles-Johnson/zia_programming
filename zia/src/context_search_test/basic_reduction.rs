@@ -16,9 +16,11 @@ use std::collections::HashMap;
 #[test]
 fn basic_reduction() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
-        );
+    let delta = NestedContextDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

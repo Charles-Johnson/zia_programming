@@ -1,6 +1,6 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::{NestedContextDelta},
+    context_delta::NestedContextDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
@@ -16,9 +16,11 @@ use std::collections::HashMap;
 #[test]
 fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
-        );
+    let delta = NestedContextDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

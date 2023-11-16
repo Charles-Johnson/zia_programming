@@ -12,11 +12,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    sync::Arc,
-};
+use std::{collections::HashSet, fmt::Debug, sync::Arc};
 
 impl_syntax_tree!(Arc, MultiThreadedSyntaxTree);
 impl_cache!(Arc, MultiThreadedContextCache);
@@ -39,8 +35,11 @@ lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new().unwrap();
 }
 
-type MultiThreadedContextDelta<CCI> =
-    NestedContextDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
+type MultiThreadedContextDelta<CCI> = NestedContextDelta<
+    CCI,
+    SharedDirectConceptDelta<CCI>,
+    SharedContextDelta<CCI>,
+>;
 
 #[derive(Debug)]
 pub struct SharedContextDelta<CCI: MixedConcept>(
@@ -61,15 +60,20 @@ impl<CCI: MixedConcept> Default for SharedContextDelta<CCI> {
 
 impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
     type NestedDelta = MultiThreadedContextDelta<CCI>;
+
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
         Arc::get_mut(&mut self.0)
     }
+
     fn from_nested(nested: Self::NestedDelta) -> Self {
         Self(nested.into())
     }
+
     fn into_nested(self) -> crate::errors::ZiaResult<Self::NestedDelta> {
-        Arc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
+        Arc::try_unwrap(self.0)
+            .map_err(|_| crate::ZiaError::MultiplePointersToDelta)
     }
+
     fn strong_count(&self) -> usize {
         Arc::strong_count(&self.0)
     }
@@ -85,12 +89,7 @@ impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
 
 pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
 
-impl<
-        's,
-        'v,
-        S,
-        CCI: MixedConcept + Send + Sync,
-    > ContextSearchIteration
+impl<'s, 'v, S, CCI: MixedConcept + Send + Sync> ContextSearchIteration
     for ContextSearch<
         's,
         'v,

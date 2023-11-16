@@ -4,11 +4,11 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{
-        Composition, DirectConceptDelta, NewConceptDelta,
-        ValueChange, NestedContextDelta, SharedDelta,
+        Composition, DirectConceptDelta, NestedContextDelta, NewConceptDelta,
+        SharedDelta, ValueChange,
     },
     errors::ZiaResult,
-    reduction_reason::{ReductionReason, Syntax, SharedSyntax},
+    reduction_reason::{ReductionReason, SharedSyntax, Syntax},
     snap_shot::Reader,
     ZiaError,
 };
@@ -21,13 +21,14 @@ pub struct ContextUpdater<
     C: ContextCache,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>> + Debug,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+        + From<DirectConceptDelta<S::ConceptId>>
+        + Debug,
+    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
 > {
     pub cache: &'a mut C,
     pub delta: &'a mut NestedContextDelta<S::ConceptId, SDCD, D>,
     pub snap_shot: &'a S,
-    pub phantom: PhantomData<D>
+    pub phantom: PhantomData<D>,
 }
 
 impl<
@@ -36,8 +37,9 @@ impl<
         C: ContextCache,
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
-            + From<DirectConceptDelta<S::ConceptId>> + Debug,
-        D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>
+            + From<DirectConceptDelta<S::ConceptId>>
+            + Debug,
+        D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
     > ContextUpdater<'a, S, C, SDCD, D>
 where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
@@ -49,10 +51,8 @@ where
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
-        if let Some((left_concept, right_concept)) = self
-            .snap_shot
-            .read_concept(self.delta, *concept)
-            .get_composition()
+        if let Some((left_concept, right_concept)) =
+            self.snap_shot.read_concept(self.delta, *concept).get_composition()
         {
             self.relabel(left_concept, &left.to_string())?;
             self.relabel(right_concept, &right.to_string())
@@ -97,11 +97,8 @@ where
                     .find_as_hand_in_composition_with(*r, Hand::Left)
                     .map(|concept| {
                         let syntax = Syntax::<C>::from(syntax);
-                        self.snap_shot.bind_concept_to_syntax(
-                            self.delta,
-                            syntax,
-                            concept,
-                        )
+                        self.snap_shot
+                            .bind_concept_to_syntax(self.delta, syntax, concept)
                     })
             })
             .unwrap_or_else(|| syntax.into())

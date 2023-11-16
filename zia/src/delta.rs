@@ -1,5 +1,5 @@
 use crate::{
-    context_delta::{NestedContextDelta, DirectConceptDelta, SharedDelta},
+    context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
     snap_shot::Reader,
 };
 use std::fmt::Debug;
@@ -23,7 +23,13 @@ pub trait Apply<SDCD>: Reader<SDCD>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<Self::ConceptId>>
-        + From<DirectConceptDelta<Self::ConceptId>> + Debug,
+        + From<DirectConceptDelta<Self::ConceptId>>
+        + Debug,
 {
-    fn apply<D: SharedDelta<NestedDelta=NestedContextDelta<Self::ConceptId, SDCD, D>>>(&mut self, _: NestedContextDelta<Self::ConceptId, SDCD, D>);
+    fn apply<
+        D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, SDCD, D>>,
+    >(
+        &mut self,
+        _: NestedContextDelta<Self::ConceptId, SDCD, D>,
+    );
 }

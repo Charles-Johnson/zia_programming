@@ -16,9 +16,11 @@ use std::collections::HashMap;
 #[test]
 fn basic_existence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-    NestedContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>, SharedContextDelta<ConceptId>>::default(
-        );
+    let delta = NestedContextDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.clone()};

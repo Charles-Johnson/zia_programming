@@ -1,13 +1,20 @@
 use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType},
-    context_delta::{DirectConceptDelta, NestedContextDelta, ValueChange, SharedDelta},
+    context_delta::{
+        DirectConceptDelta, NestedContextDelta, SharedDelta, ValueChange,
+    },
     context_search_test::check_order,
     delta::Apply,
     mixed_concept::MixedConcept,
     snap_shot::Reader,
 };
 use bimap::BiMap;
-use std::{collections::HashMap, sync::Arc, fmt::{Debug, Display}, convert::TryFrom};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    fmt::{Debug, Display},
+    sync::Arc,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ConceptId {
@@ -33,11 +40,10 @@ impl TryFrom<ConceptId> for usize {
     fn try_from(value: ConceptId) -> Result<Self, Self::Error> {
         match value {
             ConceptId::Committed(x) => Ok(x),
-            ConceptId::Uncommitted(_) => Err(())
+            ConceptId::Uncommitted(_) => Err(()),
         }
     }
 }
-
 
 impl Display for ConceptId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -83,7 +89,15 @@ impl MockSnapShot {
 }
 
 impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
-    fn apply<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>>>(
+    fn apply<
+        D: SharedDelta<
+            NestedDelta = NestedContextDelta<
+                Self::ConceptId,
+                Arc<DirectConceptDelta<ConceptId>>,
+                D,
+            >,
+        >,
+    >(
         &mut self,
         _: NestedContextDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
     ) {
@@ -99,14 +113,28 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         concept_id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'_>> {
         match concept_id {
-            ConceptId::Committed(concept_id) => self.concepts.get(concept_id).cloned(),
-            ConceptId::Uncommitted(_) => None
+            ConceptId::Committed(concept_id) => {
+                self.concepts.get(concept_id).cloned()
+            },
+            ConceptId::Uncommitted(_) => None,
         }
     }
 
-    fn get_label<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>>>(
+    fn get_label<
+        D: SharedDelta<
+            NestedDelta = NestedContextDelta<
+                Self::ConceptId,
+                Arc<DirectConceptDelta<ConceptId>>,
+                D,
+            >,
+        >,
+    >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        delta: &NestedContextDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+        >,
         concept_id: Self::ConceptId,
     ) -> Option<String> {
         let mut iter = delta.iter_string();
@@ -118,9 +146,21 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         self.concept_labels.get_by_left(&concept_id).map(|s| (*s).to_string())
     }
 
-    fn concept_from_label<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>>>(
+    fn concept_from_label<
+        D: SharedDelta<
+            NestedDelta = NestedContextDelta<
+                Self::ConceptId,
+                Arc<DirectConceptDelta<ConceptId>>,
+                D,
+            >,
+        >,
+    >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        delta: &NestedContextDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+        >,
         s: &str,
     ) -> Option<Self::ConceptId> {
         if let Some(ValueChange::Create(concept_id)) = delta.get_string(s) {
@@ -129,17 +169,41 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         self.concept_labels.get_by_right(&s).copied()
     }
 
-    fn concrete_concept_id<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>>>(
+    fn concrete_concept_id<
+        D: SharedDelta<
+            NestedDelta = NestedContextDelta<
+                Self::ConceptId,
+                Arc<DirectConceptDelta<ConceptId>>,
+                D,
+            >,
+        >,
+    >(
         &self,
-        _: &NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: &NestedContextDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+        >,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).copied()
     }
 
-    fn concrete_concept_type<D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>>>(
+    fn concrete_concept_type<
+        D: SharedDelta<
+            NestedDelta = NestedContextDelta<
+                Self::ConceptId,
+                Arc<DirectConceptDelta<ConceptId>>,
+                D,
+            >,
+        >,
+    >(
         &self,
-        _: &NestedContextDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: &NestedContextDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+        >,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.concrete_concepts.get_by_left(&concept_id).copied()
