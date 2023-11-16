@@ -46,6 +46,9 @@ impl SharedDelta for SharedContextDelta {
     fn into_nested(self) -> ZiaResult<Self::NestedDelta> {
         Rc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
     }
+    fn strong_count(&self) -> usize {
+        Rc::strong_count(&self.0)
+    }
 }
 
 impl AsRef<SingleThreadedContextDelta> for SharedContextDelta {

@@ -225,7 +225,7 @@ where
             .and_then(|mut a| {
                 a = self.context_search().expand(&a);
                 self.create_variable_concepts(Syntax::<C>::make_mut(&mut a)).unwrap();
-                self.call(dbg!(&a))
+                self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
         self.commit()?;
@@ -733,9 +733,14 @@ where
                         })
                     })
                     .or_else(|| {
-                        self.context_search()
-                            .concrete_ast(ConcreteConceptType::True)
-                            .map(|ast| self.execute_reduction(right, &ast))
+                        let cs = self.context_search();
+                        let maybe_ast = cs
+                            .concrete_ast(ConcreteConceptType::True);
+                        drop(cs);
+                        maybe_ast
+                            .map(|ast| {
+                                self.execute_reduction(right, &ast)
+                            })
                     })
                     .map(|r| r.map(|()| String::new())),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()

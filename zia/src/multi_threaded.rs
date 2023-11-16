@@ -42,10 +42,16 @@ lazy_static! {
 type MultiThreadedContextDelta<CCI> =
     NestedContextDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SharedContextDelta<CCI: MixedConcept>(
     pub Arc<MultiThreadedContextDelta<CCI>>,
 );
+
+impl<CCI: MixedConcept> Clone for SharedContextDelta<CCI> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
 
 impl<CCI: MixedConcept> Default for SharedContextDelta<CCI> {
     fn default() -> Self {
@@ -63,6 +69,9 @@ impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
     }
     fn into_nested(self) -> crate::errors::ZiaResult<Self::NestedDelta> {
         Arc::try_unwrap(self.0).map_err(|_| crate::ZiaError::MultiplePointersToDelta)
+    }
+    fn strong_count(&self) -> usize {
+        Arc::strong_count(&self.0)
     }
 }
 

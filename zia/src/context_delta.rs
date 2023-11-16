@@ -43,6 +43,7 @@ pub trait SharedDelta: Clone + Default + Debug + AsRef<Self::NestedDelta>{
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta>;
     fn from_nested(nested: Self::NestedDelta) -> Self;
     fn into_nested(self) -> ZiaResult<Self::NestedDelta>;
+    fn strong_count(&self) -> usize;
 }
 
 impl<ConceptId, SharedDirectConceptDelta> Default

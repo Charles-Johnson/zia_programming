@@ -52,7 +52,6 @@ where
                     match cd {
                         ConceptDelta::Direct(dcd) => match dcd.as_ref() {
                             DirectConceptDelta::New(delta) => {
-                                dbg!(id);
                                 debug_assert!(concept.is_none());
                                 concept = Some((&NewDirectConceptDelta{
                                     delta: delta.clone(),
