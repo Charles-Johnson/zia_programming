@@ -50,15 +50,15 @@ pub trait SharedDelta:
     fn strong_count(&self) -> usize;
 }
 
-impl<ConceptId, SharedDirectConceptDelta> Default
-    for ContextDelta<ConceptId, SharedDirectConceptDelta>
+impl<ConceptId, SharedDirectConceptDelta>
+    ContextDelta<ConceptId, SharedDirectConceptDelta>
 {
-    fn default() -> Self {
+    fn new(number_of_uncommitted_concepts: usize) -> Self {
         Self {
             string: HashMap::new(),
             concepts_to_apply_in_order: vec![],
             concept: HashMap::new(),
-            number_of_uncommitted_concepts: 0,
+            number_of_uncommitted_concepts,
         }
     }
 }
@@ -455,7 +455,7 @@ where
     fn default() -> Self {
         Self {
             inner_delta: None,
-            overlay_delta: ContextDelta::default(),
+            overlay_delta: ContextDelta::new(0),
         }
     }
 }
@@ -478,8 +478,13 @@ where
 {
     pub fn spawn(inner_delta: D) -> Self {
         Self {
+            overlay_delta: ContextDelta::new(
+                inner_delta
+                    .as_ref()
+                    .overlay_delta
+                    .number_of_uncommitted_concepts,
+            ),
             inner_delta: Some(inner_delta),
-            overlay_delta: ContextDelta::default(),
         }
     }
 
