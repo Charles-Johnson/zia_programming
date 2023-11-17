@@ -635,7 +635,7 @@ where
     // TODO Lazily compute the concepts that are equivalent to a given normal form
     // until a required number of examples are found
     /// `generalisation` needs to contain free variables
-    fn find_examples(
+    pub fn find_examples(
         &self,
         generalisation: &SharedSyntax<C>,
         equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */
