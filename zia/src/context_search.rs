@@ -116,51 +116,7 @@ where
                 result
             });
         result.or_else(|| {
-            let reduction_operator = self.concrete_ast(ConcreteConceptType::Reduction)?;
-            let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
-            let variable_reduction_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::FreeVariable);
-            let variable_reduction_syntax = Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
-            let variable_condition_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::FreeVariable);
-            let variable_condition_syntax = Syntax::<C>::new_leaf_variable(variable_condition_id).share();
-            let cache = <C as ContextCache>::SharedReductionCache::default();
-            let spawned_context_search = self.spawn(&cache, D::from_nested(spawned_delta));
-            let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
-                Syntax::<C>::new_pair(
-                    condition.clone(),
-                    Syntax::<C>::new_pair(
-                        spawned_context_search.to_ast(&implication_id),
-                        Syntax::<C>::new_pair(
-                            spawned_context_search.to_ast(&concept.id()),
-                            Syntax::<C>::new_pair(
-                                reduction_operator.clone(),
-                                reduction.clone(),
-                            ).share()
-                        ).share(),
-                    ).share()
-                )
-            };
-            let implication_rule_pattern = implication_rule_fn(&variable_condition_syntax, &variable_reduction_syntax);
-            let true_id = spawned_context_search
-            .concrete_concept_id(ConcreteConceptType::True)
-            .expect("true concept must exist");
-            let true_concept =
-                spawned_context_search.snap_shot.read_concept(spawned_context_search.delta.as_ref(), true_id);
-            let truths = true_concept.find_what_reduces_to_it();
-
-            let irp = implication_rule_pattern.share();
-            let t = truths.collect();
-            let x = spawned_context_search.find_examples(&irp, &t).into_iter().find_map(|substitutions| {
-                substitutions.get(&variable_condition_syntax).and_then(|condition_syntax| {
-                    let (condition_normal_form, reason) = spawned_context_search.recursively_reduce(condition_syntax);
-                    spawned_context_search.is_concrete_type(ConcreteConceptType::True, &condition_normal_form.get_concept()?)?;
-                    substitutions.get(&variable_reduction_syntax).map(|result| (result.clone(), C::RR::inference(
-                        implication_rule_fn(condition_syntax, result).share(),
-                        reason.unwrap_or_else(ReductionReason::explicit),
-                    )))
-                })
-            });
-            drop(spawned_context_search);
-            x
+            self.find_examples_of_inferred_reduction(concept.id())
         })
     }
 
@@ -631,11 +587,59 @@ where
     ) -> Option<Substitutions<SharedSyntax<C>>> {
         self.find_examples(generalisation, truths).pop()
     }
+    
+    pub fn find_examples_of_inferred_reduction(&self, concept: S::ConceptId) -> ReductionResult<C::RR> {
+        let implication_id =
+            self.concrete_concept_id(ConcreteConceptType::Implication)?;
+        let reduction_operator = self.concrete_ast(ConcreteConceptType::Reduction)?;
+        let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
+        let variable_reduction_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+        let variable_reduction_syntax = Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
+        let variable_condition_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+        let variable_condition_syntax = Syntax::<C>::new_leaf_variable(variable_condition_id).share();
+        let cache = <C as ContextCache>::SharedReductionCache::default();
+        let spawned_context_search = self.spawn(&cache, D::from_nested(spawned_delta));
+        let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
+            Syntax::<C>::new_pair(
+                condition.clone(),
+                Syntax::<C>::new_pair(
+                    spawned_context_search.to_ast(&implication_id),
+                    Syntax::<C>::new_pair(
+                        spawned_context_search.to_ast(&concept),
+                        Syntax::<C>::new_pair(
+                            reduction_operator.clone(),
+                            reduction.clone(),
+                        ).share()
+                    ).share(),
+                ).share()
+            )
+        };
+        let implication_rule_pattern = implication_rule_fn(&variable_condition_syntax, &variable_reduction_syntax);
+        let true_id = spawned_context_search
+        .concrete_concept_id(ConcreteConceptType::True)
+        .expect("true concept must exist");
+        let true_concept =
+            spawned_context_search.snap_shot.read_concept(spawned_context_search.delta.as_ref(), true_id);
+        let truths = true_concept.find_what_reduces_to_it();
+        let irp = implication_rule_pattern.share();
+        let t = truths.collect();
+        let x = spawned_context_search.find_examples(&irp, &t).into_iter().find_map(|substitutions| {
+            substitutions.get(&variable_condition_syntax).and_then(|condition_syntax| {
+                let (condition_normal_form, reason) = spawned_context_search.recursively_reduce(condition_syntax);
+                spawned_context_search.is_concrete_type(ConcreteConceptType::True, &condition_normal_form.get_concept()?)?;
+                substitutions.get(&variable_reduction_syntax).map(|result| (result.clone(), C::RR::inference(
+                    implication_rule_fn(condition_syntax, result).share(),
+                    reason.unwrap_or_else(ReductionReason::explicit),
+                )))
+            })
+        });
+        x
+    }
 
     // TODO Lazily compute the concepts that are equivalent to a given normal form
     // until a required number of examples are found
     /// `generalisation` needs to contain free variables
-    pub fn find_examples(
+    fn find_examples(
         &self,
         generalisation: &SharedSyntax<C>,
         equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */

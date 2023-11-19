@@ -1,4 +1,3 @@
-use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
@@ -34,6 +33,7 @@ fn concepts() -> [Concept<usize>; 17] {
         &mut concept_a,
         &mut implies_result_concept,
     );
+    concept_a.make_reduce_to(&mut true_concept);
     cause_implies_result_concept.make_reduce_to(&mut true_concept);
     let mut example_composition =
         Concept::composition_of(8, &mut concept_a, &mut example_concept);
@@ -66,37 +66,19 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn inferred_negation() {
     let context_cache = MultiThreadedContextCache::default();
-    let mut context_delta = NestedContextDelta::<
+    let context_delta = NestedContextDelta::<
         _,
         SharedDirectConceptDelta<ConceptId>,
         _,
     >::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
-    let condition = Syntax::new_leaf_variable(
-        context_delta.insert_delta_for_new_concept(crate::context_delta::NewConceptDelta::FreeVariable)
-    ).share();
-    let reduction = Syntax::new_leaf_variable(
-        context_delta.insert_delta_for_new_concept(crate::context_delta::NewConceptDelta::FreeVariable)
-    ).share();  
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
         delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });
-    let implication_rule_pattern = Syntax::new_pair(
-        condition,
-        Syntax::new_pair(
-            context_search.to_ast(&0),
-            Syntax::new_pair(
-                context_search.to_ast(&10),
-                Syntax::new_pair(
-                    context_search.to_ast(&4),
-                    reduction,
-                ).share()
-            ).share(),
-        ).share()
-    ).share();
-    assert!(!context_search.find_examples(&implication_rule_pattern, &hashset!{1.into()}).is_empty());
+    let (reduction, _) = context_search.find_examples_of_inferred_reduction(10.into()).unwrap();
+    assert_eq!(reduction.get_concept().unwrap(), 4.into());
 }
