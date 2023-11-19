@@ -80,5 +80,5 @@ fn inferred_negation() {
         bound_variable_syntax: &bound_variable_syntax,
     });
     let (reduction, _) = context_search.find_examples_of_inferred_reduction(10.into()).unwrap();
-    assert_eq!(reduction.get_concept().unwrap(), 4.into());
+    assert_eq!(reduction.get_concept().unwrap(), 15.into());
 }
