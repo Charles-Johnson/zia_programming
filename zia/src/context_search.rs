@@ -116,9 +116,9 @@ where
                 result
             });
         result.or_else(|| {
-            self.caches.get_inference_or_else(dbg!(concept).id(), || {
+            self.caches.get_inference_or_else(concept.id(), || {
                 let rr = self.find_examples_of_inferred_reduction(concept.id());
-                self.caches.insert_inference(concept.id(),  &rr);
+                self.caches.insert_inference(concept.id(), &rr);
                 rr
             })
         })
@@ -220,7 +220,7 @@ where
             let maybe_concept: Option<CCI> = ast.get_concept();
             if let Some(id) = maybe_concept {
                 if self.concrete_type(&id).is_some() {
-                    return None
+                    return None;
                 }
             }
             let reduction_result = maybe_concept
@@ -596,18 +596,27 @@ where
     ) -> Option<Substitutions<SharedSyntax<C>>> {
         self.find_examples(generalisation, truths).pop()
     }
-    
-    pub fn find_examples_of_inferred_reduction(&self, concept: S::ConceptId) -> ReductionResult<C::RR> {
+
+    pub fn find_examples_of_inferred_reduction(
+        &self,
+        concept: S::ConceptId,
+    ) -> ReductionResult<C::RR> {
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
-        let reduction_operator = self.concrete_ast(ConcreteConceptType::Reduction)?;
+        let reduction_operator =
+            self.concrete_ast(ConcreteConceptType::Reduction)?;
         let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
-        let variable_reduction_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
-        let variable_reduction_syntax = Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
-        let variable_condition_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
-        let variable_condition_syntax = Syntax::<C>::new_leaf_variable(variable_condition_id).share();
+        let variable_reduction_id = spawned_delta
+            .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+        let variable_reduction_syntax =
+            Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
+        let variable_condition_id = spawned_delta
+            .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+        let variable_condition_syntax =
+            Syntax::<C>::new_leaf_variable(variable_condition_id).share();
         let cache = <C as ContextCache>::SharedReductionCache::default();
-        let spawned_context_search = self.spawn(&cache, D::from_nested(spawned_delta));
+        let spawned_context_search =
+            self.spawn(&cache, D::from_nested(spawned_delta));
         let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
             Syntax::<C>::new_pair(
                 condition.clone(),
@@ -623,25 +632,52 @@ where
                 ).share()
             )
         };
-        let implication_rule_pattern = implication_rule_fn(&variable_condition_syntax, &variable_reduction_syntax);
+        let implication_rule_pattern = implication_rule_fn(
+            &variable_condition_syntax,
+            &variable_reduction_syntax,
+        );
         let true_id = spawned_context_search
-        .concrete_concept_id(ConcreteConceptType::True)
-        .expect("true concept must exist");
-        let true_concept =
-            spawned_context_search.snap_shot.read_concept(spawned_context_search.delta.as_ref(), true_id);
+            .concrete_concept_id(ConcreteConceptType::True)
+            .expect("true concept must exist");
+        let true_concept = spawned_context_search
+            .snap_shot
+            .read_concept(spawned_context_search.delta.as_ref(), true_id);
         let truths = true_concept.find_what_reduces_to_it();
         let irp = implication_rule_pattern.share();
         let t = truths.collect();
-        let x = spawned_context_search.find_examples(&irp, &t).into_iter().find_map(|substitutions| {
-            substitutions.get(&variable_condition_syntax).and_then(|condition_syntax| {
-                let (condition_normal_form, reason) = spawned_context_search.recursively_reduce(condition_syntax);
-                spawned_context_search.is_concrete_type(ConcreteConceptType::True, &condition_normal_form.get_concept()?)?;
-                substitutions.get(&variable_reduction_syntax).map(|result| (result.clone(), C::RR::inference(
-                    implication_rule_fn(condition_syntax, result).share(),
-                    reason.unwrap_or_else(ReductionReason::explicit),
-                )))
-            })
-        });
+        let x = spawned_context_search
+            .find_examples(&irp, &t)
+            .into_iter()
+            .find_map(|substitutions| {
+                substitutions.get(&variable_condition_syntax).and_then(
+                    |condition_syntax| {
+                        let (condition_normal_form, reason) =
+                            spawned_context_search
+                                .recursively_reduce(condition_syntax);
+                        spawned_context_search.is_concrete_type(
+                            ConcreteConceptType::True,
+                            &condition_normal_form.get_concept()?,
+                        )?;
+                        substitutions.get(&variable_reduction_syntax).map(
+                            |result| {
+                                (
+                                    result.clone(),
+                                    C::RR::inference(
+                                        implication_rule_fn(
+                                            condition_syntax,
+                                            result,
+                                        )
+                                        .share(),
+                                        reason.unwrap_or_else(
+                                            ReductionReason::explicit,
+                                        ),
+                                    ),
+                                )
+                            },
+                        )
+                    },
+                )
+            });
         x
     }
 

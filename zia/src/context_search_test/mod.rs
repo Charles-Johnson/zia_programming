@@ -7,8 +7,8 @@ mod basic_rule;
 mod comparison_existence_implication_rule;
 mod existence_inference_rule;
 mod inference_rule;
-mod nested_composition_rule;
 mod inferred_negation;
+mod nested_composition_rule;
 
 use crate::{
     concepts::{Concept, ConceptTrait},

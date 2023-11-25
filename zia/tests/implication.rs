@@ -19,6 +19,7 @@ extern crate simple_logger;
 extern crate test;
 extern crate zia;
 
+use simple_logger::init_with_level;
 use test::Bencher;
 use zia::multi_threaded::NEW_CONTEXT;
 
@@ -39,6 +40,7 @@ fn negated_condition() {
 
 #[test]
 fn implicitly_negated_condition() {
+    init_with_level(log::Level::Debug);
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("let not false"), "");
     assert_eq!(context.execute("let a => not b"), "");

@@ -16,10 +16,7 @@ pub type ReductionCache<RR> = DashMap<
     ReductionResult<RR>,
 >;
 
-pub type InferenceCache<RR> = DashMap<
-    ConceptId<RR>,
-    ReductionResult<RR>
->;
+pub type InferenceCache<RR> = DashMap<ConceptId<RR>, ReductionResult<RR>>;
 
 pub type ConceptId<RR> =
     <<RR as ReductionReason>::Syntax as SyntaxTree>::ConceptId;

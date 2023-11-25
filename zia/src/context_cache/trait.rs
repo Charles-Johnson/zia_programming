@@ -50,8 +50,12 @@ where
     fn get_inference_or_else(
         &self,
         concept: ConceptId<Self::RR>,
-        infer: impl Fn() -> ReductionResult<Self::RR> + Copy
+        infer: impl Fn() -> ReductionResult<Self::RR> + Copy,
     ) -> ReductionResult<Self::RR>;
 
-    fn insert_inference(&self, concept: ConceptId<Self::RR>, rr: &ReductionResult<Self::RR>);
+    fn insert_inference(
+        &self,
+        concept: ConceptId<Self::RR>,
+        rr: &ReductionResult<Self::RR>,
+    );
 }
