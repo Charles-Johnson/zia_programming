@@ -117,7 +117,7 @@ where
             });
         result.or_else(|| {
             self.caches.get_inference_or_else(dbg!(concept).id(), || {
-                let rr = dbg!(self.find_examples_of_inferred_reduction(dbg!(concept).id()));
+                let rr = self.find_examples_of_inferred_reduction(concept.id());
                 self.caches.insert_inference(concept.id(),  &rr);
                 rr
             })
