@@ -38,7 +38,7 @@ extern crate zia;
 use zia::{multi_threaded::Context, ZiaError};
 
 // Construct a new `Context` using the `new` method
-let mut context = Context::new();
+let mut context = Context::new().expect("Context should be created successfully ");
 
 // Specify the rule that the concept "a b" reduces to concept "c"
 assert_eq!(context.execute("let a b -> c"), "");
