@@ -37,6 +37,15 @@ fn negated_condition() {
     assert_eq!(context.execute("b"), "false");
 }
 
+#[test]
+fn implicitly_negated_condition() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let not false"), "");
+    assert_eq!(context.execute("let a => not b"), "");
+    assert_eq!(context.execute("let a"), "");
+    assert_eq!(context.execute("b"), "false");
+}
+
 fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("default > (prec let)"), "true");
