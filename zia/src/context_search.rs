@@ -116,7 +116,11 @@ where
                 result
             });
         result.or_else(|| {
-            self.find_examples_of_inferred_reduction(concept.id())
+            self.caches.get_inference_or_else(dbg!(concept).id(), || {
+                let rr = dbg!(self.find_examples_of_inferred_reduction(dbg!(concept).id()));
+                self.caches.insert_inference(concept.id(),  &rr);
+                rr
+            })
         })
     }
 
@@ -213,8 +217,13 @@ where
     pub fn reduce(&self, ast: &SharedSyntax<C>) -> ReductionResult<C::RR> {
         debug!("reduce({})", ast.to_string());
         self.caches.get_reduction_or_else(ast, || {
-            let reduction_result = ast
-                .get_concept()
+            let maybe_concept: Option<CCI> = ast.get_concept();
+            if let Some(id) = maybe_concept {
+                if self.concrete_type(&id).is_some() {
+                    return None
+                }
+            }
+            let reduction_result = maybe_concept
                 .and_then(|c| self.reduce_concept(&c))
                 .or_else(|| {
                     let (ref left, ref right) = ast.get_expansion()?;
