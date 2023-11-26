@@ -40,9 +40,8 @@ fn negated_condition() {
 
 #[test]
 fn implicitly_negated_condition() {
-    init_with_level(log::Level::Debug);
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("let not _x_ => (_x_ -> false)"), "");
+    assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
     assert_eq!(context.execute("let a => not b"), "");
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "false");
