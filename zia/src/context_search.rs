@@ -59,6 +59,7 @@ where
     delta: D,
     caches: C,
     syntax_evaluating: HashSet<SharedSyntax<C>>,
+    concept_inferring: HashSet<S::ConceptId>,
     bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
     phantom: PhantomData<SDCD>,
     phantom2: PhantomData<CCI>,
@@ -168,7 +169,11 @@ where
     fn reduce_concept(&self, id: &S::ConceptId) -> ReductionResult<C::RR> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta.as_ref(), *id);
-        self.infer_reduction(&concept).or_else(|| {
+        if self.concept_inferring.contains(id) {
+            None
+        } else {
+            self.infer_reduction(&concept)
+        }.or_else(|| {
             let n = concept.get_reduction()?;
             if self.is_leaf_variable(&n) {
                 self.variable_mask.get(n).cloned()
@@ -615,8 +620,9 @@ where
         let variable_condition_syntax =
             Syntax::<C>::new_leaf_variable(variable_condition_id).share();
         let cache = <C as ContextCache>::SharedReductionCache::default();
-        let spawned_context_search =
+        let mut spawned_context_search =
             self.spawn(&cache, D::from_nested(spawned_delta));
+        spawned_context_search.concept_inferring.insert(concept);
         let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
             Syntax::<C>::new_pair(
                 condition.clone(),
@@ -1136,6 +1142,7 @@ where
         VML: VariableMaskList,
     {
         ContextSearch::<'s, 'v> {
+            concept_inferring: self.concept_inferring.clone(),
             bound_variable_syntax: self.bound_variable_syntax,
             caches: self.caches.spawn(cache),
             delta,
@@ -1238,8 +1245,8 @@ where
             bound_variable_syntax,
         }: ContextReferences<'c, 's, 'v, S, C, D>,
     ) -> Self {
-        // simple_logger::init().unwrap_or(());
         Self {
+            concept_inferring: HashSet::default(),
             bound_variable_syntax,
             snap_shot,
             variable_mask: VML::from(hashmap! {}).into(),
