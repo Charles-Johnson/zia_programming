@@ -11,17 +11,15 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<usize>; 17] {
+fn concepts() -> [Concept<usize>; 14] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
-    let mut example_concept = (SpecificPart::default(), 7).into();
-    let variable_concept = (SpecificPart::free_variable(), 9).into();
-    let mut concept_b = (SpecificPart::default(), 10).into();
+    let mut concept_b = (SpecificPart::default(), 7).into();
     let mut reduction_concept = (ConcreteConceptType::Reduction, 4).into();
-    let mut false_concept = (ConcreteConceptType::False, 15).into();
+    let mut false_concept = (ConcreteConceptType::False, 12).into();
     let mut reduces_to_false =
-        Concept::composition_of(16, &mut reduction_concept, &mut false_concept);
+        Concept::composition_of(13, &mut reduction_concept, &mut false_concept);
     let mut result_concept =
         Concept::composition_of(2, &mut concept_b, &mut reduces_to_false);
     let mut implies_result_concept = Concept::composition_of(
@@ -31,11 +29,8 @@ fn concepts() -> [Concept<usize>; 17] {
     );
     let mut cause_implies_result_concept =
         Concept::composition_of(6, &mut concept_a, &mut implies_result_concept);
-    concept_a.make_reduce_to(&mut true_concept);
-    cause_implies_result_concept.make_reduce_to(&mut true_concept);
-    let mut example_composition =
-        Concept::composition_of(8, &mut concept_a, &mut example_concept);
-    example_composition.make_reduce_to(&mut true_concept);
+    concept_a.make_reduce_to(&mut true_concept); // a -> true
+    cause_implies_result_concept.make_reduce_to(&mut true_concept); // a => b -> false
     [
         implication_concept,
         true_concept,
@@ -44,14 +39,11 @@ fn concepts() -> [Concept<usize>; 17] {
         reduction_concept,
         implies_result_concept,
         cause_implies_result_concept,
-        example_concept,
-        example_composition,
-        variable_concept,
         concept_b,
-        (ConcreteConceptType::Precedence, 11).into(),
-        (ConcreteConceptType::Associativity, 12).into(),
-        (ConcreteConceptType::Left, 13).into(),
-        (ConcreteConceptType::Right, 14).into(),
+        (ConcreteConceptType::Precedence, 8).into(),
+        (ConcreteConceptType::Associativity, 9).into(),
+        (ConcreteConceptType::Left, 10).into(),
+        (ConcreteConceptType::Right, 11).into(),
         false_concept,
         reduces_to_false,
     ]
@@ -78,6 +70,6 @@ fn inferred_negation() {
         bound_variable_syntax: &bound_variable_syntax,
     });
     let (reduction, _) =
-        context_search.find_examples_of_inferred_reduction(10.into()).unwrap();
-    assert_eq!(reduction.get_concept().unwrap(), 15.into());
+        context_search.find_examples_of_inferred_reduction(7.into()).unwrap();
+    assert_eq!(reduction.get_concept().unwrap(), 12.into());
 }
