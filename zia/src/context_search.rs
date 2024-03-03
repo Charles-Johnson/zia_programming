@@ -35,9 +35,7 @@ use crate::{
 use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    marker::PhantomData,
+    collections::{HashMap, HashSet}, fmt::Debug, iter::once, marker::PhantomData
 };
 
 #[derive(Debug)]
@@ -646,12 +644,8 @@ where
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
-        let true_concept = spawned_context_search
-            .snap_shot
-            .read_concept(spawned_context_search.delta.as_ref(), true_id);
-        let truths = true_concept.find_what_reduces_to_it();
         let irp = implication_rule_pattern.share();
-        let t = truths.collect();
+        let t = spawned_context_search.concepts_equivalent_to(true_id);
         let x = spawned_context_search
             .find_examples(&irp, &t)
             .into_iter()
@@ -709,67 +703,43 @@ where
                             .read_concept(self.delta.as_ref(), *equivalent_concept_id);
                         equivalent_concept.get_composition()
                     }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
-                        let equivalent_left = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), equivalent_left_id);
-                        // TODO handle case when a concept implicitly reduces to `equivalent_left`
-                        let mut equivalent_left_equivalence_set: HashSet<S::ConceptId> =
-                            equivalent_left
-                                .find_what_reduces_to_it()
-                                .collect();
-                        equivalent_left_equivalence_set.insert(equivalent_left_id);
-                        let left_examples = self.find_examples(
-                            &left,
-                            &equivalent_left_equivalence_set,
-                        );
-                        let equivalent_right = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), equivalent_right_id);
-                        // TODO handle case when a concept implicitly reduces to `equivalent_right`
-                        let mut equivalent_right_equivalence_set: HashSet<
-                            S::ConceptId,
-                        > = equivalent_right
-                            .find_what_reduces_to_it()
-                            .collect();
-                        equivalent_right_equivalence_set
-                            .insert(equivalent_right_id);
-                        let right_examples = self.find_examples(
-                            &right,
-                            &equivalent_right_equivalence_set,
-                        );
-                        left_examples.into_iter().flat_map(|left_example| {
+                        let left_equivalence_set = self.concepts_equivalent_to(equivalent_left_id);
+                        let right_equivalence_set = self.concepts_equivalent_to(equivalent_right_id);
+                        let left_examples = self.find_examples(&left, &left_equivalence_set);
+                        let right_examples = self.find_examples(&right, &right_equivalence_set);
+                        left_examples.iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
                             let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
                             // TODO: check whether mutable_right also needs to be subsituted using left_example.example
                             substitute::<Syntax<C>>(mutable_right, &left_example.generalisation);
                             if self.contains_bound_variable_syntax(&right_clone) {
-                                self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
+                                right_examples.iter().cloned().map(|mut right_example| {
                                     // TODO: does the same need to be done for `right_example.example` and `left_example.example` ?
                                     right_example.generalisation.extend(left_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
                                     right_example
-                                }).collect::<Vec<_>>()
-                            } else if self.recursively_reduce(&right_clone).0.get_concept().map_or(false, |id| equivalent_right_equivalence_set.contains(&id)) {
-                                vec![left_example]
+                                }).collect::<Vec<ExampleSubstitutions<C>>>()
+                            } else if self.recursively_reduce(&right_clone).0.get_concept().map_or(false, |id| right_equivalence_set.contains(&id)) {
+                                vec![left_example.clone()]
                             } else {
                                 vec![]
                             }
-                        }).chain(right_examples.into_iter().flat_map(|right_example| {
+                        }).chain(right_examples.iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
                             let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
                             // TODO: check whether mutable_left also needs to be subsituted using right_example.example
                             substitute::<Syntax<C>>(mutable_left, &right_example.generalisation);
                             if self.contains_bound_variable_syntax(&left_clone) {
-                                self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
+                                left_examples.iter().cloned().map(|mut left_example| {
                                     // TODO: does the same need to be done for `right_example.example` and `left_example.example` ?
                                     left_example.generalisation.extend(right_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
                                     left_example
-                                }).collect::<Vec<_>>()
-                            } else if self.recursively_reduce(&left_clone).0.get_concept().map_or(false, |id| equivalent_left_equivalence_set.contains(&id)) {
-                                vec![right_example]
+                                }).collect::<Vec<ExampleSubstitutions<C>>>()
+                            } else if self.recursively_reduce(&left_clone).0.get_concept().map_or(false, |id| left_equivalence_set.contains(&id)) {
+                                vec![right_example.clone()]
                             } else {
                                 vec![]
                             }
-                        })).collect::<Vec<_>>()
+                        })).collect::<Vec<ExampleSubstitutions<C>>>()
                     }).collect()
                 },
                 (true, false) => self.find_examples_of_half_generalisation(
@@ -800,7 +770,16 @@ where
                 .collect()
         }
     }
-
+    fn concepts_equivalent_to(&self, equivalent_id: S::ConceptId) -> HashSet<S::ConceptId> {
+        let equivalent_concept = self
+            .snap_shot
+            .read_concept(self.delta.as_ref(), equivalent_id);
+        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+        once(equivalent_id).chain( 
+            equivalent_concept
+                .find_what_reduces_to_it())
+                .collect()
+    }
     fn find_examples_of_half_generalisation(
         &self,
         generalisated_part: &SharedSyntax<C>,
@@ -1230,6 +1209,7 @@ pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
     reason: RR,
 }
 
+#[derive(Clone)]
 struct ExampleSubstitutions<C: ContextCache> {
     generalisation: Substitutions<SharedSyntax<C>>,
     example: VariableMask<Syntax<C>>
