@@ -42,6 +42,8 @@ fn negated_condition() {
 fn implicitly_negated_condition() {
     let mut context = NEW_CONTEXT.clone();
     assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
+    assert_eq!(context.execute("let not c"), "");
+    assert_eq!(context.execute("c"), "false");
     assert_eq!(context.execute("let a => not b"), "");
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "false");

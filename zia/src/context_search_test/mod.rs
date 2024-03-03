@@ -9,6 +9,7 @@ mod existence_inference_rule;
 mod inference_rule;
 mod inferred_negation;
 mod nested_composition_rule;
+mod not;
 
 use crate::{
     concepts::{Concept, ConceptTrait},
