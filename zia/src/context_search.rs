@@ -582,10 +582,11 @@ where
                 let truths = true_concept.find_what_reduces_to_it();
                 self.find_example(right, &truths.collect()).map(
                     |substitutions| {
+                        // TODO: determine whether substitutions.example should be considered
                         let true_syntax = self.to_ast(&true_id);
                         (
                             true_syntax,
-                            C::RR::existence(substitutions, right.clone()),
+                            C::RR::existence(substitutions.generalisation, right.clone()),
                         )
                     },
                 )
@@ -598,7 +599,7 @@ where
         &self,
         generalisation: &SharedSyntax<C>,
         truths: &HashSet<S::ConceptId>,
-    ) -> Option<Substitutions<SharedSyntax<C>>> {
+    ) -> Option<ExampleSubstitutions<C>> {
         self.find_examples(generalisation, truths).pop()
     }
 
@@ -655,19 +656,20 @@ where
             .find_examples(&irp, &t)
             .into_iter()
             .find_map(|substitutions| {
-                substitutions.get(&variable_condition_syntax).and_then(
+                substitutions.generalisation.get(&variable_condition_syntax).and_then(
                     |condition_syntax| {
+                        let substituted_condition = self.substitute(condition_syntax, &substitutions.example);
                         let (condition_normal_form, reason) =
                             spawned_context_search
-                                .recursively_reduce(condition_syntax);
+                                .recursively_reduce(&substituted_condition);
                         spawned_context_search.is_concrete_type(
                             ConcreteConceptType::True,
                             &condition_normal_form.get_concept()?,
                         )?;
-                        substitutions.get(&variable_reduction_syntax).map(
+                        substitutions.generalisation.get(&variable_reduction_syntax).map(
                             |result| {
                                 (
-                                    result.clone(),
+                                    self.substitute(result, &substitutions.example),
                                     C::RR::inference(
                                         implication_rule_fn(
                                             condition_syntax,
@@ -694,7 +696,7 @@ where
         &self,
         generalisation: &SharedSyntax<C>,
         equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */
-    ) -> Vec<Substitutions<SharedSyntax<C>>> {
+    ) -> Vec<ExampleSubstitutions<C>> {
         if let Some((left, right)) = generalisation.get_expansion() {
             match (
                 self.contains_bound_variable_syntax(&left),
@@ -738,10 +740,12 @@ where
                         left_examples.into_iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
                             let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
-                            substitute::<Syntax<C>>(mutable_right, &left_example);
+                            // TODO: check whether mutable_right also needs to be subsituted using left_example.example
+                            substitute::<Syntax<C>>(mutable_right, &left_example.generalisation);
                             if self.contains_bound_variable_syntax(&right_clone) {
                                 self.find_examples(&right_clone, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
-                                    right_example.extend(left_example.iter().map(|(k, v)| (k.clone(), v.clone())));
+                                    // TODO: does the same need to be done for `right_example.example` and `left_example.example` ?
+                                    right_example.generalisation.extend(left_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
                                     right_example
                                 }).collect::<Vec<_>>()
                             } else if self.recursively_reduce(&right_clone).0.get_concept().map_or(false, |id| equivalent_right_equivalence_set.contains(&id)) {
@@ -752,10 +756,12 @@ where
                         }).chain(right_examples.into_iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
                             let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
-                            substitute::<Syntax<C>>(mutable_left, &right_example);
+                            // TODO: check whether mutable_left also needs to be subsituted using right_example.example
+                            substitute::<Syntax<C>>(mutable_left, &right_example.generalisation);
                             if self.contains_bound_variable_syntax(&left_clone) {
                                 self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
-                                    left_example.extend(right_example.iter().map(|(k, v)| (k.clone(), v.clone())));
+                                    // TODO: does the same need to be done for `right_example.example` and `left_example.example` ?
+                                    left_example.generalisation.extend(right_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
                                     left_example
                                 }).collect::<Vec<_>>()
                             } else if self.recursively_reduce(&left_clone).0.get_concept().map_or(false, |id| equivalent_left_equivalence_set.contains(&id)) {
@@ -786,7 +792,10 @@ where
                 .iter()
                 .map(|c| {
                     let example = self.to_ast(c);
-                    hashmap! {generalisation.clone() => example}
+                    ExampleSubstitutions {
+                        generalisation: hashmap! {generalisation.clone() => example},
+                        example: hashmap!{}
+                    }
                 })
                 .collect()
         }
@@ -798,7 +807,7 @@ where
         non_generalised_part: &SharedSyntax<C>,
         equivalence_set_of_composition: &HashSet<S::ConceptId>,
         non_generalised_hand: Hand,
-    ) -> Vec<Substitutions<SharedSyntax<C>>> {
+    ) -> Vec<ExampleSubstitutions<C>> {
         non_generalised_part.get_concept().map_or_else(
             Vec::new,
             |non_generalised_id| {
@@ -808,16 +817,36 @@ where
                 let examples =
                     non_generalised_concept.iter_hand_of(non_generalised_hand);
                 examples
-                    .filter_map(|(generalised_hand, composition)| {
-                        equivalence_set_of_composition
+                    .flat_map(|(generalised_hand, composition)| {
+                        let mut generalised_hands_and_substitutions = vec![];
+                        if equivalence_set_of_composition
                             .contains(&composition)
-                            .then_some(generalised_hand)
+                            {
+                            generalised_hands_and_substitutions.push((generalised_hand, HashMap::new()));
+                        }
+                        for equivalent_composition in equivalence_set_of_composition {
+                            let composition_concept = self.snap_shot.read_concept(self.delta.as_ref(), *equivalent_composition);
+                            if let Some((left, right)) = composition_concept.get_composition() {
+                                let equivalent_hand = match non_generalised_hand {
+                                    Hand::Left => left,
+                                    Hand::Right => right
+                                };
+                                if self.is_free_variable(&equivalent_hand) {
+                                    generalised_hands_and_substitutions.push((generalised_hand, hashmap!{equivalent_hand => non_generalised_part.clone()}))
+                                }
+                            }
+                        }
+                        generalised_hands_and_substitutions
                     })
-                    .filter_map(|generalised_hand| {
+                    .filter_map(|(generalised_hand, example_substitutions)| {
                         Syntax::<C>::check_example(
                             &self.to_ast(&generalised_hand),
                             generalisated_part,
                         )
+                        .map(|generalisation_substitutions| ExampleSubstitutions {
+                            generalisation: generalisation_substitutions,
+                            example: example_substitutions
+                        })
                         .or_else(|| {
                             // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
                             let mut equivalence_set =
@@ -1199,6 +1228,11 @@ pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
     value: Syntax::SharedSyntax,
     reduction: Syntax::SharedSyntax,
     reason: RR,
+}
+
+struct ExampleSubstitutions<C: ContextCache> {
+    generalisation: Substitutions<SharedSyntax<C>>,
+    example: VariableMask<Syntax<C>>
 }
 
 #[derive(PartialEq, Debug, Eq)]
