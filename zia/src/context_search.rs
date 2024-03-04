@@ -786,7 +786,7 @@ where
         let equivalent_concept = self
             .snap_shot
             .read_concept(self.delta.as_ref(), equivalent_id);
-        // TODO handle case when a concept implicitly reduces to `equivalent_right`
+        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
         let mut equivalence_set: HashSet<
             S::ConceptId,
         > = equivalent_concept
