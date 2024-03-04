@@ -714,17 +714,7 @@ where
                             &left,
                             &equivalent_left_equivalence_set,
                         );
-                        let equivalent_right = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), equivalent_right_id);
-                        // TODO handle case when a concept implicitly reduces to `equivalent_right`
-                        let mut equivalent_right_equivalence_set: HashSet<
-                            S::ConceptId,
-                        > = equivalent_right
-                            .find_what_reduces_to_it()
-                            .collect();
-                        equivalent_right_equivalence_set
-                            .insert(equivalent_right_id);
+                        let equivalent_right_equivalence_set = self.equivalent_concepts_to(equivalent_right_id);
                         let right_examples = self.find_examples(
                             &right,
                             &equivalent_right_equivalence_set,
