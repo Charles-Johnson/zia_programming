@@ -700,16 +700,11 @@ where
                         self.composition_of_concept(*equivalent_concept_id)
                     }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
                         let equivalent_left_equivalence_set = self.equivalent_concepts_to(equivalent_left_id);
-                        let left_examples = self.find_examples(
+                        let equivalent_right_equivalence_set = self.equivalent_concepts_to(equivalent_right_id);
+                        self.find_examples(
                             &left,
                             &equivalent_left_equivalence_set,
-                        );
-                        let equivalent_right_equivalence_set = self.equivalent_concepts_to(equivalent_right_id);
-                        let right_examples = self.find_examples(
-                            &right,
-                            &equivalent_right_equivalence_set,
-                        );
-                        left_examples.into_iter().flat_map(|left_example| {
+                        ).into_iter().flat_map(|left_example| {
                             let mut right_clone = right.clone();
                             let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
                             // TODO: check whether mutable_right also needs to be subsituted using left_example.example
@@ -725,7 +720,10 @@ where
                             } else {
                                 vec![]
                             }
-                        }).chain(right_examples.into_iter().flat_map(|right_example| {
+                        }).chain(self.find_examples(
+                            &right,
+                            &equivalent_right_equivalence_set,
+                        ).into_iter().flat_map(|right_example| {
                             let mut left_clone = left.clone();
                             let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
                             // TODO: check whether mutable_left also needs to be subsituted using right_example.example
