@@ -646,14 +646,10 @@ where
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
-        let true_concept = spawned_context_search
-            .snap_shot
-            .read_concept(spawned_context_search.delta.as_ref(), true_id);
-        let truths = true_concept.find_what_reduces_to_it();
+        let truths = self.equivalent_concepts_to(true_id);
         let irp = implication_rule_pattern.share();
-        let t = truths.collect();
         let x = spawned_context_search
-            .find_examples(&irp, &t)
+            .find_examples(&irp, &truths)
             .into_iter()
             .find_map(|substitutions| {
                 substitutions.generalisation.get(&variable_condition_syntax).and_then(
