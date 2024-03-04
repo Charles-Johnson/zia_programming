@@ -720,26 +720,7 @@ where
                             } else {
                                 vec![]
                             }
-                        }).chain(self.find_examples(
-                            &right,
-                            &equivalent_right_equivalence_set,
-                        ).into_iter().flat_map(|right_example| {
-                            let mut left_clone = left.clone();
-                            let mutable_left = Syntax::<C>::make_mut(&mut left_clone);
-                            // TODO: check whether mutable_left also needs to be subsituted using right_example.example
-                            substitute::<Syntax<C>>(mutable_left, &right_example.generalisation);
-                            if self.contains_bound_variable_syntax(&left_clone) {
-                                self.find_examples(&left_clone, &equivalent_left_equivalence_set).into_iter().map(|mut left_example| {
-                                    // TODO: does the same need to be done for `right_example.example` and `left_example.example` ?
-                                    left_example.generalisation.extend(right_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
-                                    left_example
-                                }).collect::<Vec<_>>()
-                            } else if self.recursively_reduce(&left_clone).0.get_concept().map_or(false, |id| equivalent_left_equivalence_set.contains(&id)) {
-                                vec![right_example]
-                            } else {
-                                vec![]
-                            }
-                        })).collect::<Vec<_>>()
+                        }).collect::<Vec<_>>()
                     }).collect()
                 },
                 (true, false) => self.find_examples_of_half_generalisation(
