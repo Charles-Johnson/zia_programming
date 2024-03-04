@@ -709,15 +709,7 @@ where
                             .read_concept(self.delta.as_ref(), *equivalent_concept_id);
                         equivalent_concept.get_composition()
                     }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
-                        let equivalent_left = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), equivalent_left_id);
-                        // TODO handle case when a concept implicitly reduces to `equivalent_left`
-                        let mut equivalent_left_equivalence_set: HashSet<S::ConceptId> =
-                            equivalent_left
-                                .find_what_reduces_to_it()
-                                .collect();
-                        equivalent_left_equivalence_set.insert(equivalent_left_id);
+                        let equivalent_left_equivalence_set = self.equivalent_concepts_to(equivalent_left_id);
                         let left_examples = self.find_examples(
                             &left,
                             &equivalent_left_equivalence_set,
@@ -800,7 +792,20 @@ where
                 .collect()
         }
     }
-
+    fn equivalent_concepts_to(&self, equivalent_id: S::ConceptId) -> HashSet<S::ConceptId> {
+        let equivalent_concept = self
+            .snap_shot
+            .read_concept(self.delta.as_ref(), equivalent_id);
+        // TODO handle case when a concept implicitly reduces to `equivalent_right`
+        let mut equivalence_set: HashSet<
+            S::ConceptId,
+        > = equivalent_concept
+            .find_what_reduces_to_it()
+            .collect();
+        equivalence_set
+            .insert(equivalent_id);
+        equivalence_set
+    }
     fn find_examples_of_half_generalisation(
         &self,
         generalisated_part: &SharedSyntax<C>,
