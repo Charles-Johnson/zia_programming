@@ -448,9 +448,7 @@ where
             }))
         .then(|| {
             if let Some((gl, gr)) = self
-                .snap_shot
-                .read_concept(self.delta.as_ref(), *generalisation)
-                .get_composition()
+                .composition_of_concept(*generalisation)
             {
                 let (l, r) = ast.get_expansion()?;
                 match (self.is_free_variable(&gl), self.is_free_variable(&gr)) {
@@ -538,9 +536,8 @@ where
     }
 
     fn is_leaf_concept(&self, l: &S::ConceptId) -> bool {
-        self.snap_shot
-            .read_concept(self.delta.as_ref(), *l)
-            .get_composition()
+        self
+            .composition_of_concept(*l)
             .is_none()
     }
 
@@ -700,10 +697,7 @@ where
             ) {
                 (true, true) => {
                     equivalence_set.iter().filter_map(|equivalent_concept_id| {
-                        let equivalent_concept = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), *equivalent_concept_id);
-                        equivalent_concept.get_composition()
+                        self.composition_of_concept(*equivalent_concept_id)
                     }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
                         let equivalent_left_equivalence_set = self.equivalent_concepts_to(equivalent_left_id);
                         let left_examples = self.find_examples(
@@ -792,6 +786,9 @@ where
             .insert(equivalent_id);
         equivalence_set
     }
+    fn composition_of_concept(&self, composition_id: S::ConceptId) -> Option<(S::ConceptId, S::ConceptId)> {
+        self.snap_shot.read_concept(self.delta.as_ref(), composition_id).get_composition()
+    }
     fn find_examples_of_half_generalisation(
         &self,
         generalisated_part: &SharedSyntax<C>,
@@ -816,8 +813,7 @@ where
                             generalised_hands_and_substitutions.push((generalised_hand, HashMap::new()));
                         }
                         for equivalent_composition in equivalence_set_of_composition {
-                            let composition_concept = self.snap_shot.read_concept(self.delta.as_ref(), *equivalent_composition);
-                            if let Some((left, right)) = composition_concept.get_composition() {
+                            if let Some((left, right)) = self.composition_of_concept(*equivalent_composition) {
                                 let equivalent_hand = match non_generalised_hand {
                                     Hand::Left => left,
                                     Hand::Right => right
@@ -1029,9 +1025,7 @@ where
             },
             |con| {
                 if let Some((left, right)) = self
-                    .snap_shot
-                    .read_concept(self.delta.as_ref(), con)
-                    .get_composition()
+                    .composition_of_concept(con)
                 {
                     self.combine(
                         &self.expand(&self.to_ast(&left)),
