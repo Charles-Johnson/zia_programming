@@ -55,7 +55,15 @@ fn concepts() -> [Concept<usize>; 16] {
 }
 
 fn labels() -> HashMap<usize, &'static str> {
-    hashmap! {}
+    hashmap! {
+        0 => "=>",
+        1 => "true",
+        3 => "_x_",
+        7 => "not",
+        4 => "->",
+        12 => "false",
+        14 => "c"
+    }
 }
 
 #[test]
@@ -75,6 +83,6 @@ fn not() {
         bound_variable_syntax: &bound_variable_syntax,
     });
     let (reduction, _) =
-        context_search.find_examples_of_inferred_reduction(15.into()).expect("Examples should be found");
+        context_search.find_examples_of_inferred_reduction(14.into()).expect("Examples should be found");
     assert_eq!(reduction.get_concept().unwrap(), 12.into());
 }

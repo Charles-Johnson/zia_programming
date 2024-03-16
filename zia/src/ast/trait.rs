@@ -1,10 +1,13 @@
 use std::{
     borrow::Borrow,
-    collections::HashMap,
     fmt::{Debug, Display},
     hash::Hash,
     ops::Deref,
 };
+
+use maplit::hashmap;
+
+use crate::{and_also::AndAlso, consistent_merge::ConsistentMerge, substitute::Substitutions, variable_mask_list::VariableMask};
 
 pub trait SyntaxTree
 where
@@ -70,5 +73,32 @@ where
     fn check_example(
         example: &Self::SharedSyntax,
         generalisation: &Self::SharedSyntax,
-    ) -> Option<HashMap<Self::SharedSyntax, Self::SharedSyntax>>;
+    ) -> Option<ExampleSubstitutions<Self>>;
+}
+
+#[derive(Debug)]
+pub struct ExampleSubstitutions<S: SyntaxTree> {
+    pub generalisation: Substitutions<S::SharedSyntax>,
+    pub example: VariableMask<S>
+}
+
+impl<S: SyntaxTree> Default for ExampleSubstitutions<S> {
+    fn default() -> Self {
+        Self { generalisation: hashmap! {}, example: hashmap! {} }
+    }
+}
+
+impl<S: SyntaxTree> ConsistentMerge for ExampleSubstitutions<S> {
+    
+    fn consistent_merge(self, other: Self) -> Option<Self::Output> {
+        self.generalisation
+            .consistent_merge(other.generalisation)
+            .and_also_move(self.example.consistent_merge(other.example))
+            .map(|(generalisation, example)| Self {
+                generalisation,
+                example
+            })
+    }
+    
+    type Output = Self;
 }

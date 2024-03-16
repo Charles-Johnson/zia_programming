@@ -97,7 +97,7 @@ macro_rules! impl_syntax_tree {
                 &syntax_tree.node
             }
         }
-
+        use crate::ast::ExampleSubstitutions;
         impl<ConceptId: Clone + Copy + Debug + fmt::Display + Eq + Hash> SyntaxTree for $syntax_tree<ConceptId> {
             type SharedSyntax = $refcounter<Self>;
             type ConceptId = ConceptId;
@@ -224,7 +224,7 @@ macro_rules! impl_syntax_tree {
             fn check_example(
                 example: &Self::SharedSyntax,
                 generalisation: &Self::SharedSyntax,
-            ) -> Option<HashMap<Self::SharedSyntax, Self::SharedSyntax>> {
+            ) -> Option<ExampleSubstitutions<Self>> {
                 match (example.get_expansion(), generalisation.get_expansion()) {
                     (
                         Some((left_example, right_example)),
@@ -236,12 +236,22 @@ macro_rules! impl_syntax_tree {
                         }),
                     (Some(_), None) => generalisation
                         .is_variable()
-                        .then(|| hashmap! {generalisation.clone() => example.clone()}),
+                        .then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {generalisation.clone() => example.clone()},
+                            example: hashmap!{}
+                        }),
                     (None, Some(_)) => None,
                     (None, None) => generalisation
                         .is_variable()
-                        .then(|| hashmap! {generalisation.clone() => example.clone()})
-                        .or_else(|| (example == generalisation).then(|| hashmap! {})),
+                        .then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {generalisation.clone() => example.clone()},
+                            example: hashmap!{}
+                        })
+                        .or_else(|| example.get_concept().and_then(|id| example.is_variable().then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {},
+                            example: hashmap!{id => generalisation.clone()}
+                        })))
+                        .or_else(|| (example == generalisation).then(|| ExampleSubstitutions::default())),
                 }
             }
         }
