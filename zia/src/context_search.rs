@@ -15,22 +15,11 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    and_also::AndAlso,
-    associativity::Associativity,
-    ast::{ExampleSubstitutions, SyntaxTree},
-    concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
-    context_cache::ContextCache,
-    context_delta::{
+    and_also::AndAlso, associativity::Associativity, ast::{ExampleSubstitutions, SyntaxTree}, concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand}, consistent_merge::ConsistentMerge, context_cache::ContextCache, context_delta::{
         DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta,
-    },
-    iteration::Iteration,
-    mixed_concept::MixedConcept,
-    reduction_reason::{
+    }, iteration::Iteration, mixed_concept::MixedConcept, reduction_reason::{
         RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
-    },
-    snap_shot::Reader as SnapShotReader,
-    substitute::substitute,
-    variable_mask_list::{VariableMask, VariableMaskList},
+    }, snap_shot::Reader as SnapShotReader, substitute::substitute, variable_mask_list::{VariableMask, VariableMaskList}
 };
 use log::debug;
 use maplit::{hashmap, hashset};
@@ -691,54 +680,7 @@ where
         equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */
     ) -> Vec<ExampleSubstitutions<Syntax<C>>> {
         if let Some((left, right)) = generalisation.get_expansion() {
-            match (
-                self.contains_bound_variable_syntax(&left),
-                self.contains_bound_variable_syntax(&right),
-            ) {
-                (true, true) => {
-                    equivalence_set.iter().filter_map(|equivalent_concept_id| {
-                        self.composition_of_concept(*equivalent_concept_id)
-                    }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
-                        let equivalent_left_equivalence_set = self.equivalent_concepts_to(equivalent_left_id);
-                        let equivalent_right_equivalence_set = self.equivalent_concepts_to(equivalent_right_id);
-                        self.find_examples(
-                            &left,
-                            &equivalent_left_equivalence_set,
-                        ).into_iter().flat_map(|left_example| {
-                            let mut right_clone = right.clone();
-                            let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
-                            substitute::<Syntax<C>>(mutable_right, &left_example.generalisation);
-                            // `right_clone` now has any generalised variables matched in the example of `left` substituted for
-                            // but may still have some unmatched generalised variables
-                            let substituted_right = self.substitute(&right_clone, &left_example.example);
-                            if self.contains_bound_variable_syntax(&substituted_right) {
-                                self.find_examples(&substituted_right, &equivalent_right_equivalence_set).into_iter().map(|mut right_example| {
-                                    right_example.generalisation.extend(left_example.generalisation.iter().map(|(k, v)| (k.clone(), v.clone())));
-                                    right_example.example.extend(left_example.example.iter().map(|(k, v)| (k.clone(), v.clone())));
-                                    right_example
-                                }).collect::<Vec<_>>()
-                            } else if self.recursively_reduce(&substituted_right).0.get_concept().map_or(false, |id| equivalent_right_equivalence_set.contains(&id)) {
-                                vec![left_example]
-                            } else {
-                                vec![]
-                            }
-                        }).collect::<Vec<_>>()
-                    }).collect()
-                },
-                (true, false) => self.find_examples_of_half_generalisation(
-                    &left,
-                    &right,
-                    equivalence_set,
-                    Hand::Right,
-                ),
-                (false, true) => self.find_examples_of_half_generalisation(
-                    &right,
-                    &left,
-                    equivalence_set,
-                    Hand::Left,
-                ),
-                (false, false) => vec![],
-            }
+            self.find_examples_of_branched_generalisation(&left, &right, equivalence_set)
         } else {
             debug_assert!(self.contains_bound_variable_syntax(generalisation));
             equivalence_set
@@ -752,6 +694,55 @@ where
                 })
                 .collect()
         }
+    }
+    fn find_examples_of_branched_generalisation(&self, left: &SharedSyntax<C>, right: &SharedSyntax<C>, equivalence_set: &HashSet<S::ConceptId>) -> Vec<ExampleSubstitutions<Syntax<C>>> {
+            match (
+                self.contains_bound_variable_syntax(left),
+                self.contains_bound_variable_syntax(right),
+            ) {
+                (true, true) => { 
+                    equivalence_set.iter().filter_map(|equivalent_concept_id| {
+                        self.composition_of_concept(*equivalent_concept_id)
+                    }).flat_map(|(equivalent_left_id, equivalent_right_id)| {
+                        let equivalent_left_equivalence_set = self.equivalent_concepts_to(equivalent_left_id);
+                        let equivalent_right_equivalence_set = self.equivalent_concepts_to(equivalent_right_id);
+                        self.find_examples(
+                            left,
+                            &equivalent_left_equivalence_set,
+                        ).into_iter().flat_map(|left_example| {
+                            let mut right_clone = right.clone();
+                            let mutable_right = Syntax::<C>::make_mut(&mut right_clone);
+                            substitute::<Syntax<C>>(mutable_right, &left_example.generalisation);
+                            // `right_clone` now has any generalised variables matched in the example of `left` substituted for
+                            // but may still have some unmatched generalised variables
+                            let substituted_right = self.substitute(&right_clone, &left_example.example);
+                            if self.contains_bound_variable_syntax(&substituted_right) {
+                                self.find_examples(&substituted_right, &equivalent_right_equivalence_set).into_iter().filter_map(|right_example| {
+                                    right_example.consistent_merge(left_example.clone())
+                                }).collect::<Vec<_>>()
+                            } else if self.recursively_reduce(&substituted_right).0.get_concept().map_or(false, |id| equivalent_right_equivalence_set.contains(&id)) {
+                                vec![left_example]
+                            } else {
+                                vec![]
+                            }
+                        }).collect::<Vec<_>>()
+                    }).collect()
+                },
+                (true, false) => self.find_examples_of_half_generalisation(
+                    left,
+                    right,
+                    equivalence_set,
+                    Hand::Right,
+                ),
+                (false, true) => self.find_examples_of_half_generalisation(
+                    right,
+                    left,
+                    equivalence_set,
+                    Hand::Left,
+                ),
+                (false, false) => vec![],
+            }
+
     }
     fn equivalent_concepts_to(&self, equivalent_id: S::ConceptId) -> HashSet<S::ConceptId> {
         let equivalent_concept = self
@@ -791,22 +782,11 @@ where
                         if equivalence_set_of_composition
                             .contains(&composition)
                             {
-                            generalised_hands_and_substitutions.push((example_hand, HashMap::new()));
-                        }
-                        for equivalent_composition in equivalence_set_of_composition {
-                            if let Some((left, right)) = self.composition_of_concept(*equivalent_composition) {
-                                let equivalent_hand = match non_generalised_hand {
-                                    Hand::Left => left,
-                                    Hand::Right => right
-                                };
-                                if self.is_free_variable(&equivalent_hand) {
-                                    generalised_hands_and_substitutions.push((example_hand, hashmap!{equivalent_hand => non_generalised_part.clone()}))
-                                }
-                            }
+                            generalised_hands_and_substitutions.push(example_hand);
                         }
                         generalised_hands_and_substitutions
                     })
-                    .filter_map(|(example_hand, example_substitutions)| {
+                    .filter_map(|example_hand| {
                         let example_hand_syntax = self.to_ast(&example_hand);
                         Syntax::<C>::check_example(
                             &example_hand_syntax,

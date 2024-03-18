@@ -76,7 +76,7 @@ where
     ) -> Option<ExampleSubstitutions<Self>>;
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExampleSubstitutions<S: SyntaxTree> {
     pub generalisation: Substitutions<S::SharedSyntax>,
     pub example: VariableMask<S>
