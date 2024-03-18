@@ -11,7 +11,7 @@ use crate::{
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<usize>; 16] {
+fn concepts() -> [Concept<usize>; 17] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut variable = (SpecificPart::free_variable(), 3).into();
@@ -27,7 +27,7 @@ fn concepts() -> [Concept<usize>; 16] {
         &mut implication_concept,
         &mut result_concept,
     );
-    let mut not_variable = Concept::composition_of(14, &mut not, &mut variable);
+    let mut not_variable = Concept::composition_of(16, &mut not, &mut variable);
     let mut cause_implies_result_concept =
         Concept::composition_of(6, &mut not_variable, &mut implies_result_concept);
     let mut concept_c = (SpecificPart::default(), 14).into();
@@ -50,7 +50,8 @@ fn concepts() -> [Concept<usize>; 16] {
         false_concept,
         reduces_to_false,
         concept_c,
-        not_concept_c
+        not_concept_c,
+        not_variable
     ]
 }
 
