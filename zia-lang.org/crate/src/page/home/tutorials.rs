@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<7>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<6>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -134,14 +134,8 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<7>) = (
                 expected_evaluation: "true"
             },
             TutorialStep {
-                command: "let not false",
-                explanation: "Define `not` i.e. not false is true",
-                #[cfg(test)]
-                expected_evaluation: ""
-            },
-            TutorialStep {
-                command: "let not true -> false",
-                explanation: "Another rule for not",
+                command: "let (not _x_) => _x_ -> false",
+                explanation: "If the negation of a predicate is true then the predicate itself is false",
                 #[cfg(test)]
                 expected_evaluation: ""
             },

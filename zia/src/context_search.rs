@@ -606,17 +606,20 @@ where
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
         let variable_condition_syntax =
             Syntax::<C>::new_leaf_variable(variable_condition_id).share();
+        let variable_result_id = spawned_delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+        let variable_result_syntax =Syntax::<C>::new_leaf_variable(variable_result_id).share(); 
         let cache = <C as ContextCache>::SharedReductionCache::default();
         let mut spawned_context_search =
             self.spawn(&cache, D::from_nested(spawned_delta));
         spawned_context_search.concept_inferring.insert(concept);
-        let implication_rule_fn = |condition: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax, reduction: &<<<C as ContextCache>::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax| {
+        let implication_syntax = spawned_context_search.to_ast(&implication_id); 
+        let implication_rule_fn = |condition: &SharedSyntax<C>, prereduction: &SharedSyntax<C>, reduction:&SharedSyntax<C>| {
             Syntax::<C>::new_pair(
                 condition.clone(),
                 Syntax::<C>::new_pair(
-                    spawned_context_search.to_ast(&implication_id),
+                    implication_syntax.clone(),
                     Syntax::<C>::new_pair(
-                        spawned_context_search.to_ast(&concept),
+                        prereduction.clone(),
                         Syntax::<C>::new_pair(
                             reduction_operator.clone(),
                             reduction.clone(),
@@ -625,8 +628,10 @@ where
                 ).share()
             )
         };
+        let concept_syntax = spawned_context_search.to_ast(&concept); 
         let implication_rule_pattern = implication_rule_fn(
             &variable_condition_syntax,
+            &concept_syntax,
             &variable_reduction_syntax,
         );
         let true_id = spawned_context_search
@@ -655,6 +660,7 @@ where
                                     C::RR::inference(
                                         implication_rule_fn(
                                             condition_syntax,
+                                            &concept_syntax,
                                             result,
                                         )
                                         .share(),
@@ -667,10 +673,45 @@ where
                         )
                     },
                 )
+            }).or_else(|| {
+                spawned_context_search.find_examples(&Syntax::<C>::new_pair(variable_condition_syntax.clone(), Syntax::<C>::new_pair(implication_syntax.clone(), variable_result_syntax.clone()).share()).share(), &truths).into_iter().flat_map(|mut substitutions| {
+                    let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
+                    let mut variables_generalised = HashMap::new();
+                    let generalised_condition = self.generalise(
+                        substitutions.generalisation.remove(&variable_condition_syntax).expect("Substitution should have been found for condition syntax"),
+                        &mut spawned_delta,
+                        &mut variables_generalised
+                    );
+                    let cache = <C as ContextCache>::SharedReductionCache::default();
+                    let mut spawned_context_search =
+                        self.spawn(&cache, D::from_nested(spawned_delta));
+                    spawned_context_search.concept_inferring.insert(concept);
+                    spawned_context_search.find_examples(&generalised_condition, &truths).into_iter().map(|condition_examples| {
+                        let inferred_result = self.substitute(&substitutions.generalisation[&variable_result_syntax], &variables_generalised.iter().map(|(k, v)| (k.clone(), condition_examples.generalisation[v].clone())).collect());
+                        // self.find_examples_of_inferred_reduction(concept)
+                        todo!("spawn context search with inferred result set to true in spawned delta and call `find_examples_of_inferred_reduction`"); 
+                    }).collect::<Vec<_>>()
+                }).next()
             });
         x
     }
 
+    fn generalise(&self, syntax: SharedSyntax<C>, delta: &mut NestedContextDelta<CCI, SDCD, D>, variable_mask: &mut VariableMask<Syntax<C>>) -> SharedSyntax<C> {
+        if let Some((left, right)) = syntax.get_expansion() {
+            let new_left = self.generalise(left, delta, variable_mask);
+            let new_right = self.generalise(right, delta, variable_mask);
+            Syntax::<C>::new_pair(new_left, new_right).share();
+        } else if syntax.is_leaf_variable() {
+            let variable_id = syntax.get_concept().expect("Syntax to generalise must have free variables that have assigned concepts"); // TODO: prevent that panicking
+            let new_syntax = variable_mask.get(&variable_id).cloned().unwrap_or_else(|| {
+                let bound_variable_id = delta.insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+                Syntax::<C>::new_leaf_variable(bound_variable_id).share()
+            });
+            return new_syntax;
+        }
+        syntax
+    }
+    
     // TODO Lazily compute the concepts that are equivalent to a given normal form
     // until a required number of examples are found
     /// `generalisation` needs to contain free variables
