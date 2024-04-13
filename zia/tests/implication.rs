@@ -19,7 +19,6 @@ extern crate simple_logger;
 extern crate test;
 extern crate zia;
 
-use simple_logger::init_with_level;
 use test::Bencher;
 use zia::multi_threaded::NEW_CONTEXT;
 
@@ -47,6 +46,15 @@ fn implicitly_negated_condition() {
     assert_eq!(context.execute("let a => not b"), "");
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "false");
+}
+
+#[test]
+fn implied_reduction_via_implication_chain() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let (a _x_) => not (b _x_)"), "");
+    assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
+    assert_eq!(context.execute("let a c"), "");
+    assert_eq!(context.execute("b c"), "false");
 }
 
 fn partial_order_transitivity() {
