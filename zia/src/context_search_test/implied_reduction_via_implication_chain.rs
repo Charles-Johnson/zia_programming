@@ -13,7 +13,7 @@ use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 use pretty_assertions::assert_eq;
 
-fn concepts() -> [Concept<usize>; 25] {
+fn concepts() -> [Concept<usize>; 26] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
@@ -50,6 +50,7 @@ fn concepts() -> [Concept<usize>; 25] {
     let mut implies_another_variable_reduces_to_false = Concept::composition_of(23, &mut implication_concept, &mut another_variable_reduces_to_false);
     let mut not_another_variable_implies_another_variable_reduces_to_false = Concept::composition_of(24, &mut not_another_variable, &mut implies_another_variable_reduces_to_false);
     not_another_variable_implies_another_variable_reduces_to_false.make_reduce_to(&mut true_concept);
+    let b_c = Concept::composition_of(25, &mut concept_b, &mut example_concept);
     [
         implication_concept,
         true_concept,
@@ -75,7 +76,8 @@ fn concepts() -> [Concept<usize>; 25] {
         reduces_to_false,
         another_variable_reduces_to_false,
         implies_another_variable_reduces_to_false,
-        not_another_variable_implies_another_variable_reduces_to_false
+        not_another_variable_implies_another_variable_reduces_to_false,
+        b_c
     ]
 }
 
@@ -114,13 +116,9 @@ fn inference_rule() {
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });
-    let example_syntax = Syntax::new_pair(
-        context_search.to_ast(&10),
-        context_search.to_ast(&7),       
-    );
     let false_syntax = context_search.to_ast(&19);
     assert_eq!(
-        context_search.reduce(&example_syntax.into()).unwrap().0,
+        context_search.find_examples_of_inferred_reduction(25.into()).unwrap().0,
         false_syntax.into(),
     );
 }
