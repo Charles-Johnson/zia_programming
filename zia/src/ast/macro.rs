@@ -65,10 +65,11 @@ macro_rules! impl_syntax_tree {
                     "{}",
                     self.syntax.clone().unwrap_or_else(|| self
                         .get_expansion()
-                        .map_or_else(
-                            || "".into(),
+                        .map(
                             |(left, right)| left.to_string() + " " + &right.to_string()
-                        ))
+                        )
+                        .expect(&format!("Tried to display syntax ({:?}) without symbols", self))
+                    )
                 )
             }
         }
@@ -115,16 +116,17 @@ macro_rules! impl_syntax_tree {
             }
 
             fn new_constant_concept(concept_id: impl Into<Self::ConceptId>) -> Self {
+                let concept_id = concept_id.into();
                 Self {
-                    syntax: None,
-                    concept: Some(concept_id.into()),
+                    syntax: Some(format!("constant {concept_id}")),
+                    concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Constant),
                 }
             }
 
             fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self {
                 Self {
-                    syntax: None,
+                    syntax: Some(format!("quantifier {concept_id}")),
                     concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier),
                 }
@@ -140,7 +142,7 @@ macro_rules! impl_syntax_tree {
 
             fn new_leaf_variable(concept_id: Self::ConceptId) -> Self {
                 Self {
-                    syntax: None,
+                    syntax: Some(format!("variable {concept_id}")),
                     concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
                 }
