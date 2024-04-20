@@ -4,7 +4,7 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{
-        Composition, DirectConceptDelta, NestedContextDelta, NewConceptDelta,
+        Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
         SharedDelta, ValueChange,
     },
     errors::ZiaResult,
@@ -23,10 +23,10 @@ pub struct ContextUpdater<
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 > {
     pub cache: &'a mut C,
-    pub delta: &'a mut NestedContextDelta<S::ConceptId, SDCD, D>,
+    pub delta: &'a mut NestedDelta<S::ConceptId, SDCD, D>,
     pub snap_shot: &'a S,
     pub phantom: PhantomData<D>,
 }
@@ -39,7 +39,7 @@ impl<
             + AsRef<DirectConceptDelta<S::ConceptId>>
             + From<DirectConceptDelta<S::ConceptId>>
             + Debug,
-        D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
     > ContextUpdater<'a, S, C, SDCD, D>
 where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:

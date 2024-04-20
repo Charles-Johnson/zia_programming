@@ -1,6 +1,6 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 fn comparison_existence_implication_rule_test() {
     let context_cache = MultiThreadedContextCache::default();
     let context_delta =
-        NestedContextDelta::<_, SharedDirectConceptDelta<_>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<_>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

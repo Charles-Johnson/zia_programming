@@ -1,7 +1,7 @@
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
@@ -74,11 +74,8 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn not() {
     let context_cache = MultiThreadedContextCache::default();
-    let context_delta = NestedContextDelta::<
-        _,
-        SharedDirectConceptDelta<ConceptId>,
-        _,
-    >::default();
+    let context_delta =
+        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

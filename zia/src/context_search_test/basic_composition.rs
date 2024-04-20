@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 #[test]
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedContextDelta::<
+    let delta = NestedDelta::<
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,

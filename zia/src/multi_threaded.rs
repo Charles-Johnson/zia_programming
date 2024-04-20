@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
+    context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
@@ -35,11 +35,8 @@ lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new().unwrap();
 }
 
-type MultiThreadedContextDelta<CCI> = NestedContextDelta<
-    CCI,
-    SharedDirectConceptDelta<CCI>,
-    SharedContextDelta<CCI>,
->;
+type MultiThreadedContextDelta<CCI> =
+    NestedDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
 
 #[derive(Debug)]
 pub struct SharedContextDelta<CCI: MixedConcept>(

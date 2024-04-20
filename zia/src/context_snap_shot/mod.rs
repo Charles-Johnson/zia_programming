@@ -26,7 +26,7 @@ use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType, SpecificPart},
     context_delta,
     context_delta::{
-        Composition, ConceptDelta, DirectConceptDelta, NestedContextDelta,
+        Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
         NewConceptDelta, NewDirectConceptDelta, SharedDelta, ValueChange,
     },
     delta::Apply,
@@ -250,12 +250,10 @@ impl ContextSnapShot {
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>>
             + Debug,
-        D: SharedDelta<
-            NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>,
-        >,
+        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<ConceptId, SDCD, D>,
+        delta: &NestedDelta<ConceptId, SDCD, D>,
         s: &str,
     ) -> Option<ConceptId> {
         delta.get_string(s).map_or_else(
@@ -294,10 +292,10 @@ impl ContextSnapShot {
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>>
             + Debug,
-        D: SharedDelta<NestedDelta = NestedContextDelta<ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<ConceptId, SDCD, D>,
+        delta: &NestedDelta<ConceptId, SDCD, D>,
         c: ConceptId,
     ) -> Option<ConceptId> {
         let concept = self.read_concept(delta, c);
@@ -335,10 +333,10 @@ where
     type MixedConcept<'a> = Mixed<'a>;
 
     fn concept_from_label<
-        D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.get_string_concept(delta, s)
@@ -354,10 +352,10 @@ where
     }
 
     fn get_label<
-        D: SharedDelta<NestedDelta = NestedContextDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
         concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
@@ -374,12 +372,10 @@ where
     }
 
     fn concrete_concept_id<
-        D: SharedDelta<
-            NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>,
-        >,
+        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         let mut id = None;
@@ -408,12 +404,10 @@ where
     }
 
     fn concrete_concept_type<
-        D: SharedDelta<
-            NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>,
-        >,
+        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
     >(
         &self,
-        delta: &NestedContextDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()
@@ -430,12 +424,10 @@ where
 {
     #[allow(clippy::too_many_lines)]
     fn apply<
-        D: SharedDelta<
-            NestedDelta = NestedContextDelta<concept_id::ConceptId, SDCD, D>,
-        >,
+        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
     >(
         &mut self,
-        delta: NestedContextDelta<Self::ConceptId, SDCD, D>,
+        delta: NestedDelta<Self::ConceptId, SDCD, D>,
     ) {
         debug_assert!(self.previously_uncommitted_concepts.is_empty());
         for (concept_id, concept_delta) in delta.concepts_to_apply_in_order() {

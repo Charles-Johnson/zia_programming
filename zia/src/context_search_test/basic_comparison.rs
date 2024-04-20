@@ -1,6 +1,6 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 #[test]
 fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedContextDelta::<
+    let delta = NestedDelta::<
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,

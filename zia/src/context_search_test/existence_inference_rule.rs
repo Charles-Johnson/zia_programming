@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
@@ -32,7 +32,7 @@ type ReductionReason = MultiThreadedReductionReason<Syntax>;
 fn existence_inference_rule() {
     let context_cache = MultiThreadedContextCache::default();
     let context_delta =
-        NestedContextDelta::<_, SharedDirectConceptDelta<_>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<_>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

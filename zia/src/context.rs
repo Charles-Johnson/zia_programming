@@ -21,7 +21,7 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::{self, ContextCache},
     context_delta::{
-        DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta,
+        DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
     context_search::{Comparison, ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
@@ -56,14 +56,14 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     snap_shot: S,
     delta: D,
     cache: C,
     new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
     bounded_variable_syntax: HashSet<SharedSyntax<C>>,
-    _phantom: PhantomData<VML>,
+    phantom2: PhantomData<VML>,
     phantom: PhantomData<SDCD>
 }
 
@@ -85,12 +85,12 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     fn clone(&self) -> Self {
         Self {
             delta: D::default(),
-            _phantom: self._phantom,
+            phantom2: self.phantom2,
             phantom: self.phantom,
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
@@ -113,7 +113,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     pub fn new() -> ZiaResult<Self> {
         let mut cont = Self::default();
@@ -951,7 +951,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     #[must_use]
     fn default() -> Self {
@@ -961,7 +961,7 @@ where
             cache: C::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
-            _phantom: PhantomData,
+            phantom2: PhantomData,
             phantom: PhantomData
         }
     }
@@ -980,7 +980,7 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     fn from(snap_shot: S) -> Self {
         Self {

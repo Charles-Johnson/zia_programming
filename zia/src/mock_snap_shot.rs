@@ -1,7 +1,7 @@
 use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType},
     context_delta::{
-        DirectConceptDelta, NestedContextDelta, SharedDelta, ValueChange,
+        DirectConceptDelta, NestedDelta, SharedDelta, ValueChange,
     },
     context_search_test::check_order,
     delta::Apply,
@@ -91,7 +91,7 @@ impl MockSnapShot {
 impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
     fn apply<
         D: SharedDelta<
-            NestedDelta = NestedContextDelta<
+            NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
@@ -99,7 +99,7 @@ impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         >,
     >(
         &mut self,
-        _: NestedContextDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: NestedDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
     ) {
     }
 }
@@ -122,7 +122,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
 
     fn get_label<
         D: SharedDelta<
-            NestedDelta = NestedContextDelta<
+            NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
@@ -130,7 +130,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         >,
     >(
         &self,
-        delta: &NestedContextDelta<
+        delta: &NestedDelta<
             Self::ConceptId,
             Arc<DirectConceptDelta<ConceptId>>,
             D,
@@ -148,7 +148,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
 
     fn concept_from_label<
         D: SharedDelta<
-            NestedDelta = NestedContextDelta<
+            NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
@@ -156,7 +156,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         >,
     >(
         &self,
-        delta: &NestedContextDelta<
+        delta: &NestedDelta<
             Self::ConceptId,
             Arc<DirectConceptDelta<ConceptId>>,
             D,
@@ -171,7 +171,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
 
     fn concrete_concept_id<
         D: SharedDelta<
-            NestedDelta = NestedContextDelta<
+            NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
@@ -179,11 +179,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         >,
     >(
         &self,
-        _: &NestedContextDelta<
-            Self::ConceptId,
-            Arc<DirectConceptDelta<ConceptId>>,
-            D,
-        >,
+        _: &NestedDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).copied()
@@ -191,7 +187,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
 
     fn concrete_concept_type<
         D: SharedDelta<
-            NestedDelta = NestedContextDelta<
+            NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
@@ -199,11 +195,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
         >,
     >(
         &self,
-        _: &NestedContextDelta<
-            Self::ConceptId,
-            Arc<DirectConceptDelta<ConceptId>>,
-            D,
-        >,
+        _: &NestedDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.concrete_concepts.get_by_left(&concept_id).copied()

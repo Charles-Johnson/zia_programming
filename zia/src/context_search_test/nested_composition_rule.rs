@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -57,7 +57,7 @@ fn labels() -> HashMap<usize, &'static str> {
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        NestedContextDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {

@@ -2,7 +2,7 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedContextDelta::<
+    let delta = NestedDelta::<
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,

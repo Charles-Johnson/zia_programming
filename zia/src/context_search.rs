@@ -22,7 +22,7 @@ use crate::{
     consistent_merge::ConsistentMerge,
     context_cache::ContextCache,
     context_delta::{
-        DirectConceptDelta, NestedContextDelta, NewConceptDelta, SharedDelta,
+        DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
     iteration::Iteration,
     mixed_concept::MixedConcept,
@@ -53,7 +53,7 @@ where
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     snap_shot: &'s S,
     variable_mask: VML::Shared,
@@ -78,8 +78,8 @@ where
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
-        + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedDelta<S::ConceptId, SDCD, D>>
+        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     fn infer_reduction(
         &self,
@@ -507,7 +507,7 @@ where
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let reduction_operator =
             self.concrete_ast(ConcreteConceptType::Reduction)?;
-        let mut spawned_delta = NestedContextDelta::spawn(self.delta.clone());
+        let mut spawned_delta = NestedDelta::spawn(self.delta.clone());
         let variable_reduction_id = spawned_delta
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
         let variable_reduction_syntax =
@@ -1317,8 +1317,8 @@ where
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
     VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedContextDelta<S::ConceptId, SDCD, D>>
-        + SharedDelta<NestedDelta = NestedContextDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedDelta<S::ConceptId, SDCD, D>>
+        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 {
     fn from(
         ContextReferences {

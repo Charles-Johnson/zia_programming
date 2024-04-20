@@ -2,7 +2,7 @@ use crate::{
     ast::impl_syntax_tree,
     context::Context as GenericContext,
     context_cache::impl_cache,
-    context_delta::{DirectConceptDelta, NestedContextDelta, SharedDelta},
+    context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
     context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     errors::ZiaResult,
@@ -30,11 +30,8 @@ pub type Context = GenericContext<
     ContextConceptId,
 >;
 
-type SingleThreadedContextDelta = NestedContextDelta<
-    ContextConceptId,
-    SharedDirectConceptDelta,
-    SharedContextDelta,
->;
+type SingleThreadedContextDelta =
+    NestedDelta<ContextConceptId, SharedDirectConceptDelta, SharedContextDelta>;
 
 #[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
