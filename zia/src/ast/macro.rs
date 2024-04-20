@@ -19,7 +19,6 @@ macro_rules! impl_syntax_tree {
             syntax: Option<String>,
             /// Index of the concept that the syntax may represent.
             concept: Option<ConceptId>,
-            ///
             node: SyntaxNode<$refcounter<Self>>,
         }
 

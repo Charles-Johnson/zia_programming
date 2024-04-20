@@ -252,9 +252,7 @@ where
                         },
                     );
                     let maybe_inner_delta = self.delta.get_mut();
-                    let Some(delta) = maybe_inner_delta else {
-                        return None;
-                    };
+                    let delta = maybe_inner_delta?;
                     // This might lead to variables being committed to snap shot unnecessarily
                     let concept_id = delta
                         .update_concept_delta(direct_delta, &mut self.cache);

@@ -206,8 +206,8 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &right.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
                 };
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
@@ -271,8 +271,8 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &left.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
                 };
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,

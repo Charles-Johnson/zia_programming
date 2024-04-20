@@ -734,9 +734,7 @@ where
             let equivalent_concept = self
                 .snap_shot
                 .read_concept(self.delta.as_ref(), *equivalent_concept_id);
-            let Some((left, right)) = equivalent_concept.get_composition() else {
-                return None;
-            };
+            let (left, right) = equivalent_concept.get_composition()?;
             let (equivalent_non_generalised_hand, equivalent_generalised_hand) = match non_generalised_hand {
                 Hand::Left => (left, right),
                 Hand::Right => (right, left)
@@ -996,6 +994,14 @@ where
             );
             let mut reason = None;
             let mut reversed_reason = None;
+            let determine_concrete_type_whilst_noting_reversed_reason =|(reversed_comparison, local_reversed_reason)| {
+                reversed_reason = local_reversed_reason;
+                self.concrete_type_of_ast(&reversed_comparison)
+            };
+            let determine_concrete_type_whilst_noting_reason =|(syntax_comparison, local_reason)| {
+                reason = local_reason;
+                self.concrete_type_of_ast(&syntax_comparison)
+            };
             let cache = <C as ContextCache>::SharedReductionCache::default();
             (
                 match (
@@ -1018,10 +1024,7 @@ where
                         )
                     }
                     .and_then(
-                        |(syntax_comparison, local_reason)| {
-                            reason = local_reason;
-                            self.concrete_type_of_ast(&syntax_comparison)
-                        },
+                        determine_concrete_type_whilst_noting_reason,
                     ),
                     if self
                         .syntax_evaluating
@@ -1046,10 +1049,7 @@ where
                     )
                 }
                 .and_then(
-                        |(reversed_comparison, local_reversed_reason)| {
-                            reversed_reason = local_reversed_reason;
-                            self.concrete_type_of_ast(&reversed_comparison)
-                        },
+                        determine_concrete_type_whilst_noting_reversed_reason,
                     ),
                 ) {
                     (
