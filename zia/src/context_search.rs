@@ -567,8 +567,8 @@ where
                     .get(&variable_condition_syntax)
                     .and_then(|condition_syntax| {
                         let substituted_condition = self.substitute(
-                            dbg!(condition_syntax),
-                            dbg!(&substitutions.example),
+                            condition_syntax,
+                            &substitutions.example,
                         );
                         let (condition_normal_form, reason) =
                             spawned_context_search
