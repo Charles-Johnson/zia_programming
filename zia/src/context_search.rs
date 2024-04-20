@@ -127,39 +127,6 @@ where
         })
     }
 
-    fn is_concrete_type(
-        &self,
-        cct: ConcreteConceptType,
-        concept_id: &S::ConceptId,
-    ) -> Option<S::ConceptId> {
-        if Some(cct) == self.concrete_type(concept_id) {
-            Some(*concept_id)
-        } else {
-            None
-        }
-    }
-
-    fn concrete_type(
-        &self,
-        concept_id: &S::ConceptId,
-    ) -> Option<ConcreteConceptType> {
-        self.snap_shot.concrete_concept_type(self.delta.as_ref(), *concept_id)
-    }
-
-    fn concrete_type_of_ast(
-        &self,
-        ast: &SharedSyntax<C>,
-    ) -> Option<ConcreteConceptType> {
-        ast.get_concept().and_then(|c| self.concrete_type(&c))
-    }
-
-    fn concrete_concept_id(
-        &self,
-        cct: ConcreteConceptType,
-    ) -> Option<S::ConceptId> {
-        self.snap_shot.concrete_concept_id(self.delta.as_ref(), cct)
-    }
-
     pub fn concrete_ast(
         &self,
         cct: ConcreteConceptType,
@@ -435,61 +402,6 @@ where
             .bind_pair(lefthand.clone(), righthand.clone())
     }
 
-    /// Checks if the concepts in the composition of `generalisation` matches the corresponding nodes in `ast` or is a free variable
-    /// returns `None` if does not match otherwise returns a `HashMap` mapping free variable concept IDs to the matching nodes in `ast`
-    pub fn check_generalisation(
-        &self,
-        ast: &SharedSyntax<C>,
-        generalisation: &S::ConceptId,
-    ) -> Option<VariableMask<Syntax<C>>> {
-        (self.is_free_variable(generalisation)
-            && !self.bound_variable_syntax.contains(ast)
-            && !ast.get_concept().map_or(false, |c| {
-                self.snap_shot
-                    .read_concept(self.delta.as_ref(), c)
-                    .bounded_variable()
-            }))
-        .then(|| {
-            if let Some((gl, gr)) = self.composition_of_concept(*generalisation)
-            {
-                let (l, r) = ast.get_expansion()?;
-                match (self.is_free_variable(&gl), self.is_free_variable(&gr)) {
-                    (true, true) => self
-                        .check_generalisation(&l, &gl)
-                        .and_also_move(self.check_generalisation(&r, &gr))
-                        .and_then(|(lm, mut rm)| {
-                            for (lmk, lmv) in lm {
-                                if let Some(rmv) = rm.get(&lmk) {
-                                    if rmv != &lmv {
-                                        return None;
-                                    }
-                                } else {
-                                    rm.insert(lmk, lmv);
-                                }
-                            }
-                            Some(rm)
-                        }),
-                    (true, false) if r.get_concept() == Some(gr) => {
-                        self.check_generalisation(&l, &gl)
-                    },
-                    (false, true) if l.get_concept() == Some(gl) => {
-                        self.check_generalisation(&r, &gr)
-                    },
-                    (false, false)
-                        if l.get_concept() == Some(gl)
-                            && r.get_concept() == Some(gr) =>
-                    {
-                        Some(hashmap! {})
-                    },
-                    _ => None,
-                }
-            } else {
-                Some(hashmap! {*generalisation => ast.clone()})
-            }
-        })
-        .flatten()
-    }
-
     fn find_generalisations(&self, ast: &Syntax<C>) -> HashSet<S::ConceptId> {
         let mut generalisations = HashSet::<S::ConceptId>::new();
         if let Some((l, r)) = ast.get_expansion() {
@@ -523,22 +435,6 @@ where
             });
         }
         generalisations
-    }
-
-    fn is_leaf_variable(&self, lv: &S::ConceptId) -> bool {
-        self.is_free_variable(lv) && self.is_leaf_concept(lv)
-    }
-
-    fn is_free_variable(&self, v: &S::ConceptId) -> bool {
-        self.snap_shot.read_concept(self.delta.as_ref(), *v).free_variable()
-            && self
-                .variable_mask
-                .tail()
-                .map_or(true, |vml| vml.get(*v).is_none()) // A hack required to prevent stack overflow
-    }
-
-    fn is_leaf_concept(&self, l: &S::ConceptId) -> bool {
-        self.composition_of_concept(*l).is_none()
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
@@ -728,7 +624,7 @@ where
                 generalisation
             );
             equivalence_set
-                .iter()
+            .iter()
                 .map(|c| {
                     let example = self.to_ast(c);
                     ExampleSubstitutions {
@@ -965,10 +861,10 @@ where
                         self.delta.as_ref(),
                         Syntax::<C>::from(s),
                         concept_id,
-                        )
-                    }).share();
-                    self.caches.insert_syntax_tree(&concept, &syntax);
-                    syntax
+                    )
+                }).share();
+                self.caches.insert_syntax_tree(&concept, &syntax);
+                syntax
             })
         })
     }
@@ -1050,30 +946,6 @@ where
         )
     }
 
-    // TODO: move to separate struct that just has self.delta and self.snaphot
-    fn equivalent_concepts_to(
-        &self,
-        equivalent_id: S::ConceptId,
-    ) -> HashSet<S::ConceptId> {
-        let equivalent_concept =
-            self.snap_shot.read_concept(self.delta.as_ref(), equivalent_id);
-        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-        let mut equivalence_set: HashSet<S::ConceptId> =
-            equivalent_concept.find_what_reduces_to_it().collect();
-        equivalence_set.insert(equivalent_id);
-        equivalence_set
-    }
-
-    // TODO: move to separate struct that just has self.delta and self.snaphot
-    fn composition_of_concept(
-        &self,
-        composition_id: S::ConceptId,
-    ) -> Option<(S::ConceptId, S::ConceptId)> {
-        self.snap_shot
-            .read_concept(self.delta.as_ref(), composition_id)
-            .get_composition()
-    }
-
     /// Expands syntax by definition of its associated concept.
     pub fn expand(&self, ast: &SharedSyntax<C>) -> SharedSyntax<C> {
         ast.get_concept().map_or_else(
@@ -1127,20 +999,20 @@ where
                 match (
                     if self.syntax_evaluating.contains(&comparing_syntax) {
                         self.caches
-                            .get_reduction_or_else(
-                                &comparing_syntax.share(),
-                                || None,
-                            )
-                            .map(|(s, r)| (s, Some(r)))
+                        .get_reduction_or_else(
+                            &comparing_syntax.share(),
+                            || None,
+                        )
+                        .map(|(s, r)| (s, Some(r)))
                     } else {
                         let mut context_search = self.spawn(&cache, self.delta.clone());
                         let comparing_syntax = comparing_syntax.share();
                         context_search
-                            .syntax_evaluating
-                            .insert(comparing_syntax.clone());
-                        Some(
+                        .syntax_evaluating
+                        .insert(comparing_syntax.clone());
+                    Some(
                             context_search
-                                .recursively_reduce(&comparing_syntax),
+                            .recursively_reduce(&comparing_syntax),
                         )
                     }
                     .and_then(
@@ -1152,26 +1024,26 @@ where
                     if self
                         .syntax_evaluating
                         .contains(&comparing_reversed_syntax)
-                    {
-                        self.caches
+                        {
+                            self.caches
                             .get_reduction_or_else(
                                 &comparing_reversed_syntax.share(),
                                 || None,
                             )
                             .map(|(s, r)| (s, Some(r)))
-                    } else {
-                        let mut context_search = self.spawn(&cache, self.delta.clone());
+                        } else {
+                            let mut context_search = self.spawn(&cache, self.delta.clone());
                         let comparing_reversed_syntax =
-                            comparing_reversed_syntax.share();
+                        comparing_reversed_syntax.share();
                         context_search
-                            .syntax_evaluating
-                            .insert(comparing_reversed_syntax.clone());
-                        Some(
-                            context_search
-                                .recursively_reduce(&comparing_reversed_syntax),
-                        )
-                    }
-                    .and_then(
+                        .syntax_evaluating
+                        .insert(comparing_reversed_syntax.clone());
+                    Some(
+                        context_search
+                        .recursively_reduce(&comparing_reversed_syntax),
+                    )
+                }
+                .and_then(
                         |(reversed_comparison, local_reversed_reason)| {
                             reversed_reason = local_reversed_reason;
                             self.concrete_type_of_ast(&reversed_comparison)
@@ -1228,7 +1100,144 @@ where
         }
     }
 
+    /// Checks if the concepts in the composition of `generalisation` matches the corresponding nodes in `ast` or is a free variable
+    /// returns `None` if does not match otherwise returns a `HashMap` mapping free variable concept IDs to the matching nodes in `ast`
+    /// TODO: refactor into method on struct with `self.snap_shot`, self.delta, `self.bound_variable_syntax` and `self.variable_mask`
+    pub fn check_generalisation(
+        &self,
+        ast: &SharedSyntax<C>,
+        generalisation: &S::ConceptId,
+    ) -> Option<VariableMask<Syntax<C>>> {
+        (self.is_free_variable(generalisation)
+            && !self.bound_variable_syntax.contains(ast)
+            && !ast.get_concept().map_or(false, |c| {
+                self.snap_shot
+                    .read_concept(self.delta.as_ref(), c)
+                    .bounded_variable()
+            }))
+        .then(|| {
+            if let Some((gl, gr)) = self.composition_of_concept(*generalisation)
+            {
+                let (l, r) = ast.get_expansion()?;
+                match (self.is_free_variable(&gl), self.is_free_variable(&gr)) {
+                    (true, true) => self
+                        .check_generalisation(&l, &gl)
+                        .and_also_move(self.check_generalisation(&r, &gr))
+                        .and_then(|(lm, mut rm)| {
+                            for (lmk, lmv) in lm {
+                                if let Some(rmv) = rm.get(&lmk) {
+                                    if rmv != &lmv {
+                                        return None;
+                                    }
+                                } else {
+                                    rm.insert(lmk, lmv);
+                                }
+                            }
+                            Some(rm)
+                        }),
+                    (true, false) if r.get_concept() == Some(gr) => {
+                        self.check_generalisation(&l, &gl)
+                    },
+                    (false, true) if l.get_concept() == Some(gl) => {
+                        self.check_generalisation(&r, &gr)
+                    },
+                    (false, false)
+                        if l.get_concept() == Some(gl)
+                            && r.get_concept() == Some(gr) =>
+                    {
+                        Some(hashmap! {})
+                    },
+                    _ => None,
+                }
+            } else {
+                Some(hashmap! {*generalisation => ast.clone()})
+            }
+        })
+        .flatten()
+    }
+
+    // TODO: move to separate struct that just has self.delta, self.snap_shot and self.variable_mask
+    fn is_leaf_variable(&self, lv: &S::ConceptId) -> bool {
+        self.is_free_variable(lv) && self.is_leaf_concept(lv)
+    }
+
+    // TODO: move to separate struct that just has self.delta, self.snap_shot and self.variable_mask
+    fn is_free_variable(&self, v: &S::ConceptId) -> bool {
+        self.snap_shot.read_concept(self.delta.as_ref(), *v).free_variable()
+            && self
+                .variable_mask
+                .tail()
+                .map_or(true, |vml| vml.get(*v).is_none()) // A hack required to prevent stack overflow
+    }
+
+    // TODO: move to separate struct that just has self.delta and self.snap_shot
+    fn is_leaf_concept(&self, l: &S::ConceptId) -> bool {
+        self.composition_of_concept(*l).is_none()
+    }
+
+    // TODO: move to separate struct that just has self.delta and self.snap_shot
+    fn equivalent_concepts_to(
+        &self,
+        equivalent_id: S::ConceptId,
+    ) -> HashSet<S::ConceptId> {
+        let equivalent_concept =
+            self.snap_shot.read_concept(self.delta.as_ref(), equivalent_id);
+        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+        let mut equivalence_set: HashSet<S::ConceptId> =
+            equivalent_concept.find_what_reduces_to_it().collect();
+        equivalence_set.insert(equivalent_id);
+        equivalence_set
+    }
+
+    // TODO: move to separate struct that just has self.delta and self.snap_shot
+    fn composition_of_concept(
+        &self,
+        composition_id: S::ConceptId,
+    ) -> Option<(S::ConceptId, S::ConceptId)> {
+        self.snap_shot
+            .read_concept(self.delta.as_ref(), composition_id)
+            .get_composition()
+    }
+
+    // TODO: refactor into method of struct with access to self.snap_shot and self.delta
+    fn is_concrete_type(
+        &self,
+        cct: ConcreteConceptType,
+        concept_id: &S::ConceptId,
+    ) -> Option<S::ConceptId> {
+        if Some(cct) == self.concrete_type(concept_id) {
+            Some(*concept_id)
+        } else {
+            None
+        }
+    }
+
+    // TODO: refactor into method of struct with access to self.snap_shot and self.delta
+    fn concrete_type(
+        &self,
+        concept_id: &S::ConceptId,
+    ) -> Option<ConcreteConceptType> {
+        self.snap_shot.concrete_concept_type(self.delta.as_ref(), *concept_id)
+    }
+
+    // TODO: refactor into method of struct with access to self.snap_shot and self.delta
+    fn concrete_type_of_ast(
+        &self,
+        ast: &SharedSyntax<C>,
+    ) -> Option<ConcreteConceptType> {
+        ast.get_concept().and_then(|c| self.concrete_type(&c))
+    }
+
+    // TODO: refactor into method of struct with access to self.snap_shot and self.delta
+    fn concrete_concept_id(
+        &self,
+        cct: ConcreteConceptType,
+    ) -> Option<S::ConceptId> {
+        self.snap_shot.concrete_concept_id(self.delta.as_ref(), cct)
+    }
+
     /// Error if `variable_mask` is already included
+    /// TODO: refactor as method on `VariableMaskList`
     fn insert_variable_mask(
         &mut self,
         variable_mask: VariableMask<Syntax<C>>,
@@ -1238,6 +1247,7 @@ where
         Ok(())
     }
 
+    // TODO: move to separate struct with access to self.snap_shot, self.bound_variable_syntax, self.delta and self.caches
     fn contains_bound_variable_syntax(&self, syntax: &SharedSyntax<C>) -> bool {
         self.caches.remember_if_contains_bound_variable_syntax_or_else(
             syntax,
