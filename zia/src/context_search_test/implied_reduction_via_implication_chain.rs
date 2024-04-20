@@ -1,6 +1,5 @@
-use super::Syntax;
+
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedContextDelta,
     context_search::{ContextReferences, ContextSearch},
@@ -118,7 +117,7 @@ fn inference_rule() {
     });
     let false_syntax = context_search.to_ast(&19);
     assert_eq!(
-        context_search.find_examples_of_inferred_reduction(25.into()).unwrap().0,
-        false_syntax.into(),
+        context_search.find_examples_of_inferred_reduction(&context_search.to_ast(&25)).unwrap().0,
+        false_syntax,
     );
 }
