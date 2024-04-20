@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
+      - name: Install node v16      
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
 
       - name: Install nightly Rust and rustfmt
         uses: actions-rs/toolchain@v1
@@ -29,7 +33,7 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
         with:
         # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
-          version: '0.8.1'
+          version: 'latest'
 
       - name: Install Node dependencies
         run: yarn
