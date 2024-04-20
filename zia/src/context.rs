@@ -654,9 +654,12 @@ where
         &mut self,
         ast: &SharedSyntax<C>,
     ) -> ZiaResult<String> {
-        let (normal_form, _) = &self.context_search().recursively_reduce(ast);
+        let context_search = self.context_search();
+        let (normal_form, _) = &context_search.recursively_reduce(ast);
         if normal_form == ast {
-            Err(ZiaError::CannotReduceFurther)
+            context_search.find_examples_of_inferred_reduction(ast)
+                .map(|(normal_form, _)| normal_form.to_string())
+                .ok_or(ZiaError::CannotReduceFurther)
         } else {
             self.call(normal_form)
         }
