@@ -25,7 +25,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            context: Context::new(),
+            context: Context::new().unwrap(),
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),
@@ -33,6 +33,14 @@ impl Default for Model {
             menu: menu::Model::default(),
             active_tutorial: None,
         }
+    }
+}
+
+impl Model {
+    fn reset(&mut self) {
+        self.context = Context::new().unwrap();
+        self.history = Vec::new();
+        self.menu.is_open = false;
     }
 }
 
@@ -48,6 +56,7 @@ enum EntryKind {
 
 #[derive(Clone)]
 pub enum Msg {
+    ToggleMenu,
     Input(String),
     Submit,
     StartEmptySession,
@@ -65,6 +74,9 @@ pub fn update(
     orders: &mut impl Orders<GlobalMsg>,
 ) {
     match msg {
+        Msg::ToggleMenu => {
+            model.menu.is_open = !model.menu.is_open;
+        },
         Msg::SkipToTutorialStep {
             steps,
             current_step_index,
@@ -98,9 +110,11 @@ pub fn update(
             });
         },
         Msg::Input(s) => model.input = s,
-        Msg::StartEmptySession => model.menu.is_open = false,
+        Msg::StartEmptySession => {
+            model.reset();
+        },
         Msg::StartTutorial(steps) => {
-            model.menu.is_open = false;
+            model.reset();
             let new_input = steps[0].command.to_string();
             model.active_tutorial = Some(tutorials::Model {
                 current_step_index: 0,

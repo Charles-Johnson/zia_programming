@@ -2,11 +2,13 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{
+        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+    },
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -14,21 +16,23 @@ use std::collections::HashMap;
 #[test]
 fn basic_inference() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
+    let delta = NestedDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: &delta,
+        delta: SharedContextDelta(delta.into()),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
     let true_syntax = || Syntax::from("true").bind_nonquantifier_concept(1);
     let result_syntax = || Syntax::from("b").bind_nonquantifier_concept(3);
     let reduction_reason = ReductionReason::Inference {
-        implication: context_search.to_ast(5),
+        implication: context_search.to_ast(&5),
         reason: ReductionReason::Explicit.into(),
     };
     assert_eq!(
@@ -42,7 +46,7 @@ fn basic_inference() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "implication",
         1 => "true",
@@ -51,10 +55,10 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 10] {
+fn concepts() -> [Concept<usize>; 10] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
-    let mut condition_concept: Concept<ConceptId> =
+    let mut condition_concept: Concept<usize> =
         (SpecificPart::default(), 2).into();
     let mut result_concept = (SpecificPart::default(), 3).into();
     condition_concept.make_reduce_to(&mut true_concept);

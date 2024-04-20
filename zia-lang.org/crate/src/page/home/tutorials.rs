@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<0>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<6>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -114,7 +114,44 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<0>) = (
     },
     Tutorial {
         title: "Relationships",
-        steps: []
+        steps: [
+            TutorialStep {
+                command: "let Alice is parent of Bob",
+                explanation: "We can define Alice's relationship to Bob",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let (_x_ is parent of _y_) => _y_ is child of _x_",
+                explanation: "Determine child relationship from parent relationship",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "Bob is child of Alice",
+                explanation: "Let's check",
+                #[cfg(test)]
+                expected_evaluation: "true"
+            },
+            TutorialStep {
+                command: "let (not _x_) => (_x_ -> false)",
+                explanation: "If the negation of a predicate is true then the predicate itself is false",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let (_x_ is parent of _y_) => not _x_ is child of _y_",
+                explanation: "Parents can't be children of their children",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "Alice is child of Bob",
+                explanation: "Let's check",
+                #[cfg(test)]
+                expected_evaluation: "false"
+            },
+        ]
     }
 );
 
@@ -146,6 +183,18 @@ mod test {
     fn factorial_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.0.steps {
+            assert_eq!(
+                context.execute(step.command),
+                step.expected_evaluation,
+                "Failed at {0}",
+                step.command
+            );
+        }
+    }
+    #[test]
+    fn relationships_tutorial() {
+        let mut context = NEW_CONTEXT.clone();
+        for step in TUTORIALS.1.steps {
             assert_eq!(
                 context.execute(step.command),
                 step.expected_evaluation,

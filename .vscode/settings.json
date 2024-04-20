@@ -1,6 +1,6 @@
 {
     "files.autoSave": "onFocusChange",
-    "rust-analyzer.checkOnSave.overrideCommand": ["cargo", "+nightly", "clippy", "--message-format=json", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"],
+    "rust-analyzer.check.overrideCommand": ["cargo", "clippy", "--fix", "--allow-dirty", "--message-format=json", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"],
     "files.watcherExclude": {
         "**/target": true
     },
@@ -8,9 +8,4 @@
     "files.exclude": {
         "**/.git": false,
     },
-    "rust-analyzer.hoverActions.references": true,
-    "rust-analyzer.inlayHints.hideNamedConstructorHints": true,
-    "rust-analyzer.lens.enumVariantReferences": true,
-    "rust-analyzer.lens.methodReferences": true,
-    "rust-analyzer.lens.references": true
 }

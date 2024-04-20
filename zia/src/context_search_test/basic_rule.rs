@@ -2,11 +2,13 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{
+        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+    },
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -14,14 +16,16 @@ use std::collections::HashMap;
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
+    let delta = NestedDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: &delta,
+        delta: SharedContextDelta(delta.into()),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
@@ -33,12 +37,12 @@ fn basic_rule() {
         Syntax::new_pair(left_syntax.clone(), Syntax::from("random").into())
             .into();
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax);
-    assert_eq!(context_search.to_ast(2), left_syntax);
+    assert_eq!(context_search.to_ast(&0), concrete_syntax);
+    assert_eq!(context_search.to_ast(&2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
-        generalisation: context_search.to_ast(1),
-        variable_mask: hashmap! {3 => Syntax::from("random").into()},
+        generalisation: context_search.to_ast(&1),
+        variable_mask: hashmap! {3.into() => Syntax::from("random").into()},
         reason: ReductionReason::Explicit.into(),
     };
 
@@ -53,14 +57,14 @@ fn basic_rule() {
     );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "concrete",
         2 => "left",
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 4] {
+fn concepts() -> [Concept<usize>; 4] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_concept_variable = (SpecificPart::free_variable(), 3).into();

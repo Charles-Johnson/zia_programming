@@ -13,20 +13,13 @@ macro_rules! impl_syntax_tree {
             ast::{is_variable, SyntaxLeaf, SyntaxNode},
             consistent_merge::ConsistentMerge
         };
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub struct $syntax_tree<ConceptId> {
             /// The root of this syntax tree, represented as a `String`.
             syntax: Option<String>,
             /// Index of the concept that the syntax may represent.
             concept: Option<ConceptId>,
-            ///
             node: SyntaxNode<$refcounter<Self>>,
-        }
-
-        impl<ConceptId> Debug for $syntax_tree<ConceptId> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                self.syntax.as_ref().map_or(Ok(()), |s| f.write_str(s))
-            }
         }
 
         impl<ConceptId: PartialEq> PartialEq<Self> for $syntax_tree<ConceptId> {
@@ -71,10 +64,11 @@ macro_rules! impl_syntax_tree {
                     "{}",
                     self.syntax.clone().unwrap_or_else(|| self
                         .get_expansion()
-                        .map_or_else(
-                            || "".into(),
+                        .map(
                             |(left, right)| left.to_string() + " " + &right.to_string()
-                        ))
+                        )
+                        .expect(&format!("Tried to display syntax ({:?}) without symbols", self))
+                    )
                 )
             }
         }
@@ -103,12 +97,12 @@ macro_rules! impl_syntax_tree {
                 &syntax_tree.node
             }
         }
-
+        use crate::ast::ExampleSubstitutions;
         impl<ConceptId: Clone + Copy + Debug + fmt::Display + Eq + Hash> SyntaxTree for $syntax_tree<ConceptId> {
             type SharedSyntax = $refcounter<Self>;
             type ConceptId = ConceptId;
 
-            fn make_mut<'a>(refcounter: &'a mut Self::SharedSyntax) -> &'a mut Self {
+            fn make_mut(refcounter: &mut Self::SharedSyntax) -> &mut Self {
                 $refcounter::make_mut(refcounter)
             }
 
@@ -120,9 +114,10 @@ macro_rules! impl_syntax_tree {
                 matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
             }
 
-            fn new_constant_concept(concept_id: Self::ConceptId) -> Self {
+            fn new_constant_concept(concept_id: impl Into<Self::ConceptId>) -> Self {
+                let concept_id = concept_id.into();
                 Self {
-                    syntax: None,
+                    syntax: Some(format!("constant {concept_id}")),
                     concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Constant),
                 }
@@ -130,7 +125,7 @@ macro_rules! impl_syntax_tree {
 
             fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self {
                 Self {
-                    syntax: None,
+                    syntax: Some(format!("quantifier {concept_id}")),
                     concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Quantifier),
                 }
@@ -146,14 +141,14 @@ macro_rules! impl_syntax_tree {
 
             fn new_leaf_variable(concept_id: Self::ConceptId) -> Self {
                 Self {
-                    syntax: None,
+                    syntax: Some(format!("variable {concept_id}")),
                     concept: Some(concept_id),
                     node: SyntaxNode::Leaf(SyntaxLeaf::Variable),
                 }
             }
 
-            fn bind_nonquantifier_concept(mut self, concept: Self::ConceptId) -> Self {
-                self.concept = Some(concept);
+            fn bind_nonquantifier_concept(mut self, concept: impl Into<Self::ConceptId>) -> Self {
+                self.concept = Some(concept.into());
                 self
             }
 
@@ -230,7 +225,7 @@ macro_rules! impl_syntax_tree {
             fn check_example(
                 example: &Self::SharedSyntax,
                 generalisation: &Self::SharedSyntax,
-            ) -> Option<HashMap<Self::SharedSyntax, Self::SharedSyntax>> {
+            ) -> Option<ExampleSubstitutions<Self>> {
                 match (example.get_expansion(), generalisation.get_expansion()) {
                     (
                         Some((left_example, right_example)),
@@ -242,12 +237,22 @@ macro_rules! impl_syntax_tree {
                         }),
                     (Some(_), None) => generalisation
                         .is_variable()
-                        .then(|| hashmap! {generalisation.clone() => example.clone()}),
+                        .then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {generalisation.clone() => example.clone()},
+                            example: hashmap!{}
+                        }),
                     (None, Some(_)) => None,
                     (None, None) => generalisation
                         .is_variable()
-                        .then(|| hashmap! {generalisation.clone() => example.clone()})
-                        .or_else(|| (example == generalisation).then(|| hashmap! {})),
+                        .then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {generalisation.clone() => example.clone()},
+                            example: hashmap!{}
+                        })
+                        .or_else(|| example.get_concept().and_then(|id| example.is_variable().then(|| ExampleSubstitutions{
+                            generalisation: hashmap! {},
+                            example: hashmap!{id => generalisation.clone()}
+                        })))
+                        .or_else(|| (example == generalisation).then(|| ExampleSubstitutions::default())),
                 }
             }
         }

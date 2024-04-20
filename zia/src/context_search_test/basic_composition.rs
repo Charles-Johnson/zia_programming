@@ -2,10 +2,12 @@ use super::Syntax;
 use crate::{
     ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::NestedDelta,
     context_search::{ContextReferences, ContextSearch},
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{
+        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+    },
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -13,14 +15,16 @@ use std::collections::HashMap;
 #[test]
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
+    let delta = NestedDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: &delta,
+        delta: SharedContextDelta(delta.into()),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
@@ -41,12 +45,12 @@ fn basic_composition() {
         composite_syntax
     );
 
-    assert_eq!(context_search.to_ast(0), composite_syntax);
-    assert_eq!(context_search.to_ast(1), left_syntax);
-    assert_eq!(context_search.to_ast(2), right_syntax);
+    assert_eq!(context_search.to_ast(&0), composite_syntax);
+    assert_eq!(context_search.to_ast(&1), left_syntax);
+    assert_eq!(context_search.to_ast(&2), right_syntax);
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "a",
         1 => "b",
@@ -54,7 +58,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 3] {
+fn concepts() -> [Concept<usize>; 3] {
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();
     let composite_concept =

@@ -5,8 +5,8 @@ macro_rules! impl_cache {
         use crate::{
             ast::SyntaxTree,
             concepts::ConceptTrait,
-            context_cache::{ContextCache, ReductionCache, ConceptId, SharedSyntax},
-            context_search::ReductionResult,
+            context_cache::{ContextCache, ReductionCache, InferenceCache, ConceptId, SharedSyntax},
+            reduction_reason::{ReductionReason, ReductionResult}
         };
         use dashmap::DashMap;
         use log::debug;
@@ -15,6 +15,7 @@ macro_rules! impl_cache {
             pub reductions: $refcounter<ReductionCacheList<RR>>,
             syntax_trees: $refcounter<DashMap<ConceptId<RR>, SharedSyntax<RR>>>,
             contains_bound_variable_syntax: $refcounter<DashMap<SharedSyntax<RR>, bool>>,
+            inferences: $refcounter<InferenceCacheList<RR>>
         }
 
         impl<RR: ReductionReason> Default for $cache<RR> {
@@ -23,6 +24,7 @@ macro_rules! impl_cache {
                     reductions: $refcounter::new(ReductionCacheList::default()),
                     syntax_trees: $refcounter::new(DashMap::default()),
                     contains_bound_variable_syntax: $refcounter::new(DashMap::default()),
+                    inferences: $refcounter::new(InferenceCacheList::default())
                 }
             }
         }
@@ -42,6 +44,7 @@ macro_rules! impl_cache {
             ) -> Self {
                 Self {
                     reductions: self.reductions.spawn(cache.clone()),
+                    inferences: self.inferences.clone(),
                     ..Self::default()
                 }
             }
@@ -88,6 +91,70 @@ macro_rules! impl_cache {
                 ast: &SharedSyntax<Self::RR>,
                 reduction_result: &ReductionResult<RR>,) {
                 self.reductions.insert_reduction(ast, reduction_result);
+            }
+
+            fn get_inference_or_else(&self, concept: ConceptId<RR>, infer: impl Fn() -> ReductionResult<RR> + Copy) -> ReductionResult<RR> {
+                self.inferences.get_inference_or_else(concept, infer)
+            }
+
+            fn insert_inference(&self, concept: ConceptId<RR>, rr: &ReductionResult<RR>) {
+                self.inferences.insert_inference(concept, rr)
+            }
+        }
+
+        #[derive(Debug, Clone)]
+        pub struct InferenceCacheList<RR: ReductionReason> {
+            head: $refcounter<InferenceCache<RR>>,
+            tail: Option<$refcounter<Self>>,
+        }
+
+        impl<RR: ReductionReason> Default for InferenceCacheList<RR>
+        {
+            fn default() -> Self {
+                Self {
+                    head: $refcounter::new(InferenceCache::<RR>::default()),
+                    tail: None,
+                }
+            }
+        }
+
+        impl<'a, RR: ReductionReason>
+            From<$refcounter<InferenceCache<RR>>>
+            for InferenceCacheList<RR>
+        {
+            fn from(
+                head: $refcounter<InferenceCache<RR>>,
+            ) -> Self {
+                Self {
+                    head,
+                    tail: None,
+                }
+            }
+        }
+
+        impl<RR: ReductionReason> InferenceCacheList<RR> {
+            pub fn get_inference_or_else(
+                &self,
+                concept: ConceptId<RR>,
+                reduce: impl Fn() -> ReductionResult<RR>
+                    + Copy,
+            ) -> ReductionResult<RR> {
+                self.head.get(&concept).map_or_else(
+                    || {
+                        self.tail.as_ref().map_or_else(reduce, |ccl| {
+                            ccl.get_inference_or_else(concept, reduce)
+                        })
+                    },
+                    |r| r.as_ref().cloned(),
+                )
+            }
+
+            pub fn insert_inference(
+                &self,
+                concept: ConceptId<RR>,
+                reduction_result: &ReductionResult<RR>,
+            ) {
+                self.head.insert(concept, reduction_result.clone());
             }
         }
 

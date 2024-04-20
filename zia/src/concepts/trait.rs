@@ -121,7 +121,7 @@ pub trait Concept: Sized {
         change: ValueChange<[&mut Self; 2]>,
     ) -> ZiaResult<()>;
 
-    // Returns the ID of the composition of self.id() and other_id, if exists where `hand` is the hand of self.id() in thee composition
+    // Returns the ID of the composition of self.id() and other_id, if exists where `hand` is the hand of self.id() in the composition
     fn find_as_hand_in_composition_with(
         &self,
         other_id: Self::Id,

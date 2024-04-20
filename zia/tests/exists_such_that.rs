@@ -30,5 +30,5 @@ fn some_concepts_precedence_is_below_default() {
     assert_eq!(
         context.execute("(_x_ exists_such_that) default > prec _x_"),
         "true"
-    )
+    );
 }

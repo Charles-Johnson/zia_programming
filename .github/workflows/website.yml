@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
+      - name: Install node v16      
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
 
       - name: Install nightly Rust and rustfmt
         uses: actions-rs/toolchain@v1

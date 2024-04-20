@@ -5,7 +5,7 @@ pub(crate) mod r#trait;
 
 use crate::{
     ast::SyntaxTree,
-    context_search::{ReductionReason, ReductionResult},
+    reduction_reason::{ReductionReason, ReductionResult},
 };
 use dashmap::DashMap;
 pub(crate) use r#macro::impl_cache;
@@ -15,6 +15,8 @@ pub type ReductionCache<RR> = DashMap<
     <<RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax,
     ReductionResult<RR>,
 >;
+
+pub type InferenceCache<RR> = DashMap<ConceptId<RR>, ReductionResult<RR>>;
 
 pub type ConceptId<RR> =
     <<RR as ReductionReason>::Syntax as SyntaxTree>::ConceptId;

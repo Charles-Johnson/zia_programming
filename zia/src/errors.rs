@@ -14,99 +14,89 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use snafu::Snafu;
+use thiserror::Error;
 
 use crate::associativity::Associativity;
 
 pub type ZiaResult<T> = Result<T, ZiaError>;
 
 /// All the expected ways a Zia command could be invalid.
-#[derive(Debug, PartialEq, Eq, Clone, Snafu)]
+#[derive(Debug, PartialEq, Eq, Clone, Error)]
 pub enum ZiaError {
     /// When specifying a reduction rule that already exists.
-    #[snafu(display("That reduction rule already exists."))]
+    #[error("That reduction rule already exists.")]
     RedundantReduction,
     /// When specifying a definition that already exists.
-    #[snafu(display("That definition already exists."))]
+    #[error("That definition already exists.")]
     RedundantComposition,
     /// When refactoring a symbol that hasn't been used.
-    #[snafu(display(
-        "Relabelling something that doesn't yet exist has no effect."
-    ))]
+    #[error("Relabelling something that doesn't yet exist has no effect.")]
     RedundantRefactor,
     /// When removing a definition from a concept with no definition.
-    #[snafu(display(
-        "Removing a definition that doesn't exist is redundant."
-    ))]
+    #[error("Removing a definition that doesn't exist is redundant.")]
     RedundantCompositionRemoval,
     /// When defining an expanded expression.
-    #[snafu(display("Cannot define expressions."))]
+    #[error("Cannot define expressions.")]
     BadComposition,
     /// When the command would complete a cycle of chained reduction rules.
-    #[snafu(display("Cannot allow a chain of reduction rules to loop."))]
+    #[error("Cannot allow a chain of reduction rules to loop.")]
     CyclicReduction,
     /// When syntax tree cannot be expanded further
-    #[snafu(display("Cannot expand syntax further"))]
+    #[error("Cannot expand syntax further")]
     CannotExpandFurther,
     /// When syntax tree cannot be reduced further
-    #[snafu(display("Cannot reduce syntax further"))]
+    #[error("Cannot reduce syntax further")]
     CannotReduceFurther,
     /// When a concept is contained within the concept that it reduces to.
-    #[snafu(display(
-        "Cannot reduce a concept to an expression containing itself."
-    ))]
+    #[error("Cannot reduce a concept to an expression containing itself.")]
     ExpandingReduction,
     /// When a required symbol is missing from a command
-    #[snafu(display("Missing {}", symbol))]
+    #[error("Missing {}", symbol)]
     MissingSymbol {
         symbol: &'static str,
     },
     /// When a concept is contained within the normal form of its definition.
-    #[snafu(display(
+    #[error(
         "Cannot define a concept as an expression whose normal form contains itself."
-    ))]
+    )]
     InfiniteComposition,
     /// When a command contains a pair of parentheses with no syntax inside.
-    #[snafu(display("Parentheses need to contain a symbol or expression."))]
+    #[error("Parentheses need to contain a symbol or expression.")]
     EmptyParentheses,
     /// When the interpreter cannot determine the tree structure of an expression.
-    #[snafu(display("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression."))]
+    #[error("Ambiguity due to lack of precedence or associativity defined for the symbols in that expression.")]
     AmbiguousExpression,
-    #[snafu(display("Could not find lowest precendence for `{tokens:?}`"))]
+    #[error("Could not find lowest precendence for `{tokens:?}`")]
     LowestPrecendenceNotFound {
         tokens: Vec<String>,
     },
-    #[snafu(display("Tokens with the lowest precendence don't all have the same associativity. The token `{token}` is `{associativity:?}` associative whereas the rest of the tokens are `{other_associativity:?}` associative"))]
+    #[error("Tokens with the lowest precendence don't all have the same associativity. The token `{token}` is `{associativity:?}` associative whereas the rest of the tokens are `{other_associativity:?}` associative")]
     DifferentAssociativityAmongstLowestPrecendenceTokens {
         token: String,
         associativity: Associativity,
         other_associativity: Associativity,
     },
     /// When trying to refactor a used symbol as another used symbol or expression.
-    #[snafu(display(
+    #[error(
         "Cannot define a used symbol as another used symbol or expression."
-    ))]
+    )]
     CompositionCollision,
     /// When trying to define the composition of a concrete concept.
-    #[snafu(display("Cannot set a definition of a concrete concept"))]
+    #[error("Cannot set a definition of a concrete concept")]
     SettingCompositionOfConcrete,
     /// When trying to specify a reduction rule for a concrete concept.
-    #[snafu(display("Cannot reduce a concrete concept"))]
+    #[error("Cannot reduce a concrete concept")]
     ConcreteReduction,
     /// When trying to specify a reduction rule for a concept whose components reduce to something else.
-    #[snafu(display("Concept is already composed of concepts with their own reduction rules."))]
+    #[error("Concept is already composed of concepts with their own reduction rules.")]
     MultipleReductionPaths,
     /// When symbol is expected to be used by a concept but isn't.
-    #[snafu(display(
-        "Symbol was expected to be used to label a concept but isn't."
-    ))]
+    #[error("Symbol was expected to be used to label a concept but isn't.")]
     UnusedSymbol,
-    #[snafu(display(
-        "Tried to label a concept without a concept of a label."
-    ))]
+    #[error("Tried to label a concept without a concept of a label.")]
     NoLabelConcept,
-    #[snafu(display(
-        "Cannot quantify over compound expressions or constant concepts"
-    ))]
+    #[error("Cannot quantify over compound expressions or constant concepts")]
     CanOnlyQuantifyOverVariables,
+    #[error("Multiple smart pointers to context delta")]
+    MultiplePointersToDelta,
 }

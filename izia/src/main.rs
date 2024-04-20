@@ -25,7 +25,7 @@ fn main() {
     let reader = Interface::new("IZia").unwrap();
     println!("IZia Copyright (C) 2018 to 2019 Charles Johnson.\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain\nconditions; visit https://www.gnu.org/licenses/gpl-3.0.en.html for more details.");
     reader.set_prompt(">>> ").unwrap();
-    let mut cont = Context::new();
+    let mut cont = Context::new().unwrap();
     while let ReadResult::Input(input) = reader.read_line().unwrap() {
         println!("{}", cont.execute(&input));
     }

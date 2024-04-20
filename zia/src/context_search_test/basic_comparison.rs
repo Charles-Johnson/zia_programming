@@ -1,12 +1,14 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
+    context_delta::NestedDelta,
     context_search::{
         Comparison, ComparisonReason, ContextReferences, ContextSearch,
     },
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    multi_threaded::{
+        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+    },
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -14,20 +16,22 @@ use std::collections::HashMap;
 #[test]
 fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
+    let delta = NestedDelta::<
+        ConceptId,
+        SharedDirectConceptDelta<ConceptId>,
+        SharedContextDelta<ConceptId>,
+    >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
     let context_search = ContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: &delta,
+        delta: SharedContextDelta(delta.into()),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });
-    let left_syntax = context_search.to_ast(1);
-    let right_syntax = context_search.to_ast(2);
-    let another_syntax = context_search.to_ast(8);
+    let left_syntax = context_search.to_ast(&1);
+    let right_syntax = context_search.to_ast(&2);
+    let another_syntax = context_search.to_ast(&8);
 
     assert_eq!(
         context_search.compare(&left_syntax, &right_syntax),
@@ -86,10 +90,10 @@ fn basic_comparison() {
                 reversed_reason: None
             }
         )
-    )
+    );
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => ">",
         1 => "2",
@@ -102,7 +106,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 11] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 0).into();
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();

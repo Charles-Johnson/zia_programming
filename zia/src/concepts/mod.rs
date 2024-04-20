@@ -40,6 +40,101 @@ pub struct Concept<Id: Eq + Hash> {
     specific_part: SpecificPart<Id>,
 }
 
+#[cfg(test)]
+impl From<Concept<usize>> for Concept<crate::mock_snap_shot::ConceptId> {
+    fn from(value: Concept<usize>) -> Self {
+        Self {
+            id: value.id.into(),
+            concrete_part: value.concrete_part.into(),
+            specific_part: value.specific_part.into(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<ConcreteConcept<usize>>
+    for ConcreteConcept<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: ConcreteConcept<usize>) -> Self {
+        Self {
+            lefthand_of: value
+                .lefthand_of
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+            righthand_of: value
+                .righthand_of
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+            reduces_from: value
+                .reduces_from
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<SpecificPart<usize>>
+    for SpecificPart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: SpecificPart<usize>) -> Self {
+        match value {
+            SpecificPart::Abstract(a) => Self::Abstract(a.into()),
+            SpecificPart::Concrete(c) => Self::Concrete(c),
+            SpecificPart::String(s) => Self::String(s),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<AbstractPart<usize>>
+    for AbstractPart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: AbstractPart<usize>) -> Self {
+        Self {
+            composition: value.composition.into(),
+            reduces_to: value.reduces_to.map(std::convert::Into::into),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<MaybeComposition<usize>>
+    for MaybeComposition<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: MaybeComposition<usize>) -> Self {
+        match value {
+            MaybeComposition::Composition(cp) => Self::Composition(cp.into()),
+            MaybeComposition::Leaf(lc) => Self::Leaf(lc),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<CompositePart<usize>>
+    for CompositePart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: CompositePart<usize>) -> Self {
+        Self {
+            lefthand: value.lefthand.into(),
+            righthand: value.righthand.into(),
+            free_variables: value
+                .free_variables
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+            binding_variables: value
+                .binding_variables
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+        }
+    }
+}
+
 impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
     pub fn make_reduce_to(&mut self, other: &mut Self) {
         if let SpecificPart::Abstract(ref mut ap) = &mut self.specific_part {
@@ -111,8 +206,8 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &right.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
                 };
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
@@ -176,8 +271,8 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &left.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
                 };
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
@@ -308,21 +403,21 @@ impl<Id: Copy + Display + Hash + Eq> Debug for Concept<Id> {
         if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             for key in self.concrete_part.lefthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
             for key in self.concrete_part.righthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.reduces_from.is_empty() {
             string += " reduces_from: {";
             for key in &self.concrete_part.reduces_from {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
@@ -757,15 +852,15 @@ impl<Id: Copy + Display + Eq + Hash> Debug for SpecificPart<Id> {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Concrete(ref cc) => format!("{:#?}", cc),
-            Self::Abstract(ref ap) => format!("{:#?}", ap),
+            Self::Concrete(ref cc) => format!("{cc:#?}"),
+            Self::Abstract(ref ap) => format!("{ap:#?}"),
             Self::String(ref s) => format_string(s),
         })
     }
 }
 
 pub fn format_string(s: &str) -> String {
-    format!("\"{}\"", s)
+    format!("\"{s}\"")
 }
 
 impl<Id: Eq + Hash> From<(AbstractPart<Id>, Id)> for Concept<Id> {
@@ -941,13 +1036,11 @@ impl<Id: Copy + Display + Eq + Hash> Debug for AbstractPart<Id> {
             ..
         }) = self.composition
         {
-            formatter.write_str(&format!(
-                "composition: {}, {},",
-                lefthand, righthand
-            ))?;
+            formatter
+                .write_str(&format!("composition: {lefthand}, {righthand},"))?;
         }
         self.reduces_to.iter().try_for_each(|r| {
-            formatter.write_str(&format!("reduces_to: {},", r))
+            formatter.write_str(&format!("reduces_to: {r},"))
         })?;
         formatter.write_str("}")
     }

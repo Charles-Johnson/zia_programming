@@ -1,16 +1,19 @@
 use crate::{
+    and_also::AndAlso,
     ast::SyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::ContextCache,
     context_delta::{
-        Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
-        ValueChange,
+        Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
+        SharedDelta, ValueChange,
     },
-    context_search::{ReductionReason, Syntax},
     errors::ZiaResult,
+    reduction_reason::{ReductionReason, SharedSyntax, Syntax},
     snap_shot::Reader,
     ZiaError,
 };
+
+use std::{fmt::Debug, marker::PhantomData};
 
 pub struct ContextUpdater<
     'a,
@@ -18,11 +21,14 @@ pub struct ContextUpdater<
     C: ContextCache,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
+        + From<DirectConceptDelta<S::ConceptId>>
+        + Debug,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
 > {
-    pub snap_shot: &'a S,
     pub cache: &'a mut C,
-    pub delta: &'a mut ContextDelta<S::ConceptId, SDCD>,
+    pub delta: &'a mut NestedDelta<S::ConceptId, SDCD, D>,
+    pub snap_shot: &'a S,
+    pub phantom: PhantomData<D>,
 }
 
 impl<
@@ -31,12 +37,76 @@ impl<
         C: ContextCache,
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
-            + From<DirectConceptDelta<S::ConceptId>>,
-    > ContextUpdater<'a, S, C, SDCD>
+            + From<DirectConceptDelta<S::ConceptId>>
+            + Debug,
+        D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    > ContextUpdater<'a, S, C, SDCD, D>
 where
     <<C as ContextCache>::RR as ReductionReason>::Syntax:
         SyntaxTree<ConceptId = S::ConceptId>,
 {
+    pub fn redefine(
+        &mut self,
+        concept: &S::ConceptId,
+        left: &SharedSyntax<C>,
+        right: &SharedSyntax<C>,
+    ) -> ZiaResult<()> {
+        if let Some((left_concept, right_concept)) =
+            self.snap_shot.read_concept(self.delta, *concept).get_composition()
+        {
+            self.relabel(left_concept, &left.to_string())?;
+            self.relabel(right_concept, &right.to_string())
+        } else {
+            let left_concept = self.concept_from_ast(left)?;
+            let right_concept = self.concept_from_ast(right)?;
+            self.insert_composition(*concept, left_concept, right_concept)
+        }
+    }
+
+    pub fn cleanly_delete_composition(
+        &mut self,
+        concept: &S::ConceptId,
+    ) -> ZiaResult<()> {
+        match self
+            .snap_shot
+            .read_concept(self.delta, *concept)
+            .get_composition()
+        {
+            None => Err(ZiaError::RedundantCompositionRemoval),
+            Some((left, right)) => {
+                self.try_delete_concept(*concept)?;
+                self.try_delete_concept(left)?;
+                self.try_delete_concept(right)
+            },
+        }
+    }
+
+    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
+    pub fn define_new_syntax(
+        &mut self,
+        syntax: &str,
+        left: &SharedSyntax<C>,
+        right: &SharedSyntax<C>,
+    ) -> ZiaResult<()> {
+        let new_syntax_tree = left
+            .get_concept()
+            .and_also(&right.get_concept())
+            .and_then(|(l, r)| {
+                self.snap_shot
+                    .read_concept(self.delta, *l)
+                    .find_as_hand_in_composition_with(*r, Hand::Left)
+                    .map(|concept| {
+                        let syntax = Syntax::<C>::from(syntax);
+                        self.snap_shot
+                            .bind_concept_to_syntax(self.delta, syntax, concept)
+                    })
+            })
+            .unwrap_or_else(|| syntax.into())
+            .bind_pair(left.clone(), right.clone());
+        self.concept_from_ast(&new_syntax_tree)?;
+        Ok(())
+    }
+
     pub fn concept_from_ast(
         &mut self,
         ast: &Syntax<C>,
@@ -267,10 +337,9 @@ where
     }
 
     fn remove_string(&mut self, string: &str) {
-        let index = *(self
+        let index = self
             .delta
-            .string()
-            .get(string)
+            .get_string(string)
             .and_then(|sd| match sd {
                 ValueChange::Update {
                     after,
@@ -279,7 +348,7 @@ where
                 ValueChange::Create(index) => Some(index),
                 ValueChange::Remove(_) => None,
             })
-            .expect("string already removed or doesn't exist"));
+            .expect("string already removed or doesn't exist");
         self.blindly_remove_concept(index);
     }
 

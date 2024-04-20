@@ -139,23 +139,17 @@ fn main() {
     let contents =
         include_str!("../../zia/src/lib.rs").split("//! ```\n").nth(1).unwrap();
     let code_blocks = contents.split("//!\n");
-    let mut blocks = Vec::<String>::new();
     let mut commands = Vec::<String>::new();
     for code_block in code_blocks {
-        let mut block = String::new();
-        block += "```rust\n";
         for line in code_block.split("//! ") {
-            block += line;
             line.split("context.execute(\"").nth(1).map(|s| {
                 s.split("\")").next().map(|s| commands.push(s.to_string()))
             });
         }
-        block += "```\n";
-        blocks.push(block);
     }
-    let mut context = Context::new();
+    let mut context = Context::new().unwrap();
     for command in commands {
         context.execute(&command);
     }
-    println!("{}", PRESENTATION);
+    println!("{PRESENTATION}");
 }

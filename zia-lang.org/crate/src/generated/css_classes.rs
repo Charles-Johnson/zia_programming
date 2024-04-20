@@ -181,6 +181,7 @@ pub struct CssClasses<'a> {
     pub w_20: &'a str,
     pub w_24: &'a str,
     pub flex_1: &'a str,
+    pub flex_2: &'a str,
     pub flex_grow: &'a str,
     pub table_auto: &'a str,
     pub table_fixed: &'a str,
@@ -712,6 +713,7 @@ pub struct CssClasses<'a> {
     pub sm__w_20: &'a str,
     pub sm__w_24: &'a str,
     pub sm__flex_1: &'a str,
+    pub sm__flex_2: &'a str,
     pub sm__flex_grow: &'a str,
     pub sm__table_auto: &'a str,
     pub sm__table_fixed: &'a str,
@@ -1238,6 +1240,7 @@ pub struct CssClasses<'a> {
     pub lg__w_20: &'a str,
     pub lg__w_24: &'a str,
     pub lg__flex_1: &'a str,
+    pub lg__flex_2: &'a str,
     pub lg__flex_grow: &'a str,
     pub lg__table_auto: &'a str,
     pub lg__table_fixed: &'a str,
@@ -2560,6 +2563,11 @@ pub static C: CssClasses = CssClasses {
         flex: 1 1 0%;
     */
     flex_1: "flex-1",
+
+    /**
+        flex: 2 2 0%;
+    */
+    flex_2: "flex-2",
 
     /**
         flex-grow: 1;
@@ -5535,6 +5543,11 @@ pub static C: CssClasses = CssClasses {
     sm__flex_1: "sm:flex-1",
 
     /**
+        flex: 2 2 0%;    @media (min-width: 569px)
+    */
+    sm__flex_2: "sm:flex-2",
+
+    /**
         flex-grow: 1;    @media (min-width: 569px)
     */
     sm__flex_grow: "sm:flex-grow",
@@ -8419,6 +8432,11 @@ pub static C: CssClasses = CssClasses {
         flex: 1 1 0%;    @media (min-width: 1025px)
     */
     lg__flex_1: "lg:flex-1",
+
+    /**
+        flex: 2 2 0%;    @media (min-width: 1025px)
+    */
+    lg__flex_2: "lg:flex-2",
 
     /**
         flex-grow: 1;    @media (min-width: 1025px)

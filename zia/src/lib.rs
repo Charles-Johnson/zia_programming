@@ -52,7 +52,7 @@
 //! use zia::{multi_threaded::Context, ZiaError};
 //!
 //! // Construct a new `Context` using the `new` method
-//! let mut context = Context::new();
+//! let mut context = Context::new().expect("Context should be created successfully ");
 //!
 //! // Specify the rule that the concept "a b" reduces to concept "c"
 //! assert_eq!(context.execute("let a b -> c"), "");
@@ -137,7 +137,6 @@ mod context_cache;
 
 mod context_delta;
 
-#[macro_use]
 mod context_search;
 
 #[cfg(test)]
@@ -163,13 +162,22 @@ mod map_err_variant;
 #[cfg(test)]
 mod mock_snap_shot;
 
+mod mixed_concept;
+
 mod parser;
+
+#[macro_use]
+mod reduction_reason;
 
 pub mod single_threaded;
 
 pub mod multi_threaded;
 
 mod snap_shot;
+
+mod iteration;
+
+mod substitute;
 
 pub mod variable_mask_list;
 

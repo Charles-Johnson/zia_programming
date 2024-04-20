@@ -3,12 +3,12 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_test::Context,
-    mock_snap_shot::{ConceptId, MockSnapShot},
+    mock_snap_shot::MockSnapShot,
 };
 use maplit::hashmap;
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<ConceptId>; 11] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut precedence_concept = (ConcreteConceptType::Precedence, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut default_concept = (ConcreteConceptType::Default, 2).into();
@@ -52,7 +52,7 @@ fn concepts() -> [Concept<ConceptId>; 11] {
     ]
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {4 => "a"}
 }
 

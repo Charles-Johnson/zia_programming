@@ -70,7 +70,7 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
             St::Bottom => "0",
             // without this command input is not horizontally centered
             St::Left => "0",
-            St::Width => format!("calc(100% - calc(2 * {}))", OUTER_PADDING),
+            St::Width => format!("calc(100% - calc(2 * {OUTER_PADDING}))"),
             St::Margin => OUTER_PADDING,
             St::Display => "flex",
             St::FlexDirection => "column"
@@ -127,7 +127,7 @@ fn syntax_colouring<T>(
             St::Bottom => "0",
             // without this command input is not horizontally centered
             St::Left => "0",
-            St::Width => format!("calc(100% - calc(2 * {}))", OUTER_PADDING),
+            St::Width => format!("calc(100% - calc(2 * {OUTER_PADDING}))"),
             St::Margin => OUTER_PADDING
         },
         &textarea_class,

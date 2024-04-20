@@ -29,6 +29,33 @@ fn simple_condition() {
     assert_eq!(context.execute("let a"), "");
     assert_eq!(context.execute("b"), "true");
 }
+#[test]
+fn negated_condition() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let a => (b -> false)"), "");
+    assert_eq!(context.execute("let a"), "");
+    assert_eq!(context.execute("b"), "false");
+}
+
+#[test]
+fn implicitly_negated_condition() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
+    assert_eq!(context.execute("let not c"), "");
+    assert_eq!(context.execute("c"), "false");
+    assert_eq!(context.execute("let a => not b"), "");
+    assert_eq!(context.execute("let a"), "");
+    assert_eq!(context.execute("b"), "false");
+}
+
+#[test]
+fn implied_reduction_via_implication_chain() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(context.execute("let (a _x_) => not (b _x_)"), "");
+    assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
+    assert_eq!(context.execute("let a c"), "");
+    assert_eq!(context.execute("b c"), "false");
+}
 
 fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();

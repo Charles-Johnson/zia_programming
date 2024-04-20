@@ -27,7 +27,7 @@ proptest! {
     #[test]
     fn lexer_indentifies_whitespace(w in r"\s") {
         let cont = NEW_CONTEXT.clone();
-        let lexemes = cont.lex(&format!("new_concept{}another_new_concept", w));
+        let lexemes = cont.lex(&format!("new_concept{w}another_new_concept"));
         assert_eq!(lexemes.len(), 3);
         assert_eq!(lexemes[0].text, "new_concept");
         assert_eq!(lexemes[0].category, LexemeCategory::Concept(ConceptKind::New));
