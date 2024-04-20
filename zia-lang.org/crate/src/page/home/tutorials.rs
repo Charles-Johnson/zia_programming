@@ -134,7 +134,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<6>) = (
                 expected_evaluation: "true"
             },
             TutorialStep {
-                command: "let (not _x_) => _x_ -> false",
+                command: "let (not _x_) => (_x_ -> false)",
                 explanation: "If the negation of a predicate is true then the predicate itself is false",
                 #[cfg(test)]
                 expected_evaluation: ""
