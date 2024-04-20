@@ -753,7 +753,10 @@ where
             self.find_example(generalised_part, &hashset!{equivalent_generalised_hand})
         }));
 
-        let Some(non_generalised_id) = non_generalised_part.get_concept() else {return subs;};
+        let Some(non_generalised_id) = non_generalised_part.get_concept()
+        else {
+            return subs;
+        };
         let non_generalised_concept = self
             .snap_shot
             .read_concept(self.delta.as_ref(), non_generalised_id);
