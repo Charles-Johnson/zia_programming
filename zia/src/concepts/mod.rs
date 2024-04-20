@@ -70,7 +70,7 @@ impl From<ConcreteConcept<usize>>
             reduces_from: value
                 .reduces_from
                 .into_iter()
-                .map(|v| v.into())
+                .map(std::convert::Into::into)
                 .collect(),
         }
     }
@@ -82,9 +82,9 @@ impl From<SpecificPart<usize>>
 {
     fn from(value: SpecificPart<usize>) -> Self {
         match value {
-            SpecificPart::Abstract(a) => SpecificPart::Abstract(a.into()),
-            SpecificPart::Concrete(c) => SpecificPart::Concrete(c),
-            SpecificPart::String(s) => SpecificPart::String(s),
+            SpecificPart::Abstract(a) => Self::Abstract(a.into()),
+            SpecificPart::Concrete(c) => Self::Concrete(c),
+            SpecificPart::String(s) => Self::String(s),
         }
     }
 }
@@ -96,7 +96,7 @@ impl From<AbstractPart<usize>>
     fn from(value: AbstractPart<usize>) -> Self {
         Self {
             composition: value.composition.into(),
-            reduces_to: value.reduces_to.map(|id| id.into()),
+            reduces_to: value.reduces_to.map(std::convert::Into::into),
         }
     }
 }
@@ -108,9 +108,9 @@ impl From<MaybeComposition<usize>>
     fn from(value: MaybeComposition<usize>) -> Self {
         match value {
             MaybeComposition::Composition(cp) => {
-                MaybeComposition::Composition(cp.into())
+                Self::Composition(cp.into())
             },
-            MaybeComposition::Leaf(lc) => MaybeComposition::Leaf(lc),
+            MaybeComposition::Leaf(lc) => Self::Leaf(lc),
         }
     }
 }
@@ -126,12 +126,12 @@ impl From<CompositePart<usize>>
             free_variables: value
                 .free_variables
                 .into_iter()
-                .map(|v| v.into())
+                .map(std::convert::Into::into)
                 .collect(),
             binding_variables: value
                 .binding_variables
                 .into_iter()
-                .map(|v| v.into())
+                .map(std::convert::Into::into)
                 .collect(),
         }
     }
