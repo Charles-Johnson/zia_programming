@@ -2,10 +2,12 @@
 # ---- GENERAL ----
 
 [tasks.verify]
+toolchain = "nightly"
 description = "Format, lint with Clippy and run tests"
 dependencies = ["fmt", "clippy_fix", "test", "test_web_h_firefox"]
 
 [tasks.verify_only]
+toolchain = "nightly"
 description = "Like `verify`, but fails if the code isn't formatted. Primarily for CI."
 dependencies = ["fmt_check", "clippy", "test", "test_web_h_firefox"]
 
@@ -34,7 +36,7 @@ args = ["fmt", "--all", "--", "--check"]
 [tasks.clippy]
 description = "Lint with Clippy"
 clear = true
-toolchain = "1.69"
+toolchain = "nightly"
 install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
 command = "cargo"
 args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"]
@@ -43,7 +45,7 @@ args = ["clippy", "--all-features", "--", "--deny", "warnings", "--deny", "clipp
 [tasks.clippy_fix]
 description = "Lint and fix with Clippy"
 clear = true
-toolchain = "1.69"
+toolchain = "nightly"
 install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", test_arg = "--help" }
 command = "cargo"
 args = ["clippy", "--all-features", "--fix", "--allow-dirty", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"]

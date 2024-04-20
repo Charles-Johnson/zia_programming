@@ -226,7 +226,7 @@ where
                         ValueChange::Create(_)
                         | ValueChange::Update {
                             ..
-                        } => panic!("String \"{}\" already exists", s),
+                        } => panic!("String \"{s}\" already exists"),
                         ValueChange::Remove(id) => {
                             *v = ValueChange::Update {
                                 before: *id,
@@ -327,7 +327,7 @@ where
                             &DirectConceptDelta::Remove(_)
                         ) =>
                     {
-                        panic!("Concept {} already removed", concept_id);
+                        panic!("Concept {concept_id} already removed");
                     },
                     _ => (),
                 };
@@ -353,7 +353,7 @@ where
                             dcd.as_ref(),
                             &DirectConceptDelta::Remove(_)
                         ) => {},
-                    _ => panic!("Concept {} already exists", concept_id),
+                    _ => panic!("Concept {concept_id} already exists"),
                 };
             },
         );
@@ -402,7 +402,7 @@ where
             unsorted_keys.sort();
             for key in unsorted_keys {
                 let sd = self.string.get(key).unwrap();
-                string += &format!("\t{}: {:#?},\n", key, sd);
+                string += &format!("\t{key}: {sd:#?},\n");
             }
             string += "    },\n";
         }
@@ -410,7 +410,7 @@ where
             string += "    concept: {\n";
             for key in self.concept.keys() {
                 for cd in self.concept.get(key).unwrap() {
-                    string += &format!("\t{}: {:#?},\n", key, cd);
+                    string += &format!("\t{key}: {cd:#?},\n");
                 }
             }
             string += "    },\n";
@@ -447,7 +447,21 @@ where
         }
     }
 }
-
+type BoxedTupleIterator<'a> = Box<
+    dyn Iterator<
+        Item = (
+            &'a ConceptId,
+            Box<
+                dyn Iterator<
+                        Item = &'a ConceptDelta<
+                            ConceptId,
+                            SharedDirectConceptDelta,
+                        >,
+                    > + 'a,
+            >,
+        ),
+    >,
+>;
 impl<ConceptId, SharedDirectConceptDelta, D>
     NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
@@ -539,7 +553,7 @@ where
                 ),
                 y @ Some(ValueChange::Create(_)),
             ) => {
-                panic!("Unexpected string delta combination - before: {:?}, after: {:?}", x, y)
+                panic!("Unexpected string delta combination - before: {x:?}, after: {y:?}")
             },
         }
     }
@@ -606,7 +620,7 @@ where
                 > = Box::new(cd);
                 Some(new_box)
             },
-            (Some(icd), Some(ocd)) => {
+            (Some(inner_cd), Some(outer_cd)) => {
                 let new_box: Box<
                     dyn Iterator<
                         Item = &ConceptDelta<
@@ -614,90 +628,49 @@ where
                             SharedDirectConceptDelta,
                         >,
                     >,
-                > = Box::new(icd.chain(ocd));
+                > = Box::new(inner_cd.chain(outer_cd));
                 Some(new_box)
             },
         }
     }
 
-    pub fn iter_concepts<'a>(
-        &'a self,
-    ) -> impl Iterator<
-        Item = (
-            &'a ConceptId,
-            Box<
-                dyn Iterator<
-                        Item = &'a ConceptDelta<
-                            ConceptId,
-                            SharedDirectConceptDelta,
-                        >,
-                    > + 'a,
-            >,
-        ),
-    > {
+    pub fn iter_concepts<'a>(&'a self) -> BoxedTupleIterator<'a> {
         let inner_delta = self.inner_delta.as_ref();
-        let new_box: Box<
-            dyn Iterator<
-                Item = (
-                    &ConceptId,
-                    Box<
-                        dyn Iterator<
-                            Item = &ConceptDelta<
-                                ConceptId,
-                                SharedDirectConceptDelta,
-                            >,
-                        >,
-                    >,
-                ),
-            >,
-        > = Box::new(self.overlay_delta.iter_concepts().map(move |(k, v)| {
-            (k, {
-                let inner_concept_iter =
-                    inner_delta.and_then(|d| d.as_ref().get_concept(k));
-                match inner_concept_iter {
-                    None => {
-                        let new_box: Box<
-                            dyn Iterator<
-                                Item = &ConceptDelta<
-                                    ConceptId,
-                                    SharedDirectConceptDelta,
-                                >,
-                            >,
-                        > = Box::new(v);
-                        new_box
-                    },
-                    Some(inner_concept_iter) => {
-                        let new_box: Box<
-                            dyn Iterator<
-                                Item = &ConceptDelta<
-                                    ConceptId,
-                                    SharedDirectConceptDelta,
-                                >,
-                            >,
-                        > = Box::new(inner_concept_iter.chain(v));
-                        new_box
-                    },
-                }
-            })
-        }));
-        let concepts = &self.overlay_delta.concept;
-        match &self.inner_delta {
-            Some(d) => {
-                let new_box: Box<
-                    dyn Iterator<
-                        Item = (
-                            &ConceptId,
-                            Box<
+        let new_box: BoxedTupleIterator<'a> =
+            Box::new(self.overlay_delta.iter_concepts().map(move |(k, v)| {
+                (k, {
+                    let inner_concept_iter =
+                        inner_delta.and_then(|d| d.as_ref().get_concept(k));
+                    match inner_concept_iter {
+                        None => {
+                            let new_box: Box<
                                 dyn Iterator<
                                     Item = &ConceptDelta<
                                         ConceptId,
                                         SharedDirectConceptDelta,
                                     >,
                                 >,
-                            >,
-                        ),
-                    >,
-                > = Box::new(
+                            > = Box::new(v);
+                            new_box
+                        },
+                        Some(inner_concept_iter) => {
+                            let new_box: Box<
+                                dyn Iterator<
+                                    Item = &ConceptDelta<
+                                        ConceptId,
+                                        SharedDirectConceptDelta,
+                                    >,
+                                >,
+                            > = Box::new(inner_concept_iter.chain(v));
+                            new_box
+                        },
+                    }
+                })
+            }));
+        let concepts = &self.overlay_delta.concept;
+        match &self.inner_delta {
+            Some(d) => {
+                let new_box: BoxedTupleIterator<'a> = Box::new(
                     d.as_ref()
                         .iter_concepts()
                         .filter(move |(k, _)| !concepts.contains_key(*k)),
@@ -705,21 +678,8 @@ where
                 new_box
             },
             None => {
-                let new_box: Box<
-                    dyn Iterator<
-                        Item = (
-                            &ConceptId,
-                            Box<
-                                dyn Iterator<
-                                    Item = &ConceptDelta<
-                                        ConceptId,
-                                        SharedDirectConceptDelta,
-                                    >,
-                                >,
-                            >,
-                        ),
-                    >,
-                > = Box::new(std::iter::empty());
+                let new_box: BoxedTupleIterator<'a> =
+                    Box::new(std::iter::empty());
                 new_box
             },
         }
@@ -797,8 +757,8 @@ where
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Direct(ref c) => format!("+ {:#?}", c) + " (direct) ",
-            Self::Indirect(ref c) => format!("- {:#?}", c) + " (indirect) ",
+            Self::Direct(ref c) => format!("+ {c:#?}") + " (direct) ",
+            Self::Indirect(ref c) => format!("- {c:#?}") + " (indirect) ",
         })
     }
 }
@@ -811,12 +771,12 @@ impl<T: Clone + Display, U: Clone + Display> Debug
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match self {
-            Self::Create(n) => format!("+ {}", n),
-            Self::Remove(n) => format!("- {}", n),
+            Self::Create(n) => format!("+ {n}"),
+            Self::Remove(n) => format!("- {n}"),
             Self::Update {
                 before,
                 after,
-            } => format!("{} -> {}", before, after),
+            } => format!("{before} -> {after}"),
         })
     }
 }

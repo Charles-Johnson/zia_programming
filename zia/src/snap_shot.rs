@@ -136,7 +136,7 @@ where
             })
             .unwrap_or_else(|| {
                 self.get_concept(id)
-                    .unwrap_or_else(|| panic!("No concept with id = {}", id))
+                    .unwrap_or_else(|| panic!("No concept with id = {id}"))
             })
     }
     fn concepts_from_composition<

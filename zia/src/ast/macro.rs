@@ -103,7 +103,7 @@ macro_rules! impl_syntax_tree {
             type SharedSyntax = $refcounter<Self>;
             type ConceptId = ConceptId;
 
-            fn make_mut<'a>(refcounter: &'a mut Self::SharedSyntax) -> &'a mut Self {
+            fn make_mut(refcounter: &mut Self::SharedSyntax) -> &mut Self {
                 $refcounter::make_mut(refcounter)
             }
 

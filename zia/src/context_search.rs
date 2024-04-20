@@ -155,8 +155,8 @@ where
     }
 
     // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept
-    fn reduce_otherwise_default<'b>(
-        &'b self,
+    fn reduce_otherwise_default(
+        &self,
         ast: &SharedSyntax<C>,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
@@ -240,8 +240,8 @@ where
     }
 
     // Reduces a syntax tree based on the properties of the left and right branches
-    fn reduce_pair<'b>(
-        &'b self,
+    fn reduce_pair(
+        &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ReductionResult<C::RR> {
@@ -262,8 +262,8 @@ where
             .or_else(|| self.recursively_reduce_pair(left, right))
     }
 
-    fn recursively_reduce_pair<'b>(
-        &'b self,
+    fn recursively_reduce_pair(
+        &self,
         left: &SharedSyntax<C>,
         right: &SharedSyntax<C>,
     ) -> ReductionResult<C::RR> {
@@ -326,8 +326,8 @@ where
         }
     }
 
-    pub fn substitute<'b>(
-        &'b self,
+    pub fn substitute(
+        &self,
         ast: &SharedSyntax<C>,
         variable_mask: &VariableMask<Syntax<C>>,
     ) -> SharedSyntax<C> {
@@ -556,7 +556,7 @@ where
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
-        let truths = self.equivalent_concepts_to(true_id);
+        let truths = self.equivalent_concepts_to(&true_id);
         let irp = implication_rule_pattern.share();
         spawned_context_search
             .find_examples(&irp, &truths)
@@ -620,8 +620,7 @@ where
         } else {
             debug_assert!(
                 self.contains_bound_variable_syntax(generalisation),
-                "Generalisation ({}) doesn't contain bound variables",
-                generalisation
+                "Generalisation ({generalisation}) doesn't contain bound variables"
             );
             equivalence_set
             .iter()
@@ -650,13 +649,13 @@ where
                 equivalence_set
                     .iter()
                     .filter_map(|equivalent_concept_id| {
-                        self.composition_of_concept(*equivalent_concept_id)
+                        self.composition_of_concept(equivalent_concept_id)
                     })
                     .flat_map(|(equivalent_left_id, equivalent_right_id)| {
                         let equivalent_left_equivalence_set =
-                            self.equivalent_concepts_to(equivalent_left_id);
+                            self.equivalent_concepts_to(&equivalent_left_id);
                         let equivalent_right_equivalence_set =
-                            self.equivalent_concepts_to(equivalent_right_id);
+                            self.equivalent_concepts_to(&equivalent_right_id);
                         self.find_examples(
                             left,
                             &equivalent_left_equivalence_set,
@@ -958,7 +957,7 @@ where
                 }
             },
             |con| {
-                if let Some((left, right)) = self.composition_of_concept(con) {
+                if let Some((left, right)) = self.composition_of_concept(&con) {
                     self.combine(
                         &self.expand(&self.to_ast(&left)),
                         &self.expand(&self.to_ast(&right)),
@@ -972,8 +971,8 @@ where
     }
 
     #[allow(clippy::too_many_lines)]
-    pub fn compare<'b>(
-        &'b self,
+    pub fn compare(
+        &self,
         some_syntax: &SharedSyntax<C>,
         another_syntax: &SharedSyntax<C>,
     ) -> (Comparison, ComparisonReason<C::RR>) {
@@ -1058,7 +1057,7 @@ where
                         Some(ConcreteConceptType::True),
                         Some(ConcreteConceptType::True),
                     ) => {
-                        panic!("{:#?} is both greater than and less than {:#?}!\nReason: {:#?}\n Reversed reason: {:#?}", some_syntax, another_syntax, reason, reversed_reason);
+                        panic!("{some_syntax:#?} is both greater than and less than {another_syntax:#?}!\nReason: {reason:#?}\n Reversed reason: {reversed_reason:#?}");
                     },
                     (Some(ConcreteConceptType::True), _) => {
                         Comparison::GreaterThan
@@ -1116,7 +1115,7 @@ where
                     .bounded_variable()
             }))
         .then(|| {
-            if let Some((gl, gr)) = self.composition_of_concept(*generalisation)
+            if let Some((gl, gr)) = self.composition_of_concept(generalisation)
             {
                 let (l, r) = ast.get_expansion()?;
                 match (self.is_free_variable(&gl), self.is_free_variable(&gr)) {
@@ -1172,30 +1171,30 @@ where
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
     fn is_leaf_concept(&self, l: &S::ConceptId) -> bool {
-        self.composition_of_concept(*l).is_none()
+        self.composition_of_concept(l).is_none()
     }
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
     fn equivalent_concepts_to(
         &self,
-        equivalent_id: S::ConceptId,
+        equivalent_id: &S::ConceptId,
     ) -> HashSet<S::ConceptId> {
         let equivalent_concept =
-            self.snap_shot.read_concept(self.delta.as_ref(), equivalent_id);
+            self.snap_shot.read_concept(self.delta.as_ref(), *equivalent_id);
         // TODO handle case when a concept implicitly reduces to `equivalent_concept`
         let mut equivalence_set: HashSet<S::ConceptId> =
             equivalent_concept.find_what_reduces_to_it().collect();
-        equivalence_set.insert(equivalent_id);
+        equivalence_set.insert(*equivalent_id);
         equivalence_set
     }
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
     fn composition_of_concept(
         &self,
-        composition_id: S::ConceptId,
+        composition_id: &S::ConceptId,
     ) -> Option<(S::ConceptId, S::ConceptId)> {
         self.snap_shot
-            .read_concept(self.delta.as_ref(), composition_id)
+            .read_concept(self.delta.as_ref(), *composition_id)
             .get_composition()
     }
 

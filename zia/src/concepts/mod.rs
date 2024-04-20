@@ -403,21 +403,21 @@ impl<Id: Copy + Display + Hash + Eq> Debug for Concept<Id> {
         if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             for key in self.concrete_part.lefthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
             for key in self.concrete_part.righthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.reduces_from.is_empty() {
             string += " reduces_from: {";
             for key in &self.concrete_part.reduces_from {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
@@ -852,15 +852,15 @@ impl<Id: Copy + Display + Eq + Hash> Debug for SpecificPart<Id> {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Concrete(ref cc) => format!("{:#?}", cc),
-            Self::Abstract(ref ap) => format!("{:#?}", ap),
+            Self::Concrete(ref cc) => format!("{cc:#?}"),
+            Self::Abstract(ref ap) => format!("{ap:#?}"),
             Self::String(ref s) => format_string(s),
         })
     }
 }
 
 pub fn format_string(s: &str) -> String {
-    format!("\"{}\"", s)
+    format!("\"{s}\"")
 }
 
 impl<Id: Eq + Hash> From<(AbstractPart<Id>, Id)> for Concept<Id> {
@@ -1036,13 +1036,11 @@ impl<Id: Copy + Display + Eq + Hash> Debug for AbstractPart<Id> {
             ..
         }) = self.composition
         {
-            formatter.write_str(&format!(
-                "composition: {}, {},",
-                lefthand, righthand
-            ))?;
+            formatter
+                .write_str(&format!("composition: {lefthand}, {righthand},"))?;
         }
         self.reduces_to.iter().try_for_each(|r| {
-            formatter.write_str(&format!("reduces_to: {},", r))
+            formatter.write_str(&format!("reduces_to: {r},"))
         })?;
         formatter.write_str("}")
     }

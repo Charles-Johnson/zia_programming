@@ -157,5 +157,5 @@ fn main() {
     for command in commands {
         context.execute(&command);
     }
-    println!("{}", PRESENTATION);
+    println!("{PRESENTATION}");
 }

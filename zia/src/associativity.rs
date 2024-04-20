@@ -13,8 +13,8 @@ impl Associativity {
         leftright: impl Display,
     ) -> String {
         match &self {
-            Self::Left => format!("{} {}", leftleft, leftright),
-            Self::Right => format!("({} {})", leftleft, leftright),
+            Self::Left => format!("{leftleft} {leftright}"),
+            Self::Right => format!("({leftleft} {leftright})"),
         }
     }
 
@@ -24,8 +24,8 @@ impl Associativity {
         rightright: impl Display,
     ) -> String {
         match &self {
-            Self::Left => format!("({} {})", rightleft, rightright),
-            Self::Right => format!("{} {}", rightleft, rightright),
+            Self::Left => format!("({rightleft} {rightright})"),
+            Self::Right => format!("{rightleft} {rightright}"),
         }
     }
 

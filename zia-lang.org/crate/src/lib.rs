@@ -49,7 +49,7 @@ impl From<Url> for Page {
     fn from(url: Url) -> Self {
         let (page, title) = match url.path().first().map(String::as_str) {
             None | Some("") => (Self::Home, TITLE_SUFFIX.to_owned()),
-            _ => (Self::NotFound, format!("404 - {}", TITLE_SUFFIX)),
+            _ => (Self::NotFound, format!("404 - {TITLE_SUFFIX}")),
         };
         document().set_title(&title);
         page
@@ -125,7 +125,7 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
 
 #[must_use]
 pub fn image_src(image: &str) -> String {
-    format!("{}/{}", IMAGES_PATH, image)
+    format!("{IMAGES_PATH}/{image}")
 }
 
 // ------ ------
