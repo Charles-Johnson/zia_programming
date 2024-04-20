@@ -1,4 +1,3 @@
-
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedContextDelta,
@@ -9,8 +8,8 @@ use crate::{
     },
 };
 use maplit::{hashmap, hashset};
-use std::collections::HashMap;
 use pretty_assertions::assert_eq;
+use std::collections::HashMap;
 
 fn concepts() -> [Concept<usize>; 26] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
@@ -21,10 +20,10 @@ fn concepts() -> [Concept<usize>; 26] {
     let mut concept_b = (SpecificPart::default(), 10).into();
     let mut cause_concept =
         Concept::composition_of(4, &mut concept_a, &mut variable_concept);
-    let mut b_x = Concept::composition_of(15, &mut concept_b, &mut variable_concept);
+    let mut b_x =
+        Concept::composition_of(15, &mut concept_b, &mut variable_concept);
     let mut not = (SpecificPart::default(), 16).into();
-    let mut result_concept =
-        Concept::composition_of(2, &mut not, &mut b_x);
+    let mut result_concept = Concept::composition_of(2, &mut not, &mut b_x);
     let mut implies_result_concept = Concept::composition_of(
         5,
         &mut implication_concept,
@@ -41,14 +40,32 @@ fn concepts() -> [Concept<usize>; 26] {
     example_composition.make_reduce_to(&mut true_concept);
 
     let mut another_variable = (SpecificPart::free_variable(), 17).into();
-    let mut not_another_variable = Concept::composition_of(18, &mut not, &mut another_variable);
-    let mut false_concept = (SpecificPart::Concrete(ConcreteConceptType::False), 19).into();
-    let mut reduction_concept = (SpecificPart::Concrete(ConcreteConceptType::Reduction), 20).into();
-    let mut reduces_to_false = Concept::composition_of(21, &mut reduction_concept, &mut false_concept);
-    let mut another_variable_reduces_to_false = Concept::composition_of(22, &mut another_variable, &mut reduces_to_false);
-    let mut implies_another_variable_reduces_to_false = Concept::composition_of(23, &mut implication_concept, &mut another_variable_reduces_to_false);
-    let mut not_another_variable_implies_another_variable_reduces_to_false = Concept::composition_of(24, &mut not_another_variable, &mut implies_another_variable_reduces_to_false);
-    not_another_variable_implies_another_variable_reduces_to_false.make_reduce_to(&mut true_concept);
+    let mut not_another_variable =
+        Concept::composition_of(18, &mut not, &mut another_variable);
+    let mut false_concept =
+        (SpecificPart::Concrete(ConcreteConceptType::False), 19).into();
+    let mut reduction_concept =
+        (SpecificPart::Concrete(ConcreteConceptType::Reduction), 20).into();
+    let mut reduces_to_false =
+        Concept::composition_of(21, &mut reduction_concept, &mut false_concept);
+    let mut another_variable_reduces_to_false = Concept::composition_of(
+        22,
+        &mut another_variable,
+        &mut reduces_to_false,
+    );
+    let mut implies_another_variable_reduces_to_false = Concept::composition_of(
+        23,
+        &mut implication_concept,
+        &mut another_variable_reduces_to_false,
+    );
+    let mut not_another_variable_implies_another_variable_reduces_to_false =
+        Concept::composition_of(
+            24,
+            &mut not_another_variable,
+            &mut implies_another_variable_reduces_to_false,
+        );
+    not_another_variable_implies_another_variable_reduces_to_false
+        .make_reduce_to(&mut true_concept);
     let b_c = Concept::composition_of(25, &mut concept_b, &mut example_concept);
     [
         implication_concept,
@@ -76,7 +93,7 @@ fn concepts() -> [Concept<usize>; 26] {
         another_variable_reduces_to_false,
         implies_another_variable_reduces_to_false,
         not_another_variable_implies_another_variable_reduces_to_false,
-        b_c
+        b_c,
     ]
 }
 
@@ -117,7 +134,10 @@ fn inference_rule() {
     });
     let false_syntax = context_search.to_ast(&19);
     assert_eq!(
-        context_search.find_examples_of_inferred_reduction(&context_search.to_ast(&25)).unwrap().0,
+        context_search
+            .find_examples_of_inferred_reduction(&context_search.to_ast(&25))
+            .unwrap()
+            .0,
         false_syntax,
     );
 }

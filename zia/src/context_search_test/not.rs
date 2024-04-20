@@ -28,10 +28,14 @@ fn concepts() -> [Concept<usize>; 17] {
         &mut result_concept,
     );
     let mut not_variable = Concept::composition_of(16, &mut not, &mut variable);
-    let mut cause_implies_result_concept =
-        Concept::composition_of(6, &mut not_variable, &mut implies_result_concept);
+    let mut cause_implies_result_concept = Concept::composition_of(
+        6,
+        &mut not_variable,
+        &mut implies_result_concept,
+    );
     let mut concept_c = (SpecificPart::default(), 14).into();
-    let mut not_concept_c = Concept::composition_of(15, &mut not, &mut concept_c);
+    let mut not_concept_c =
+        Concept::composition_of(15, &mut not, &mut concept_c);
     not_concept_c.make_reduce_to(&mut true_concept); // not c -> true
     cause_implies_result_concept.make_reduce_to(&mut true_concept); // not _x_ => _x_ -> false
     [
@@ -51,7 +55,7 @@ fn concepts() -> [Concept<usize>; 17] {
         reduces_to_false,
         concept_c,
         not_concept_c,
-        not_variable
+        not_variable,
     ]
 }
 
@@ -83,7 +87,8 @@ fn not() {
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });
-    let (reduction, _) =
-        context_search.find_examples_of_inferred_reduction(&context_search.to_ast(&14)).expect("Examples should be found");
+    let (reduction, _) = context_search
+        .find_examples_of_inferred_reduction(&context_search.to_ast(&14))
+        .expect("Examples should be found");
     assert_eq!(reduction.get_concept().unwrap(), 12.into());
 }

@@ -107,9 +107,7 @@ impl From<MaybeComposition<usize>>
 {
     fn from(value: MaybeComposition<usize>) -> Self {
         match value {
-            MaybeComposition::Composition(cp) => {
-                Self::Composition(cp.into())
-            },
+            MaybeComposition::Composition(cp) => Self::Composition(cp.into()),
             MaybeComposition::Leaf(lc) => Self::Leaf(lc),
         }
     }

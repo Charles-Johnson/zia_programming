@@ -6,9 +6,9 @@ mod basic_reduction;
 mod basic_rule;
 mod comparison_existence_implication_rule;
 mod existence_inference_rule;
+mod implied_reduction_via_implication_chain;
 mod inference_rule;
 mod inferred_negation;
-mod implied_reduction_via_implication_chain;
 mod nested_composition_rule;
 mod not;
 

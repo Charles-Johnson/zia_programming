@@ -10,8 +10,8 @@ use crate::{
     },
 };
 use maplit::{hashmap, hashset};
-use std::collections::HashMap;
 use pretty_assertions::assert_eq;
+use std::collections::HashMap;
 
 fn concepts() -> [Concept<usize>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
@@ -88,10 +88,8 @@ fn inference_rule() {
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });
-    let example_syntax = Syntax::new_pair(
-        context_search.to_ast(&7),       
-        context_search.to_ast(&10),
-    );
+    let example_syntax =
+        Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10));
     let true_syntax = context_search.to_ast(&1);
     assert_eq!(
         context_search.reduce(&example_syntax.into()).unwrap().0,

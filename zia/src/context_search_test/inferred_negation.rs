@@ -69,7 +69,8 @@ fn inferred_negation() {
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });
-    let (reduction, _) =
-        context_search.find_examples_of_inferred_reduction(&context_search.to_ast(&7)).unwrap();
+    let (reduction, _) = context_search
+        .find_examples_of_inferred_reduction(&context_search.to_ast(&7))
+        .unwrap();
     assert_eq!(reduction.get_concept().unwrap(), 12.into());
 }

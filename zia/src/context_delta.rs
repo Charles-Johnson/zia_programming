@@ -425,9 +425,7 @@ pub struct NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
     ConceptId: MixedConcept,
     SharedDirectConceptDelta: Debug,
-    D: SharedDelta<
-        NestedDelta = Self,
-    >,
+    D: SharedDelta<NestedDelta = Self>,
 {
     inner_delta: Option<D>,
     overlay_delta: ContextDelta<ConceptId, SharedDirectConceptDelta>,
@@ -436,9 +434,7 @@ where
 impl<
         ConceptId: Clone,
         SharedDirectConceptDelta,
-        D: SharedDelta<
-            NestedDelta = Self,
-        >,
+        D: SharedDelta<NestedDelta = Self>,
     > Default for NestedContextDelta<ConceptId, SharedDirectConceptDelta, D>
 where
     ConceptId: MixedConcept,
@@ -460,9 +456,7 @@ where
         + AsRef<DirectConceptDelta<ConceptId>>
         + From<DirectConceptDelta<ConceptId>>
         + Debug,
-    D: SharedDelta<
-        NestedDelta = Self,
-    >,
+    D: SharedDelta<NestedDelta = Self>,
 {
     pub fn spawn(inner_delta: D) -> Self {
         Self {
@@ -527,10 +521,24 @@ where
                     after: *after,
                 })
             },
-            (x @ Some(ValueChange::Remove(_)),
-y @ Some(ValueChange::Remove(_) | ValueChange::Update { .. })) |
-(x @ Some(ValueChange::Create(_) | ValueChange::Update { .. }), y @
-Some(ValueChange::Create(_))) => {
+            (
+                x @ Some(ValueChange::Remove(_)),
+                y @ Some(
+                    ValueChange::Remove(_)
+                    | ValueChange::Update {
+                        ..
+                    },
+                ),
+            )
+            | (
+                x @ Some(
+                    ValueChange::Create(_)
+                    | ValueChange::Update {
+                        ..
+                    },
+                ),
+                y @ Some(ValueChange::Create(_)),
+            ) => {
                 panic!("Unexpected string delta combination - before: {:?}, after: {:?}", x, y)
             },
         }
@@ -734,10 +742,10 @@ Some(ValueChange::Create(_))) => {
     pub fn concepts_to_apply_in_order(
         &self,
     ) -> Vec<(ConceptId, SharedDirectConceptDelta)> {
-        let mut concepts =
-            self.inner_delta.as_ref().map_or_else(Vec::new, |d| {
-                d.as_ref().concepts_to_apply_in_order()
-            });
+        let mut concepts = self
+            .inner_delta
+            .as_ref()
+            .map_or_else(Vec::new, |d| d.as_ref().concepts_to_apply_in_order());
         concepts
             .extend(self.overlay_delta.concepts_to_apply_in_order().clone());
         concepts
