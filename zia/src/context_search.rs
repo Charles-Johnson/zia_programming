@@ -1085,7 +1085,7 @@ where
         &'b self,
         cache: &'c <C as ContextCache>::SharedReductionCache,
         delta: D,
-    ) -> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+    ) -> Self
     where
         VML: VariableMaskList,
     {
@@ -1339,8 +1339,8 @@ where
             delta,
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
-            phantom: PhantomData::default(),
-            phantom2: PhantomData::default(),
+            phantom: PhantomData,
+            phantom2: PhantomData,
         }
     }
 }
