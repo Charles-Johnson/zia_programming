@@ -99,4 +99,9 @@ pub enum ZiaError {
     CanOnlyQuantifyOverVariables,
     #[error("Multiple smart pointers to context delta")]
     MultiplePointersToDelta,
+    #[error("{syntax_to_reduce} already reduces to {existing_reduction}")]
+    ExistingReduction {
+        syntax_to_reduce: String,
+        existing_reduction: String,
+    },
 }

@@ -884,14 +884,23 @@ where
 
     fn execute_reduction(
         &mut self,
-        syntax: &Syntax<C>,
-        normal_form: &Syntax<C>,
+        syntax: &SharedSyntax<C>,
+        normal_form: &SharedSyntax<C>,
     ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else if syntax == normal_form {
             self.try_removing_reduction(syntax)
         } else {
+            let context_search = self.context_search();
+            if let Some((existing_reduction, _)) = context_search
+                .reduce(syntax)
+                .or_else(|| context_search
+                    .find_examples_of_inferred_reduction(syntax)
+                ) {
+                    Err(ZiaError::ExistingReduction{syntax_to_reduce: syntax.to_string(), existing_reduction: existing_reduction.to_string()})
+                } else {
+                    drop(context_search);
             let maybe_inner_delta = self.delta.get_mut();
             let Some(delta) = maybe_inner_delta else {
                 return Err(ZiaError::MultiplePointersToDelta);
@@ -904,7 +913,8 @@ where
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
             let normal_form_concept = updater.concept_from_ast(normal_form)?;
-            updater.update_reduction(syntax_concept, normal_form_concept)
+                updater.update_reduction(syntax_concept, normal_form_concept)
+            }
         }
     }
 
