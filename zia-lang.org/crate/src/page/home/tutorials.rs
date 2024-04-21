@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<12>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -169,6 +169,24 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
                 #[cfg(test)]
                 expected_evaluation: "true"
             },
+            TutorialStep {
+                command: "let ((_y_ exists_such_that) (_y_ is parent of _x_) and (_y_ is parent of _z_)) => (_x_ is sibling of _z_)",
+                explanation: "Define sibling is terms of parent relationships",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "let Alice is parent of Eve",
+                explanation: "This should mean that Eve is sibling of Bob",
+                #[cfg(test)]
+                expected_evaluation: ""
+            },
+            TutorialStep {
+                command: "Eve is sibling of Bob",
+                explanation: "Let's check",
+                #[cfg(test)]
+                expected_evaluation: "true"
+            }
         ]
     }
 );
