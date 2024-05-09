@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<10>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -150,6 +150,12 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
                 explanation: "Let's check",
                 #[cfg(test)]
                 expected_evaluation: "false"
+            },
+            TutorialStep {
+                command: "let Alice is child of Bob",
+                explanation: "We won't accidentally define a parent as a child of their child",
+                #[cfg(test)]
+                expected_evaluation: "Alice is child of Bob already reduces to false"
             },
             TutorialStep {
                 command: "let ((_y_ exists_such_that) (_x_ is parent of _y_) and (_y_ is parent of _z_)) => (_x_ is grandparent of _z_)",
