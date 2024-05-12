@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<7>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -170,6 +170,53 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>) = (
                 expected_evaluation: "true"
             },
         ]
+    },
+    Tutorial {
+        title: "Arrays",
+        steps: [
+            TutorialStep {
+                command: "let ([ _x_ ])[ 0 ] -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the base case for array access",
+            },
+            TutorialStep {
+                command: "([ 2 ])[ 0 ]",
+                #[cfg(test)]
+                expected_evaluation: "2",
+                explanation: "We can now access the element of any array with that has a single element"
+            },
+            TutorialStep {
+                command: "let ([ _x_ , _y_)[ 0 ] -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the first element of an array with more than one element"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ])[ 0 ]",
+                #[cfg(test)]
+                expected_evaluation: "5",
+                explanation: "We can access the first element of any array"
+            },
+            TutorialStep {
+                command: "let ([ _x_ , _y_)[ (_i_ +1) ] -> ([ _y_)[ _i_ ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the how to access subsequent elements of an array"
+            },
+            TutorialStep {
+                command: "let 1 := 0 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the number one"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ])[ 1 ]",
+                #[cfg(test)]
+                expected_evaluation: "3",
+                explanation: "We can now access any element of any array"
+            }
+        ]
     }
 );
 
@@ -213,6 +260,18 @@ mod test {
     fn relationships_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.1.steps {
+            assert_eq!(
+                context.execute(step.command),
+                step.expected_evaluation,
+                "Failed at {0}",
+                step.command
+            );
+        }
+    }
+    #[test]
+    fn array_tutorial() {
+        let mut context = NEW_CONTEXT.clone();
+        for step in TUTORIALS.2.steps {
             assert_eq!(
                 context.execute(step.command),
                 step.expected_evaluation,
