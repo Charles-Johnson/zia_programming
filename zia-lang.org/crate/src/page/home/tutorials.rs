@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<4>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<7>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -197,6 +197,24 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<4>) = (
                 #[cfg(test)]
                 expected_evaluation: "5",
                 explanation: "We can access the first element of any array"
+            },
+            TutorialStep {
+                command: "let ([ _x_ , _y_)[ (_i_ +1) ] -> ([ _y_)[ _i_ ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the how to access subsequent elements of an array"
+            },
+            TutorialStep {
+                command: "let 1 := 0 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the number one"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ])[ 1 ]",
+                #[cfg(test)]
+                expected_evaluation: "3",
+                explanation: "We can now access any element of any array"
             }
         ]
     }
