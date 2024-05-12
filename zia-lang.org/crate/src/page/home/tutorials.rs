@@ -179,7 +179,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<7>) = (
                 #[cfg(test)]
                 expected_evaluation: "",
                 explanation: "Define the base case for array access",
-            }, 
+            },
             TutorialStep {
                 command: "([ 2 ])[ 0 ]",
                 #[cfg(test)]

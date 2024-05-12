@@ -79,7 +79,9 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     }
 }
 
-fn tutorial_button<const N: usize>(tutorial: &'static Tutorial<N>) -> impl IntoNodes<Msg> {
+fn tutorial_button<const N: usize>(
+    tutorial: &'static Tutorial<N>,
+) -> impl IntoNodes<Msg> {
     button![
         C![
             C.flex_1,
