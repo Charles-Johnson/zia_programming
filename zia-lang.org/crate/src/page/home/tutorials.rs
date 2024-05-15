@@ -1,4 +1,4 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<7>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<12>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -215,7 +215,37 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<7>) = (
                 #[cfg(test)]
                 expected_evaluation: "3",
                 explanation: "We can now access any element of any array"
-            }
+            },
+            TutorialStep {
+                command: "let (_x_ ]) push _y_ -> _x_ , _y_ ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the end of an array"
+            },
+            TutorialStep {
+                command: "let ([ _x_) push _y_ -> [ _x_ push _y_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the start of an array"
+            },
+            TutorialStep {
+                command: "([ 5 ]) push 3",
+                #[cfg(test)]
+                expected_evaluation: "[ 5 , 3 ]",
+                explanation: "We can now push to arrays with a single element"
+            },
+            TutorialStep {
+                command: "let (_x_ , _y_) push _z_ -> _x_ , _y_ push _z_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the middle of an array"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ]) push 1",
+                #[cfg(test)]
+                expected_evaluation: "[ 5 , 3 , 1 ]",
+                explanation: "We can now push to arrays with multiple elements"
+            },
         ]
     }
 );
