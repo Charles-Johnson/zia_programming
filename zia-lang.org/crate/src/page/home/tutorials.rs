@@ -1,3 +1,6 @@
+#[cfg(test)]
+use std::time::{Instant, Duration};
+
 pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<19>) = (
     Tutorial {
         title: "Factorial",
@@ -377,7 +380,24 @@ pub struct TutorialStep {
 }
 
 #[cfg(test)]
+impl TutorialStep {
+    fn test(&self, context: &mut zia::multi_threaded::Context) {
+        let i = Instant::now();
+        assert_eq!(
+            context.execute(self.command),
+            self.expected_evaluation,
+            "Failed at {0}",
+            self.command
+        );
+        let time_taken = i.elapsed();
+        let limit_in_seconds = 25; 
+        assert!(time_taken < Duration::from_secs(limit_in_seconds), "{0} took longer than {limit_in_seconds} second - it took {time_taken:?}", self.command);
+    }
+}
+
+#[cfg(test)]
 mod test {
+
     use zia::multi_threaded::NEW_CONTEXT;
 
     use super::TUTORIALS;
@@ -386,36 +406,21 @@ mod test {
     fn factorial_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.0.steps {
-            assert_eq!(
-                context.execute(step.command),
-                step.expected_evaluation,
-                "Failed at {0}",
-                step.command
-            );
+            step.test(&mut context);
         }
     }
     #[test]
     fn relationships_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.1.steps {
-            assert_eq!(
-                context.execute(step.command),
-                step.expected_evaluation,
-                "Failed at {0}",
-                step.command
-            );
+            step.test(&mut context);
         }
     }
     #[test]
     fn array_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.2.steps {
-            assert_eq!(
-                context.execute(step.command),
-                step.expected_evaluation,
-                "Failed at {0}",
-                step.command
-            );
+            step.test(&mut context);
         }
     }
 }
