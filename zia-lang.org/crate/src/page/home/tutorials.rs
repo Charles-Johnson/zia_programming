@@ -1,5 +1,5 @@
 #[cfg(test)]
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<19>) = (
     Tutorial {
@@ -292,7 +292,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<19>) = (
                 explanation: "This is how to simplify a division expression"
             },
             // TutorialStep {
-            //     command: "let 3 := 2 +1", 
+            //     command: "let 3 := 2 +1",
             //     #[cfg(test)]
             //     expected_evaluation: "",
             //     explanation: "Define three to test"
@@ -319,7 +319,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<19>) = (
             //     command: "let _y_ % _y_ -> 0",
             //     #[cfg(test)]
             //     expected_evaluation: "",
-            //     explanation: "There's no remainder when dividing something by itself" 
+            //     explanation: "There's no remainder when dividing something by itself"
             // },
             // TutorialStep {
             //     command: "let (_x_ > _y_) => (_x_ % _y_ -> (_x_ - _y_) % _y_)",
@@ -390,7 +390,7 @@ impl TutorialStep {
             self.command
         );
         let time_taken = i.elapsed();
-        let limit_in_seconds = 25; 
+        let limit_in_seconds = 25;
         assert!(time_taken < Duration::from_secs(limit_in_seconds), "{0} took longer than {limit_in_seconds} second - it took {time_taken:?}", self.command);
     }
 }
