@@ -36,9 +36,7 @@ use crate::{
 use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    marker::PhantomData,
+    collections::{HashMap, HashSet}, fmt::Debug, iter, marker::PhantomData
 };
 
 #[derive(Debug)]
@@ -473,7 +471,7 @@ where
                 let true_concept =
                     self.snap_shot.read_concept(self.delta.as_ref(), true_id);
                 let truths = true_concept.find_what_reduces_to_it();
-                self.find_example(right, &truths.collect()).map(
+                self.find_example(right, truths).map(
                     |substitutions| {
                         // TODO: determine whether substitutions.example should be considered
                         let true_syntax = self.to_ast(&true_id);
@@ -494,9 +492,9 @@ where
     fn find_example(
         &self,
         generalisation: &SharedSyntax<C>,
-        truths: &HashSet<S::ConceptId>,
+        truths: impl Iterator<Item=S::ConceptId>,
     ) -> Option<ExampleSubstitutions<Syntax<C>>> {
-        self.find_examples(generalisation, truths).pop()
+        self.find_examples(generalisation.clone(), truths).next()
     }
 
     pub fn find_examples_of_inferred_reduction(
@@ -556,11 +554,14 @@ where
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
-        let truths = self.equivalent_concepts_to(&true_id);
+        let equivalent_concept =
+            self.snap_shot.read_concept(self.delta.as_ref(), true_id);
+        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+        let truths = equivalent_concept.find_what_reduces_to_it().chain(iter::once(true_id));
+
         let irp = implication_rule_pattern.share();
-        spawned_context_search
-            .find_examples(&irp, &truths)
-            .into_iter()
+        let result = spawned_context_search
+            .find_examples(irp, truths)
             .find_map(|substitutions| {
                 substitutions
                     .generalisation
@@ -600,68 +601,67 @@ where
                                 )
                             })
                     })
-            })
+            });
+            result
     }
 
-    // TODO Lazily compute the concepts that are equivalent to a given normal form
-    // until a required number of examples are found
-    // `generalisation` needs to contain bound variables
-    fn find_examples(
-        &self,
-        generalisation: &SharedSyntax<C>,
-        equivalence_set: &HashSet<S::ConceptId>, /* All concepts that are equal to generalisation */
-    ) -> Vec<ExampleSubstitutions<Syntax<C>>> {
+    fn find_examples<'a>(
+        &'a self,
+        generalisation: SharedSyntax<C>,
+        equivalence_set: impl Iterator<Item=S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
+    ) -> impl Iterator<Item=ExampleSubstitutions<Syntax<C>>> + 'a {
+        let iterator: Box<dyn Iterator<Item=ExampleSubstitutions<Syntax<C>>>>;
         if let Some((left, right)) = generalisation.get_expansion() {
-            self.find_examples_of_branched_generalisation(
-                &left,
-                &right,
+            iterator = Box::new(self.find_examples_of_branched_generalisation(
+                left,
+                right,
                 equivalence_set,
-            )
+            ));
         } else {
             debug_assert!(
-                self.contains_bound_variable_syntax(generalisation),
+                self.contains_bound_variable_syntax(&generalisation),
                 "Generalisation ({generalisation}) doesn't contain bound variables"
             );
-            equivalence_set
-            .iter()
-                .map(|c| {
-                    let example = self.to_ast(c);
+            iterator = Box::new(equivalence_set
+                .map(move |c| {
+                    let example = self.to_ast(&c);
                     ExampleSubstitutions {
                         generalisation: hashmap! {generalisation.clone() => example},
                         example: hashmap!{}
                     }
-                })
-                .collect()
+                }));
         }
+        iterator
     }
 
-    fn find_examples_of_branched_generalisation(
-        &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-        equivalence_set: &HashSet<S::ConceptId>,
-    ) -> Vec<ExampleSubstitutions<Syntax<C>>> {
+    fn find_examples_of_branched_generalisation<'a>(
+        &'a self,
+        left: SharedSyntax<C>,
+        right: SharedSyntax<C>,
+        equivalence_set: impl Iterator<Item=S::ConceptId> + 'a,
+    ) -> impl Iterator<Item=ExampleSubstitutions<Syntax<C>>> + 'a {
+        let iterator: Box<dyn Iterator<Item=ExampleSubstitutions<Syntax<C>>>>;
         match (
-            self.contains_bound_variable_syntax(left),
-            self.contains_bound_variable_syntax(right),
+            self.contains_bound_variable_syntax(&left),
+            self.contains_bound_variable_syntax(&right),
         ) {
             (true, true) => {
-                equivalence_set
-                    .iter()
+                iterator = Box::new(equivalence_set
                     .filter_map(|equivalent_concept_id| {
-                        self.composition_of_concept(equivalent_concept_id)
+                        self.composition_of_concept(&equivalent_concept_id)
                     })
-                    .flat_map(|(equivalent_left_id, equivalent_right_id)| {
-                        let equivalent_left_equivalence_set =
-                            self.equivalent_concepts_to(&equivalent_left_id);
-                        let equivalent_right_equivalence_set =
-                            self.equivalent_concepts_to(&equivalent_right_id);
-                        self.find_examples(
-                            left,
-                            &equivalent_left_equivalence_set,
+                    .filter_map(move |(equivalent_left_id, equivalent_right_id)| {
+                        let equivalent_concept =
+                            self.snap_shot.read_concept(self.delta.as_ref(), equivalent_left_id);
+                        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+                        let equivalent_left_equivalence_set = equivalent_concept.find_what_reduces_to_it().chain(iter::once(equivalent_left_id));
+
+                        let maybe_example = self.find_examples(
+                            left.clone(),
+                            equivalent_left_equivalence_set,
                         )
-                        .into_iter()
-                        .flat_map(|left_example| {
+                        // TODO try to find a case where this needs to be a flat_map method call
+                        .find_map(|left_example| {
                             let mut right_clone = right.clone();
                             let mutable_right =
                                 Syntax::<C>::make_mut(&mut right_clone);
@@ -675,121 +675,106 @@ where
                                 &right_clone,
                                 &left_example.example,
                             );
+                            let equivalent_concept =
+                                self.snap_shot.read_concept(self.delta.as_ref(), equivalent_right_id);
+                            // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+                            let mut equivalent_right_equivalence_set = equivalent_concept.find_what_reduces_to_it().chain(iter::once(equivalent_right_id));
                             if self.contains_bound_variable_syntax(
                                 &substituted_right,
                             ) {
                                 self.find_examples(
-                                    &substituted_right,
-                                    &equivalent_right_equivalence_set,
+                                    substituted_right,
+                                    equivalent_right_equivalence_set,
                                 )
-                                .into_iter()
-                                .filter_map(|right_example| {
+                                // TODO find test case where this needs to be filter_map
+                                .find_map(|right_example| {
                                     right_example
                                         .consistent_merge(left_example.clone())
                                 })
-                                .collect::<Vec<_>>()
                             } else if self
                                 .recursively_reduce(&substituted_right)
                                 .0
                                 .get_concept()
                                 .map_or(false, |id| {
-                                    equivalent_right_equivalence_set
-                                        .contains(&id)
+                                    equivalent_right_equivalence_set.any(|equivalent_right_id| equivalent_right_id == id)
                                 })
                             {
-                                vec![left_example]
+                                Some(left_example)
                             } else {
-                                vec![]
+                                None
                             }
-                        })
-                        .collect::<Vec<_>>()
-                    })
-                    .collect()
+                        });
+                        maybe_example
+                    }));
             },
-            (true, false) => self.find_examples_of_half_generalisation(
-                left,
-                right,
+            (true, false) => {iterator = Box::new(self.find_examples_of_half_generalisation(
+                left.clone(),
+                right.clone(),
                 equivalence_set,
                 Hand::Right,
-            ),
-            (false, true) => self.find_examples_of_half_generalisation(
-                right,
-                left,
+            ).into_iter());},
+            (false, true) => {
+                iterator = Box::new(self.find_examples_of_half_generalisation(
+                right.clone(),
+                left.clone(),
                 equivalence_set,
                 Hand::Left,
-            ),
-            (false, false) => vec![],
+            ).into_iter());},
+            (false, false) => {iterator = Box::new(iter::empty())},
         }
+        iterator
     }
 
-    fn find_examples_of_half_generalisation(
-        &self,
-        generalised_part: &SharedSyntax<C>,
-        non_generalised_part: &SharedSyntax<C>,
-        equivalence_set_of_composition: &HashSet<S::ConceptId>,
+    fn find_examples_of_half_generalisation<'a>(
+        &'a self,
+        generalised_part: SharedSyntax<C>,
+        non_generalised_part: SharedSyntax<C>,
+        mut equivalence_set_of_composition: impl Iterator<Item=S::ConceptId> + 'a,
         non_generalised_hand: Hand,
-    ) -> Vec<ExampleSubstitutions<Syntax<C>>> {
-        let mut subs = Vec::new();
-        subs.extend(equivalence_set_of_composition.iter().find_map(|equivalent_concept_id| {
+    ) -> Option<ExampleSubstitutions<Syntax<C>>> {
+        let non_generalised_part_clone = non_generalised_part.clone();
+        let generalised_part_clone = generalised_part;
+        // TODO try to test if this needs to be a flat_map call
+        equivalence_set_of_composition.find_map(move |equivalent_concept_id| {
             let equivalent_concept = self
                 .snap_shot
-                .read_concept(self.delta.as_ref(), *equivalent_concept_id);
+                .read_concept(self.delta.as_ref(), equivalent_concept_id);
             let (left, right) = equivalent_concept.get_composition()?;
             let (equivalent_non_generalised_hand, equivalent_generalised_hand) = match non_generalised_hand {
                 Hand::Left => (left, right),
                 Hand::Right => (right, left)
             };
-            if Some(equivalent_non_generalised_hand) != non_generalised_part.get_concept() {
+            if Some(equivalent_non_generalised_hand) != non_generalised_part_clone.get_concept() {
                 if self.snap_shot.read_concept(self.delta.as_ref(), equivalent_non_generalised_hand).free_variable() {
-                    return self.find_example(generalised_part, &hashset!{equivalent_generalised_hand}).and_then(|subs| {
+                    return self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
                         // Could have a more efficient method for this
-                        subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part.clone()}, ..Default::default()})
+                        subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part_clone.clone()}, ..Default::default()})
                     })
                 }
                 return None;
             }
-            self.find_example(generalised_part, &hashset!{equivalent_generalised_hand})
-        }));
-
-        let Some(non_generalised_id) = non_generalised_part.get_concept()
-        else {
-            return subs;
-        };
-        let non_generalised_concept = self
-            .snap_shot
-            .read_concept(self.delta.as_ref(), non_generalised_id);
-        let examples =
-            non_generalised_concept.iter_hand_of(non_generalised_hand);
-        subs.extend(
-            examples
-                .flat_map(|(example_hand, composition)| {
-                    let mut generalised_hands_and_substitutions = vec![];
-                    if equivalence_set_of_composition.contains(&composition) {
-                        generalised_hands_and_substitutions.push(example_hand);
-                    }
-                    generalised_hands_and_substitutions
-                })
-                .filter_map(|example_hand| {
+            self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).or_else(|| {
+        let non_generalised_id = non_generalised_part.get_concept()?;
+                    let example_hand = match non_generalised_hand {
+                        Hand::Left => (left == non_generalised_id).then_some(right)?,
+                        Hand::Right => (right == non_generalised_id).then_some(left)?,
+                    };
                     let example_hand_syntax = self.to_ast(&example_hand);
                     Syntax::<C>::check_example(
                         &example_hand_syntax,
-                        generalised_part,
+                        &generalised_part_clone,
                     )
                     .or_else(|| {
                         // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
-                        let mut equivalence_set = hashset! {example_hand};
+                        let equivalence_set = iter::once(example_hand);
                         let non_generalised_hand_concept = self
                             .snap_shot
                             .read_concept(self.delta.as_ref(), example_hand);
-                        equivalence_set.extend(
-                            non_generalised_hand_concept
-                                .find_what_reduces_to_it(),
-                        );
-                        self.find_example(generalised_part, &equivalence_set)
+                        self.find_example(&generalised_part_clone, equivalence_set.chain(non_generalised_hand_concept
+                                .find_what_reduces_to_it()))
                     })
-                }),
-        );
-        subs
+            })
+        })
     }
 
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
@@ -1175,20 +1160,6 @@ where
     // TODO: move to separate struct that just has self.delta and self.snap_shot
     fn is_leaf_concept(&self, l: &S::ConceptId) -> bool {
         self.composition_of_concept(l).is_none()
-    }
-
-    // TODO: move to separate struct that just has self.delta and self.snap_shot
-    fn equivalent_concepts_to(
-        &self,
-        equivalent_id: &S::ConceptId,
-    ) -> HashSet<S::ConceptId> {
-        let equivalent_concept =
-            self.snap_shot.read_concept(self.delta.as_ref(), *equivalent_id);
-        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-        let mut equivalence_set: HashSet<S::ConceptId> =
-            equivalent_concept.find_what_reduces_to_it().collect();
-        equivalence_set.insert(*equivalent_id);
-        equivalence_set
     }
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
