@@ -1,0 +1,14 @@
+services:
+  nvim:
+    environment:
+      - CARGO_HOME=/usr/src/.cargo
+      - DISPLAY
+    build: ./nvim
+    volumes:
+      - .:/usr/src
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: ["sh", "-c", "rsync -avzh /home/node/.cargo /usr/src/.cargo && nvim /usr/src"]
+    working_dir: /usr/src
+    user: ${UID:-1000}:${GID:-1000}
+    ports:
+      - 8000:8000
