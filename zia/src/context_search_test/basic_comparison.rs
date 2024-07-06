@@ -5,8 +5,8 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedContextSearch,
-        SharedContextDelta, SharedDirectConceptDelta,
+        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -22,7 +22,7 @@ fn basic_comparison() {
     >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};
-    let context_search = MultiThreadedContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
         delta: SharedContextDelta(delta.into()),
         cache: &cache,

@@ -31,6 +31,22 @@ services:
       ]
     working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
+  verify:
+    environment:
+      - CARGO_HOME=/usr/src/.cargo
+      - DISPLAY
+    build: ./nvim
+    volumes:
+      - .:/usr/src
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command:
+      [
+        "sh",
+        "-c",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cargo make --no-workspace verify",
+      ]
+    working_dir: /usr/src
+    user: ${UID:-1000}:${GID:-1000}
   web:
     environment:
       - CARGO_HOME=/usr/src/.cargo

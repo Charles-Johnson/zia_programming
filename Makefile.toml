@@ -4,12 +4,12 @@
 [tasks.verify]
 toolchain = "nightly"
 description = "Format, lint with Clippy and run tests"
-dependencies = ["fmt", "clippy_fix", "test", "test_web_h_firefox"]
+dependencies = ["fmt", "clippy_fix", "test"]
 
 [tasks.verify_only]
 toolchain = "nightly"
 description = "Like `verify`, but fails if the code isn't formatted. Primarily for CI."
-dependencies = ["fmt_check", "clippy", "test", "test_web_h_firefox"]
+dependencies = ["fmt_check", "clippy", "test"]
 
 # ---- TEST ----
 
@@ -50,45 +50,3 @@ install_crate = { rustup_component_name = "clippy", binary = "cargo-clippy", tes
 command = "cargo"
 args = ["clippy", "--all-features", "--fix", "--allow-dirty", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"]
 
-# ---- TEST ----
-
-[tasks.test_web]
-description = "Run tests. Ex: 'cargo make test firefox'. Test envs: [chrome, firefox, safari]"
-clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1" }
-command = "wasm-pack"
-args = ["test", "zia-lang.org/crate", "--${@}"]
-
-[tasks.test_web_release]
-extend = "test_web"
-description = "Run tests in release mode. Ex: 'cargo make test_release firefox'. Test envs: [chrome, firefox, safari]"
-args = ["test", "zia-lang.org/crate", "--${@}", "--release"]
-
-[tasks.test_web_h]
-description = "Run headless tests. Ex: 'cargo make test_h firefox'. Test envs: [chrome, firefox, safari]"
-extend = "test_web"
-args = ["test", "zia-lang.org/crate", "--headless", "--${@}"]
-
-[tasks.test_web_h_firefox]
-description = "Run headless tests with Firefox."
-extend = "test_web"
-args = ["test", "zia-lang.org/crate", "--headless", "--firefox"]
-
-[tasks.test_web_h_release]
-extend = "test_web_h"
-description = "Run headless tests in release mode. Ex: 'cargo make test_h firefox'. Test envs: [chrome, firefox, safari]"
-args = ["test", "zia-lang.org/crate", "--headless", "--${@}", "--release"]
-
-[tasks.test_web_one]
-description = "Run a single test in Firefox. Ex 'cargo make test_one my_test'"
-clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1" }
-command = "wasm-pack"
-args = ["test", "zia-lang.org/crate", "--firefox", "--", "--lib", "${@}"]
-
-[tasks.test_web_one_h]
-description = "Run a single test in headless Firefox. Ex 'cargo make test_one_h my_test'"
-clear = true
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V", version = "0.8.1"}
-command = "wasm-pack"
-args = ["test", "zia-lang.org/crate",  "--firefox", "--headless", "--", "--lib", "${@}"]

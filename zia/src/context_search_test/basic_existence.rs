@@ -7,8 +7,8 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedContextSearch,
-        SharedContextDelta, SharedDirectConceptDelta,
+        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -25,7 +25,7 @@ fn basic_existence() {
     let cache = MultiThreadedContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.clone()};
-    let context_search = MultiThreadedContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
         delta: SharedContextDelta(delta.into()),
         cache: &cache,

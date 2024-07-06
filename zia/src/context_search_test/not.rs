@@ -5,8 +5,8 @@ use crate::{
     context_search::ContextReferences,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedContextSearch,
-        SharedContextDelta, SharedDirectConceptDelta,
+        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -79,7 +79,7 @@ fn not() {
         NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
-    let context_search = MultiThreadedContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
         delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,

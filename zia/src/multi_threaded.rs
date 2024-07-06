@@ -27,7 +27,7 @@ pub type Context = GenericContext<
     ContextConceptId,
 >;
 
-pub type MultiThreadedContextSearch<'s, 'v, S, CCI> = ContextSearch<
+pub type MTContextSearch<'s, 'v, S, CCI> = ContextSearch<
     's,
     'v,
     S,
