@@ -175,8 +175,6 @@ pub mod multi_threaded;
 
 mod snap_shot;
 
-mod iteration;
-
 mod substitute;
 
 pub mod variable_mask_list;

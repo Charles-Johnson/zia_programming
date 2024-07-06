@@ -1,3 +1,5 @@
+![Maintenance](https://img.shields.io/badge/maintenance-activly--developed-brightgreen.svg)
+
 # zia
 
 [![Crates.io](https://img.shields.io/crates/v/zia.svg)](https://crates.io/crates/zia)

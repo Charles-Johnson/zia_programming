@@ -24,7 +24,6 @@ use crate::{
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
-    iteration::Iteration,
     mixed_concept::MixedConcept,
     reduction_reason::{
         RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
@@ -35,15 +34,12 @@ use crate::{
 };
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{
-    collections::{HashMap, HashSet}, fmt::Debug, iter, marker::PhantomData
-};
+use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
 #[derive(Debug)]
 pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: MixedConcept>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -68,7 +64,6 @@ impl<'s, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
     ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -274,29 +269,43 @@ where
             left.get_concept().and_then(|l| self.variable_mask.get(l));
         let cache = <C as ContextCache>::SharedReductionCache::default();
         match (left_result, right_result) {
-            (None, None) => self
-                .filter_generalisations_for_pair(left, right)
-                .iter()
-                .find_map(|(generalisation, variable_mask)| {
-                    let mut context_search =
-                        self.spawn(&cache, self.delta.clone());
-                    // Stack overflow occurs if you remove this
-                    context_search
-                        .insert_variable_mask(variable_mask.clone())
-                        .ok()?;
-                    context_search.reduce_concept(generalisation).map(
-                        |(ast, reason)| {
-                            (
-                                context_search.substitute(&ast, variable_mask),
-                                C::RR::rule(
-                                    self.to_ast(generalisation),
-                                    variable_mask.clone(),
-                                    reason,
-                                ),
-                            )
-                        },
-                    )
-                }),
+            (None, None) => {
+                let ast = self.contract_pair(left, right);
+                let generalisation_candidates = self.find_generalisations(&ast);
+                let ast = ast.share();
+                generalisation_candidates
+                    .into_iter()
+                    .filter_map(move |gc| {
+                        self.check_generalisation(&ast, &gc).and_then(|vm| {
+                            if vm.is_empty() {
+                                None
+                            } else {
+                                Some((gc, vm))
+                            }
+                        })
+                    })
+                    .find_map(|(generalisation, variable_mask)| {
+                        let mut context_search =
+                            self.spawn(&cache, self.delta.clone());
+                        // Stack overflow occurs if you remove this
+                        context_search
+                            .insert_variable_mask(variable_mask.clone())
+                            .ok()?;
+                        context_search.reduce_concept(&generalisation).map(
+                            |(ast, reason)| {
+                                (
+                                    context_search
+                                        .substitute(&ast, &variable_mask),
+                                    C::RR::rule(
+                                        self.to_ast(&generalisation),
+                                        variable_mask.clone(),
+                                        reason,
+                                    ),
+                                )
+                            },
+                        )
+                    })
+            },
             (Some((left_ast, left_reason)), None) => Some((
                 self.contract_pair(&left_ast, maybe_subbed_r.unwrap_or(right))
                     .share(),
@@ -343,28 +352,6 @@ where
                     },
                 )
             })
-    }
-
-    fn filter_generalisations_for_pair(
-        &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> Generalisations<Syntax<C>> {
-        let ast = self.contract_pair(left, right);
-        let generalisation_candidates = self.find_generalisations(&ast);
-        debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
-        let ast = ast.share();
-        let result = self.filter_generalisations_from_candidates(
-            &ast,
-            generalisation_candidates,
-        );
-        debug!(
-            "filter_generalisations_for_pair({}, {}) -> {:#?}",
-            left.to_string(),
-            right.to_string(),
-            result
-        );
-        result
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
@@ -471,19 +458,17 @@ where
                 let true_concept =
                     self.snap_shot.read_concept(self.delta.as_ref(), true_id);
                 let truths = true_concept.find_what_reduces_to_it();
-                self.find_example(right, truths).map(
-                    |substitutions| {
-                        // TODO: determine whether substitutions.example should be considered
-                        let true_syntax = self.to_ast(&true_id);
-                        (
-                            true_syntax,
-                            C::RR::existence(
-                                substitutions.generalisation,
-                                right.clone(),
-                            ),
-                        )
-                    },
-                )
+                self.find_example(right, truths).map(|substitutions| {
+                    // TODO: determine whether substitutions.example should be considered
+                    let true_syntax = self.to_ast(&true_id);
+                    (
+                        true_syntax,
+                        C::RR::existence(
+                            substitutions.generalisation,
+                            right.clone(),
+                        ),
+                    )
+                })
             },
             _ => None,
         }
@@ -492,11 +477,12 @@ where
     fn find_example(
         &self,
         generalisation: &SharedSyntax<C>,
-        truths: impl Iterator<Item=S::ConceptId>,
+        truths: impl Iterator<Item = S::ConceptId>,
     ) -> Option<ExampleSubstitutions<Syntax<C>>> {
         self.find_examples(generalisation.clone(), truths).next()
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn find_examples_of_inferred_reduction(
         &self,
         ast_to_reduce: &SharedSyntax<C>,
@@ -557,7 +543,9 @@ where
         let equivalent_concept =
             self.snap_shot.read_concept(self.delta.as_ref(), true_id);
         // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-        let truths = equivalent_concept.find_what_reduces_to_it().chain(iter::once(true_id));
+        let truths = equivalent_concept
+            .find_what_reduces_to_it()
+            .chain(iter::once(true_id));
 
         let irp = implication_rule_pattern.share();
         let result = spawned_context_search
@@ -602,15 +590,17 @@ where
                             })
                     })
             });
-            result
+        result
     }
 
     fn find_examples<'a>(
         &'a self,
         generalisation: SharedSyntax<C>,
-        equivalence_set: impl Iterator<Item=S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
-    ) -> impl Iterator<Item=ExampleSubstitutions<Syntax<C>>> + 'a {
-        let iterator: Box<dyn Iterator<Item=ExampleSubstitutions<Syntax<C>>>>;
+        equivalence_set: impl Iterator<Item = S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
+    ) -> impl Iterator<Item = ExampleSubstitutions<Syntax<C>>> + 'a {
+        let iterator: Box<
+            dyn Iterator<Item = ExampleSubstitutions<Syntax<C>>>,
+        >;
         if let Some((left, right)) = generalisation.get_expansion() {
             iterator = Box::new(self.find_examples_of_branched_generalisation(
                 left,
@@ -634,94 +624,131 @@ where
         iterator
     }
 
+    #[allow(clippy::too_many_lines)]
     fn find_examples_of_branched_generalisation<'a>(
         &'a self,
         left: SharedSyntax<C>,
         right: SharedSyntax<C>,
-        equivalence_set: impl Iterator<Item=S::ConceptId> + 'a,
-    ) -> impl Iterator<Item=ExampleSubstitutions<Syntax<C>>> + 'a {
-        let iterator: Box<dyn Iterator<Item=ExampleSubstitutions<Syntax<C>>>>;
-        match (
+        equivalence_set: impl Iterator<Item = S::ConceptId> + 'a,
+    ) -> impl Iterator<Item = ExampleSubstitutions<Syntax<C>>> + 'a {
+        let iterator: Box<
+            dyn Iterator<Item = ExampleSubstitutions<Syntax<C>>>,
+        > = match (
             self.contains_bound_variable_syntax(&left),
             self.contains_bound_variable_syntax(&right),
         ) {
             (true, true) => {
-                iterator = Box::new(equivalence_set
-                    .filter_map(|equivalent_concept_id| {
-                        self.composition_of_concept(&equivalent_concept_id)
-                    })
-                    .filter_map(move |(equivalent_left_id, equivalent_right_id)| {
-                        let equivalent_concept =
-                            self.snap_shot.read_concept(self.delta.as_ref(), equivalent_left_id);
-                        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-                        let equivalent_left_equivalence_set = equivalent_concept.find_what_reduces_to_it().chain(iter::once(equivalent_left_id));
-
-                        let maybe_example = self.find_examples(
-                            left.clone(),
-                            equivalent_left_equivalence_set,
-                        )
-                        // TODO try to find a case where this needs to be a flat_map method call
-                        .find_map(|left_example| {
-                            let mut right_clone = right.clone();
-                            let mutable_right =
-                                Syntax::<C>::make_mut(&mut right_clone);
-                            substitute::<Syntax<C>>(
-                                mutable_right,
-                                &left_example.generalisation,
-                            );
-                            // `right_clone` now has any generalised variables matched in the example of `left` substituted for
-                            // but may still have some unmatched generalised variables
-                            let substituted_right = self.substitute(
-                                &right_clone,
-                                &left_example.example,
-                            );
-                            let equivalent_concept =
-                                self.snap_shot.read_concept(self.delta.as_ref(), equivalent_right_id);
-                            // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-                            let mut equivalent_right_equivalence_set = equivalent_concept.find_what_reduces_to_it().chain(iter::once(equivalent_right_id));
-                            if self.contains_bound_variable_syntax(
-                                &substituted_right,
-                            ) {
-                                self.find_examples(
+                Box::new(
+                    equivalence_set
+                        .filter_map(|equivalent_concept_id| {
+                            self.composition_of_concept(&equivalent_concept_id)
+                        })
+                        .filter_map(
+                            move |(equivalent_left_id, equivalent_right_id)| {
+                                let equivalent_concept =
+                                    self.snap_shot.read_concept(
+                                        self.delta.as_ref(),
+                                        equivalent_left_id,
+                                    );
+                                // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+                                let equivalent_left_equivalence_set =
+                                    equivalent_concept
+                                        .find_what_reduces_to_it()
+                                        .chain(iter::once(equivalent_left_id));
+                                // TODO try to find a case where this needs to be a flat_map method call
+                                let maybe_example = self
+                                    .find_examples(
+                                        left.clone(),
+                                        equivalent_left_equivalence_set,
+                                    )
+                                    .find_map(|left_example| {
+                                        let mut right_clone = right.clone();
+                                        let mutable_right =
+                                            Syntax::<C>::make_mut(
+                                                &mut right_clone,
+                                            );
+                                        substitute::<Syntax<C>>(
+                                            mutable_right,
+                                            &left_example.generalisation,
+                                        );
+                                        // `right_clone` now has any generalised variables matched in the example of `left` substituted for
+                                        // but may still have some unmatched generalised variables
+                                        let substituted_right = self
+                                            .substitute(
+                                                &right_clone,
+                                                &left_example.example,
+                                            );
+                                        let equivalent_concept =
+                                            self.snap_shot.read_concept(
+                                                self.delta.as_ref(),
+                                                equivalent_right_id,
+                                            );
+                                        // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+                                        let mut
+                                        equivalent_right_equivalence_set =
+                                            equivalent_concept
+                                                .find_what_reduces_to_it()
+                                                .chain(iter::once(
+                                                    equivalent_right_id,
+                                                ));
+                                        if self.contains_bound_variable_syntax(
+                                            &substituted_right,
+                                        ) {
+                                            self.find_examples(
                                     substituted_right,
                                     equivalent_right_equivalence_set,
                                 )
-                                // TODO find test case where this needs to be filter_map
                                 .find_map(|right_example| {
+                                // TODO find test case where this needs to be filter_map
                                     right_example
                                         .consistent_merge(left_example.clone())
                                 })
-                            } else if self
-                                .recursively_reduce(&substituted_right)
-                                .0
-                                .get_concept()
-                                .map_or(false, |id| {
-                                    equivalent_right_equivalence_set.any(|equivalent_right_id| equivalent_right_id == id)
-                                })
-                            {
-                                Some(left_example)
-                            } else {
-                                None
-                            }
-                        });
-                        maybe_example
-                    }));
+                                        } else if self
+                                            .recursively_reduce(
+                                                &substituted_right,
+                                            )
+                                            .0
+                                            .get_concept()
+                                            .map_or(false, |id| {
+                                                equivalent_right_equivalence_set
+                                                    .any(
+                                                        |equivalent_right_id| {
+                                                            equivalent_right_id
+                                                                == id
+                                                        },
+                                                    )
+                                            })
+                                        {
+                                            Some(left_example)
+                                        } else {
+                                            None
+                                        }
+                                    });
+                                maybe_example
+                            },
+                        ),
+                )
             },
-            (true, false) => {iterator = Box::new(self.find_examples_of_half_generalisation(
-                left.clone(),
-                right.clone(),
-                equivalence_set,
-                Hand::Right,
-            ).into_iter());},
-            (false, true) => {
-                iterator = Box::new(self.find_examples_of_half_generalisation(
-                right.clone(),
-                left.clone(),
-                equivalence_set,
-                Hand::Left,
-            ).into_iter());},
-            (false, false) => {iterator = Box::new(iter::empty())},
-        }
+            (true, false) => Box::new(
+                self.find_examples_of_half_generalisation(
+                    left.clone(),
+                    right.clone(),
+                    equivalence_set,
+                    Hand::Right,
+                )
+                .into_iter(),
+            ),
+            (false, true) => Box::new(
+                self.find_examples_of_half_generalisation(
+                    right.clone(),
+                    left.clone(),
+                    equivalence_set,
+                    Hand::Left,
+                )
+                .into_iter(),
+            ),
+            (false, false) => Box::new(iter::empty()),
+        };
         iterator
     }
 
@@ -729,7 +756,7 @@ where
         &'a self,
         generalised_part: SharedSyntax<C>,
         non_generalised_part: SharedSyntax<C>,
-        mut equivalence_set_of_composition: impl Iterator<Item=S::ConceptId> + 'a,
+        mut equivalence_set_of_composition: impl Iterator<Item = S::ConceptId> + 'a,
         non_generalised_hand: Hand,
     ) -> Option<ExampleSubstitutions<Syntax<C>>> {
         let non_generalised_part_clone = non_generalised_part.clone();
@@ -1243,20 +1270,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Example<Syntax: SyntaxTree, RR: ReductionReason> {
-    generalisation: Syntax::SharedSyntax,
-    substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax, RR>>,
-}
-
 type MaybeReducedSyntaxWithReason<RR> = (RRSharedSyntax<RR>, Option<RR>);
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
-    value: Syntax::SharedSyntax,
-    reduction: Syntax::SharedSyntax,
-    reason: RR,
-}
 
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
@@ -1283,7 +1297,6 @@ impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
     for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -1322,8 +1335,5 @@ pub struct ContextReferences<'c, 's, 'v, S, C: ContextCache, D> {
     pub cache: &'c C,
     pub bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
 }
-
-pub type Generalisations<Syntax> =
-    Vec<(<Syntax as SyntaxTree>::ConceptId, VariableMask<Syntax>)>;
 
 pub type ReductionTruthResult<RR> = Option<(bool, RR)>;
