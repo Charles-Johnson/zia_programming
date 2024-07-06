@@ -282,7 +282,7 @@ impl TutorialStep {
             self.command
         );
         let time_taken = i.elapsed();
-        let limit_in_seconds = 15;
+        let limit_in_seconds = 5;
         assert!(time_taken < Duration::from_secs(limit_in_seconds), "{0} took longer than {limit_in_seconds} second - it took {time_taken:?}", self.command);
     }
 }

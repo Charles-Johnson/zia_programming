@@ -6,8 +6,8 @@ use crate::{
     context_search::ContextReferences,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedContextSearch, SharedContextDelta,
-        SharedDirectConceptDelta,
+        MultiThreadedContextCache, MultiThreadedContextSearch,
+        SharedContextDelta, SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -26,7 +26,6 @@ fn labels() -> HashMap<usize, &'static str> {
         14 => "exists_such_that",
     }
 }
-
 
 #[test]
 fn existence_inference_rule() {

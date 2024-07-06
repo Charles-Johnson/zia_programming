@@ -1,9 +1,7 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{
-        Comparison, ComparisonReason, ContextReferences,
-    },
+    context_search::{Comparison, ComparisonReason, ContextReferences},
     context_search_test::ReductionReason,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{

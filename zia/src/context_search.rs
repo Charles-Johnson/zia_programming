@@ -34,12 +34,7 @@ use crate::{
 };
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{
-    collections::{HashSet},
-    fmt::Debug,
-    iter,
-    marker::PhantomData,
-};
+use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
 #[derive(Debug)]
 pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: MixedConcept>

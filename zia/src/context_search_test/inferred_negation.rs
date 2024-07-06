@@ -2,7 +2,7 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences},
+    context_search::ContextReferences,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
         MultiThreadedContextCache, MultiThreadedContextSearch,
