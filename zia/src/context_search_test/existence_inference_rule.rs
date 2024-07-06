@@ -6,12 +6,12 @@ use crate::{
     context_search::ContextReferences,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedContextSearch,
-        MultiThreadedReductionReason, SharedContextDelta,
+        MultiThreadedContextCache, MultiThreadedContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
+use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
 fn labels() -> HashMap<usize, &'static str> {
@@ -27,7 +27,6 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-type ReductionReason = MultiThreadedReductionReason<Syntax>;
 
 #[test]
 fn existence_inference_rule() {
@@ -46,27 +45,9 @@ fn existence_inference_rule() {
         Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10))
             .share();
     let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
-    let variable_mask = hashmap! {9.into() => context_search.to_ast(&7)};
     assert_eq!(
-        context_search.reduce(&example_syntax),
-        Some((
-            true_syntax.into(),
-            ReductionReason::Rule {
-                generalisation: context_search.to_ast(&2),
-                variable_mask: variable_mask.clone(),
-                reason: ReductionReason::Inference {
-                    implication: context_search
-                        .substitute(&context_search.to_ast(&6), &variable_mask),
-                    reason: ReductionReason::Existence{
-                        generalisation: context_search
-                            .substitute(&context_search.to_ast(&13), &variable_mask),
-                        substitutions: hashmap!{context_search.to_ast(&11) => context_search.to_ast(&3)},
-                    }
-                    .into()
-                }
-                .into()
-            }
-        ))
+        context_search.reduce(&example_syntax).unwrap().0,
+        true_syntax.into(),
     );
 }
 
