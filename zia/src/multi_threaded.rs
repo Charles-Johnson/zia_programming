@@ -3,16 +3,13 @@ use crate::{
     context::Context as GenericContext,
     context_cache::impl_cache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
-    context_search::{ContextSearch, Generalisations},
+    context_search::ContextSearch,
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
-    iteration::Iteration as ContextSearchIteration,
     mixed_concept::MixedConcept,
-    snap_shot::Reader as SnapShotReader,
     variable_mask_list::impl_variable_mask_list,
 };
 use lazy_static::lazy_static;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashSet, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 impl_syntax_tree!(Arc, MultiThreadedSyntaxTree);
 impl_cache!(Arc, MultiThreadedContextCache);
@@ -28,6 +25,19 @@ pub type Context = GenericContext<
     MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ContextConceptId>>,
     SharedContextDelta<ContextConceptId>,
     ContextConceptId,
+>;
+
+pub type MTContextSearch<'s, 'v, S, CCI> = ContextSearch<
+    's,
+    'v,
+    S,
+    MultiThreadedContextCache<
+        MultiThreadedReductionReason<MultiThreadedSyntaxTree<CCI>>,
+    >,
+    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<CCI>>,
+    SharedDirectConceptDelta<CCI>,
+    SharedContextDelta<CCI>,
+    CCI,
 >;
 
 // Saves having to construct a new `Context` each time.
@@ -85,46 +95,3 @@ impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
 }
 
 pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
-
-impl<'s, 'v, S, CCI: MixedConcept + Send + Sync> ContextSearchIteration
-    for ContextSearch<
-        's,
-        'v,
-        S,
-        MultiThreadedContextCache<
-            MultiThreadedReductionReason<MultiThreadedSyntaxTree<S::ConceptId>>,
-        >,
-        MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<S::ConceptId>>,
-        SharedDirectConceptDelta<S::ConceptId>,
-        SharedContextDelta<S::ConceptId>,
-        CCI,
-    >
-where
-    S: SnapShotReader<SharedDirectConceptDelta<CCI>, ConceptId = CCI>
-        + Sync
-        + Debug,
-    for<'a> &'a std::collections::HashSet<CCI>:
-        rayon::iter::IntoParallelIterator<Item = &'a CCI>,
-{
-    type ConceptId = S::ConceptId;
-    type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;
-
-    fn filter_generalisations_from_candidates(
-        &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-        candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax> {
-        candidates
-            .par_iter()
-            .filter_map(|gc| {
-                self.check_generalisation(example, gc).and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
-            })
-            .collect()
-    }
-}
