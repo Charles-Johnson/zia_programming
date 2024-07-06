@@ -24,7 +24,6 @@ use crate::{
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
-    iteration::Iteration,
     mixed_concept::MixedConcept,
     reduction_reason::{
         RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
@@ -36,7 +35,7 @@ use crate::{
 use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashSet},
     fmt::Debug,
     iter,
     marker::PhantomData,
@@ -46,7 +45,6 @@ use std::{
 pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: MixedConcept>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -71,7 +69,6 @@ impl<'s, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
     ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -277,29 +274,43 @@ where
             left.get_concept().and_then(|l| self.variable_mask.get(l));
         let cache = <C as ContextCache>::SharedReductionCache::default();
         match (left_result, right_result) {
-            (None, None) => self
-                .filter_generalisations_for_pair(left, right)
-                .iter()
-                .find_map(|(generalisation, variable_mask)| {
-                    let mut context_search =
-                        self.spawn(&cache, self.delta.clone());
-                    // Stack overflow occurs if you remove this
-                    context_search
-                        .insert_variable_mask(variable_mask.clone())
-                        .ok()?;
-                    context_search.reduce_concept(generalisation).map(
-                        |(ast, reason)| {
-                            (
-                                context_search.substitute(&ast, variable_mask),
-                                C::RR::rule(
-                                    self.to_ast(generalisation),
-                                    variable_mask.clone(),
-                                    reason,
-                                ),
-                            )
-                        },
-                    )
-                }),
+            (None, None) => {
+                let ast = self.contract_pair(left, right);
+                let generalisation_candidates = self.find_generalisations(&ast);
+                let ast = ast.share();
+                generalisation_candidates
+                    .into_iter()
+                    .filter_map(move |gc| {
+                        self.check_generalisation(&ast, &gc).and_then(|vm| {
+                            if vm.is_empty() {
+                                None
+                            } else {
+                                Some((gc, vm))
+                            }
+                        })
+                    })
+                    .find_map(|(generalisation, variable_mask)| {
+                        let mut context_search =
+                            self.spawn(&cache, self.delta.clone());
+                        // Stack overflow occurs if you remove this
+                        context_search
+                            .insert_variable_mask(variable_mask.clone())
+                            .ok()?;
+                        context_search.reduce_concept(&generalisation).map(
+                            |(ast, reason)| {
+                                (
+                                    context_search
+                                        .substitute(&ast, &variable_mask),
+                                    C::RR::rule(
+                                        self.to_ast(&generalisation),
+                                        variable_mask.clone(),
+                                        reason,
+                                    ),
+                                )
+                            },
+                        )
+                    })
+            },
             (Some((left_ast, left_reason)), None) => Some((
                 self.contract_pair(&left_ast, maybe_subbed_r.unwrap_or(right))
                     .share(),
@@ -346,28 +357,6 @@ where
                     },
                 )
             })
-    }
-
-    fn filter_generalisations_for_pair(
-        &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> Generalisations<Syntax<C>> {
-        let ast = self.contract_pair(left, right);
-        let generalisation_candidates = self.find_generalisations(&ast);
-        debug!("filter_generalisations_for_pair({}, {}): generalisation_candidates = {:#?}", left.to_string(), right.to_string(), generalisation_candidates);
-        let ast = ast.share();
-        let result = self.filter_generalisations_from_candidates(
-            &ast,
-            generalisation_candidates,
-        );
-        debug!(
-            "filter_generalisations_for_pair({}, {}) -> {:#?}",
-            left.to_string(),
-            right.to_string(),
-            result
-        );
-        result
     }
 
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
@@ -1286,20 +1275,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Example<Syntax: SyntaxTree, RR: ReductionReason> {
-    generalisation: Syntax::SharedSyntax,
-    substitutions: HashMap<Syntax::SharedSyntax, Match<Syntax, RR>>,
-}
-
 type MaybeReducedSyntaxWithReason<RR> = (RRSharedSyntax<RR>, Option<RR>);
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Match<Syntax: SyntaxTree, RR: ReductionReason> {
-    value: Syntax::SharedSyntax,
-    reduction: Syntax::SharedSyntax,
-    reason: RR,
-}
 
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
@@ -1326,7 +1302,6 @@ impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
     for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    Self: Iteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: ContextCache,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
     SDCD: Clone
@@ -1365,8 +1340,5 @@ pub struct ContextReferences<'c, 's, 'v, S, C: ContextCache, D> {
     pub cache: &'c C,
     pub bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
 }
-
-pub type Generalisations<Syntax> =
-    Vec<(<Syntax as SyntaxTree>::ConceptId, VariableMask<Syntax>)>;
 
 pub type ReductionTruthResult<RR> = Option<(bool, RR)>;

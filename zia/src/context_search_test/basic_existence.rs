@@ -3,11 +3,12 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences, ContextSearch},
+    context_search::ContextReferences,
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+        MultiThreadedContextCache, MultiThreadedContextSearch,
+        SharedContextDelta, SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -24,7 +25,7 @@ fn basic_existence() {
     let cache = MultiThreadedContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.clone()};
-    let context_search = ContextSearch::from(ContextReferences {
+    let context_search = MultiThreadedContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
         delta: SharedContextDelta(delta.into()),
         cache: &cache,

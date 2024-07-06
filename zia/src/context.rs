@@ -27,7 +27,6 @@ use crate::{
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
-    iteration::Iteration as ContextSearchIteration,
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     mixed_concept::MixedConcept,
@@ -47,8 +46,6 @@ pub struct Context<S, C, SDCD, VML, D, CCI: MixedConcept>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
-        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
@@ -76,8 +73,6 @@ impl<S, C, SDCD, VML, D, CCI: MixedConcept> Clone for Context<S, C, SDCD, VML, D
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug + Clone,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
-        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
@@ -104,8 +99,6 @@ impl<S, C, SDCD, VML, D, CCI: MixedConcept> Context<S, C, SDCD, VML, D, CCI>
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
-        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
@@ -940,8 +933,6 @@ impl<S, C, SDCD, VML, D, CCI: MixedConcept> Default for Context<S, C, SDCD, VML,
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
-        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone
@@ -969,8 +960,6 @@ impl<S, C, SDCD, VML, D, CCI: MixedConcept> From<S> for Context<S, C, SDCD, VML,
 where
     S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
     Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    for<'s, 'v> ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>:
-        ContextSearchIteration<ConceptId = S::ConceptId, Syntax = Syntax<C>>,
     C: Default + ContextCache,
     for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
     SDCD: Clone

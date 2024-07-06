@@ -3,11 +3,12 @@ use crate::{
     ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences, ContextSearch},
+    context_search::ContextReferences,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedReductionReason,
-        SharedContextDelta, SharedDirectConceptDelta,
+        MultiThreadedContextCache, MultiThreadedContextSearch,
+        MultiThreadedReductionReason, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -35,7 +36,7 @@ fn existence_inference_rule() {
         NestedDelta::<_, SharedDirectConceptDelta<_>, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
+    let context_search = MultiThreadedContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
         delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
