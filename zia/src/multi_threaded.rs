@@ -3,7 +3,7 @@ use crate::{
     context::Context as GenericContext,
     context_cache::impl_cache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
-    context_search::{ContextSearch, Generalisations},
+    context_search::{ContextSearch, Generalisation},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     iteration::Iteration as ContextSearchIteration,
     mixed_concept::MixedConcept,
@@ -86,45 +86,46 @@ impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
 
 pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
 
-impl<'s, 'v, S, CCI: MixedConcept + Send + Sync> ContextSearchIteration
+impl<'s, 'v, 'a, S, CCI: MixedConcept + Send + Sync + 'a>
+    ContextSearchIteration<'a, MultiThreadedSyntaxTree<S::ConceptId>>
     for ContextSearch<
         's,
         'v,
         S,
         MultiThreadedContextCache<
             MultiThreadedReductionReason<MultiThreadedSyntaxTree<S::ConceptId>>,
+            MultiThreadedSyntaxTree<S::ConceptId>,
         >,
         MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<S::ConceptId>>,
         SharedDirectConceptDelta<S::ConceptId>,
         SharedContextDelta<S::ConceptId>,
         CCI,
+        MultiThreadedSyntaxTree<S::ConceptId>,
     >
 where
     S: SnapShotReader<SharedDirectConceptDelta<CCI>, ConceptId = CCI>
         + Sync
         + Debug,
-    for<'a> &'a std::collections::HashSet<CCI>:
-        rayon::iter::IntoParallelIterator<Item = &'a CCI>,
+    &'a std::collections::HashSet<CCI>:
+        rayon::iter::IntoParallelIterator<Item = CCI>,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;
 
     fn filter_generalisations_from_candidates(
-        &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+        &'a self,
+        example: <MultiThreadedSyntaxTree<S::ConceptId> as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax> {
-        candidates
-            .par_iter()
-            .filter_map(|gc| {
-                self.check_generalisation(example, gc).and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
-            })
-            .collect()
+    ) -> impl Iterator<
+        Item = Generalisation<MultiThreadedSyntaxTree<S::ConceptId>>,
+    > + 'a {
+        let (sender, receiver) = sync_channel(100);
+        candidates.par_iter().for_each(|gc| {
+            if let Some(vm) = self.check_generalisation(&example, gc) {
+                if !vm.is_empty() {
+                    sender.send((gc, vm));
+                }
+            }
+        });
+        receiver.into_iter()
     }
 }

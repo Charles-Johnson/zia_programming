@@ -3,7 +3,7 @@ use crate::{
     context::Context as GenericContext,
     context_cache::impl_cache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
-    context_search::{ContextSearch, Generalisations},
+    context_search::{ContextSearch, Generalisation},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     errors::ZiaResult,
     iteration::Iteration as ContextSearchIteration,
@@ -86,24 +86,22 @@ where
         + Debug,
 {
     type ConceptId = S::ConceptId;
-    type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;
 
     fn filter_generalisations_from_candidates(
-        &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+        &'a self,
+        example: <SingleThreadedSyntaxTree<S::ConceptId> as SyntaxTree>::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax> {
-        candidates
-            .iter()
-            .filter_map(|gc| {
-                self.check_generalisation(example, gc).and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
+    ) -> impl Iterator<
+        Item = Generalisation<SingleThreadedSyntaxTree<S::ConceptId>>,
+    > + 'a {
+        candidates.into_iter().filter_map(move |gc| {
+            self.check_generalisation(&example, &gc).and_then(|vm| {
+                if vm.is_empty() {
+                    None
+                } else {
+                    Some((gc, vm))
+                }
             })
-            .collect()
+        })
     }
 }

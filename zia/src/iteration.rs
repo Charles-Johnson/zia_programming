@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
-use crate::{ast::SyntaxTree, context_search::Generalisations};
+use crate::{ast::SyntaxTree, context_search::Generalisation};
 
-pub trait Iteration {
-    type Syntax: SyntaxTree;
+pub trait Iteration<'a, Syntax: SyntaxTree> {
     type ConceptId;
     fn filter_generalisations_from_candidates(
         &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
+        example: Syntax::SharedSyntax,
         candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax>;
+    ) -> impl Iterator<Item = Generalisation<Syntax>> + 'a;
 }
