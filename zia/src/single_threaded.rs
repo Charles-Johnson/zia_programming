@@ -1,34 +1,44 @@
 use crate::{
-    ast::impl_syntax_tree,
     context::Context as GenericContext,
-    context_cache::impl_cache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     errors::ZiaResult,
-    variable_mask_list::impl_variable_mask_list,
+    nester::SharedReference,
+    variable_mask_list::GenericVariableMaskList,
 };
 use std::{fmt::Debug, rc::Rc};
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RcFamily;
 
-impl_syntax_tree!(Rc, SingleThreadedSyntaxTree);
-impl_cache!(Rc, SingleThreadedContextCache);
-impl_variable_mask_list!(Rc, SingleThreadedVariableMaskList);
-impl_reduction_reason!(Rc, SingleThreadedReductionReason);
+impl SharedReference for RcFamily {
+    type Share<T> = Rc<T>;
+
+    fn share<T>(owned: T) -> Self::Share<T> {
+        Rc::new(owned)
+    }
+
+    fn make_mut<T: Clone>(refcounter: &mut Self::Share<T>) -> &mut T {
+        Rc::make_mut(refcounter)
+    }
+}
+
+type SingleThreadedVariableMaskList<CI> = GenericVariableMaskList<CI, RcFamily>;
 
 pub type Context = GenericContext<
-    ContextSnapShot,
-    SingleThreadedContextCache<
-        SingleThreadedReductionReason<
-            SingleThreadedSyntaxTree<ContextConceptId>,
-        >,
-    >,
+    ContextSnapShot<RcFamily>,
     SharedDirectConceptDelta,
-    SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
+    SingleThreadedVariableMaskList<ContextConceptId>,
     SharedContextDelta,
     ContextConceptId,
+    RcFamily,
 >;
 
-type SingleThreadedContextDelta =
-    NestedDelta<ContextConceptId, SharedDirectConceptDelta, SharedContextDelta>;
+type SingleThreadedContextDelta = NestedDelta<
+    ContextConceptId,
+    SharedDirectConceptDelta,
+    SharedContextDelta,
+    RcFamily,
+>;
 
 #[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);

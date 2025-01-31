@@ -1,14 +1,15 @@
 use crate::{
     and_also::AndAlso,
-    ast::SyntaxTree,
+    ast::{GenericSyntaxTree, SyntaxTree},
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
-    context_cache::ContextCache,
+    context_cache::GenericCache,
     context_delta::{
         Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
         SharedDelta, ValueChange,
     },
     errors::ZiaResult,
-    reduction_reason::{ReductionReason, SharedSyntax, Syntax},
+    nester::SharedReference,
+    reduction_reason::SharedSyntax,
     snap_shot::Reader,
     ZiaError,
 };
@@ -17,39 +18,40 @@ use std::{fmt::Debug, marker::PhantomData};
 
 pub struct ContextUpdater<
     'a,
-    S: Reader<SDCD>,
-    C: ContextCache,
+    S: Reader<SDCD, SR>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    SR: SharedReference,
 > {
-    pub cache: &'a mut C,
-    pub delta: &'a mut NestedDelta<S::ConceptId, SDCD, D>,
+    pub cache: &'a mut GenericCache<S::ConceptId, SR>,
+    pub delta: &'a mut NestedDelta<S::ConceptId, SDCD, D, SR>,
     pub snap_shot: &'a S,
     pub phantom: PhantomData<D>,
+    pub phantom2: PhantomData<SR>,
 }
 
 impl<
         'a,
-        S: Reader<SDCD>,
-        C: ContextCache,
+        S: Reader<SDCD, SR>,
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
             + From<DirectConceptDelta<S::ConceptId>>
             + Debug,
-        D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
-    > ContextUpdater<'a, S, C, SDCD, D>
+        D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+        SR: SharedReference,
+    > ContextUpdater<'a, S, SDCD, D, SR>
 where
-    <<C as ContextCache>::RR as ReductionReason>::Syntax:
-        SyntaxTree<ConceptId = S::ConceptId>,
+    GenericSyntaxTree<S::ConceptId, SR>:
+        SyntaxTree<SR, ConceptId = S::ConceptId>,
 {
     pub fn redefine(
         &mut self,
         concept: &S::ConceptId,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.snap_shot.read_concept(self.delta, *concept).get_composition()
@@ -85,8 +87,8 @@ where
     pub fn define_new_syntax(
         &mut self,
         syntax: &str,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
     ) -> ZiaResult<()> {
         let new_syntax_tree = left
             .get_concept()
@@ -96,7 +98,8 @@ where
                     .read_concept(self.delta, *l)
                     .find_as_hand_in_composition_with(*r, Hand::Left)
                     .map(|concept| {
-                        let syntax = Syntax::<C>::from(syntax);
+                        let syntax =
+                            GenericSyntaxTree::<S::ConceptId, SR>::from(syntax);
                         self.snap_shot
                             .bind_concept_to_syntax(self.delta, syntax, concept)
                     })
@@ -109,7 +112,7 @@ where
 
     pub fn concept_from_ast(
         &mut self,
-        ast: &Syntax<C>,
+        ast: &GenericSyntaxTree<S::ConceptId, SR>,
     ) -> ZiaResult<S::ConceptId> {
         if let Some(c) = ast.get_concept() {
             Ok(c)

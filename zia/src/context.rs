@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use crate::ast::SyntaxKey;
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
-    ast::SyntaxTree,
+    ast::{GenericSyntaxTree, SyntaxTree},
     concepts::{ConceptTrait, ConcreteConceptType},
-    context_cache::{self, ContextCache},
+    context_cache::GenericCache,
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
@@ -29,9 +30,10 @@ use crate::{
     errors::{ZiaError, ZiaResult},
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
-    mixed_concept::MixedConcept,
+    mixed_concept::{ConceptId, MixedConcept},
+    nester::{NestedSyntaxTree, SharedReference},
     parser::parse_line,
-    reduction_reason::{ReductionReason, SharedSyntax, Syntax},
+    reduction_reason::SharedSyntax,
     snap_shot::Reader as SnapShotReader,
     variable_mask_list::VariableMaskList,
 };
@@ -42,26 +44,30 @@ use std::{
     marker::PhantomData,
 };
 
-pub struct Context<S, C, SDCD, VML, D, CCI: MixedConcept>
+pub struct Context<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+        + Default
+        + Sync
+        + Apply<SDCD, SR>
+        + Debug,
+    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>,
+    for<'a> GenericSyntaxTree<CCI, SR>:
+        std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+        + AsRef<DirectConceptDelta<CCI>>
+        + From<DirectConceptDelta<CCI>>,
+    VML: VariableMaskList<CCI, SR>,
+    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     snap_shot: S,
     delta: D,
-    cache: C,
-    new_variable_concepts_by_label: HashMap<String, S::ConceptId>,
-    bounded_variable_syntax: HashSet<SharedSyntax<C>>,
+    cache: GenericCache<CCI, SR>,
+    new_variable_concepts_by_label: HashMap<String, CCI>,
+    bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
     phantom2: PhantomData<VML>,
-    phantom: PhantomData<SDCD>
+    phantom: PhantomData<SDCD>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -69,18 +75,24 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub syntax: Vec<SharedSyntax>,
     pub positions: Vec<usize>,
 }
-impl<S, C, SDCD, VML, D, CCI: MixedConcept> Clone for Context<S, C, SDCD, VML, D, CCI>
+impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> Clone
+    for Context<S, SDCD, VML, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug + Clone,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+        + Default
+        + Sync
+        + Apply<SDCD, SR>
+        + Debug
+        + Clone,
+    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
+    for<'a> GenericSyntaxTree<CCI, SR>:
+        std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+        + AsRef<DirectConceptDelta<CCI>>
+        + From<DirectConceptDelta<CCI>>,
+    VML: VariableMaskList<CCI, SR>,
+    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -89,24 +101,31 @@ where
             phantom: self.phantom,
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
-            new_variable_concepts_by_label: self.new_variable_concepts_by_label.clone(),
-            snap_shot: self.snap_shot.clone()
+            new_variable_concepts_by_label: self
+                .new_variable_concepts_by_label
+                .clone(),
+            snap_shot: self.snap_shot.clone(),
         }
     }
 }
 
-impl<S, C, SDCD, VML, D, CCI: MixedConcept> Context<S, C, SDCD, VML, D, CCI>
+impl<S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference>
+    Context<S, SDCD, VML, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+        + Default
+        + Sync
+        + Apply<SDCD, SR>
+        + Debug,
+    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>,
+    for<'a> GenericSyntaxTree<CCI, SR>:
+        std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+        + AsRef<DirectConceptDelta<CCI>>
+        + From<DirectConceptDelta<CCI>>,
+    VML: VariableMaskList<CCI, SR>,
+    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     pub fn new() -> ZiaResult<Self> {
         let mut cont = Self::default();
@@ -186,6 +205,11 @@ where
         lexemes
     }
 
+    fn nest(&self, _lexemes: Vec<Lexeme>) -> NestedSyntaxTree<CCI, SR> {
+        let _nested_syntax: NestedSyntaxTree<CCI, SR>;
+        todo!("Nest lexemes according to grammar");
+    }
+
     fn concept_kind_from_symbol(&self, symbol: &str) -> ConceptKind {
         if symbol.starts_with('_') && symbol.ends_with('_') {
             return ConceptKind::Variable;
@@ -214,12 +238,18 @@ where
         string.unwrap()
     }
 
-    fn execute_without_closing_scope(&mut self, command: &str) -> ZiaResult<String> {
+    fn execute_without_closing_scope(
+        &mut self,
+        command: &str,
+    ) -> ZiaResult<String> {
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
                 a = self.context_search().expand(&a);
-                self.create_variable_concepts(Syntax::<C>::make_mut(&mut a)).unwrap();
+                self.create_variable_concepts(
+                    GenericSyntaxTree::<CCI, SR>::make_mut(&mut a),
+                )
+                .unwrap();
                 self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
@@ -227,7 +257,10 @@ where
         Ok(string)
     }
 
-    pub fn create_variable_concepts(&mut self, ast: &mut Syntax<C>) -> ZiaResult<()> {
+    pub fn create_variable_concepts(
+        &mut self,
+        ast: &mut GenericSyntaxTree<CCI, SR>,
+    ) -> ZiaResult<()> {
         if let Some((left, right)) = ast.get_expansion_mut() {
             self.create_variable_concepts(left)?;
             self.create_variable_concepts(right)?;
@@ -238,7 +271,7 @@ where
                 .copied()
                 .or_else(|| {
                     let direct_delta = DirectConceptDelta::New(
-                        if self.bounded_variable_syntax.contains(ast) {
+                        if self.bounded_variable_syntax.contains(&ast.key()) {
                             NewConceptDelta::BoundVariable
                         } else {
                             NewConceptDelta::FreeVariable
@@ -262,7 +295,7 @@ where
     pub fn ast_from_expression(
         &mut self,
         s: &str,
-    ) -> ZiaResult<SharedSyntax<C>> {
+    ) -> ZiaResult<SharedSyntax<CCI, SR>> {
         let tokens: Vec<String> = parse_line(s)?;
         self.ast_from_tokens(&tokens)
     }
@@ -270,13 +303,13 @@ where
     fn ast_from_tokens(
         &mut self,
         tokens: &[String],
-    ) -> ZiaResult<SharedSyntax<C>> {
+    ) -> ZiaResult<SharedSyntax<CCI, SR>> {
         match tokens.len() {
             0 => Err(ZiaError::EmptyParentheses),
             1 => self.ast_from_token(&tokens[0]),
             2 => self
                 .ast_from_pair(&tokens[0], &tokens[1])
-                .map(Syntax::<C>::share),
+                .map(GenericSyntaxTree::<CCI, SR>::share),
             _ => {
                 let TokenSubsequence {
                     syntax: lp_syntax,
@@ -355,10 +388,10 @@ where
     fn associativity_try_fold_handler(
         &mut self,
         tokens: &[String],
-        state: Option<(SharedSyntax<C>, usize)>,
+        state: Option<(SharedSyntax<CCI, SR>, usize)>,
         lp_index: usize,
         assoc: Associativity,
-    ) -> ZiaResult<(SharedSyntax<C>, usize)> {
+    ) -> ZiaResult<(SharedSyntax<CCI, SR>, usize)> {
         let mut prev_lp_index = None;
         let mut edge = None;
         if let Some((e, pli)) = state {
@@ -426,16 +459,17 @@ where
     pub fn lowest_precedence_info(
         &self,
         tokens: &[String],
-    ) -> ZiaResult<TokenSubsequence<SharedSyntax<C>>> {
+    ) -> ZiaResult<TokenSubsequence<SharedSyntax<CCI, SR>>> {
         let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
             // Initially assume no concepts have the lowest precedence
-            (Vec::<SharedSyntax<C>>::new(), Vec::<usize>::new(), None),
+            (Vec::<SharedSyntax<CCI, SR>>::new(), Vec::<usize>::new(), None),
             |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
              token| {
                 // Increment index
                 let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                let raw_syntax_of_token = Syntax::<C>::from(token).share();
+                let raw_syntax_of_token =
+                    GenericSyntaxTree::<CCI, SR>::from(token).share();
                 let (precedence_of_token, syntax_of_token) = self
                     .snap_shot
                     .concept_from_label(self.delta.as_ref(), token)
@@ -540,24 +574,28 @@ where
         &mut self,
         left: &str,
         right: &str,
-    ) -> ZiaResult<Syntax<C>> {
+    ) -> ZiaResult<GenericSyntaxTree<CCI, SR>> {
         let lefthand = self.ast_from_token(left)?;
         let righthand = self.ast_from_token(right)?;
         if Some(ConcreteConceptType::ExistsSuchThat)
             == self.concrete_type_of_ast(&righthand)
             && lefthand.is_leaf_variable()
         {
-            self.bounded_variable_syntax.insert(lefthand.clone());
+            self.bounded_variable_syntax.insert(lefthand.key());
         }
         Ok(self.context_search().combine(&lefthand, &righthand))
     }
 
-    fn ast_from_token(&mut self, t: &str) -> ZiaResult<SharedSyntax<C>> {
+    fn ast_from_token(&mut self, t: &str) -> ZiaResult<SharedSyntax<CCI, SR>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
-            let ast =
-                self.snap_shot.ast_from_symbol::<Syntax<C>, D>(self.delta.as_ref(), t);
+            let ast = self
+                .snap_shot
+                .ast_from_symbol::<GenericSyntaxTree<CCI, SR>, D>(
+                    self.delta.as_ref(),
+                    t,
+                );
             Ok(ast.share())
         }
     }
@@ -593,7 +631,8 @@ where
             snap_shot: &self.snap_shot,
             delta,
             cache: &mut self.cache,
-            phantom: PhantomData
+            phantom: PhantomData,
+            phantom2: PhantomData,
         };
         let label_id = updater.new_labelled_concept(
             "label_of",
@@ -627,8 +666,8 @@ where
 
     fn reduce_and_call_pair(
         &mut self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<String> {
         let reduced_left = self.context_search().reduce(left);
         let reduced_right = self.context_search().reduce(right);
@@ -643,12 +682,13 @@ where
     /// If the abstract syntax tree can be reduced, then `call` is called with this reduction. If not then an `Err(ZiaError::CannotReduceFurther)` is returned
     fn try_reducing_then_call(
         &mut self,
-        ast: &SharedSyntax<C>,
+        ast: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<String> {
         let context_search = self.context_search();
         let (normal_form, _) = &context_search.recursively_reduce(ast);
-        if normal_form == ast {
-            context_search.find_examples_of_inferred_reduction(ast)
+        if normal_form.key() == ast.key() {
+            context_search
+                .find_examples_of_inferred_reduction(ast)
                 .map(|(normal_form, _)| normal_form.to_string())
                 .ok_or(ZiaError::CannotReduceFurther)
         } else {
@@ -657,7 +697,7 @@ where
     }
 
     /// If the associated concept of the syntax tree is a string concept that that associated string is returned. If not, the function tries to expand the syntax tree. If that's possible, `call_pair` is called with the lefthand and righthand syntax parts. If not `try_expanding_then_call` is called on the tree. If a program cannot be found this way, `Err(ZiaError::NotAProgram)` is returned.
-    fn call(&mut self, ast: &SharedSyntax<C>) -> ZiaResult<String> {
+    fn call(&mut self, ast: &SharedSyntax<CCI, SR>) -> ZiaResult<String> {
         ast.get_concept()
             .and_then(|c| {
                 self.snap_shot.read_concept(self.delta.as_ref(), c).get_string()
@@ -695,16 +735,13 @@ where
             )
     }
 
-    fn concrete_type(
-        &self,
-        concept_id: &S::ConceptId,
-    ) -> Option<ConcreteConceptType> {
+    fn concrete_type(&self, concept_id: &CCI) -> Option<ConcreteConceptType> {
         self.snap_shot.concrete_concept_type(self.delta.as_ref(), *concept_id)
     }
 
     fn concrete_type_of_ast(
         &self,
-        ast: &SharedSyntax<C>,
+        ast: &SharedSyntax<CCI, SR>,
     ) -> Option<ConcreteConceptType> {
         ast.get_concept().and_then(|c| self.concrete_type(&c))
     }
@@ -712,8 +749,8 @@ where
     /// If the associated concept of the lefthand part of the syntax tree is LET then `call_as_righthand` is called with the left and right of the lefthand syntax. Tries to get the concept associated with the righthand part of the syntax. If the associated concept is `->` then `call` is called with the reduction of the lefthand part of the syntax. Otherwise `Err(ZiaError::NotAProgram)` is returned.
     fn call_pair(
         &mut self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<String> {
         self.concrete_type_of_ast(left)
             .and_then(|cct| match cct {
@@ -730,19 +767,18 @@ where
                     })
                     .or_else(|| {
                         let cs = self.context_search();
-                        let maybe_ast = cs
-                            .concrete_ast(ConcreteConceptType::True);
+                        let maybe_ast =
+                            cs.concrete_ast(ConcreteConceptType::True);
                         drop(cs);
-                        maybe_ast
-                            .map(|ast| {
-                                self.execute_reduction(right, &ast)
-                            })
+                        maybe_ast.map(|ast| self.execute_reduction(right, &ast))
                     })
                     .map(|r| r.map(|()| String::new())),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
                     + &right
                         .get_concept()
-                        .and_then(|c| self.snap_shot.get_label(self.delta.as_ref(), c))
+                        .and_then(|c| {
+                            self.snap_shot.get_label(self.delta.as_ref(), c)
+                        })
                         .unwrap_or_else(|| right.to_string())
                     + "'")),
                 _ => None,
@@ -761,8 +797,8 @@ where
     /// If the righthand part of the syntax can be expanded, then `match_righthand_pair` is called. If not, `Err(ZiaError::CannotExpandFurther)` is returned.
     fn execute_let(
         &mut self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
     ) -> Option<ZiaResult<()>> {
         right.get_expansion().map(|(ref rightleft, ref rightright)| {
             self.match_righthand_pair(left, rightleft, rightright)
@@ -774,9 +810,9 @@ where
     /// with a concept which isn't `->` or `:=` then if this concept reduces, `match_righthand_pair` is called with this reduced concept as an abstract syntax tree.
     fn match_righthand_pair(
         &mut self,
-        left: &SharedSyntax<C>,
-        rightleft: &SharedSyntax<C>,
-        rightright: &SharedSyntax<C>,
+        left: &SharedSyntax<CCI, SR>,
+        rightleft: &SharedSyntax<CCI, SR>,
+        rightright: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
         rightleft.get_concept().map_or(Err(ZiaError::UnusedSymbol), |c| {
             match self.concrete_type(&c) {
@@ -806,8 +842,8 @@ where
     /// If the new syntax is contained within the old syntax then this returns `Err(ZiaError::InfiniteComposition)`. Otherwise `define` is called.
     fn execute_composition(
         &mut self,
-        new: &SharedSyntax<C>,
-        old: &SharedSyntax<C>,
+        new: &SharedSyntax<CCI, SR>,
+        old: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
         if old.contains(new) {
             Err(ZiaError::InfiniteComposition)
@@ -819,8 +855,8 @@ where
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
-        new: &SharedSyntax<C>,
-        old: &SharedSyntax<C>,
+        new: &SharedSyntax<CCI, SR>,
+        old: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
@@ -830,7 +866,8 @@ where
             snap_shot: &self.snap_shot,
             delta,
             cache: &mut self.cache,
-            phantom: PhantomData
+            phantom: PhantomData,
+            phantom2: PhantomData,
         };
         match (
             new.get_concept(),
@@ -877,12 +914,12 @@ where
 
     fn execute_reduction(
         &mut self,
-        syntax: &Syntax<C>,
-        normal_form: &Syntax<C>,
+        syntax: &SharedSyntax<CCI, SR>,
+        normal_form: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
-        } else if syntax == normal_form {
+        } else if syntax.key() == normal_form.key() {
             self.try_removing_reduction(syntax)
         } else {
             let maybe_inner_delta = self.delta.get_mut();
@@ -893,7 +930,8 @@ where
                 snap_shot: &self.snap_shot,
                 delta,
                 cache: &mut self.cache,
-                phantom: PhantomData
+                phantom: PhantomData,
+                phantom2: PhantomData,
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
             let normal_form_concept = updater.concept_from_ast(normal_form)?;
@@ -901,7 +939,10 @@ where
         }
     }
 
-    fn try_removing_reduction(&mut self, syntax: &Syntax<C>) -> ZiaResult<()> {
+    fn try_removing_reduction(
+        &mut self,
+        syntax: &GenericSyntaxTree<CCI, SR>,
+    ) -> ZiaResult<()> {
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
             return Err(ZiaError::MultiplePointersToDelta);
@@ -913,13 +954,14 @@ where
                 cache,
                 delta,
                 snap_shot,
-                phantom: PhantomData
+                phantom: PhantomData,
+                phantom2: PhantomData,
             }
             .delete_reduction(c)
         })
     }
 
-    fn context_search(&self) -> ContextSearch<S, C, VML, SDCD, D, CCI> {
+    fn context_search(&self) -> ContextSearch<S, VML, SDCD, D, CCI, SR> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: self.delta.clone(),
@@ -929,45 +971,55 @@ where
     }
 }
 
-impl<S, C, SDCD, VML, D, CCI: MixedConcept> Default for Context<S, C, SDCD, VML, D, CCI>
+impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> Default
+    for Context<S, SDCD, VML, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+        + Default
+        + Sync
+        + Apply<SDCD, SR>
+        + Debug,
+    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
+    for<'a> GenericSyntaxTree<CCI, SR>:
+        std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    VML: VariableMaskList<CCI, SR>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     #[must_use]
     fn default() -> Self {
         Self {
             snap_shot: S::default(),
             delta: D::default(),
-            cache: C::default(),
+            cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
             phantom2: PhantomData,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 }
 
-impl<S, C, SDCD, VML, D, CCI: MixedConcept> From<S> for Context<S, C, SDCD, VML, D, CCI>
+impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> From<S>
+    for Context<S, SDCD, VML, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId=CCI> + Default + Sync + Apply<SDCD> + Debug,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
-    C: Default + ContextCache,
-    for<'a> <<C as context_cache::r#trait::ContextCache>::RR as ReductionReason>::Syntax: std::convert::From<&'a std::string::String>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+        + Default
+        + Sync
+        + Apply<SDCD, SR>
+        + Debug,
+    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
+    for<'a> GenericSyntaxTree<CCI, SR>:
+        std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    VML: VariableMaskList<CCI, SR>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     fn from(snap_shot: S) -> Self {
         Self {

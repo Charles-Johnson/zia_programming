@@ -121,7 +121,7 @@ fn labels() -> HashMap<usize, &'static str> {
 fn inference_rule() {
     let context_cache = MultiThreadedContextCache::default();
     let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {

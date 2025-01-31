@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
@@ -23,14 +24,15 @@ services:
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
         "-c",
-        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cargo make --no-workspace test",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && ls -al target && cargo make --no-workspace test",
       ]
-    working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
+    working_dir: /usr/src
   verify:
     environment:
       - CARGO_HOME=/usr/src/.cargo
@@ -39,6 +41,7 @@ services:
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
@@ -55,6 +58,7 @@ services:
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",

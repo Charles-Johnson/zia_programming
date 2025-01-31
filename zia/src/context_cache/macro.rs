@@ -1,234 +1,223 @@
 #![allow(clippy::single_component_path_imports)]
 
-macro_rules! impl_cache {
-    ($refcounter:tt, $cache:tt) => {
-        use crate::{
-            ast::SyntaxTree,
-            concepts::ConceptTrait,
-            context_cache::{ContextCache, ReductionCache, InferenceCache, ConceptId, SharedSyntax},
-            reduction_reason::{ReductionReason, ReductionResult}
-        };
-        use dashmap::DashMap;
-        use log::debug;
-        #[derive(Debug, Clone)]
-        pub struct $cache<RR: ReductionReason> {
-            pub reductions: $refcounter<ReductionCacheList<RR>>,
-            syntax_trees: $refcounter<DashMap<ConceptId<RR>, SharedSyntax<RR>>>,
-            contains_bound_variable_syntax: $refcounter<DashMap<SharedSyntax<RR>, bool>>,
-            inferences: $refcounter<InferenceCacheList<RR>>
-        }
+use crate::{
+    ast::{SyntaxKey, SyntaxTree},
+    concepts::ConceptTrait,
+    context_cache::{InferenceCache, ReductionCache},
+    mixed_concept::ConceptId,
+    nester::SharedReference,
+    reduction_reason::{ReductionResult, SharedSyntax},
+};
+use dashmap::DashMap;
+use log::debug;
+#[derive(Debug, Clone)]
+pub struct GenericCache<CI: ConceptId, SR: SharedReference> {
+    pub reductions: SR::Share<ReductionCacheList<CI, SR>>,
+    syntax_trees: SR::Share<DashMap<CI, SharedSyntax<CI, SR>>>,
+    contains_bound_variable_syntax: SR::Share<DashMap<SyntaxKey<CI>, bool>>,
+    inferences: SR::Share<InferenceCacheList<CI, SR>>,
+}
 
-        impl<RR: ReductionReason> Default for $cache<RR> {
-            fn default() -> Self {
-                Self {
-                    reductions: $refcounter::new(ReductionCacheList::default()),
-                    syntax_trees: $refcounter::new(DashMap::default()),
-                    contains_bound_variable_syntax: $refcounter::new(DashMap::default()),
-                    inferences: $refcounter::new(InferenceCacheList::default())
-                }
-            }
-        }
-
-        impl<RR: ReductionReason> ContextCache for $cache<RR>
-        {
-            type RR = RR;
-            type SharedReductionCache = $refcounter<ReductionCache<RR>>;
-            fn invalidate(&mut self) {
-                std::mem::take(self);
-                debug!("Cache invalidated");
-            }
-
-            fn spawn(
-                &self,
-                cache: &Self::SharedReductionCache,
-            ) -> Self {
-                Self {
-                    reductions: self.reductions.spawn(cache.clone()),
-                    inferences: self.inferences.clone(),
-                    ..Self::default()
-                }
-            }
-
-            fn remember_if_contains_bound_variable_syntax_or_else(
-                &self,
-                syntax: &SharedSyntax<Self::RR>,
-                f: impl Fn() -> bool,
-            ) -> bool {
-                self.contains_bound_variable_syntax.get(syntax).map_or_else(f, |v| *v)
-            }
-
-            fn get_syntax_tree_or_else(
-                &self,
-                concept_id: ConceptId<Self::RR>,
-                build_syntax: impl Fn() -> SharedSyntax<Self::RR> + Copy,
-            ) -> <<Self::RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax {
-                self.syntax_trees
-                    .get(&concept_id)
-                    .map_or_else(build_syntax, |v| v.clone())
-            }
-
-            fn insert_syntax_tree(
-                &self,
-                concept: &impl ConceptTrait<Id=ConceptId<Self::RR>>,
-                syntax_tree: &SharedSyntax<Self::RR>,
-            )
-            {
-                if !concept.anonymous_variable() {
-                    self.syntax_trees.insert(concept.id(), syntax_tree.clone());
-                }
-            }
-
-            fn get_reduction_or_else(
-                &self,
-                ast: &SharedSyntax<Self::RR>,
-                reduce: impl Fn() -> ReductionResult<RR>
-                    + Copy,
-            ) -> ReductionResult<RR> {
-                self.reductions.get_reduction_or_else(ast, reduce)
-            }
-
-            fn insert_reduction(&self,
-                ast: &SharedSyntax<Self::RR>,
-                reduction_result: &ReductionResult<RR>,) {
-                self.reductions.insert_reduction(ast, reduction_result);
-            }
-
-            fn get_inference_or_else(&self, concept: ConceptId<RR>, infer: impl Fn() -> ReductionResult<RR> + Copy) -> ReductionResult<RR> {
-                self.inferences.get_inference_or_else(concept, infer)
-            }
-
-            fn insert_inference(&self, concept: ConceptId<RR>, rr: &ReductionResult<RR>) {
-                self.inferences.insert_inference(concept, rr)
-            }
-        }
-
-        #[derive(Debug, Clone)]
-        pub struct InferenceCacheList<RR: ReductionReason> {
-            head: $refcounter<InferenceCache<RR>>,
-            tail: Option<$refcounter<Self>>,
-        }
-
-        impl<RR: ReductionReason> Default for InferenceCacheList<RR>
-        {
-            fn default() -> Self {
-                Self {
-                    head: $refcounter::new(InferenceCache::<RR>::default()),
-                    tail: None,
-                }
-            }
-        }
-
-        impl<'a, RR: ReductionReason>
-            From<$refcounter<InferenceCache<RR>>>
-            for InferenceCacheList<RR>
-        {
-            fn from(
-                head: $refcounter<InferenceCache<RR>>,
-            ) -> Self {
-                Self {
-                    head,
-                    tail: None,
-                }
-            }
-        }
-
-        impl<RR: ReductionReason> InferenceCacheList<RR> {
-            pub fn get_inference_or_else(
-                &self,
-                concept: ConceptId<RR>,
-                reduce: impl Fn() -> ReductionResult<RR>
-                    + Copy,
-            ) -> ReductionResult<RR> {
-                self.head.get(&concept).map_or_else(
-                    || {
-                        self.tail.as_ref().map_or_else(reduce, |ccl| {
-                            ccl.get_inference_or_else(concept, reduce)
-                        })
-                    },
-                    |r| r.as_ref().cloned(),
-                )
-            }
-
-            pub fn insert_inference(
-                &self,
-                concept: ConceptId<RR>,
-                reduction_result: &ReductionResult<RR>,
-            ) {
-                self.head.insert(concept, reduction_result.clone());
-            }
-        }
-
-        #[derive(Debug, Clone)]
-        pub struct ReductionCacheList<RR: ReductionReason> {
-            head: $refcounter<ReductionCache<RR>>,
-            tail: Option<$refcounter<Self>>,
-        }
-
-        impl<RR: ReductionReason> Default for ReductionCacheList<RR>
-        {
-            fn default() -> Self {
-                Self {
-                    head: $refcounter::new(ReductionCache::<RR>::default()),
-                    tail: None,
-                }
-            }
-        }
-
-        impl<'a, RR: ReductionReason>
-            From<$refcounter<ReductionCache<RR>>>
-            for ReductionCacheList<RR>
-        {
-            fn from(
-                head: $refcounter<ReductionCache<RR>>,
-            ) -> Self {
-                Self {
-                    head,
-                    tail: None,
-                }
-            }
-        }
-
-        impl<RR: ReductionReason> ReductionCacheList<RR> {
-            #[must_use]
-            pub fn spawn(
-                self: &$refcounter<Self>,
-                cache: $refcounter<ReductionCache<RR>>,
-            ) -> $refcounter<Self> {
-                $refcounter::new(Self {
-                    head: cache,
-                    tail: Some(self.clone()),
-                })
-            }
-
-            pub fn get_reduction_or_else(
-                &self,
-                ast: &SharedSyntax<RR>,
-                reduce: impl Fn() -> ReductionResult<RR>
-                    + Copy,
-            ) -> ReductionResult<RR> {
-                self.head.get(ast).map_or_else(
-                    || {
-                        self.tail.as_ref().map_or_else(reduce, |ccl| {
-                            ccl.get_reduction_or_else(ast, reduce)
-                        })
-                    },
-                    |r| r.as_ref().cloned(),
-                )
-            }
-
-            pub fn insert_reduction(
-                &self,
-                ast: &SharedSyntax<RR>,
-                reduction_result: &ReductionResult<RR>,
-            ) {
-                if !ast.is_variable()
-                    && reduction_result.as_ref().map_or(true, |(r, _)| r != ast)
-                {
-                    self.head.insert(ast.clone(), reduction_result.clone());
-                }
-            }
+impl<CI: ConceptId, SR: SharedReference> Default for GenericCache<CI, SR> {
+    fn default() -> Self {
+        Self {
+            reductions: SR::share(ReductionCacheList::default()),
+            syntax_trees: SR::share(DashMap::default()),
+            contains_bound_variable_syntax: SR::share(DashMap::default()),
+            inferences: SR::share(InferenceCacheList::default()),
         }
     }
 }
 
-pub(crate) use impl_cache;
+impl<CI: ConceptId, SR: SharedReference> GenericCache<CI, SR> {
+    pub fn invalidate(&mut self) {
+        std::mem::take(self);
+        debug!("Cache invalidated");
+    }
+
+    pub fn spawn(&self, cache: &SR::Share<ReductionCache<CI, SR>>) -> Self {
+        Self {
+            reductions: ReductionCacheList::<CI, SR>::spawn(
+                &self.reductions,
+                cache.clone(),
+            ),
+            inferences: self.inferences.clone(),
+            ..Self::default()
+        }
+    }
+
+    pub fn remember_if_contains_bound_variable_syntax_or_else(
+        &self,
+        syntax: &SharedSyntax<CI, SR>,
+        f: impl Fn() -> bool,
+    ) -> bool {
+        self.contains_bound_variable_syntax
+            .get(&syntax.key())
+            .map_or_else(f, |v| *v)
+    }
+
+    pub fn get_syntax_tree_or_else(
+        &self,
+        concept_id: CI,
+        build_syntax: impl Fn() -> SharedSyntax<CI, SR> + Copy,
+    ) -> SharedSyntax<CI, SR> {
+        self.syntax_trees
+            .get(&concept_id)
+            .map_or_else(build_syntax, |v| v.clone())
+    }
+
+    pub fn insert_syntax_tree(
+        &self,
+        concept: &impl ConceptTrait<Id = CI>,
+        syntax_tree: &SharedSyntax<CI, SR>,
+    ) {
+        if !concept.anonymous_variable() {
+            self.syntax_trees.insert(concept.id(), syntax_tree.clone());
+        }
+    }
+
+    pub fn get_reduction_or_else(
+        &self,
+        ast: &SharedSyntax<CI, SR>,
+        reduce: impl Fn() -> ReductionResult<CI, SR> + Copy,
+    ) -> ReductionResult<CI, SR> {
+        self.reductions.get_reduction_or_else(ast, reduce)
+    }
+
+    pub fn insert_reduction(
+        &self,
+        ast: &SharedSyntax<CI, SR>,
+        reduction_result: &ReductionResult<CI, SR>,
+    ) {
+        self.reductions.insert_reduction(ast, reduction_result);
+    }
+
+    pub fn get_inference_or_else(
+        &self,
+        concept: CI,
+        infer: impl Fn() -> ReductionResult<CI, SR> + Copy,
+    ) -> ReductionResult<CI, SR> {
+        self.inferences.get_inference_or_else(concept, infer)
+    }
+
+    pub fn insert_inference(&self, concept: CI, rr: &ReductionResult<CI, SR>) {
+        self.inferences.insert_inference(concept, rr);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InferenceCacheList<CI: ConceptId, SR: SharedReference> {
+    head: SR::Share<InferenceCache<CI, SR>>,
+    tail: Option<SR::Share<Self>>,
+}
+
+impl<CI: ConceptId, SR: SharedReference> Default
+    for InferenceCacheList<CI, SR>
+{
+    fn default() -> Self {
+        Self {
+            head: SR::share(InferenceCache::<CI, SR>::default()),
+            tail: None,
+        }
+    }
+}
+
+impl<'a, CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
+    fn stub(head: SR::Share<InferenceCache<CI, SR>>) -> Self {
+        Self {
+            head,
+            tail: None,
+        }
+    }
+}
+
+impl<CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
+    pub fn get_inference_or_else(
+        &self,
+        concept: CI,
+        reduce: impl Fn() -> ReductionResult<CI, SR> + Copy,
+    ) -> ReductionResult<CI, SR> {
+        self.head.get(&concept).map_or_else(
+            || {
+                self.tail.as_ref().map_or_else(reduce, |ccl| {
+                    ccl.get_inference_or_else(concept, reduce)
+                })
+            },
+            |r| r.as_ref().cloned(),
+        )
+    }
+
+    pub fn insert_inference(
+        &self,
+        concept: CI,
+        reduction_result: &ReductionResult<CI, SR>,
+    ) {
+        self.head.insert(concept, reduction_result.clone());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReductionCacheList<CI: ConceptId, SR: SharedReference> {
+    head: SR::Share<ReductionCache<CI, SR>>,
+    tail: Option<SR::Share<Self>>,
+}
+
+impl<CI: ConceptId, SR: SharedReference> Default
+    for ReductionCacheList<CI, SR>
+{
+    fn default() -> Self {
+        Self {
+            head: SR::share(ReductionCache::<CI, SR>::default()),
+            tail: None,
+        }
+    }
+}
+
+impl<CI: ConceptId, SR: SharedReference> ReductionCacheList<CI, SR> {
+    #[must_use]
+    pub fn spawn(
+        shared_ref: &SR::Share<Self>,
+        cache: SR::Share<ReductionCache<CI, SR>>,
+    ) -> SR::Share<Self> {
+        SR::share(Self {
+            head: cache,
+            tail: Some(shared_ref.clone()),
+        })
+    }
+
+    pub fn start_list(head: SR::Share<ReductionCache<CI, SR>>) -> Self {
+        Self {
+            head,
+            tail: None,
+        }
+    }
+
+    pub fn get_reduction_or_else(
+        &self,
+        ast: &SharedSyntax<CI, SR>,
+        reduce: impl Fn() -> ReductionResult<CI, SR> + Copy,
+    ) -> ReductionResult<CI, SR> {
+        self.head.get(&ast.key()).map_or_else(
+            || {
+                self.tail.as_ref().map_or_else(reduce, |ccl| {
+                    ccl.get_reduction_or_else(ast, reduce)
+                })
+            },
+            |r| r.as_ref().cloned(),
+        )
+    }
+
+    pub fn insert_reduction(
+        &self,
+        ast: &SharedSyntax<CI, SR>,
+        reduction_result: &ReductionResult<CI, SR>,
+    ) {
+        if !ast.is_variable()
+            && reduction_result
+                .as_ref()
+                .map_or(true, |(r, _)| r.key() != ast.key())
+        {
+            self.head.insert(ast.key(), reduction_result.clone());
+        }
+    }
+}

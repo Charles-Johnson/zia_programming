@@ -19,6 +19,7 @@ fn basic_comparison() {
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,
+        _,
     >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};

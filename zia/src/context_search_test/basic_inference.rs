@@ -21,6 +21,7 @@ fn basic_inference() {
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,
+        _,
     >::default();
     let cache = MultiThreadedContextCache::default();
     let bound_variables = hashset! {};

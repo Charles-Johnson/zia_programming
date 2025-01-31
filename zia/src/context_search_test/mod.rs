@@ -30,4 +30,4 @@ pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
 }
 
 type Syntax = MultiThreadedSyntaxTree<ConceptId>;
-type ReductionReason = MultiThreadedReductionReason<Syntax>;
+type ReductionReason = MultiThreadedReductionReason<ConceptId>;

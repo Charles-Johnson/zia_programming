@@ -48,3 +48,4 @@ RUN rustup component add rustfmt --toolchain nightly
 RUN cargo install --force cargo-readme
 RUN git config --global user.email "charlesthomasjohnson0@gmail.com"
 RUN git config --global user.name "Charle Johnson"
+
