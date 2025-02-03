@@ -3,7 +3,7 @@ RUN apt update
 RUN apt install -y curl
 RUN apt-get install ripgrep
 USER node
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.75 -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.81 -y
 ENV PATH="/home/node/.cargo/bin:$PATH"
 RUN rustup component add rust-analyzer
 RUN mkdir -p /home/node/.local/share/nvim/site/autoload
@@ -41,10 +41,10 @@ USER root
 RUN apt install -y build-essential
 RUN apt install -y rsync
 USER node
-RUN cargo install --force wasm-pack
+RUN cargo install --force wasm-pack --version 0.13.0
 RUN cargo install --force cargo-make
-RUN rustup toolchain install nightly
-RUN rustup component add rustfmt --toolchain nightly
+RUN rustup toolchain install nightly-2024-07-07
+RUN rustup component add rustfmt --toolchain nightly-2024-07-07
 RUN cargo install --force cargo-readme
 RUN git config --global user.email "charlesthomasjohnson0@gmail.com"
 RUN git config --global user.name "Charle Johnson"

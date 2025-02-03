@@ -1,11 +1,10 @@
 #![allow(clippy::single_component_path_imports)]
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
-use crate::context_cache::SharedSyntax;
-use crate::mixed_concept::ConceptId;
-use crate::nester::SharedReference;
-use crate::reduction_reason::convert_to_syntax_keys;
+use crate::{
+    context_cache::SharedSyntax, mixed_concept::ConceptId,
+    nester::SharedReference, reduction_reason::convert_to_syntax_keys,
+};
 
 #[derive(Clone)]
 pub struct GenericVariableMaskList<CI: ConceptId, SR: SharedReference> {
@@ -74,10 +73,7 @@ impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR>
     fn contains(&self, node: &VariableMask<CI, SR>) -> bool {
         convert_to_syntax_keys::<CI, CI, SR>(&self.head)
             == convert_to_syntax_keys::<CI, CI, SR>(node)
-            || self
-                .tail
-                .as_ref()
-                .map_or(false, |vml| vml.as_ref().contains(node))
+            || self.tail.as_ref().is_some_and(|vml| vml.as_ref().contains(node))
     }
 
     fn get(&self, concept_id: CI) -> Option<&SharedSyntax<CI, SR>> {

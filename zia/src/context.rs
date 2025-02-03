@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::ast::SyntaxKey;
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
-    ast::{GenericSyntaxTree, SyntaxTree},
+    ast::{GenericSyntaxTree, SyntaxKey, SyntaxTree},
     concepts::{ConceptTrait, ConcreteConceptType},
     context_cache::GenericCache,
     context_delta::{
@@ -556,7 +555,7 @@ where
                         // Check other syntax with lowest precedence
                         Comparison::Incomparable
                         | Comparison::LessThanOrEqualTo => (),
-                    };
+                    }
                 }
                 // syntax of token has neither higher or lower precedence than the lowest precedence syntax
                 lowest_precedence_syntax.push(syntax_of_token);

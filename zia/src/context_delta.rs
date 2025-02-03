@@ -17,7 +17,7 @@
 use crate::{
     ast::{GenericSyntaxTree, SyntaxTree},
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
-    context_cache::{ContextCache, GenericCache},
+    context_cache::GenericCache,
     errors::ZiaResult,
     mixed_concept::{self, ConceptId, MixedConcept},
     nester::SharedReference,
@@ -308,7 +308,7 @@ where
                     IndirectConceptDelta::ReducesFrom(new_concept_id).into();
                 self.insert_delta_for_existing_concept(*reduction, cd);
             },
-        };
+        }
         new_concept_id
     }
 
@@ -320,18 +320,16 @@ where
         self.insert_delta_for_concept(
             concept_id,
             cd,
-            |last_delta, concept_id: CI| {
-                match last_delta {
-                    ConceptDelta::Direct(dcd)
-                        if matches!(
-                            dcd.as_ref(),
-                            &DirectConceptDelta::Remove(_)
-                        ) =>
-                    {
-                        panic!("Concept {concept_id} already removed");
-                    },
-                    _ => (),
-                };
+            |last_delta, concept_id: CI| match last_delta {
+                ConceptDelta::Direct(dcd)
+                    if matches!(
+                        dcd.as_ref(),
+                        &DirectConceptDelta::Remove(_)
+                    ) =>
+                {
+                    panic!("Concept {concept_id} already removed");
+                },
+                _ => (),
             },
         );
     }
@@ -346,15 +344,13 @@ where
         self.insert_delta_for_concept(
             concept_id,
             ConceptDelta::Direct(DirectConceptDelta::New(cd).into()),
-            |last_delta, concept_id: CI| {
-                match last_delta {
-                    ConceptDelta::Direct(dcd)
-                        if matches!(
-                            dcd.as_ref(),
-                            &DirectConceptDelta::Remove(_)
-                        ) => {},
-                    _ => panic!("Concept {concept_id} already exists"),
-                };
+            |last_delta, concept_id: CI| match last_delta {
+                ConceptDelta::Direct(dcd)
+                    if matches!(
+                        dcd.as_ref(),
+                        &DirectConceptDelta::Remove(_)
+                    ) => {},
+                _ => panic!("Concept {concept_id} already exists"),
             },
         );
         concept_id
@@ -378,7 +374,7 @@ where
             Entry::Vacant(e) => {
                 e.insert(vec![cd]);
             },
-        };
+        }
     }
 }
 

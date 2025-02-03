@@ -1,7 +1,6 @@
 #![allow(clippy::redundant_pub_crate)]
 
 mod r#macro;
-pub(crate) mod r#trait;
 
 use crate::{
     ast::{GenericSyntaxTree, SyntaxKey},
@@ -10,7 +9,6 @@ use crate::{
 };
 use dashmap::DashMap;
 pub(crate) use r#macro::GenericCache;
-pub use r#trait::ContextCache;
 
 pub type ReductionCache<CI, SR> =
     DashMap<SyntaxKey<CI>, ReductionResult<CI, SR>>;

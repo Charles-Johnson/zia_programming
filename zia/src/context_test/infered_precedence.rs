@@ -1,4 +1,3 @@
-
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_test::Context,

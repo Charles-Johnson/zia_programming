@@ -114,7 +114,7 @@ where
                                             ))
                                             .unwrap();
                                     },
-                                };
+                                }
                             },
                             DirectConceptDelta::Reduce {
                                 change,

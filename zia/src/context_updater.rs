@@ -34,7 +34,6 @@ pub struct ContextUpdater<
 }
 
 impl<
-        'a,
         S: Reader<SDCD, SR>,
         SDCD: Clone
             + AsRef<DirectConceptDelta<S::ConceptId>>
@@ -42,7 +41,7 @@ impl<
             + Debug,
         D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
         SR: SharedReference,
-    > ContextUpdater<'a, S, SDCD, D, SR>
+    > ContextUpdater<'_, S, SDCD, D, SR>
 where
     GenericSyntaxTree<S::ConceptId, SR>:
         SyntaxTree<SR, ConceptId = S::ConceptId>,

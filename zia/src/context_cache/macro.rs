@@ -123,7 +123,7 @@ impl<CI: ConceptId, SR: SharedReference> Default
 }
 
 impl<'a, CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
-    fn stub(head: SR::Share<InferenceCache<CI, SR>>) -> Self {
+    const fn stub(head: SR::Share<InferenceCache<CI, SR>>) -> Self {
         Self {
             head,
             tail: None,
@@ -185,7 +185,7 @@ impl<CI: ConceptId, SR: SharedReference> ReductionCacheList<CI, SR> {
         })
     }
 
-    pub fn start_list(head: SR::Share<ReductionCache<CI, SR>>) -> Self {
+    pub const fn start_list(head: SR::Share<ReductionCache<CI, SR>>) -> Self {
         Self {
             head,
             tail: None,

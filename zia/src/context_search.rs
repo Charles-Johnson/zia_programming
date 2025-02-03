@@ -66,8 +66,8 @@ pub struct ContextSearch<
     phantom: PhantomData<SDCD>,
     phantom2: PhantomData<CCI>,
 }
-impl<'s, 'v, S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference> Debug
-    for ContextSearch<'s, 'v, S, VML, SDCD, D, CCI, SR>
+impl<S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference> Debug
+    for ContextSearch<'_, '_, S, VML, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
@@ -767,7 +767,7 @@ where
                                             )
                                             .0
                                             .get_concept()
-                                            .map_or(false, |id| {
+                                            .is_some_and(|id| {
                                                 equivalent_right_equivalence_set
                                                     .any(
                                                         |equivalent_right_id| {
@@ -1189,7 +1189,7 @@ where
     ) -> Option<VariableMask<CCI, SR>> {
         (self.is_free_variable(generalisation)
             && !self.bound_variable_syntax.contains(&ast.key())
-            && !ast.get_concept().map_or(false, |c| {
+            && !ast.get_concept().is_some_and(|c| {
                 self.snap_shot
                     .read_concept(self.delta.as_ref(), c)
                     .bounded_variable()
@@ -1246,7 +1246,8 @@ where
             && self
                 .variable_mask
                 .tail()
-                .map_or(true, |vml| vml.get(*v).is_none()) // A hack required to prevent stack overflow
+                .map_or(true, |vml| vml.get(*v).is_none())
+        // A hack required to prevent stack overflow
     }
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
@@ -1328,7 +1329,7 @@ where
                     }
                 }
                 self.bound_variable_syntax.contains(&syntax.key())
-                    || syntax.get_concept().map_or(false, |c| {
+                    || syntax.get_concept().is_some_and(|c| {
                         self.snap_shot
                             .read_concept(self.delta.as_ref(), c)
                             .bounded_variable()

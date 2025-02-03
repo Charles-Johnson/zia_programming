@@ -14,7 +14,7 @@ where
     NestedSyntax: Clone + Eq + Hash,
     for<'a> &'a Self: From<&'a NestedSyntax>,
 {
-    pub fn new_parent(children: Vec<NestedSyntax>) -> Self {
+    pub const fn new_parent(children: Vec<NestedSyntax>) -> Self {
         Self::Parent {
             children,
         }

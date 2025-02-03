@@ -335,7 +335,10 @@ where
 {
     type CommittedConceptId = Committed;
     type ConceptId = ConceptId;
-    type MixedConcept<'a> = Mixed<'a> where SR: 'a;
+    type MixedConcept<'a>
+        = Mixed<'a>
+    where
+        SR: 'a;
 
     fn concept_from_label<
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
