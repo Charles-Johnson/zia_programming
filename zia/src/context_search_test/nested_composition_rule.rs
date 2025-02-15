@@ -7,7 +7,7 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -60,7 +60,7 @@ fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
         NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
-    let cache = MultiThreadedContextCache::default();
+    let cache = MTContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,

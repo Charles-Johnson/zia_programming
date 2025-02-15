@@ -7,7 +7,7 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -23,7 +23,7 @@ fn basic_existence() {
         SharedContextDelta<ConceptId>,
         _,
     >::default();
-    let cache = MultiThreadedContextCache::default();
+    let cache = MTContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.key()};
     let context_search = MTContextSearch::from(ContextReferences {

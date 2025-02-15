@@ -433,7 +433,6 @@ where
         + From<DirectConceptDelta<ConceptId>>
         + Debug,
     Uncommitted: TryFrom<Self::ConceptId, Error = ()>,
-    SR: SharedReference,
 {
     #[allow(clippy::too_many_lines)]
     fn apply<

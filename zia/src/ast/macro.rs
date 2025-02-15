@@ -82,12 +82,12 @@ impl<CI: ConceptId, SR: SharedReference> fmt::Display
             "{}",
             self.syntax.clone().unwrap_or_else(|| self
                 .get_expansion()
-                .map(|(left, right)| left.to_string()
-                    + " "
-                    + &right.to_string())
-                .unwrap_or_else(|| panic!(
-                    "Tried to display syntax ({self:?}) without symbols"
-                )))
+                .map_or_else(
+                    || panic!(
+                        "Tried to display syntax ({self:?}) without symbols"
+                    ),
+                    |(left, right)| left.to_string() + " " + &right.to_string()
+                ))
         )
     }
 }

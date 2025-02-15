@@ -7,7 +7,7 @@ use crate::{
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     mixed_concept::ConceptId,
     nester::SharedReference,
-    reduction_reason::GenericReductionReason,
+    reduction_reason::ReductionReason,
     variable_mask_list::VariableMaskList,
 };
 use lazy_static::lazy_static;
@@ -28,11 +28,10 @@ impl SharedReference for ArcFamily {
     }
 }
 
-pub type MultiThreadedSyntaxTree<CI> = GenericSyntaxTree<CI, ArcFamily>;
-pub type MultiThreadedContextCache<CI> = GenericCache<CI, ArcFamily>;
-pub type MultiThreadedVariableMaskList<CI> = VariableMaskList<CI, ArcFamily>;
-pub type MultiThreadedReductionReason<CI> =
-    GenericReductionReason<CI, ArcFamily>;
+pub type MTSyntaxTree<CI> = GenericSyntaxTree<CI, ArcFamily>;
+pub type MTContextCache<CI> = GenericCache<CI, ArcFamily>;
+pub type MTVariableMaskList<CI> = VariableMaskList<CI, ArcFamily>;
+pub type MTReductionReason<CI> = ReductionReason<CI, ArcFamily>;
 
 pub type Context = GenericContext<
     ContextSnapShot<ArcFamily>,

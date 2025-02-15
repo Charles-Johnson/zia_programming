@@ -5,7 +5,7 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 #[test]
 fn comparison_existence_implication_rule_test() {
-    let context_cache = MultiThreadedContextCache::default();
+    let context_cache = MTContextCache::default();
     let context_delta =
         NestedDelta::<_, SharedDirectConceptDelta<_>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());

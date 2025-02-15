@@ -11,51 +11,7 @@ use crate::{
     variable_mask_list::VariableMask,
 };
 
-pub trait ReductionReason<CI: ConceptId, SR: SharedReference>
-where
-    Self: Clone + From<ComparisonReason<CI, SR>>,
-{
-    fn simplify_reasoning(
-        reason: Option<Self>,
-        reversed_reason: Option<Self>,
-    ) -> ComparisonReason<CI, SR>;
-
-    fn determine_reduction_truth(
-        left: &SharedSyntax<CI, SR>,
-        right: &SharedSyntax<CI, SR>,
-        reduce: impl Fn(&SharedSyntax<CI, SR>) -> ReductionResult<CI, SR>,
-    ) -> ReductionTruthResult<Self>;
-
-    fn recursive_reason(
-        previous: Option<Self>,
-        last: Self,
-        previously_reduced_syntax: &SharedSyntax<CI, SR>,
-    ) -> Self;
-
-    fn existence(
-        substitutions: Substitutions<CI, SR>,
-        generalisation: SharedSyntax<CI, SR>,
-    ) -> Self;
-
-    fn inference(implication: SharedSyntax<CI, SR>, reason: Self) -> Self;
-
-    fn explicit() -> Self;
-
-    fn default(operator_id: CI) -> Self;
-
-    fn rule(
-        generalisation: SharedSyntax<CI, SR>,
-        variable_mask: VariableMask<CI, SR>,
-        reason: Self,
-    ) -> Self;
-
-    fn partial(
-        partial_reductions: HashMap<SyntaxKey<CI>, Reduction<CI, SR>>,
-    ) -> Self;
-}
-
-pub type Reduction<CI, SR> =
-    (SharedSyntax<CI, SR>, GenericReductionReason<CI, SR>);
+pub type Reduction<CI, SR> = (SharedSyntax<CI, SR>, ReductionReason<CI, SR>);
 
 pub type ReductionResult<CI, SR> = Option<Reduction<CI, SR>>;
 
@@ -64,7 +20,7 @@ pub type SharedSyntax<CCI, SR> =
 type PartialReductionReasons<CI, SR> =
     HashMap<SyntaxKey<CI>, Reduction<CI, SR>>;
 #[derive(Clone)]
-pub enum GenericReductionReason<CI: ConceptId, SR: SharedReference> {
+pub enum ReductionReason<CI: ConceptId, SR: SharedReference> {
     Comparison(SR::Share<ComparisonReason<CI, SR>>),
     Explicit,
     Rule {
@@ -102,11 +58,9 @@ pub enum GenericReductionReason<CI: ConceptId, SR: SharedReference> {
     },
 }
 
-impl<CI: ConceptId, SR: SharedReference> Eq for GenericReductionReason<CI, SR> {}
+impl<CI: ConceptId, SR: SharedReference> Eq for ReductionReason<CI, SR> {}
 
-impl<CI: ConceptId, SR: SharedReference> Debug
-    for GenericReductionReason<CI, SR>
-{
+impl<CI: ConceptId, SR: SharedReference> Debug for ReductionReason<CI, SR> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Comparison(arg0) => {
@@ -207,7 +161,7 @@ pub fn convert_to_syntax_keys<
 }
 
 type PartialReductionReasonKeys<CI, SR> =
-    HashMap<SyntaxKey<CI>, (SyntaxKey<CI>, GenericReductionReason<CI, SR>)>;
+    HashMap<SyntaxKey<CI>, (SyntaxKey<CI>, ReductionReason<CI, SR>)>;
 
 // TODO: implement more efficient way of comparing PartialReductionReasons
 fn collect_to_syntax_keys<CI: ConceptId, SR: SharedReference>(
@@ -217,9 +171,7 @@ fn collect_to_syntax_keys<CI: ConceptId, SR: SharedReference>(
         .map(|(k, (v1, v2))| (k.clone(), (v1.key(), v2.clone())))
         .collect::<HashMap<_, _>>()
 }
-impl<CI: ConceptId, SR: SharedReference> PartialEq
-    for GenericReductionReason<CI, SR>
-{
+impl<CI: ConceptId, SR: SharedReference> PartialEq for ReductionReason<CI, SR> {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Self::Comparison(c1) => {
@@ -277,14 +229,14 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq
 }
 
 impl<CI: ConceptId, SR: SharedReference> From<ComparisonReason<CI, SR>>
-    for GenericReductionReason<CI, SR>
+    for ReductionReason<CI, SR>
 {
     fn from(comparison_reason: ComparisonReason<CI, SR>) -> Self {
         Self::Comparison(SR::share(comparison_reason))
     }
 }
 
-impl<CI: ConceptId, SR: SharedReference> GenericReductionReason<CI, SR> {
+impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR> {
     fn determine_evidence_of_reduction(
         left: &SharedSyntax<CI, SR>,
         right: &SharedSyntax<CI, SR>,
@@ -309,10 +261,8 @@ impl<CI: ConceptId, SR: SharedReference> GenericReductionReason<CI, SR> {
     }
 }
 
-impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
-    for GenericReductionReason<CI, SR>
-{
-    fn simplify_reasoning(
+impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR> {
+    pub fn simplify_reasoning(
         reason: Option<Self>,
         reversed_reason: Option<Self>,
     ) -> ComparisonReason<CI, SR> {
@@ -352,7 +302,7 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
         }
     }
 
-    fn determine_reduction_truth(
+    pub fn determine_reduction_truth(
         left: &SharedSyntax<CI, SR>,
         right: &SharedSyntax<CI, SR>,
         reduce: impl Fn(&SharedSyntax<CI, SR>) -> ReductionResult<CI, SR>,
@@ -390,7 +340,7 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
         }
     }
 
-    fn recursive_reason(
+    pub fn recursive_reason(
         previous: Option<Self>,
         last: Self,
         previously_reduced_syntax: &SharedSyntax<CI, SR>,
@@ -402,7 +352,7 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
         })
     }
 
-    fn existence(
+    pub const fn existence(
         substitutions: Substitutions<CI, SR>,
         generalisation: SharedSyntax<CI, SR>,
     ) -> Self {
@@ -412,24 +362,24 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
         }
     }
 
-    fn inference(implication: SharedSyntax<CI, SR>, reason: Self) -> Self {
+    pub fn inference(implication: SharedSyntax<CI, SR>, reason: Self) -> Self {
         Self::Inference {
             implication,
             reason: SR::share(reason),
         }
     }
 
-    fn explicit() -> Self {
+    pub const fn explicit() -> Self {
         Self::Explicit
     }
 
-    fn default(operator: CI) -> Self {
+    pub const fn default(operator: CI) -> Self {
         Self::Default {
             operator,
         }
     }
 
-    fn rule(
+    pub fn rule(
         generalisation: SharedSyntax<CI, SR>,
         variable_mask: VariableMask<CI, SR>,
         reason: Self,
@@ -441,7 +391,7 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR>
         }
     }
 
-    fn partial(
+    pub fn partial(
         partial_reductions: HashMap<SyntaxKey<CI>, Reduction<CI, SR>>,
     ) -> Self {
         debug_assert!(!partial_reductions.is_empty());

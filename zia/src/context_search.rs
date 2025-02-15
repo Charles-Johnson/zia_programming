@@ -26,9 +26,7 @@ use crate::{
     },
     mixed_concept::{ConceptId, MixedConcept},
     nester::SharedReference,
-    reduction_reason::{
-        GenericReductionReason, ReductionReason, ReductionResult, SharedSyntax,
-    },
+    reduction_reason::{ReductionReason, ReductionResult, SharedSyntax},
     snap_shot::Reader as SnapShotReader,
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
@@ -204,7 +202,7 @@ where
         {
             Some((
                 self.to_ast(default_concept_id),
-                GenericReductionReason::<CCI, SR>::default(*operator_id),
+                ReductionReason::<CCI, SR>::default(*operator_id),
             ))
         } else {
             reduced_pair
@@ -333,7 +331,7 @@ where
                                 (
                                     context_search
                                         .substitute(&ast, &variable_mask),
-                                    GenericReductionReason::<CCI, SR>::rule(
+                                    ReductionReason::<CCI, SR>::rule(
                                         self.to_ast(&generalisation),
                                         variable_mask.clone(),
                                         reason,
@@ -466,17 +464,16 @@ where
     pub fn recursively_reduce(
         &self,
         ast: &SharedSyntax<CCI, SR>,
-    ) -> (SharedSyntax<CCI, SR>, Option<GenericReductionReason<CCI, SR>>) {
+    ) -> (SharedSyntax<CCI, SR>, Option<ReductionReason<CCI, SR>>) {
         debug!("recursively_reduce({})", ast.as_ref());
-        let mut maybe_reason: Option<GenericReductionReason<CCI, SR>> = None;
+        let mut maybe_reason: Option<ReductionReason<CCI, SR>> = None;
         let mut reduced_ast = ast.clone();
         while let Some((a, reason)) = self.reduce(&reduced_ast) {
-            maybe_reason =
-                Some(GenericReductionReason::<CCI, SR>::recursive_reason(
-                    maybe_reason,
-                    reason,
-                    &reduced_ast,
-                ));
+            maybe_reason = Some(ReductionReason::<CCI, SR>::recursive_reason(
+                maybe_reason,
+                reason,
+                &reduced_ast,
+            ));
             reduced_ast = a;
         }
         (reduced_ast, maybe_reason)
@@ -504,7 +501,7 @@ where
                     let true_syntax = self.to_ast(&true_id);
                     (
                         true_syntax,
-                        GenericReductionReason::<CCI, SR>::existence(
+                        ReductionReason::<CCI, SR>::existence(
                             substitutions.generalisation,
                             right.clone(),
                         ),
@@ -623,7 +620,7 @@ where
                                         result,
                                         &substitutions.example,
                                     ),
-                                    GenericReductionReason::<CCI, SR>::inference(
+                                    ReductionReason::<CCI, SR>::inference(
                                         implication_rule_fn(
                                             condition_syntax,
                                             ast_to_reduce,
@@ -885,11 +882,12 @@ where
                 .map(|ast| (ast, comparison_reason.into()))
             },
             ConcreteConceptType::Reduction => {
-                let (x, reason) = GenericReductionReason::<CCI,SR>::determine_reduction_truth(
-                    left,
-                    rightright,
-                    |syntax| self.reduce(syntax),
-                )?;
+                let (x, reason) =
+                    ReductionReason::<CCI, SR>::determine_reduction_truth(
+                        left,
+                        rightright,
+                        |syntax| self.reduce(syntax),
+                    )?;
                 self.concrete_ast(if x {
                     ConcreteConceptType::True
                 } else {
@@ -1149,7 +1147,7 @@ where
                     },
                     _ => Comparison::Incomparable,
                 },
-                GenericReductionReason::<CCI,SR>::simplify_reasoning(reason, reversed_reason),
+                ReductionReason::<CCI,SR>::simplify_reasoning(reason, reversed_reason),
             )
         })
     }
@@ -1348,8 +1346,8 @@ pub enum Comparison {
 pub enum ComparisonReason<CI: ConceptId, SR: SharedReference> {
     SameSyntax,
     Reduction {
-        reason: Option<GenericReductionReason<CI, SR>>,
-        reversed_reason: Option<GenericReductionReason<CI, SR>>,
+        reason: Option<ReductionReason<CI, SR>>,
+        reversed_reason: Option<ReductionReason<CI, SR>>,
     },
     NoGreaterThanConcept,
 }

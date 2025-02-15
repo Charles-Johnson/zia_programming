@@ -49,9 +49,8 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>,
-    for<'a> GenericSyntaxTree<CCI, SR>:
-        std::convert::From<&'a std::string::String>,
+    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>
+        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -80,9 +79,8 @@ where
         + Apply<SDCD, SR>
         + Debug
         + Clone,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
-    for<'a> GenericSyntaxTree<CCI, SR>:
-        std::convert::From<&'a std::string::String>,
+    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
+        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -111,9 +109,8 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>,
-    for<'a> GenericSyntaxTree<CCI, SR>:
-        std::convert::From<&'a std::string::String>,
+    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>
+        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -972,9 +969,8 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
-    for<'a> GenericSyntaxTree<CCI, SR>:
-        std::convert::From<&'a std::string::String>,
+    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
+        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
@@ -1002,9 +998,8 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
-    for<'a> GenericSyntaxTree<CCI, SR>:
-        std::convert::From<&'a std::string::String>,
+    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
+        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>

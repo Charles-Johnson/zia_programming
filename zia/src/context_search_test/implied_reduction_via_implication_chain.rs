@@ -4,7 +4,7 @@ use crate::{
     context_search::ContextReferences,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -119,7 +119,7 @@ fn labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn inference_rule() {
-    let context_cache = MultiThreadedContextCache::default();
+    let context_cache = MTContextCache::default();
     let context_delta =
         NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
