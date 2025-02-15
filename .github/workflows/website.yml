@@ -17,12 +17,11 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install nightly Rust and rustfmt
+      - name: Install stable Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2024-07-07
-          components: rustfmt
+          toolchain: 1.81.0
 
       - name: Install cargo-make
         uses: davidB/rust-cargo-make@v1
@@ -32,7 +31,6 @@ jobs:
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.3.0
         with:
-          # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: "v0.13.0"
 
       - name: Install Node dependencies
