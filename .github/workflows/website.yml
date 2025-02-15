@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
-      - name: Install node v16
+      - name: Install node v18
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Install nightly Rust and rustfmt
         uses: actions-rs/toolchain@v1
@@ -41,6 +41,8 @@ jobs:
 
       - name: Build & prerender
         run: yarn build:prerender
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
         working-directory: ./zia-lang.org
 
       - name: Install Netlify CLI
