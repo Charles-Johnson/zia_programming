@@ -39,8 +39,8 @@ jobs:
         run: yarn
         working-directory: ./zia-lang.org
 
-      - name: Build & prerender
-        run: yarn build:prerender
+      - name: Build
+        run: yarn build:release
         env:
           NODE_OPTIONS: --openssl-legacy-provider
         working-directory: ./zia-lang.org
