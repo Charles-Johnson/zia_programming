@@ -7,13 +7,13 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct GenericVariableMaskList<CI: ConceptId, SR: SharedReference> {
+pub struct VariableMaskList<CI: ConceptId, SR: SharedReference> {
     head: VariableMask<CI, SR>,
     tail: Option<SR::Share<Self>>,
 }
 
 impl<CI: ConceptId, SR: SharedReference> PartialEq
-    for GenericVariableMaskList<CI, SR>
+    for VariableMaskList<CI, SR>
 {
     fn eq(&self, other: &Self) -> bool {
         convert_to_syntax_keys::<CI, CI, SR>(&self.head)
@@ -22,13 +22,8 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq
                 == other.tail.as_ref().map(std::convert::AsRef::as_ref)
     }
 }
-impl<CI: ConceptId, SR: SharedReference> Eq
-    for GenericVariableMaskList<CI, SR>
-{
-}
-impl<CI: ConceptId, SR: SharedReference> Debug
-    for GenericVariableMaskList<CI, SR>
-{
+impl<CI: ConceptId, SR: SharedReference> Eq for VariableMaskList<CI, SR> {}
+impl<CI: ConceptId, SR: SharedReference> Debug for VariableMaskList<CI, SR> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let tail = self.tail.as_ref().map(std::convert::AsRef::as_ref);
         f.debug_struct("GenericVariableMaskList")
@@ -45,7 +40,7 @@ impl<CI: ConceptId, SR: SharedReference> Debug
     }
 }
 impl<CI: ConceptId, SR: SharedReference> From<VariableMask<CI, SR>>
-    for GenericVariableMaskList<CI, SR>
+    for VariableMaskList<CI, SR>
 {
     fn from(head: VariableMask<CI, SR>) -> Self {
         Self {
@@ -55,12 +50,10 @@ impl<CI: ConceptId, SR: SharedReference> From<VariableMask<CI, SR>>
     }
 }
 
-impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR>
-    for GenericVariableMaskList<CI, SR>
-{
+impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR> {
     /// returns None if `head` is equal to one of the nodes.
     /// This prevents cycles in reduction evaluations
-    fn push(
+    pub fn push(
         list: &SR::Share<Self>,
         head: VariableMask<CI, SR>,
     ) -> Option<Self> {
@@ -70,34 +63,21 @@ impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR>
         })
     }
 
-    fn contains(&self, node: &VariableMask<CI, SR>) -> bool {
+    pub fn contains(&self, node: &VariableMask<CI, SR>) -> bool {
         convert_to_syntax_keys::<CI, CI, SR>(&self.head)
             == convert_to_syntax_keys::<CI, CI, SR>(node)
             || self.tail.as_ref().is_some_and(|vml| vml.as_ref().contains(node))
     }
 
-    fn get(&self, concept_id: CI) -> Option<&SharedSyntax<CI, SR>> {
+    pub fn get(&self, concept_id: CI) -> Option<&SharedSyntax<CI, SR>> {
         self.head.get(&concept_id).or_else(|| {
             self.tail.as_ref().and_then(|vml| vml.as_ref().get(concept_id))
         })
     }
 
-    fn tail(&self) -> Option<&SR::Share<Self>> {
+    pub const fn tail(&self) -> Option<&SR::Share<Self>> {
         self.tail.as_ref()
     }
-}
-
-pub trait VariableMaskList<CI: ConceptId, SR: SharedReference>:
-    Sized + From<VariableMask<CI, SR>>
-{
-    fn push(list: &SR::Share<Self>, head: VariableMask<CI, SR>)
-        -> Option<Self>;
-
-    fn contains(&self, node: &VariableMask<CI, SR>) -> bool;
-
-    fn get(&self, concept_id: CI) -> Option<&SharedSyntax<CI, SR>>;
-
-    fn tail(&self) -> Option<&SR::Share<Self>>;
 }
 
 pub type VariableMask<CI, SR> = HashMap<CI, SharedSyntax<CI, SR>>;

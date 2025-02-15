@@ -8,7 +8,7 @@ use crate::{
     mixed_concept::ConceptId,
     nester::SharedReference,
     reduction_reason::GenericReductionReason,
-    variable_mask_list::GenericVariableMaskList,
+    variable_mask_list::VariableMaskList,
 };
 use lazy_static::lazy_static;
 use std::{fmt::Debug, sync::Arc};
@@ -30,15 +30,13 @@ impl SharedReference for ArcFamily {
 
 pub type MultiThreadedSyntaxTree<CI> = GenericSyntaxTree<CI, ArcFamily>;
 pub type MultiThreadedContextCache<CI> = GenericCache<CI, ArcFamily>;
-pub type MultiThreadedVariableMaskList<CI> =
-    GenericVariableMaskList<CI, ArcFamily>;
+pub type MultiThreadedVariableMaskList<CI> = VariableMaskList<CI, ArcFamily>;
 pub type MultiThreadedReductionReason<CI> =
     GenericReductionReason<CI, ArcFamily>;
 
 pub type Context = GenericContext<
     ContextSnapShot<ArcFamily>,
     SharedDirectConceptDelta<ContextConceptId>,
-    MultiThreadedVariableMaskList<ContextConceptId>,
     SharedContextDelta<ContextConceptId>,
     ContextConceptId,
     ArcFamily,
@@ -48,7 +46,6 @@ pub type MTContextSearch<'s, 'v, S, CCI> = ContextSearch<
     's,
     'v,
     S,
-    MultiThreadedVariableMaskList<CCI>,
     SharedDirectConceptDelta<CCI>,
     SharedContextDelta<CCI>,
     CCI,

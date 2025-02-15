@@ -122,15 +122,6 @@ impl<CI: ConceptId, SR: SharedReference> Default
     }
 }
 
-impl<'a, CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
-    const fn stub(head: SR::Share<InferenceCache<CI, SR>>) -> Self {
-        Self {
-            head,
-            tail: None,
-        }
-    }
-}
-
 impl<CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
     pub fn get_inference_or_else(
         &self,

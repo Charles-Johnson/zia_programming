@@ -4,7 +4,6 @@ use crate::{
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     errors::ZiaResult,
     nester::SharedReference,
-    variable_mask_list::GenericVariableMaskList,
 };
 use std::{fmt::Debug, rc::Rc};
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -22,12 +21,9 @@ impl SharedReference for RcFamily {
     }
 }
 
-type SingleThreadedVariableMaskList<CI> = GenericVariableMaskList<CI, RcFamily>;
-
 pub type Context = GenericContext<
     ContextSnapShot<RcFamily>,
     SharedDirectConceptDelta,
-    SingleThreadedVariableMaskList<ContextConceptId>,
     SharedContextDelta,
     ContextConceptId,
     RcFamily,

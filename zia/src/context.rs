@@ -34,7 +34,6 @@ use crate::{
     parser::parse_line,
     reduction_reason::SharedSyntax,
     snap_shot::Reader as SnapShotReader,
-    variable_mask_list::VariableMaskList,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -43,7 +42,7 @@ use std::{
     marker::PhantomData,
 };
 
-pub struct Context<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference>
+pub struct Context<S, SDCD, D, CCI: ConceptId, SR: SharedReference>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI>
         + Default
@@ -57,7 +56,6 @@ where
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
         + From<DirectConceptDelta<CCI>>,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     snap_shot: S,
@@ -65,7 +63,6 @@ where
     cache: GenericCache<CCI, SR>,
     new_variable_concepts_by_label: HashMap<String, CCI>,
     bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
-    phantom2: PhantomData<VML>,
     phantom: PhantomData<SDCD>,
 }
 
@@ -74,8 +71,8 @@ pub struct TokenSubsequence<SharedSyntax> {
     pub syntax: Vec<SharedSyntax>,
     pub positions: Vec<usize>,
 }
-impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> Clone
-    for Context<S, SDCD, VML, D, CCI, SR>
+impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> Clone
+    for Context<S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI>
         + Default
@@ -90,13 +87,11 @@ where
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
         + From<DirectConceptDelta<CCI>>,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     fn clone(&self) -> Self {
         Self {
             delta: D::default(),
-            phantom2: self.phantom2,
             phantom: self.phantom,
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
@@ -108,8 +103,8 @@ where
     }
 }
 
-impl<S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference>
-    Context<S, SDCD, VML, D, CCI, SR>
+impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
+    Context<S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI>
         + Default
@@ -123,7 +118,6 @@ where
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
         + From<DirectConceptDelta<CCI>>,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     pub fn new() -> ZiaResult<Self> {
@@ -960,7 +954,7 @@ where
         })
     }
 
-    fn context_search(&self) -> ContextSearch<S, VML, SDCD, D, CCI, SR> {
+    fn context_search(&self) -> ContextSearch<S, SDCD, D, CCI, SR> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: self.delta.clone(),
@@ -970,8 +964,8 @@ where
     }
 }
 
-impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> Default
-    for Context<S, SDCD, VML, D, CCI, SR>
+impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> Default
+    for Context<S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI>
         + Default
@@ -985,7 +979,6 @@ where
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     #[must_use]
@@ -996,14 +989,13 @@ where
             cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
-            phantom2: PhantomData,
             phantom: PhantomData,
         }
     }
 }
 
-impl<S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference> From<S>
-    for Context<S, SDCD, VML, D, CCI, SR>
+impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> From<S>
+    for Context<S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI>
         + Default
@@ -1017,7 +1009,6 @@ where
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     fn from(snap_shot: S) -> Self {

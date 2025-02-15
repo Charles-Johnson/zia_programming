@@ -41,7 +41,6 @@ pub struct ContextSearch<
     's,
     'v,
     S,
-    VML,
     SDCD,
     D,
     CCI: ConceptId,
@@ -53,11 +52,10 @@ pub struct ContextSearch<
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<CCI, SR>,
     D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     snap_shot: &'s S,
-    variable_mask: SR::Share<VML>,
+    variable_mask: SR::Share<VariableMaskList<CCI, SR>>,
     delta: D,
     caches: GenericCache<CCI, SR>,
     syntax_evaluating: HashSet<SyntaxKey<CCI>>,
@@ -66,8 +64,8 @@ pub struct ContextSearch<
     phantom: PhantomData<SDCD>,
     phantom2: PhantomData<CCI>,
 }
-impl<S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference> Debug
-    for ContextSearch<'_, '_, S, VML, SDCD, D, CCI, SR>
+impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference> Debug
+    for ContextSearch<'_, '_, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
@@ -75,7 +73,6 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<CCI, SR>,
     D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
         + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
@@ -94,8 +91,8 @@ where
     }
 }
 
-impl<'s, 'v, S, SDCD, VML, D, CCI: MixedConcept, SR: SharedReference>
-    ContextSearch<'s, 'v, S, VML, SDCD, D, CCI, SR>
+impl<'s, 'v, S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
+    ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
@@ -103,7 +100,6 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<CCI, SR>,
     D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
         + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
@@ -1162,10 +1158,7 @@ where
         &'b self,
         cache: &'c SR::Share<ReductionCache<CCI, SR>>,
         delta: D,
-    ) -> Self
-    where
-        VML: VariableMaskList<CCI, SR>,
-    {
+    ) -> Self {
         ContextSearch::<'s, 'v> {
             concept_inferring: self.concept_inferring.clone(),
             bound_variable_syntax: self.bound_variable_syntax,
@@ -1308,8 +1301,10 @@ where
         &mut self,
         variable_mask: VariableMask<CCI, SR>,
     ) -> Result<(), ()> {
-        self.variable_mask =
-            SR::share(VML::push(&self.variable_mask, variable_mask).ok_or(())?);
+        self.variable_mask = SR::share(
+            VariableMaskList::push(&self.variable_mask, variable_mask)
+                .ok_or(())?,
+        );
         Ok(())
     }
 
@@ -1339,9 +1334,6 @@ where
     }
 }
 
-type MaybeReducedSyntaxWithReason<CI, SR> =
-    (SharedSyntax<CI, SR>, Option<GenericReductionReason<CI, SR>>);
-
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
     GreaterThan,
@@ -1364,9 +1356,9 @@ pub enum ComparisonReason<CI: ConceptId, SR: SharedReference> {
 
 impl<CI: ConceptId, SR: SharedReference> Eq for ComparisonReason<CI, SR> {}
 
-impl<'c, 's, 'v, S, SDCD, VML, D, CCI: ConceptId, SR: SharedReference>
+impl<'c, 's, 'v, S, SDCD, D, CCI: ConceptId, SR: SharedReference>
     From<ContextReferences<'c, 's, 'v, S, D, SR, CCI>>
-    for ContextSearch<'s, 'v, S, VML, SDCD, D, CCI, SR>
+    for ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
@@ -1374,7 +1366,6 @@ where
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<CCI, SR>,
     D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
         + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
@@ -1390,7 +1381,7 @@ where
             concept_inferring: HashSet::default(),
             bound_variable_syntax,
             snap_shot,
-            variable_mask: SR::share(VML::from(hashmap! {})),
+            variable_mask: SR::share(VariableMaskList::from(hashmap! {})),
             delta,
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
