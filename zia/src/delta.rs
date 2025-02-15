@@ -1,5 +1,6 @@
 use crate::{
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
+    nester::SharedReference,
     snap_shot::Reader,
 };
 use std::fmt::Debug;
@@ -19,7 +20,7 @@ use std::fmt::Debug;
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-pub trait Apply<SDCD>: Reader<SDCD>
+pub trait Apply<SDCD, SR: SharedReference>: Reader<SDCD, SR>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<Self::ConceptId>>
@@ -27,9 +28,9 @@ where
         + Debug,
 {
     fn apply<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &mut self,
-        _: NestedDelta<Self::ConceptId, SDCD, D>,
+        _: NestedDelta<Self::ConceptId, SDCD, D, SR>,
     );
 }

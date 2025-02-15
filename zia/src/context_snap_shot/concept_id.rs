@@ -3,7 +3,7 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use crate::mixed_concept::MixedConcept;
+use crate::mixed_concept::{self, MixedConcept};
 
 use slotmap::new_key_type;
 
@@ -22,6 +22,8 @@ pub enum ConceptId {
     Committed(Committed),
     Uncommitted(Uncommitted),
 }
+
+impl mixed_concept::ConceptId for ConceptId {}
 
 impl MixedConcept for ConceptId {
     fn uncommitted(id: usize) -> Self {

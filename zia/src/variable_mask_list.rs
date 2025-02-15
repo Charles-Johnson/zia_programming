@@ -1,87 +1,83 @@
 #![allow(clippy::single_component_path_imports)]
+use std::{collections::HashMap, fmt::Debug};
 
-use std::{collections::HashMap, ops::Deref};
+use crate::{
+    context_cache::SharedSyntax, mixed_concept::ConceptId,
+    nester::SharedReference, reduction_reason::convert_to_syntax_keys,
+};
 
-use crate::ast::SyntaxTree;
-
-macro_rules! impl_variable_mask_list {
-    ($refcounter:tt, $vml:tt) => {
-        use crate::variable_mask_list::{VariableMask, VariableMaskList};
-        #[derive(Clone, PartialEq, Debug)]
-        pub struct $vml<Syntax: SyntaxTree> {
-            head: VariableMask<Syntax>,
-            tail: Option<$refcounter<$vml<Syntax>>>,
-        }
-        impl<Syntax: SyntaxTree> From<VariableMask<Syntax>> for $vml<Syntax> {
-            fn from(head: VariableMask<Syntax>) -> Self {
-                Self {
-                    head,
-                    tail: None,
-                }
-            }
-        }
-
-        impl<Syntax: SyntaxTree> VariableMaskList for $vml<Syntax> {
-            type Shared = $refcounter<$vml<Syntax>>;
-            type Syntax = Syntax;
-
-            /// returns None if `head` is equal to one of the nodes.
-            /// This prevents cycles in reduction evaluations
-            fn push(
-                list: &$refcounter<Self>,
-                head: VariableMask<Syntax>,
-            ) -> Option<Self> {
-                (!list.contains(&head)).then(|| Self {
-                    head,
-                    tail: Some(list.clone()),
-                })
-            }
-
-            fn contains(&self, node: &VariableMask<Syntax>) -> bool {
-                &self.head == node
-                    || self
-                        .tail
-                        .as_ref()
-                        .map_or(false, |vml| vml.contains(node))
-            }
-
-            fn get(
-                &self,
-                concept_id: Syntax::ConceptId,
-            ) -> Option<&Syntax::SharedSyntax> {
-                self.head.get(&concept_id).or_else(|| {
-                    self.tail.as_ref().and_then(|vml| vml.get(concept_id))
-                })
-            }
-
-            fn tail(&self) -> Option<&$refcounter<Self>> {
-                self.tail.as_ref()
-            }
-        }
-    };
+#[derive(Clone)]
+pub struct VariableMaskList<CI: ConceptId, SR: SharedReference> {
+    head: VariableMask<CI, SR>,
+    tail: Option<SR::Share<Self>>,
 }
 
-pub(crate) use impl_variable_mask_list;
-
-pub trait VariableMaskList: Sized + From<VariableMask<Self::Syntax>> {
-    type Shared: Clone + Deref<Target = Self> + From<Self>;
-    type Syntax: SyntaxTree;
-    fn push(
-        list: &Self::Shared,
-        head: VariableMask<Self::Syntax>,
-    ) -> Option<Self>;
-
-    fn contains(&self, node: &VariableMask<Self::Syntax>) -> bool;
-
-    fn get(
-        &self,
-        concept_id: <Self::Syntax as SyntaxTree>::ConceptId,
-    ) -> Option<&<Self::Syntax as SyntaxTree>::SharedSyntax>;
-
-    fn tail(&self) -> Option<&Self::Shared>;
+impl<CI: ConceptId, SR: SharedReference> PartialEq
+    for VariableMaskList<CI, SR>
+{
+    fn eq(&self, other: &Self) -> bool {
+        convert_to_syntax_keys::<CI, CI, SR>(&self.head)
+            == convert_to_syntax_keys::<CI, CI, SR>(&other.head)
+            && self.tail.as_ref().map(std::convert::AsRef::as_ref)
+                == other.tail.as_ref().map(std::convert::AsRef::as_ref)
+    }
+}
+impl<CI: ConceptId, SR: SharedReference> Eq for VariableMaskList<CI, SR> {}
+impl<CI: ConceptId, SR: SharedReference> Debug for VariableMaskList<CI, SR> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let tail = self.tail.as_ref().map(std::convert::AsRef::as_ref);
+        f.debug_struct("GenericVariableMaskList")
+            .field(
+                "head",
+                &self
+                    .head
+                    .iter()
+                    .map(|(k, v)| (*k, v.as_ref()))
+                    .collect::<HashMap<_, _>>(),
+            )
+            .field("tail", &tail)
+            .finish()
+    }
+}
+impl<CI: ConceptId, SR: SharedReference> From<VariableMask<CI, SR>>
+    for VariableMaskList<CI, SR>
+{
+    fn from(head: VariableMask<CI, SR>) -> Self {
+        Self {
+            head,
+            tail: None,
+        }
+    }
 }
 
-pub type VariableMask<Syntax> = HashMap<
-    <Syntax as SyntaxTree>::ConceptId,
-    <Syntax as SyntaxTree>::SharedSyntax,
->;
+impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR> {
+    /// returns None if `head` is equal to one of the nodes.
+    /// This prevents cycles in reduction evaluations
+    pub fn push(
+        list: &SR::Share<Self>,
+        head: VariableMask<CI, SR>,
+    ) -> Option<Self> {
+        (!list.as_ref().contains(&head)).then(|| Self {
+            head,
+            tail: Some(list.clone()),
+        })
+    }
+
+    pub fn contains(&self, node: &VariableMask<CI, SR>) -> bool {
+        convert_to_syntax_keys::<CI, CI, SR>(&self.head)
+            == convert_to_syntax_keys::<CI, CI, SR>(node)
+            || self.tail.as_ref().is_some_and(|vml| vml.as_ref().contains(node))
+    }
+
+    pub fn get(&self, concept_id: CI) -> Option<&SharedSyntax<CI, SR>> {
+        self.head.get(&concept_id).or_else(|| {
+            self.tail.as_ref().and_then(|vml| vml.as_ref().get(concept_id))
+        })
+    }
+
+    pub const fn tail(&self) -> Option<&SR::Share<Self>> {
+        self.tail.as_ref()
+    }
+}
+
+pub type VariableMask<CI, SR> = HashMap<CI, SharedSyntax<CI, SR>>;

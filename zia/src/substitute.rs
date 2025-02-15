@@ -1,14 +1,19 @@
 use std::collections::HashMap;
 
-use crate::ast::SyntaxTree;
+use crate::{
+    ast::{GenericSyntaxTree, SyntaxKey, SyntaxTree},
+    context_cache::SharedSyntax,
+    mixed_concept::ConceptId,
+    nester::SharedReference,
+};
 
-pub type Substitutions<SharedSyntax> = HashMap<SharedSyntax, SharedSyntax>;
+pub type Substitutions<CI, SR> = HashMap<SyntaxKey<CI>, SharedSyntax<CI, SR>>;
 
-pub fn substitute<Syntax: SyntaxTree>(
-    syntax: &mut Syntax,
-    substitutions: &Substitutions<Syntax::SharedSyntax>,
+pub fn substitute<CI: ConceptId, SR: SharedReference>(
+    syntax: &mut GenericSyntaxTree<CI, SR>,
+    substitutions: &Substitutions<CI, SR>,
 ) {
-    if let Some(substitution) = substitutions.get(syntax) {
+    if let Some(substitution) = substitutions.get(&syntax.key()) {
         *syntax = substitution.as_ref().clone();
     } else if let Some((left, right)) = syntax.get_expansion_mut() {
         substitute(left, substitutions);

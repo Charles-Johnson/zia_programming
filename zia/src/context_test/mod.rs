@@ -5,21 +5,16 @@ use crate::{
     context::Context as GenericContext,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedReductionReason,
-        MultiThreadedSyntaxTree, MultiThreadedVariableMaskList,
-        SharedContextDelta, SharedDirectConceptDelta,
+        ArcFamily, MTSyntaxTree, SharedContextDelta, SharedDirectConceptDelta,
     },
 };
 
 pub type Context = GenericContext<
     MockSnapShot,
-    MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree<ConceptId>>,
-    >,
     SharedDirectConceptDelta<ConceptId>,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ConceptId>>,
     SharedContextDelta<ConceptId>,
     ConceptId,
+    ArcFamily,
 >;
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MTSyntaxTree<ConceptId>;

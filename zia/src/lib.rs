@@ -157,6 +157,8 @@ mod errors;
 
 mod lexer;
 
+mod nester;
+
 mod map_err_variant;
 
 #[cfg(test)]

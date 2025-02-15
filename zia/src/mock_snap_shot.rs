@@ -6,6 +6,7 @@ use crate::{
     context_search_test::check_order,
     delta::Apply,
     mixed_concept::MixedConcept,
+    multi_threaded::ArcFamily,
     snap_shot::Reader,
 };
 use bimap::BiMap;
@@ -21,6 +22,8 @@ pub enum ConceptId {
     Committed(usize),
     Uncommitted(usize),
 }
+
+impl crate::mixed_concept::ConceptId for ConceptId {}
 
 impl MixedConcept for ConceptId {
     fn uncommitted(id: usize) -> Self {
@@ -88,22 +91,28 @@ impl MockSnapShot {
     }
 }
 
-impl Apply<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
+impl Apply<Arc<DirectConceptDelta<ConceptId>>, ArcFamily> for MockSnapShot {
     fn apply<
         D: SharedDelta<
             NestedDelta = NestedDelta<
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
+                ArcFamily,
             >,
         >,
     >(
         &mut self,
-        _: NestedDelta<ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: NestedDelta<
+            ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+            ArcFamily,
+        >,
     ) {
     }
 }
-impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
+impl Reader<Arc<DirectConceptDelta<ConceptId>>, ArcFamily> for MockSnapShot {
     type CommittedConceptId = usize;
     type ConceptId = ConceptId;
     type MixedConcept<'a> = Concept<ConceptId>;
@@ -126,6 +135,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
+                ArcFamily,
             >,
         >,
     >(
@@ -134,6 +144,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
             Self::ConceptId,
             Arc<DirectConceptDelta<ConceptId>>,
             D,
+            ArcFamily,
         >,
         concept_id: Self::ConceptId,
     ) -> Option<String> {
@@ -152,6 +163,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
+                ArcFamily,
             >,
         >,
     >(
@@ -160,6 +172,7 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
             Self::ConceptId,
             Arc<DirectConceptDelta<ConceptId>>,
             D,
+            ArcFamily,
         >,
         s: &str,
     ) -> Option<Self::ConceptId> {
@@ -175,11 +188,17 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
+                ArcFamily,
             >,
         >,
     >(
         &self,
-        _: &NestedDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: &NestedDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+            ArcFamily,
+        >,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         self.concrete_concepts.get_by_right(&cc).copied()
@@ -191,11 +210,17 @@ impl Reader<Arc<DirectConceptDelta<ConceptId>>> for MockSnapShot {
                 Self::ConceptId,
                 Arc<DirectConceptDelta<ConceptId>>,
                 D,
+                ArcFamily,
             >,
         >,
     >(
         &self,
-        _: &NestedDelta<Self::ConceptId, Arc<DirectConceptDelta<ConceptId>>, D>,
+        _: &NestedDelta<
+            Self::ConceptId,
+            Arc<DirectConceptDelta<ConceptId>>,
+            D,
+            ArcFamily,
+        >,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.concrete_concepts.get_by_left(&concept_id).copied()

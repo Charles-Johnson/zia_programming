@@ -51,18 +51,22 @@ impl<'a> From<&'a Concept<Committed>> for Mixed<'a> {
     }
 }
 
-impl<'a, 'b> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>>
-    for Mixed<'b>
-{
+impl<'a> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>> for Mixed<'_> {
     fn from(delta: &'a NewDirectConceptDelta<ConceptId, ConceptId>) -> Self {
         Mixed::Uncommitted(Box::new(delta.into()))
     }
 }
 
-impl<'a> ConceptTrait for Mixed<'a> {
+impl ConceptTrait for Mixed<'_> {
     type Id = ConceptId;
-    type IdIterator<'b> = Box<dyn Iterator<Item = Self::Id> + 'b> where Self: 'b;
-    type IdPairIterator<'b> = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b> where Self: 'b;
+    type IdIterator<'b>
+        = Box<dyn Iterator<Item = Self::Id> + 'b>
+    where
+        Self: 'b;
+    type IdPairIterator<'b>
+        = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>
+    where
+        Self: 'b;
 
     fn id(&self) -> Self::Id {
         match self {
@@ -296,7 +300,7 @@ impl<'a> ConceptTrait for Mixed<'a> {
                     Some(None) => return None,
                     Some(Some(c)) => return Some(*c),
                     None => (),
-                };
+                }
                 other_id.try_into().map_or(None, |other_id| {
                     original_concept
                         .find_as_hand_in_composition_with(other_id, hand)

@@ -20,9 +20,8 @@ mod node;
 mod r#trait;
 
 pub use node::{Node as SyntaxNode, SyntaxLeaf};
-pub(crate) use r#macro::impl_syntax_tree;
+pub use r#macro::{GenericSyntaxTree, SyntaxKey};
 pub use r#trait::{ExampleSubstitutions, SyntaxTree};
-
 pub fn is_variable(string: &str) -> bool {
     string.starts_with('_') && string.ends_with('_') && !string.contains(' ')
 }

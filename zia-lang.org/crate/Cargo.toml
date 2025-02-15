@@ -13,11 +13,11 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dev-dependencies]
-wasm-bindgen-test = "^0.3.18"
+wasm-bindgen-test = "=0.3.18"
 
 [dependencies]
 zia = { path = "../../zia", version = "0.5.0"}
-seed = "0.8.0"
+seed = "0.9.0"
 console_error_panic_hook = "0.1.7"
 
 [dependencies.web-sys]
@@ -30,3 +30,4 @@ features = [
 [profile.release]
 lto = true
 opt-level = 's'
+strip = true

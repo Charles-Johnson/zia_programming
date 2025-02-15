@@ -3,10 +3,12 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
-    build: ./nvim
+    image: devimage
+    pull_policy: never
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
@@ -19,26 +21,30 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
-    build: ./nvim
+    image: devimage
+    pull_policy: never
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
         "-c",
-        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cargo make --no-workspace test",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && ls -al target && cargo make --no-workspace test",
       ]
-    working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
+    working_dir: /usr/src
   verify:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
-    build: ./nvim
+    image: devimage
+    pull_policy: never
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
@@ -51,15 +57,39 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
-    build: ./nvim
+    image: devimage
+    pull_policy: never
     volumes:
       - .:/usr/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
     command:
       [
         "sh",
         "-c",
         "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn start",
+      ]
+    working_dir: /usr/src
+    user: ${UID:-1000}:${GID:-1000}
+    ports:
+      - 8000:8000
+  web-release:
+    environment:
+      - CARGO_HOME=/usr/src/.cargo
+      - DISPLAY
+      - NODE_OPTIONS=--openssl-legacy-provider
+    build: ./nvim
+    image: devimage
+    pull_policy: never
+    volumes:
+      - .:/usr/src
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
+    command:
+      [
+        "sh",
+        "-c",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn && yarn build:prerender",
       ]
     working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
