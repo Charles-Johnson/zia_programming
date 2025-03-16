@@ -42,7 +42,7 @@ RUN apt install -y build-essential
 RUN apt install -y rsync
 USER node
 RUN cargo install --force wasm-pack --version 0.13.0
-RUN cargo install --force cargo-make
+RUN cargo install --force cargo-make --version "0.35.1"
 RUN rustup toolchain install nightly-2024-07-07
 RUN rustup component add rustfmt --toolchain nightly-2024-07-07
 RUN cargo install --force cargo-readme
