@@ -15,7 +15,7 @@ use std::{
 #[derive(Clone)]
 pub struct GenericSyntaxTree<CI: ConceptId, SR: SharedReference> {
     /// The root of this syntax tree, represented as a `String`.
-    syntax: Option<String>,
+    pub syntax: Option<String>,
     /// Index of the concept that the syntax may represent.
     concept: Option<CI>,
     pub node: SyntaxNode<SR, CI>,

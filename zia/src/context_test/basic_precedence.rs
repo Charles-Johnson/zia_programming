@@ -8,7 +8,7 @@ use crate::{
 use maplit::hashmap;
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<usize>; 11] {
+fn concepts() -> [Concept<usize>; 12] {
     let mut precedence_concept = (ConcreteConceptType::Precedence, 0).into();
     let mut greater_than_concept = (ConcreteConceptType::GreaterThan, 1).into();
     let mut default_concept = (ConcreteConceptType::Default, 2).into();
@@ -37,6 +37,7 @@ fn concepts() -> [Concept<usize>; 11] {
         (ConcreteConceptType::Associativity, 8).into();
     let left_concept: Concept<_> = (ConcreteConceptType::Left, 9).into();
     let right_concept: Concept<_> = (ConcreteConceptType::Right, 10).into();
+    let label_of_concept: Concept<_> = (ConcreteConceptType::Label, 11).into();
     [
         precedence_concept,
         greater_than_concept,
@@ -49,6 +50,7 @@ fn concepts() -> [Concept<usize>; 11] {
         assoc_concept,
         left_concept,
         right_concept,
+        label_of_concept,
     ]
 }
 

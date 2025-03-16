@@ -31,7 +31,6 @@ use crate::{
     map_err_variant::MapErrVariant,
     mixed_concept::{ConceptId, MixedConcept},
     nester::{NestedSyntaxTree, SharedReference},
-    parser::parse_line,
     reduction_reason::SharedSyntax,
     snap_shot::Reader as SnapShotReader,
 };
@@ -123,7 +122,7 @@ where
         Ok(cont)
     }
 
-    pub fn lex(&self, command: &str) -> Vec<Lexeme> {
+    pub fn lex(&self, command: &str) -> Vec<Lexeme<CCI>> {
         let mut lexemes = vec![];
         let mut opening_parentheses_positions = vec![];
         for character in command.chars() {
@@ -195,12 +194,61 @@ where
         lexemes
     }
 
-    fn nest(&self, _lexemes: Vec<Lexeme>) -> NestedSyntaxTree<CCI, SR> {
-        let _nested_syntax: NestedSyntaxTree<CCI, SR>;
-        todo!("Nest lexemes according to grammar");
+    fn nest(lexemes: Vec<Lexeme<CCI>>) -> ZiaResult<NestedSyntaxTree<CCI, SR>> {
+        let mut nested_syntax_at_depth =
+            HashMap::<usize, NestedSyntaxTree<CCI, SR>>::new();
+        let mut nest_depth = 0;
+        for lexeme in lexemes {
+            match lexeme.category {
+                LexemeCategory::Whitespace => continue,
+                LexemeCategory::Concept(c) => {
+                    let new_nested_syntax =
+                        NestedSyntaxTree::from_concept_kind(&c, lexeme.text);
+                    let nested_syntax =
+                        match nested_syntax_at_depth.remove(&nest_depth) {
+                            None => new_nested_syntax,
+                            Some(ns) => ns.append_node(new_nested_syntax),
+                        };
+                    let existing_value = nested_syntax_at_depth
+                        .insert(nest_depth, nested_syntax);
+                    assert!(existing_value.is_none(), "A value for the nested_syntax at depth {nest_depth} previously exists");
+                },
+                LexemeCategory::OpeningParenthesis {
+                    ..
+                } => {
+                    nest_depth += 1;
+                },
+                LexemeCategory::ClosingParenthesis {
+                    ..
+                } => {
+                    let Some(mut nested_syntax) =
+                        nested_syntax_at_depth.remove(&nest_depth)
+                    else {
+                        return Err(ZiaError::EmptyParentheses);
+                    };
+                    if nest_depth == 0 {
+                        return Err(ZiaError::UnmatchedParentheses);
+                    }
+                    nest_depth -= 1;
+                    if let Some(ns) = nested_syntax_at_depth.remove(&nest_depth)
+                    {
+                        nested_syntax = ns.append_node(nested_syntax);
+                    };
+
+                    nested_syntax_at_depth.insert(nest_depth, nested_syntax);
+                },
+            }
+        }
+        if nest_depth != 0 {
+            return Err(ZiaError::UnmatchedParentheses);
+        }
+        let Some(nested_syntax) = nested_syntax_at_depth.remove(&0) else {
+            return Err(ZiaError::EmptyExpression);
+        };
+        Ok(nested_syntax)
     }
 
-    fn concept_kind_from_symbol(&self, symbol: &str) -> ConceptKind {
+    fn concept_kind_from_symbol(&self, symbol: &str) -> ConceptKind<CCI> {
         if symbol.starts_with('_') && symbol.ends_with('_') {
             return ConceptKind::Variable;
         }
@@ -213,9 +261,13 @@ where
                     .get_concrete_concept_type()
                     .is_some()
                 {
-                    ConceptKind::Concrete
+                    ConceptKind::Concrete {
+                        id,
+                    }
                 } else {
-                    ConceptKind::Abstract
+                    ConceptKind::Abstract {
+                        id,
+                    }
                 }
             },
         )
@@ -286,32 +338,33 @@ where
         &mut self,
         s: &str,
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
-        let tokens: Vec<String> = parse_line(s)?;
-        self.ast_from_tokens(&tokens)
+        let lexemes = self.lex(s);
+        let nested_syntax = Self::nest(lexemes)?;
+        self.ast_from_nested_syntax(&nested_syntax)
     }
 
-    fn ast_from_tokens(
+    fn ast_from_nested_syntax_children(
         &mut self,
-        tokens: &[String],
+        nds: &[SR::Share<NestedSyntaxTree<CCI, SR>>],
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
-        match tokens.len() {
-            0 => Err(ZiaError::EmptyParentheses),
-            1 => self.ast_from_token(&tokens[0]),
-            2 => self
-                .ast_from_pair(&tokens[0], &tokens[1])
-                .map(GenericSyntaxTree::<CCI, SR>::share),
-            _ => {
-                let TokenSubsequence {
-                    syntax: lp_syntax,
-                    positions: lp_indices,
-                } = self.lowest_precedence_info(tokens)?;
-                if lp_indices.is_empty() {
-                    return Err(ZiaError::LowestPrecendenceNotFound {
-                        tokens: tokens.to_vec(),
-                    });
-                }
-                // TODO: redesign how opposing associativity is handled. Refer to this issue #69
-                let assoc =
+        let syntax_list = nds
+            .iter()
+            .map(|n| self.ast_from_nested_syntax(n).unwrap())
+            .collect::<Vec<_>>();
+        let TokenSubsequence {
+            syntax: lp_syntax,
+            positions: lp_indices,
+        } = self.lowest_precedence_info(&syntax_list)?;
+        if lp_indices.is_empty() {
+            return Err(ZiaError::LowestPrecendenceNotFound {
+                tokens: syntax_list
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            });
+        }
+        // TODO: redesign how opposing associativity is handled. Refer to this issue #69
+        let assoc =
                     lp_syntax.iter().try_fold(None, |assoc, syntax| match (
                         self.context_search().get_associativity(syntax),
                         assoc,
@@ -325,59 +378,117 @@ where
                         },
                         (x, None) => Ok(Some(x)),
                     })?;
-                match assoc {
-                    Some(Associativity::Right) => {
-                        let tail = lp_indices
-                            .iter()
-                            .rev()
-                            .try_fold(
-                                Err(ZiaError::AmbiguousExpression),
-                                |state, lp_index| {
-                                    Ok(Ok(self
-                                        .associativity_try_fold_handler(
-                                            tokens,
-                                            state.ok(),
-                                            *lp_index,
-                                            Associativity::Right,
-                                        )?))
-                                },
-                            )??
-                            .0;
-                        if lp_indices[0] == 0 {
-                            Ok(tail)
-                        } else {
-                            let head =
-                                self.ast_from_tokens(&tokens[..lp_indices[0]])?;
-                            Ok(self
-                                .context_search()
-                                .combine(&head, &tail)
-                                .share())
-                        }
-                    },
-                    Some(Associativity::Left) => lp_indices
-                        .iter()
-                        .try_fold(None, |state, lp_index| {
-                            Some(self.associativity_try_fold_handler(
-                                tokens,
-                                state,
+        match assoc {
+            Some(Associativity::Right) => {
+                let tail = lp_indices
+                    .iter()
+                    .rev()
+                    .try_fold(
+                        Err(ZiaError::AmbiguousExpression),
+                        |state, lp_index| {
+                            Ok(Ok(self.associativity_try_fold_handler(
+                                nds,
+                                state.ok(),
                                 *lp_index,
-                                Associativity::Left,
-                            ))
-                            .transpose()
-                        })?
-                        .map_or(
-                            Err(ZiaError::AmbiguousExpression),
-                            |(syntax, _)| Ok(syntax),
-                        ),
-                    None => Err(ZiaError::AmbiguousExpression),
+                                Associativity::Right,
+                            )?))
+                        },
+                    )??
+                    .0;
+                if lp_indices[0] == 0 {
+                    Ok(tail)
+                } else {
+                    let head = self.ast_from_nested_syntax_children(
+                        &nds[..lp_indices[0]],
+                    )?;
+                    Ok(self.context_search().combine(&head, &tail).share())
                 }
+            },
+            Some(Associativity::Left) => lp_indices
+                .iter()
+                .try_fold(None, |state, lp_index| {
+                    Some(self.associativity_try_fold_handler(
+                        nds,
+                        state,
+                        *lp_index,
+                        Associativity::Left,
+                    ))
+                    .transpose()
+                })?
+                .map_or(Err(ZiaError::AmbiguousExpression), |(syntax, _)| {
+                    Ok(syntax)
+                }),
+            None => Err(ZiaError::AmbiguousExpression),
+        }
+    }
+
+    fn ast_from_nested_syntax(
+        &mut self,
+        nested_syntax: &NestedSyntaxTree<CCI, SR>,
+    ) -> ZiaResult<SharedSyntax<CCI, SR>> {
+        match &nested_syntax.node {
+            crate::nester::Node::Leaf(l) => {
+                let concept_id = nested_syntax.concept.unwrap_or_else(|| {
+                    let maybe_inner_delta = self.delta.get_mut();
+                    let Some(delta) = maybe_inner_delta else {
+                        // Err(ZiaError::MultiplePointersToDelta).unwrap();
+                        panic!();
+                    };
+                    if let Some(id) = self
+                        .snap_shot
+                        .concept_from_label(delta, &nested_syntax.syntax)
+                    {
+                        return id;
+                    }
+                    let label_id = {
+                        self.snap_shot.concrete_concept_id(
+                            delta,
+                            ConcreteConceptType::Label,
+                        )
+                    };
+                    let mut updater = ContextUpdater {
+                        snap_shot: &self.snap_shot,
+                        delta,
+                        cache: &mut self.cache,
+                        phantom: PhantomData,
+                        phantom2: PhantomData,
+                    };
+                    updater.new_labelled_concept(
+                        &nested_syntax.syntax,
+                        None,
+                        label_id,
+                    )
+                });
+                let mut gst = match l {
+                    crate::ast::SyntaxLeaf::Variable => {
+                        GenericSyntaxTree::new_leaf_variable(concept_id)
+                    },
+                    crate::ast::SyntaxLeaf::Constant => {
+                        GenericSyntaxTree::new_constant_concept(concept_id)
+                    },
+                    crate::ast::SyntaxLeaf::Quantifier => {
+                        GenericSyntaxTree::new_quantifier_concept(concept_id)
+                    },
+                };
+                gst.syntax = Some(nested_syntax.syntax.clone());
+                Ok(gst.share())
+            },
+            crate::nester::Node::Parent {
+                children: nodes,
+            } => match &nodes[..] {
+                [left, right] => Ok(GenericSyntaxTree::new_pair(
+                    self.ast_from_nested_syntax(left.as_ref())?,
+                    self.ast_from_nested_syntax(right.as_ref())?,
+                )
+                .share()),
+                _ => self.ast_from_nested_syntax_children(nodes),
             },
         }
     }
 
     fn associativity_try_fold_handler(
         &mut self,
-        tokens: &[String],
+        tokens: &[SR::Share<NestedSyntaxTree<CCI, SR>>],
         state: Option<(SharedSyntax<CCI, SR>, usize)>,
         lp_index: usize,
         assoc: Associativity,
@@ -389,7 +500,7 @@ where
             prev_lp_index = Some(pli);
         }
         let slice = assoc.slice_tokens(tokens, prev_lp_index, lp_index);
-        // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmprtyParentheses)
+        // Required otherwise self.ast_from_tokens will return Err(ZiaError::EmptyParentheses)
         if slice.is_empty() {
             return Err(ZiaError::AmbiguousExpression);
         }
@@ -398,26 +509,29 @@ where
             Associativity::Right => 0,
         };
         let lp_with_the_rest = if lp_index == edge_index {
-            let edge_syntax = self.ast_from_token(&slice[edge_index])?;
+            let edge_syntax =
+                self.ast_from_nested_syntax(&slice[edge_index])?;
             if slice.len() == 1 {
                 edge_syntax
             } else {
                 match assoc {
                     Associativity::Left => {
                         let rest_of_syntax = if slice.len() < 3 {
-                            self.ast_from_token(&slice[slice.len() - 1])?
+                            self.ast_from_nested_syntax(&slice[slice.len() - 1])
                         } else {
-                            self.ast_from_tokens(&slice[..slice.len() - 1])?
-                        };
+                            self.ast_from_nested_syntax_children(
+                                &slice[..slice.len() - 1],
+                            )
+                        }?;
                         self.context_search()
                             .combine(&rest_of_syntax, &edge_syntax)
                     },
                     Associativity::Right => {
                         let rest_of_syntax = if slice.len() < 3 {
-                            self.ast_from_token(&slice[1])?
+                            self.ast_from_nested_syntax(&slice[1])
                         } else {
-                            self.ast_from_tokens(&slice[1..])?
-                        };
+                            self.ast_from_nested_syntax_children(&slice[1..])
+                        }?;
                         self.context_search()
                             .combine(&edge_syntax, &rest_of_syntax)
                     },
@@ -425,7 +539,7 @@ where
                 .share()
             }
         } else {
-            self.ast_from_tokens(slice)?
+            self.ast_from_nested_syntax_children(slice)?
         };
         Ok((
             match edge {
@@ -448,112 +562,110 @@ where
     #[allow(clippy::too_many_lines)]
     pub fn lowest_precedence_info(
         &self,
-        tokens: &[String],
+        syntax_children: &[SR::Share<GenericSyntaxTree<CCI, SR>>],
     ) -> ZiaResult<TokenSubsequence<SharedSyntax<CCI, SR>>> {
         let context_search = self.context_search();
-        let (syntax, positions, _number_of_tokens) = tokens.iter().try_fold(
-            // Initially assume no concepts have the lowest precedence
-            (Vec::<SharedSyntax<CCI, SR>>::new(), Vec::<usize>::new(), None),
-            |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
-             token| {
-                // Increment index
-                let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                let raw_syntax_of_token =
-                    GenericSyntaxTree::<CCI, SR>::from(token).share();
-                let (precedence_of_token, syntax_of_token) = self
-                    .snap_shot
-                    .concept_from_label(self.delta.as_ref(), token)
-                    .map_or_else(
-                        || {
-                            (
-                                context_search
-                                    .concrete_ast(ConcreteConceptType::Default),
-                                raw_syntax_of_token.clone(),
-                            )
-                        },
-                        |c| {
-                            let syntax_of_token = self
-                                .snap_shot
-                                .bind_concept_to_syntax(
-                                    self.delta.as_ref(),
-                                    raw_syntax_of_token.as_ref().clone(),
-                                    c,
+        let (syntax, positions, _number_of_tokens) =
+            syntax_children.iter().try_fold(
+                // Initially assume no concepts have the lowest precedence
+                (
+                    Vec::<SharedSyntax<CCI, SR>>::new(),
+                    Vec::<usize>::new(),
+                    None,
+                ),
+                |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
+                 child| {
+                    // Increment index
+                    let this_index = prev_index.map(|x| x + 1).or(Some(0));
+                    let (precedence_of_token, syntax_of_token) =
+                        child.get_concept().map_or_else(
+                            || {
+                                (
+                                    context_search.concrete_ast(
+                                        ConcreteConceptType::Default,
+                                    ),
+                                    child,
                                 )
-                                .share();
-                            (
-                                context_search
-                                    .concrete_ast(
-                                        ConcreteConceptType::Precedence,
-                                    )
-                                    .map(|ast| {
-                                        context_search
-                                            .combine(&ast, &syntax_of_token)
-                                            .share()
-                                    }),
-                                syntax_of_token,
-                            )
-                        },
-                    );
-                // Compare current token's precedence with each currently assumed lowest syntax
-                for syntax in &lowest_precedence_syntax {
-                    let precedence_of_syntax = if syntax.get_concept().is_some()
-                    {
-                        context_search
-                            .concrete_ast(ConcreteConceptType::Precedence)
-                            .map(|ast| {
-                                context_search.combine(&ast, syntax).share()
-                            })
-                    } else {
-                        context_search
-                            .concrete_ast(ConcreteConceptType::Default)
-                    };
-                    match precedence_of_syntax
-                        .and_also(&precedence_of_token)
-                        .map_or(Comparison::Incomparable, |(pos, pot)| {
-                            context_search.compare(pos, pot).0
-                        }) {
-                        // syntax of token has an even lower precedence than some previous lowest precendence syntax
-                        // reset lowest precedence syntax with just this one
-                        Comparison::GreaterThan => {
-                            return Ok((
-                                vec![syntax_of_token],
-                                vec![this_index.unwrap()],
-                                this_index,
-                            ))
-                        },
-                        // syntax of token has a higher precedence than some previous lowest precendence syntax
-                        // keep existing lowest precedence syntax as-is
-                        Comparison::LessThan => {
-                            return Ok((
-                                lowest_precedence_syntax,
-                                lp_indices,
-                                this_index,
-                            ))
-                        },
-                        // syntax of token has at least an equal precedence as the previous lowest precedence syntax
-                        // include syntax is lowest precedence syntax list
-                        Comparison::EqualTo
-                        | Comparison::GreaterThanOrEqualTo => {
-                            lowest_precedence_syntax.push(syntax_of_token);
-                            lp_indices.push(this_index.unwrap());
-                            return Ok((
-                                lowest_precedence_syntax,
-                                lp_indices,
-                                this_index,
-                            ));
-                        },
-                        // Cannot determine if token has higher or lower precedence than this syntax
-                        // Check other syntax with lowest precedence
-                        Comparison::Incomparable
-                        | Comparison::LessThanOrEqualTo => (),
+                            },
+                            |_| {
+                                let syntax_of_token = child;
+                                (
+                                    context_search
+                                        .concrete_ast(
+                                            ConcreteConceptType::Precedence,
+                                        )
+                                        .map(|ast| {
+                                            context_search
+                                                .combine(&ast, syntax_of_token)
+                                                .share()
+                                        }),
+                                    syntax_of_token,
+                                )
+                            },
+                        );
+                    // Compare current token's precedence with each currently assumed lowest syntax
+                    for syntax in &lowest_precedence_syntax {
+                        let precedence_of_syntax = if syntax
+                            .get_concept()
+                            .is_some()
+                        {
+                            context_search
+                                .concrete_ast(ConcreteConceptType::Precedence)
+                                .map(|ast| {
+                                    context_search.combine(&ast, syntax).share()
+                                })
+                        } else {
+                            context_search
+                                .concrete_ast(ConcreteConceptType::Default)
+                        };
+                        match precedence_of_syntax
+                            .and_also(&precedence_of_token)
+                            .map_or(Comparison::Incomparable, |(pos, pot)| {
+                                context_search.compare(pos, pot).0
+                            }) {
+                            // syntax of token has an even lower precedence than some previous lowest precendence syntax
+                            // reset lowest precedence syntax with just this one
+                            Comparison::GreaterThan => {
+                                return Ok((
+                                    vec![syntax_of_token.clone()],
+                                    vec![this_index.unwrap()],
+                                    this_index,
+                                ))
+                            },
+                            // syntax of token has a higher precedence than some previous lowest precendence syntax
+                            // keep existing lowest precedence syntax as-is
+                            Comparison::LessThan => {
+                                return Ok((
+                                    lowest_precedence_syntax,
+                                    lp_indices,
+                                    this_index,
+                                ))
+                            },
+                            // syntax of token has at least an equal precedence as the previous lowest precedence syntax
+                            // include syntax is lowest precedence syntax list
+                            Comparison::EqualTo
+                            | Comparison::GreaterThanOrEqualTo => {
+                                lowest_precedence_syntax
+                                    .push(syntax_of_token.clone());
+                                lp_indices.push(this_index.unwrap());
+                                return Ok((
+                                    lowest_precedence_syntax,
+                                    lp_indices,
+                                    this_index,
+                                ));
+                            },
+                            // Cannot determine if token has higher or lower precedence than this syntax
+                            // Check other syntax with lowest precedence
+                            Comparison::Incomparable
+                            | Comparison::LessThanOrEqualTo => (),
+                        }
                     }
-                }
-                // syntax of token has neither higher or lower precedence than the lowest precedence syntax
-                lowest_precedence_syntax.push(syntax_of_token);
-                lp_indices.push(this_index.unwrap());
-                Ok((lowest_precedence_syntax, lp_indices, this_index))
-            },
-        )?;
+                    // syntax of token has neither higher or lower precedence than the lowest precedence syntax
+                    lowest_precedence_syntax.push(syntax_of_token.clone());
+                    lp_indices.push(this_index.unwrap());
+                    Ok((lowest_precedence_syntax, lp_indices, this_index))
+                },
+            )?;
         Ok(TokenSubsequence {
             syntax,
             positions,
