@@ -18,8 +18,12 @@ RUN git clone https://tpope.io/vim/fugitive.git
 RUN mkdir -p /home/node/.config/nvim
 COPY init.vim /home/node/.config/nvim/init.vim
 USER root
-RUN apt update && apt install -y neovim
+RUN curl -o /home/node/nvim.tar.gz -L https://github.com/neovim/neovim/releases/download/v0.8.3/nvim-linux64.tar.gz
+RUN tar -xzvf /home/node/nvim.tar.gz
+RUN mv nvim-linux64 /home/node/nvim
+RUN chown -R node:node /home/node/nvim
 USER node
+ENV PATH=$PATH:/home/node/nvim/bin
 RUN nvim -c "helptags fugitive/doc" -c ":PlugInstall | :q | :q"
 RUN git config --global --add safe.directory /usr/src
 # install coc.nvim extensions
