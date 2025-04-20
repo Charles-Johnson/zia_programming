@@ -114,6 +114,17 @@ impl<CI: ConceptId, SR: SharedReference> NestedSyntaxTree<CI, SR> {
         }
     }
 
+    pub fn nest(self) -> Self {
+        Self {
+            syntax: format!("({})", &self.syntax),
+            node: Node::Parent {
+                children: vec![SR::share(self)],
+            },
+            concept: None,
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn append_node(self, new_nested_syntax: Self) -> Self {
         let share_nested_syntax = SR::share(new_nested_syntax);
         let shared_self = SR::share(self);

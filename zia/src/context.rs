@@ -227,7 +227,9 @@ where
                     nest_depth -= 1;
                     if let Some(ns) = nested_syntax_at_depth.remove(&nest_depth)
                     {
-                        nested_syntax = ns.append_node(nested_syntax);
+                        nested_syntax = ns.append_node(nested_syntax.nest());
+                    } else {
+                        nested_syntax = nested_syntax.nest();
                     };
 
                     nested_syntax_at_depth.insert(nest_depth, nested_syntax);

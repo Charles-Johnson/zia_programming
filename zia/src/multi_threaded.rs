@@ -129,31 +129,16 @@ mod tests {
         let nested_syntax = Context::nest(lexeme).unwrap();
         assert_eq!(
             nested_syntax,
-            NestedSyntaxTree {
-                _phantom: PhantomData,
-                concept: None,
-                syntax: "(a b) c".into(),
-                node: Node::Parent {
-                    children: vec![
-                        Arc::new(
-                            NestedSyntaxTree::from_concept_kind(
-                                &ConceptKind::New,
-                                "a".into()
-                            )
-                            .append_node(
-                                NestedSyntaxTree::from_concept_kind(
-                                    &ConceptKind::New,
-                                    "b".into()
-                                )
-                            )
-                        ),
-                        Arc::new(NestedSyntaxTree::from_concept_kind(
-                            &ConceptKind::New,
-                            "c".into()
-                        ))
-                    ],
-                },
-            }
+            NestedSyntaxTree::from_concept_kind(&ConceptKind::New, "a".into())
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "b".into()
+                ))
+                .nest()
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "c".into()
+                ))
         );
     }
 }
