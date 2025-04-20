@@ -721,16 +721,6 @@ where
         self.context_search().combine(left, right)
     }
 
-    fn ast_from_token(&mut self, t: &str) -> ZiaResult<SharedSyntax<CCI, SR>> {
-        if t.contains(' ') || t.contains('(') || t.contains(')') {
-            self.ast_from_expression(t)
-        } else {
-            let ast =
-                self.snap_shot.ast_from_symbol::<D>(self.delta.as_ref(), t);
-            Ok(ast.share())
-        }
-    }
-
     fn commit(&mut self) -> ZiaResult<()> {
         let taken_delta = std::mem::take(&mut self.delta);
         let delta = taken_delta.into_nested()?;

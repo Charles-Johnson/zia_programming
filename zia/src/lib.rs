@@ -166,8 +166,6 @@ mod mock_snap_shot;
 
 mod mixed_concept;
 
-mod parser;
-
 #[macro_use]
 mod reduction_reason;
 
