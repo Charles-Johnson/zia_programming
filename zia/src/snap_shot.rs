@@ -1,5 +1,5 @@
 use crate::{
-    ast::{GenericSyntaxTree, SyntaxTree},
+    ast::GenericSyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_delta::{
         Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
@@ -161,37 +161,31 @@ where
         concept_id: Self::ConceptId,
     ) -> Option<String>;
     fn ast_from_symbol<
-        Syntax,
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
         delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         s: &str,
-    ) -> Syntax
+    ) -> GenericSyntaxTree<Self::ConceptId, SR>
     where
-        Syntax: SyntaxTree<SR, ConceptId = Self::ConceptId>,
         SR: SharedReference,
     {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
             |concept| {
-                let syntax = Syntax::from(s);
+                let syntax = GenericSyntaxTree::<Self::ConceptId, SR>::from(s);
                 self.bind_concept_to_syntax(delta, syntax, concept)
             },
         )
     }
     fn bind_concept_to_syntax<
-        Syntax,
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
         delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
-        syntax: Syntax,
+        syntax: GenericSyntaxTree<Self::ConceptId, SR>,
         concept: Self::ConceptId,
-    ) -> Syntax
-    where
-        Syntax: SyntaxTree<SR, ConceptId = Self::ConceptId>,
-    {
+    ) -> GenericSyntaxTree<Self::ConceptId, SR> {
         if self.concrete_concept_type(delta, concept)
             == Some(ConcreteConceptType::ExistsSuchThat)
         {

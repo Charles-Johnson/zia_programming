@@ -1,6 +1,5 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_test::Context,
     mock_snap_shot::MockSnapShot,

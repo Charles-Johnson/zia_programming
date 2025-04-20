@@ -1,5 +1,4 @@
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
     context_search::ContextReferences,

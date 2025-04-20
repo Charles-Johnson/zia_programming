@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    ast::{GenericSyntaxTree, SyntaxTree},
+    ast::GenericSyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::GenericCache,
     errors::ZiaResult,
@@ -83,10 +83,7 @@ where
         &mut self,
         concept_delta: DirectConceptDelta<CI>,
         cache_to_invalidate: &mut GenericCache<CI, SR>,
-    ) -> CI
-    where
-        GenericSyntaxTree<CI, SR>: SyntaxTree<SR, ConceptId = CI>,
-    {
+    ) -> CI {
         let concept_delta: SharedDirectConceptDelta = concept_delta.into();
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
@@ -211,10 +208,7 @@ where
     fn update_new_concept_delta<Syntax>(
         &mut self,
         delta: &NewConceptDelta<CI>,
-    ) -> CI
-    where
-        Syntax: SyntaxTree<SR, ConceptId = CI>,
-    {
+    ) -> CI {
         let new_concept_id = self.insert_delta_for_new_concept(delta.clone());
         match delta {
             NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {
@@ -696,10 +690,7 @@ where
         &mut self,
         concept_delta: DirectConceptDelta<CI>,
         cache_to_invalidate: &mut GenericCache<CI, SR>,
-    ) -> CI
-    where
-        GenericSyntaxTree<CI, SR>: SyntaxTree<SR, ConceptId = CI>,
-    {
+    ) -> CI {
         self.overlay_delta
             .update_concept_delta(concept_delta, cache_to_invalidate)
     }

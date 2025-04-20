@@ -1,6 +1,6 @@
 use crate::{
     and_also::AndAlso,
-    ast::{GenericSyntaxTree, SyntaxTree},
+    ast::GenericSyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::GenericCache,
     context_delta::{
@@ -42,9 +42,6 @@ impl<
         D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
         SR: SharedReference,
     > ContextUpdater<'_, S, SDCD, D, SR>
-where
-    GenericSyntaxTree<S::ConceptId, SR>:
-        SyntaxTree<SR, ConceptId = S::ConceptId>,
 {
     pub fn redefine(
         &mut self,

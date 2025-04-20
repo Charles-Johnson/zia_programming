@@ -114,25 +114,20 @@ where
 
 use crate::ast::ExampleSubstitutions;
 
-use super::SyntaxTree;
-impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
-    for GenericSyntaxTree<CI, SR>
-{
-    type ConceptId = CI;
-
-    fn make_mut(refcounter: &mut SR::Share<Self>) -> &mut Self {
+impl<CI: ConceptId, SR: SharedReference> GenericSyntaxTree<CI, SR> {
+    pub fn make_mut(refcounter: &mut SR::Share<Self>) -> &mut Self {
         SR::make_mut(refcounter)
     }
 
-    fn share(self) -> SR::Share<Self> {
+    pub fn share(self) -> SR::Share<Self> {
         SR::share(self)
     }
 
-    fn is_leaf_variable(&self) -> bool {
+    pub const fn is_leaf_variable(&self) -> bool {
         matches!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Variable))
     }
 
-    fn new_constant_concept(concept_id: impl Into<Self::ConceptId>) -> Self {
+    pub fn new_constant_concept(concept_id: impl Into<CI>) -> Self {
         let concept_id = concept_id.into();
         Self {
             syntax: Some(format!("constant {concept_id}")),
@@ -141,7 +136,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn new_quantifier_concept(concept_id: Self::ConceptId) -> Self {
+    pub fn new_quantifier_concept(concept_id: CI) -> Self {
         Self {
             syntax: Some(format!("quantifier {concept_id}")),
             concept: Some(concept_id),
@@ -149,7 +144,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn new_pair(left: SR::Share<Self>, right: SR::Share<Self>) -> Self {
+    pub fn new_pair(left: SR::Share<Self>, right: SR::Share<Self>) -> Self {
         Self {
             syntax: None,
             concept: None,
@@ -157,7 +152,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn new_leaf_variable(concept_id: Self::ConceptId) -> Self {
+    pub fn new_leaf_variable(concept_id: CI) -> Self {
         Self {
             syntax: Some(format!("variable {concept_id}")),
             concept: Some(concept_id),
@@ -165,26 +160,26 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn bind_nonquantifier_concept(
+    pub fn bind_nonquantifier_concept(
         mut self,
-        concept: impl Into<Self::ConceptId>,
+        concept: impl Into<CI>,
     ) -> Self {
         self.concept = Some(concept.into());
         self
     }
 
-    fn bind_nonquantifier_concept_as_ref(&mut self, concept: Self::ConceptId) {
+    pub fn bind_nonquantifier_concept_as_ref(&mut self, concept: CI) {
         self.concept = Some(concept);
     }
 
-    fn bind_quantifier_concept(mut self, concept: Self::ConceptId) -> Self {
+    pub fn bind_quantifier_concept(mut self, concept: CI) -> Self {
         debug_assert_eq!(self.node, SyntaxNode::Leaf(SyntaxLeaf::Constant));
         self.concept = Some(concept);
         self.node = SyntaxNode::Leaf(SyntaxLeaf::Quantifier);
         self
     }
 
-    fn contains(&self, other: &Self) -> bool {
+    pub fn contains(&self, other: &Self) -> bool {
         if let Some((ref left, ref right)) = self.get_expansion() {
             other.key() == left.key()
                 || other.key() == right.key()
@@ -196,7 +191,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
     }
 
     /// An expression does have an expansion while a symbol does not.
-    fn get_expansion(&self) -> Option<(SR::Share<Self>, SR::Share<Self>)> {
+    pub fn get_expansion(&self) -> Option<(SR::Share<Self>, SR::Share<Self>)> {
         if let SyntaxNode::Branch {
             left,
             right,
@@ -209,7 +204,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
+    pub fn get_expansion_mut(&mut self) -> Option<(&mut Self, &mut Self)> {
         if let SyntaxNode::Branch {
             left,
             right,
@@ -222,7 +217,7 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn bind_pair(
+    pub fn bind_pair(
         mut self,
         left: SR::Share<Self>,
         right: SR::Share<Self>,
@@ -231,11 +226,11 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         self
     }
 
-    fn get_concept(&self) -> Option<Self::ConceptId> {
+    pub const fn get_concept(&self) -> Option<CI> {
         self.concept
     }
 
-    fn is_variable(&self) -> bool {
+    pub fn is_variable(&self) -> bool {
         match &self.node {
             SyntaxNode::Branch {
                 free_variables,
@@ -247,10 +242,10 @@ impl<CI: ConceptId, SR: SharedReference> SyntaxTree<SR>
         }
     }
 
-    fn check_example(
+    pub fn check_example(
         example: &SR::Share<Self>,
         generalisation: &SR::Share<Self>,
-    ) -> Option<ExampleSubstitutions<Self::ConceptId, SR>> {
+    ) -> Option<ExampleSubstitutions<CI, SR>> {
         match (example.get_expansion(), generalisation.get_expansion()) {
                     (
                         Some((left_example, right_example)),

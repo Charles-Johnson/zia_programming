@@ -17,7 +17,7 @@
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
-    ast::{ExampleSubstitutions, GenericSyntaxTree, SyntaxKey, SyntaxTree},
+    ast::{ExampleSubstitutions, GenericSyntaxTree, SyntaxKey},
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     consistent_merge::ConsistentMerge,
     context_cache::{GenericCache, ReductionCache},
@@ -45,7 +45,6 @@ pub struct ContextSearch<
     SR: SharedReference,
 > where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
@@ -66,7 +65,6 @@ impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference> Debug
     for ContextSearch<'_, '_, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
@@ -93,7 +91,6 @@ impl<'s, 'v, S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
     ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
@@ -1359,7 +1356,6 @@ impl<'c, 's, 'v, S, SDCD, D, CCI: ConceptId, SR: SharedReference>
     for ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
 where
     S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>

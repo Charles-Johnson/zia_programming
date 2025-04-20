@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{GenericSyntaxTree, SyntaxKey, SyntaxTree},
+    ast::{GenericSyntaxTree, SyntaxKey},
     context_cache::SharedSyntax,
     mixed_concept::ConceptId,
     nester::SharedReference,

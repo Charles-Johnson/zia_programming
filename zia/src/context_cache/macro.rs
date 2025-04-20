@@ -1,7 +1,7 @@
 #![allow(clippy::single_component_path_imports)]
 
 use crate::{
-    ast::{SyntaxKey, SyntaxTree},
+    ast::SyntaxKey,
     concepts::ConceptTrait,
     context_cache::{InferenceCache, ReductionCache},
     mixed_concept::ConceptId,

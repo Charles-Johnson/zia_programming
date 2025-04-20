@@ -17,9 +17,9 @@
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
-    ast::{GenericSyntaxTree, SyntaxKey, SyntaxTree},
+    ast::{GenericSyntaxTree, SyntaxKey, SyntaxLeaf},
     concepts::{ConceptTrait, ConcreteConceptType},
-    context_cache::GenericCache,
+    context_cache::{GenericCache, SharedSyntax},
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
@@ -30,8 +30,7 @@ use crate::{
     lexer::{Category as LexemeCategory, ConceptKind, Lexeme},
     map_err_variant::MapErrVariant,
     mixed_concept::{ConceptId, MixedConcept},
-    nester::{NestedSyntaxTree, SharedReference},
-    reduction_reason::SharedSyntax,
+    nester::{NestedSyntaxTree, Node, SharedReference},
     snap_shot::Reader as SnapShotReader,
 };
 use std::{
@@ -48,8 +47,6 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>
-        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -78,8 +75,6 @@ where
         + Apply<SDCD, SR>
         + Debug
         + Clone,
-    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
-        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -108,8 +103,6 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = CCI>
-        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<CCI>>
@@ -1081,8 +1074,6 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
-        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
@@ -1110,8 +1101,6 @@ where
         + Sync
         + Apply<SDCD, SR>
         + Debug,
-    for<'a> GenericSyntaxTree<CCI, SR>: SyntaxTree<SR, ConceptId = S::ConceptId>
-        + std::convert::From<&'a std::string::String>,
     SDCD: Clone
         + Debug
         + AsRef<DirectConceptDelta<S::ConceptId>>
