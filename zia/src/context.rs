@@ -187,7 +187,9 @@ where
         lexemes
     }
 
-    fn nest(lexemes: Vec<Lexeme<CCI>>) -> ZiaResult<NestedSyntaxTree<CCI, SR>> {
+    pub(crate) fn nest(
+        lexemes: Vec<Lexeme<CCI>>,
+    ) -> ZiaResult<NestedSyntaxTree<CCI, SR>> {
         let mut nested_syntax_at_depth =
             HashMap::<usize, NestedSyntaxTree<CCI, SR>>::new();
         let mut nest_depth = 0;
@@ -248,14 +250,14 @@ where
         self.snap_shot.concept_from_label(self.delta.as_ref(), symbol).map_or(
             ConceptKind::New,
             |id| {
-                if self
+                if let Some(concrete_type) = self
                     .snap_shot
                     .read_concept(self.delta.as_ref(), id)
                     .get_concrete_concept_type()
-                    .is_some()
                 {
                     ConceptKind::Concrete {
                         id,
+                        concrete_type,
                     }
                 } else {
                     ConceptKind::Abstract {
@@ -333,27 +335,56 @@ where
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
         let lexemes = self.lex(s);
         let nested_syntax = Self::nest(lexemes)?;
-        self.ast_from_nested_syntax(&nested_syntax)
+        let syntax_list = self.syntax_list_for_nested_syntax(&nested_syntax)?;
+        self.ast_from_syntax_list(&syntax_list)
     }
 
-    fn ast_from_nested_syntax_children(
+    pub fn syntax_list_for_nested_syntax(
         &mut self,
-        nds: &[SR::Share<NestedSyntaxTree<CCI, SR>>],
+        NestedSyntaxTree {
+            node,
+            syntax,
+            concept,
+            ..
+        }: &NestedSyntaxTree<CCI, SR>,
+    ) -> ZiaResult<Vec<SharedSyntax<CCI, SR>>> {
+        match node {
+            Node::Parent {
+                children,
+            } => children
+                .iter()
+                .map(|n| self.ast_from_nested_syntax(n))
+                .collect(),
+            Node::Leaf(leaf) => {
+                Ok(vec![self.ast_from_syntax_leaf(*leaf, syntax, concept)?])
+            },
+        }
+    }
+
+    /// Panics if `syntax_list.is_empty()`
+    pub fn ast_from_syntax_list(
+        &mut self,
+        syntax_list: &[SharedSyntax<CCI, SR>],
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
-        let syntax_list = nds
-            .iter()
-            .map(|n| self.ast_from_nested_syntax(n).unwrap())
-            .collect::<Vec<_>>();
+        match syntax_list {
+            [] => panic!("ast_from_syntax_list called with empty list!"),
+            [s] => return Ok(s.clone()),
+            [l, r] => {
+                return Ok(GenericSyntaxTree::<CCI, SR>::new_pair(
+                    l.clone(),
+                    r.clone(),
+                )
+                .share())
+            },
+            _ => {},
+        };
         let TokenSubsequence {
             syntax: lp_syntax,
             positions: lp_indices,
-        } = self.lowest_precedence_info(&syntax_list)?;
+        } = self.lowest_precedence_info(syntax_list)?;
         if lp_indices.is_empty() {
             return Err(ZiaError::LowestPrecendenceNotFound {
-                tokens: syntax_list
-                    .into_iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                tokens: syntax_list.iter().map(|s| s.to_string()).collect(),
             });
         }
         // TODO: redesign how opposing associativity is handled. Refer to this issue #69
@@ -380,7 +411,7 @@ where
                         Err(ZiaError::AmbiguousExpression),
                         |state, lp_index| {
                             Ok(Ok(self.associativity_try_fold_handler(
-                                nds,
+                                syntax_list,
                                 state.ok(),
                                 *lp_index,
                                 Associativity::Right,
@@ -391,9 +422,8 @@ where
                 if lp_indices[0] == 0 {
                     Ok(tail)
                 } else {
-                    let head = self.ast_from_nested_syntax_children(
-                        &nds[..lp_indices[0]],
-                    )?;
+                    let head = self
+                        .ast_from_syntax_list(&syntax_list[..lp_indices[0]])?;
                     Ok(self.context_search().combine(&head, &tail).share())
                 }
             },
@@ -401,7 +431,7 @@ where
                 .iter()
                 .try_fold(None, |state, lp_index| {
                     Some(self.associativity_try_fold_handler(
-                        nds,
+                        syntax_list,
                         state,
                         *lp_index,
                         Associativity::Left,
@@ -415,73 +445,84 @@ where
         }
     }
 
+    fn ast_from_syntax_leaf(
+        &mut self,
+        l: SyntaxLeaf,
+        syntax: &str,
+        concept: &Option<CCI>,
+    ) -> ZiaResult<SharedSyntax<CCI, SR>> {
+        let concept_id = concept.map_or_else(
+            || {
+                let maybe_inner_delta = self.delta.get_mut();
+                let Some(delta) = maybe_inner_delta else {
+                    return Err(ZiaError::MultiplePointersToDelta);
+                };
+                if let Some(id) =
+                    self.snap_shot.concept_from_label(delta, syntax)
+                {
+                    return Ok(id);
+                }
+                let label_id = {
+                    self.snap_shot
+                        .concrete_concept_id(delta, ConcreteConceptType::Label)
+                };
+                let mut updater = ContextUpdater {
+                    snap_shot: &self.snap_shot,
+                    delta,
+                    cache: &mut self.cache,
+                    phantom: PhantomData,
+                    phantom2: PhantomData,
+                };
+                Ok(updater.new_labelled_concept(syntax, None, label_id))
+            },
+            Ok,
+        )?;
+        let mut gst = match l {
+            crate::ast::SyntaxLeaf::Variable => {
+                GenericSyntaxTree::<CCI, SR>::new_leaf_variable(concept_id)
+            },
+            crate::ast::SyntaxLeaf::Constant => {
+                GenericSyntaxTree::<CCI, SR>::new_constant_concept(concept_id)
+            },
+            crate::ast::SyntaxLeaf::Quantifier => {
+                GenericSyntaxTree::<CCI, SR>::new_quantifier_concept(concept_id)
+            },
+        };
+        gst.syntax = Some(syntax.to_string());
+        Ok(gst.share())
+    }
+
     fn ast_from_nested_syntax(
         &mut self,
         nested_syntax: &NestedSyntaxTree<CCI, SR>,
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
         match &nested_syntax.node {
-            crate::nester::Node::Leaf(l) => {
-                let concept_id = nested_syntax.concept.unwrap_or_else(|| {
-                    let maybe_inner_delta = self.delta.get_mut();
-                    let Some(delta) = maybe_inner_delta else {
-                        // Err(ZiaError::MultiplePointersToDelta).unwrap();
-                        panic!();
-                    };
-                    if let Some(id) = self
-                        .snap_shot
-                        .concept_from_label(delta, &nested_syntax.syntax)
-                    {
-                        return id;
-                    }
-                    let label_id = {
-                        self.snap_shot.concrete_concept_id(
-                            delta,
-                            ConcreteConceptType::Label,
-                        )
-                    };
-                    let mut updater = ContextUpdater {
-                        snap_shot: &self.snap_shot,
-                        delta,
-                        cache: &mut self.cache,
-                        phantom: PhantomData,
-                        phantom2: PhantomData,
-                    };
-                    updater.new_labelled_concept(
-                        &nested_syntax.syntax,
-                        None,
-                        label_id,
-                    )
-                });
-                let mut gst = match l {
-                    crate::ast::SyntaxLeaf::Variable => {
-                        GenericSyntaxTree::new_leaf_variable(concept_id)
-                    },
-                    crate::ast::SyntaxLeaf::Constant => {
-                        GenericSyntaxTree::new_constant_concept(concept_id)
-                    },
-                    crate::ast::SyntaxLeaf::Quantifier => {
-                        GenericSyntaxTree::new_quantifier_concept(concept_id)
-                    },
-                };
-                gst.syntax = Some(nested_syntax.syntax.clone());
-                Ok(gst.share())
-            },
+            crate::nester::Node::Leaf(l) => self.ast_from_syntax_leaf(
+                *l,
+                &nested_syntax.syntax,
+                &nested_syntax.concept,
+            ),
             crate::nester::Node::Parent {
                 children: nodes,
-            } => match &nodes[..] {
-                [left, right] => Ok(GenericSyntaxTree::new_pair(
-                    self.ast_from_nested_syntax(left.as_ref())?,
-                    self.ast_from_nested_syntax(right.as_ref())?,
-                )
-                .share()),
-                _ => self.ast_from_nested_syntax_children(nodes),
+            } => {
+                if let [left, right] = &nodes[..] {
+                    let left_syntax =
+                        self.ast_from_nested_syntax(left.as_ref())?;
+                    let right_syntax =
+                        self.ast_from_nested_syntax(right.as_ref())?;
+                    Ok(self.ast_from_pair(&left_syntax, &right_syntax).share())
+                } else {
+                    let syntax_list =
+                        self.syntax_list_for_nested_syntax(nested_syntax)?;
+                    self.ast_from_syntax_list(&syntax_list)
+                }
             },
         }
     }
 
     fn associativity_try_fold_handler(
         &mut self,
-        tokens: &[SR::Share<NestedSyntaxTree<CCI, SR>>],
+        tokens: &[SharedSyntax<CCI, SR>],
         state: Option<(SharedSyntax<CCI, SR>, usize)>,
         lp_index: usize,
         assoc: Associativity,
@@ -502,37 +543,36 @@ where
             Associativity::Right => 0,
         };
         let lp_with_the_rest = if lp_index == edge_index {
-            let edge_syntax =
-                self.ast_from_nested_syntax(&slice[edge_index])?;
+            let edge_syntax = slice[edge_index].clone();
             if slice.len() == 1 {
                 edge_syntax
             } else {
                 match assoc {
                     Associativity::Left => {
                         let rest_of_syntax = if slice.len() < 3 {
-                            self.ast_from_nested_syntax(&slice[slice.len() - 1])
+                            &slice[slice.len() - 1]
                         } else {
-                            self.ast_from_nested_syntax_children(
+                            &self.ast_from_syntax_list(
                                 &slice[..slice.len() - 1],
-                            )
-                        }?;
+                            )?
+                        };
                         self.context_search()
-                            .combine(&rest_of_syntax, &edge_syntax)
+                            .combine(rest_of_syntax, &edge_syntax)
                     },
                     Associativity::Right => {
                         let rest_of_syntax = if slice.len() < 3 {
-                            self.ast_from_nested_syntax(&slice[1])
+                            &slice[1]
                         } else {
-                            self.ast_from_nested_syntax_children(&slice[1..])
-                        }?;
+                            &self.ast_from_syntax_list(&slice[1..])?
+                        };
                         self.context_search()
-                            .combine(&edge_syntax, &rest_of_syntax)
+                            .combine(&edge_syntax, rest_of_syntax)
                     },
                 }
                 .share()
             }
         } else {
-            self.ast_from_nested_syntax_children(slice)?
+            self.ast_from_syntax_list(slice)?
         };
         Ok((
             match edge {
@@ -635,7 +675,7 @@ where
                                 ))
                             },
                             // syntax of token has at least an equal precedence as the previous lowest precedence syntax
-                            // include syntax is lowest precedence syntax list
+                            // include syntax in lowest precedence syntax list
                             Comparison::EqualTo
                             | Comparison::GreaterThanOrEqualTo => {
                                 lowest_precedence_syntax
@@ -667,30 +707,24 @@ where
 
     fn ast_from_pair(
         &mut self,
-        left: &str,
-        right: &str,
-    ) -> ZiaResult<GenericSyntaxTree<CCI, SR>> {
-        let lefthand = self.ast_from_token(left)?;
-        let righthand = self.ast_from_token(right)?;
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
+    ) -> GenericSyntaxTree<CCI, SR> {
         if Some(ConcreteConceptType::ExistsSuchThat)
-            == self.concrete_type_of_ast(&righthand)
-            && lefthand.is_leaf_variable()
+            == self.concrete_type_of_ast(right)
+            && left.is_leaf_variable()
         {
-            self.bounded_variable_syntax.insert(lefthand.key());
+            self.bounded_variable_syntax.insert(left.key());
         }
-        Ok(self.context_search().combine(&lefthand, &righthand))
+        self.context_search().combine(left, right)
     }
 
     fn ast_from_token(&mut self, t: &str) -> ZiaResult<SharedSyntax<CCI, SR>> {
         if t.contains(' ') || t.contains('(') || t.contains(')') {
             self.ast_from_expression(t)
         } else {
-            let ast = self
-                .snap_shot
-                .ast_from_symbol::<GenericSyntaxTree<CCI, SR>, D>(
-                    self.delta.as_ref(),
-                    t,
-                );
+            let ast =
+                self.snap_shot.ast_from_symbol::<D>(self.delta.as_ref(), t);
             Ok(ast.share())
         }
     }

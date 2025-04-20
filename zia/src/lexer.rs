@@ -1,5 +1,6 @@
-use crate::mixed_concept::ConceptId;
+use crate::{concepts::ConcreteConceptType, mixed_concept::ConceptId};
 
+#[derive(Debug)]
 pub struct Lexeme<CI: ConceptId> {
     pub text: String,
     pub category: Category<CI>,
@@ -21,6 +22,7 @@ pub enum Category<CI: ConceptId> {
 pub enum ConceptKind<CI: ConceptId> {
     Concrete {
         id: CI,
+        concrete_type: ConcreteConceptType,
     },
     Abstract {
         id: CI,

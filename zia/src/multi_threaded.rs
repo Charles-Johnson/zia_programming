@@ -110,3 +110,50 @@ impl<CCI: ConceptId> AsRef<MultiThreadedContextDelta<CCI>>
 }
 
 pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
+
+#[cfg(test)]
+mod tests {
+    use std::{marker::PhantomData, sync::Arc};
+
+    use crate::{
+        nester::{NestedSyntaxTree, Node},
+        ConceptKind,
+    };
+
+    use super::Context;
+
+    #[test]
+    fn precendence_test() {
+        let ctx = Context::new().unwrap();
+        let lexeme = ctx.lex("(a b) c");
+        let nested_syntax = Context::nest(lexeme).unwrap();
+        assert_eq!(
+            nested_syntax,
+            NestedSyntaxTree {
+                _phantom: PhantomData,
+                concept: None,
+                syntax: "(a b) c".into(),
+                node: Node::Parent {
+                    children: vec![
+                        Arc::new(
+                            NestedSyntaxTree::from_concept_kind(
+                                &ConceptKind::New,
+                                "a".into()
+                            )
+                            .append_node(
+                                NestedSyntaxTree::from_concept_kind(
+                                    &ConceptKind::New,
+                                    "b".into()
+                                )
+                            )
+                        ),
+                        Arc::new(NestedSyntaxTree::from_concept_kind(
+                            &ConceptKind::New,
+                            "c".into()
+                        ))
+                    ],
+                },
+            }
+        );
+    }
+}
