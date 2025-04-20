@@ -113,12 +113,7 @@ pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
 
 #[cfg(test)]
 mod tests {
-    use std::{marker::PhantomData, sync::Arc};
-
-    use crate::{
-        nester::{NestedSyntaxTree, Node},
-        ConceptKind,
-    };
+    use crate::{nester::NestedSyntaxTree, ConceptKind};
 
     use super::Context;
 
