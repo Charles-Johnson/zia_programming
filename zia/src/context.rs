@@ -1006,7 +1006,7 @@ where
             old.get_concept(),
             old.get_expansion(),
         ) {
-            (_, Some(_), None, None) => Err(ZiaError::BadComposition),
+            (_, Some(_), _, None) => Err(ZiaError::BadComposition),
             (_, None, None, None) => Err(ZiaError::RedundantRefactor),
             (None, _, Some(b), None) => updater.relabel(b, &new.to_string()),
             (None, _, Some(b), Some(_)) => {
@@ -1023,9 +1023,16 @@ where
             (None, _, None, Some((ref left, ref right))) => {
                 updater.define_new_syntax(&new.to_string(), left, right)
             },
-            (Some(a), _, Some(b), None) => {
+            (Some(a), a_comp, Some(b), None) => {
                 if a == b {
                     updater.cleanly_delete_composition(&a)
+                } else if a_comp.is_none() {
+                    if self.snap_shot.get_concept(b).is_some() {
+                        updater.unlabel(a)?;
+                        updater.relabel(b, &new.to_string())
+                    } else {
+                        Err(ZiaError::RedundantRefactor)
+                    }
                 } else {
                     Err(ZiaError::CompositionCollision)
                 }

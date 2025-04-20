@@ -391,7 +391,8 @@ where
         let mut id = None;
         for (concept_id, cdv) in
             delta.iter_concepts().filter(|(concept_id, _)| {
-                self.concrete_concept_type(delta, **concept_id) == Some(cc)
+                self.maybe_concrete_concept_type(delta, **concept_id)
+                    == Some(cc)
             })
         {
             for dcd in cdv.filter_map(ConceptDelta::try_direct) {
@@ -411,18 +412,6 @@ where
                 .copied()
                 .map(Self::ConceptId::from)
         })
-    }
-
-    fn concrete_concept_type<
-        D: SharedDelta<
-            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
-        >,
-    >(
-        &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
-        concept_id: Self::ConceptId,
-    ) -> Option<ConcreteConceptType> {
-        self.read_concept(delta, concept_id).get_concrete_concept_type()
     }
 }
 

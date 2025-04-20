@@ -38,6 +38,122 @@ where
         &self,
         concept_id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'_>>;
+    fn maybe_read_concept<
+        'a,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
+    >(
+        &'a self,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        id: Self::ConceptId,
+    ) -> Option<Self::MixedConcept<'a>> {
+        delta.get_concept(&id).and_then(|cds| {
+            let mut concept = self.get_concept(id);
+            for cd in cds {
+                match cd {
+                    ConceptDelta::Direct(dcd) => match dcd.as_ref() {
+                        DirectConceptDelta::New(delta) => {
+                            debug_assert!(concept.is_none()); // Assert that concept hasn't already been committed
+                            concept = Some(
+                                (&NewDirectConceptDelta {
+                                    delta: delta.clone(),
+                                    new_concept_id: id,
+                                })
+                                    .into(),
+                            );
+                        },
+                        DirectConceptDelta::Remove(concept_id) => {
+                            debug_assert_eq!(*concept_id, id);
+                            debug_assert!(concept.is_some());
+                            concept = None;
+                        },
+                        DirectConceptDelta::Compose {
+                            change,
+                            composition_id,
+                        } => {
+                            debug_assert_eq!(*composition_id, id);
+                            match change {
+                                ValueChange::Create(comp) => {
+                                    let [mut left, mut right] = self
+                                        .concepts_from_composition(
+                                            delta, *comp,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Create([
+                                                &mut left, &mut right,
+                                            ]),
+                                        )
+                                        .unwrap();
+                                },
+                                ValueChange::Update {
+                                    before,
+                                    after,
+                                } => {
+                                    let [mut before_left, mut before_right] =
+                                        self.concepts_from_composition(
+                                            delta, *before,
+                                        );
+                                    let [mut after_left, mut after_right] =
+                                        self.concepts_from_composition(
+                                            delta, *after,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Update {
+                                                before: [
+                                                    &mut before_left,
+                                                    &mut before_right,
+                                                ],
+                                                after: [
+                                                    &mut after_left,
+                                                    &mut after_right,
+                                                ],
+                                            },
+                                        )
+                                        .unwrap();
+                                },
+                                ValueChange::Remove(comp) => {
+                                    let [mut left, mut right] = self
+                                        .concepts_from_composition(
+                                            delta, *comp,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Remove([
+                                                &mut left, &mut right,
+                                            ]),
+                                        )
+                                        .unwrap();
+                                },
+                            }
+                        },
+                        DirectConceptDelta::Reduce {
+                            change,
+                            unreduced_id,
+                        } => {
+                            debug_assert_eq!(*unreduced_id, id);
+                            concept
+                                .as_mut()
+                                .expect("concept must already exist")
+                                .change_reduction(*change);
+                        },
+                    },
+                    ConceptDelta::Indirect(delta) => {
+                        let c =
+                            concept.as_mut().expect("Concept doesn't exist");
+                        c.apply_indirect(delta);
+                    },
+                }
+            }
+            concept
+        })
+    }
     fn read_concept<
         'a,
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
@@ -46,99 +162,10 @@ where
         delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         id: Self::ConceptId,
     ) -> Self::MixedConcept<'a> {
-        delta
-            .get_concept(&id)
-            .and_then(|cds| {
-                let mut concept = self.get_concept(id);
-                for cd in cds {
-                    match cd {
-                        ConceptDelta::Direct(dcd) => match dcd.as_ref() {
-                            DirectConceptDelta::New(delta) => {
-                                debug_assert!(concept.is_none()); // Assert that concept hasn't already been committed
-                                concept = Some((&NewDirectConceptDelta{
-                                    delta: delta.clone(),
-                                    new_concept_id: id
-                                }).into());
-                            },
-                            DirectConceptDelta::Remove(concept_id) => {
-                                debug_assert_eq!(*concept_id, id);
-                                debug_assert!(concept.is_some());
-                                concept = None;
-                            },
-                            DirectConceptDelta::Compose {
-                                change,
-                                composition_id,
-                            } => {
-                                debug_assert_eq!(*composition_id, id);
-                                match change {
-                                    ValueChange::Create(comp) => {
-                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(ValueChange::Create(
-                                                [&mut left, &mut right],
-                                            ))
-                                            .unwrap();
-                                    },
-                                    ValueChange::Update {
-                                        before,
-                                        after,
-                                    } => {
-                                        let [mut before_left, mut before_right] = self.concepts_from_composition(delta, *before);
-                                        let [mut after_left, mut after_right] = self.concepts_from_composition(delta, *after);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(
-                                                ValueChange::Update {
-                                                    before: [
-                                                        &mut before_left,
-                                                        &mut before_right,
-                                                    ],
-                                                    after: [
-                                                        &mut after_left,
-                                                        &mut after_right,
-                                                    ],
-                                                },
-                                            )
-                                            .unwrap();
-                                    },
-                                    ValueChange::Remove(comp) => {
-                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(ValueChange::Remove(
-                                                [&mut left, &mut right],
-                                            ))
-                                            .unwrap();
-                                    },
-                                }
-                            },
-                            DirectConceptDelta::Reduce {
-                                change,
-                                unreduced_id,
-                            } => {
-                                debug_assert_eq!(*unreduced_id, id);
-                                concept
-                                    .as_mut()
-                                    .expect("concept must already exist")
-                                    .change_reduction(*change);
-                            },
-                        },
-                        ConceptDelta::Indirect(delta) => {
-                            let c = concept.as_mut().expect("Concept doesn't exist");
-                            c.apply_indirect(delta);
-                        },
-                    }
-                }
-                concept
-            })
-            .unwrap_or_else(|| {
-                self.get_concept(id)
-                    .unwrap_or_else(|| panic!("No concept with id = {id}"))
-            })
+        self.maybe_read_concept(delta, id).unwrap_or_else(|| {
+            self.get_concept(id)
+                .unwrap_or_else(|| panic!("No concept with id = {id}"))
+        })
     }
     fn concepts_from_composition<
         'a,
@@ -362,11 +389,24 @@ where
         delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId>;
+    fn maybe_concrete_concept_type<
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
+    >(
+        &self,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        concept_id: Self::ConceptId,
+    ) -> Option<ConcreteConceptType> {
+        self.maybe_read_concept(delta, concept_id)
+            .and_then(|c| c.get_concrete_concept_type())
+    }
+
     fn concrete_concept_type<
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
         delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept_id: Self::ConceptId,
-    ) -> Option<ConcreteConceptType>;
+    ) -> Option<ConcreteConceptType> {
+        self.read_concept(delta, concept_id).get_concrete_concept_type()
+    }
 }

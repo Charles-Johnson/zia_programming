@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    ast::GenericSyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
     context_cache::GenericCache,
     errors::ZiaResult,
@@ -87,8 +86,9 @@ where
         let concept_delta: SharedDirectConceptDelta = concept_delta.into();
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
-            DirectConceptDelta::New(delta) => self
-                .update_new_concept_delta::<GenericSyntaxTree<CI, SR>>(delta),
+            DirectConceptDelta::New(delta) => {
+                self.update_new_concept_delta(delta)
+            },
             DirectConceptDelta::Compose {
                 composition_id,
                 change,
@@ -205,10 +205,7 @@ where
         self.concept.iter().map(|(c, v)| (c, v.iter()))
     }
 
-    fn update_new_concept_delta<Syntax>(
-        &mut self,
-        delta: &NewConceptDelta<CI>,
-    ) -> CI {
+    fn update_new_concept_delta(&mut self, delta: &NewConceptDelta<CI>) -> CI {
         let new_concept_id = self.insert_delta_for_new_concept(delta.clone());
         match delta {
             NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {

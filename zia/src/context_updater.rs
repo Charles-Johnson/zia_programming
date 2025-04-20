@@ -5,7 +5,7 @@ use crate::{
     context_cache::GenericCache,
     context_delta::{
         Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
-        SharedDelta, ValueChange,
+        SharedDelta, ValueAndTypeChange, ValueChange,
     },
     errors::ZiaResult,
     nester::SharedReference,
@@ -195,7 +195,8 @@ impl<
             .snap_shot
             .get_concept_of_label(self.delta, concept)
             .expect("No label to remove");
-        self.delete_reduction(concept_of_label)
+        self.delete_reduction(concept_of_label)?;
+        Ok(())
     }
 
     pub fn delete_reduction(
@@ -228,7 +229,15 @@ impl<
             .concrete_concept_id(self.delta, ConcreteConceptType::Label)
             .ok_or(ZiaError::NoLabelConcept)?;
         let composition = self.find_or_insert_composition(label_id, concept);
-        let string_id = self.new_string(string);
+
+        let string_id = self
+            .delta
+            .get_string(string)
+            .and_then(|v| match v {
+                ValueAndTypeChange::Create(id) => Some(id),
+                _ => None,
+            })
+            .unwrap_or_else(|| self.new_string(string));
         self.update_reduction(composition, string_id)
     }
 
