@@ -30,8 +30,10 @@ pub enum ZiaError {
     #[error("Not all opening parentheses match closing parentheses")]
     UnmatchedParentheses,
     /// When specifying a reduction rule that already exists.
-    #[error("That reduction rule already exists.")]
-    RedundantReduction,
+    #[error("That reduction rule for {syntax} already exists.")]
+    RedundantReduction {
+        syntax: String,
+    },
     /// When specifying a definition that already exists.
     #[error("That definition already exists.")]
     RedundantComposition,

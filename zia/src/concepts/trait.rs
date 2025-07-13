@@ -87,7 +87,11 @@ pub trait Concept: Sized {
     fn anonymous_variable(&self) -> bool;
 
     fn remove_reduction(&self) -> ZiaResult<Self::Id> {
-        self.get_reduction().ok_or(ZiaError::RedundantReduction)
+        self.get_reduction().ok_or(ZiaError::RedundantReduction {
+            syntax: self
+                .get_string()
+                .unwrap_or_else(|| "anonymous".to_string()),
+        })
     }
 
     fn find_what_reduces_to_it(&self) -> Self::IdIterator<'_>;

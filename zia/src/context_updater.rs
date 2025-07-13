@@ -255,14 +255,18 @@ impl<
             .read_concept(self.delta, concept)
             .get_reduction()
             .and_then(|r| {
-                (r == reduction).then_some(Err(ZiaError::RedundantReduction))
+                (r == reduction).then_some(Err(ZiaError::RedundantReduction {
+                    syntax: concept.to_string(),
+                }))
             })
         {
             result
         } else if reduction
             == self.snap_shot.get_reduction_of_composition(self.delta, concept)
         {
-            Err(ZiaError::RedundantReduction)
+            Err(ZiaError::RedundantReduction {
+                syntax: concept.to_string(),
+            })
         } else {
             let change = maybe_normal_form.map_or_else(
                 || ValueChange::Create(reduction),
