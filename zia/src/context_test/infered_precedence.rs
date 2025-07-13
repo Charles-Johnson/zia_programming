@@ -134,5 +134,5 @@ fn concept_labels() -> HashMap<usize, &'static str> {
 fn infered_precedence_test() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &concept_labels());
     let mut context: Context = snapshot.into();
-    assert_eq!(context.execute("-> preceeds let)"), "true");
+    assert_eq!(context.execute("-> (preceeds let)"), "true");
 }
