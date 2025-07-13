@@ -736,11 +736,10 @@ pub enum ConcreteConceptType {
     Associativity,
     Right,
     Left,
-    Precedence,
-    Default,
     GreaterThan,
     Implication,
     ExistsSuchThat,
+    Preceeds,
 }
 
 impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {

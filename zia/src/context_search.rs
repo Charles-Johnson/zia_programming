@@ -225,19 +225,6 @@ where
                     let (ref left, ref right) = ast.get_expansion()?;
                     left.get_concept()
                         .and_then(|lc| match self.concrete_type(&lc) {
-                            Some(ConcreteConceptType::Precedence) => {
-                                let default_concept_id = self
-                                    .concrete_concept_id(
-                                        ConcreteConceptType::Default,
-                                    )?;
-                                self.reduce_otherwise_default(
-                                    ast,
-                                    left,
-                                    right,
-                                    &lc,
-                                    &default_concept_id,
-                                )
-                            },
                             Some(ConcreteConceptType::Associativity) => {
                                 let default_concept_id = self
                                     .concrete_concept_id(

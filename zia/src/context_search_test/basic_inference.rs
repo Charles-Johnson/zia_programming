@@ -83,7 +83,7 @@ fn concepts() -> [Concept<usize>; 10] {
         condition_implies_result_concept,
         (ConcreteConceptType::Associativity, 6).into(),
         (ConcreteConceptType::Left, 7).into(),
-        (ConcreteConceptType::Precedence, 8).into(),
+        (ConcreteConceptType::Preceeds, 8).into(),
         (ConcreteConceptType::Right, 9).into(),
     ]
 }

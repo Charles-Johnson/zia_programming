@@ -80,7 +80,7 @@ fn concepts() -> [Concept<usize>; 26] {
         example_composition,
         variable_concept,
         concept_b,
-        (ConcreteConceptType::Precedence, 11).into(),
+        (ConcreteConceptType::Preceeds, 11).into(),
         (ConcreteConceptType::Associativity, 12).into(),
         (ConcreteConceptType::Left, 13).into(),
         (ConcreteConceptType::Right, 14).into(),

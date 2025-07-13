@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    and_also::AndAlso,
     associativity::Associativity,
     ast::{GenericSyntaxTree, SyntaxKey, SyntaxLeaf},
     concepts::{ConceptTrait, ConcreteConceptType},
@@ -23,7 +22,7 @@ use crate::{
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
-    context_search::{Comparison, ContextReferences, ContextSearch},
+    context_search::{ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -596,10 +595,9 @@ where
     /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
     #[allow(clippy::too_many_lines)]
     pub fn lowest_precedence_info(
-        &self,
+        &mut self,
         syntax_children: &[SR::Share<GenericSyntaxTree<CCI, SR>>],
     ) -> ZiaResult<TokenSubsequence<SharedSyntax<CCI, SR>>> {
-        let context_search = self.context_search();
         let (syntax, positions, _number_of_tokens) =
             syntax_children.iter().try_fold(
                 // Initially assume no concepts have the lowest precedence
@@ -612,91 +610,140 @@ where
                  child| {
                     // Increment index
                     let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                    let (precedence_of_token, syntax_of_token) =
-                        child.get_concept().map_or_else(
-                            || {
-                                (
-                                    context_search.concrete_ast(
-                                        ConcreteConceptType::Default,
-                                    ),
-                                    child,
-                                )
-                            },
-                            |_| {
-                                let syntax_of_token = child;
-                                (
-                                    context_search
-                                        .concrete_ast(
-                                            ConcreteConceptType::Precedence,
-                                        )
-                                        .map(|ast| {
-                                            context_search
-                                                .combine(&ast, syntax_of_token)
-                                                .share()
-                                        }),
-                                    syntax_of_token,
-                                )
-                            },
-                        );
+                    
+                    let preceeds = |a, b| {
+                        let context_search = self.context_search();
+                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                        self.concrete_type_of_ast(&context_search.recursively_reduce(
+                            &context_search.combine(
+                                a,
+                                &context_search.combine(
+                                    &preceeds_syntax,
+                                    b
+                                ).share()
+                            ).share()
+                        ).0)
+                    };
                     // Compare current token's precedence with each currently assumed lowest syntax
-                    for syntax in &lowest_precedence_syntax {
-                        let precedence_of_syntax = if syntax
-                            .get_concept()
-                            .is_some()
-                        {
-                            context_search
-                                .concrete_ast(ConcreteConceptType::Precedence)
-                                .map(|ast| {
-                                    context_search.combine(&ast, syntax).share()
-                                })
-                        } else {
-                            context_search
-                                .concrete_ast(ConcreteConceptType::Default)
-                        };
-                        match precedence_of_syntax
-                            .and_also(&precedence_of_token)
-                            .map_or(Comparison::Incomparable, |(pos, pot)| {
-                                context_search.compare(pos, pot).0
-                            }) {
-                            // syntax of token has an even lower precedence than some previous lowest precendence syntax
-                            // reset lowest precedence syntax with just this one
-                            Comparison::GreaterThan => {
+                    if let Some(syntax) = lowest_precedence_syntax.first() {
+                        match preceeds(syntax, child) {
+                            Some(ConcreteConceptType::True) => {
+                        
                                 return Ok((
-                                    vec![syntax_of_token.clone()],
+                                    vec![child.clone()],
                                     vec![this_index.unwrap()],
                                     this_index,
                                 ))
                             },
-                            // syntax of token has a higher precedence than some previous lowest precendence syntax
-                            // keep existing lowest precedence syntax as-is
-                            Comparison::LessThan => {
-                                return Ok((
-                                    lowest_precedence_syntax,
-                                    lp_indices,
-                                    this_index,
-                                ))
+                            Some(ConcreteConceptType::False) => {
+                                 match preceeds(child, syntax) {
+                                    Some(ConcreteConceptType::True) => {
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ))
+                                    },
+                                    Some(ConcreteConceptType::False) => {
+                                        lowest_precedence_syntax
+                                            .push(child.clone());
+                                        lp_indices.push(this_index.unwrap());
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ));
+                                    },
+                                    Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
+                                    None => {
+                                        let context_search = self.context_search();
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let child_precedes_syntax = context_search.combine(
+                                            child,
+                                            &context_search.combine(
+                                                &preceeds_syntax,
+                                                syntax
+                                            ).share()
+                                        ).share();
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        drop(context_search);
+                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?; 
+                                        lowest_precedence_syntax
+                                            .push(child.clone());
+                                        lp_indices.push(this_index.unwrap());
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ));
+                                        
+                                    }
+                                 }  
                             },
-                            // syntax of token has at least an equal precedence as the previous lowest precedence syntax
-                            // include syntax in lowest precedence syntax list
-                            Comparison::EqualTo
-                            | Comparison::GreaterThanOrEqualTo => {
-                                lowest_precedence_syntax
-                                    .push(syntax_of_token.clone());
-                                lp_indices.push(this_index.unwrap());
-                                return Ok((
-                                    lowest_precedence_syntax,
-                                    lp_indices,
-                                    this_index,
-                                ));
-                            },
-                            // Cannot determine if token has higher or lower precedence than this syntax
-                            // Check other syntax with lowest precedence
-                            Comparison::Incomparable
-                            | Comparison::LessThanOrEqualTo => (),
+                            // TODO: remove the need to default (assoc _x_) to right
+                            Some(ConcreteConceptType::Right) | None => {
+                                 match preceeds(child, syntax) {
+                                    Some(ConcreteConceptType::True) => {
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ))
+                                    },
+                                    Some(ConcreteConceptType::False) => {
+                                        let context_search = self.context_search();
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let syntax_precedes_child = context_search.combine(
+                                            syntax,
+                                            &context_search.combine(
+                                                &preceeds_syntax,
+                                                child
+                                            ).share()
+                                        ).share();
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        drop(context_search);
+                                        self.execute_reduction(&syntax_precedes_child, &true_syntax)?; 
+                                        lowest_precedence_syntax
+                                            .push(child.clone());
+                                        lp_indices.push(this_index.unwrap());
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ));
+                                    },
+                                    // TODO: remove the need to default (assoc _x_) to right
+                            Some(ConcreteConceptType::Right) | None => {
+                                        let context_search = self.context_search();
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let child_precedes_syntax = context_search.combine(
+                                            child,
+                                            &context_search.combine(
+                                                &preceeds_syntax,
+                                                syntax
+                                            ).share()
+                                        ).share();
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        drop(context_search);
+                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?; 
+                                        lowest_precedence_syntax
+                                            .push(child.clone());
+                                        lp_indices.push(this_index.unwrap());
+                                        return Ok((
+                                            lowest_precedence_syntax,
+                                            lp_indices,
+                                            this_index,
+                                        ));
+
+                                    }
+                            Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
+                                 }  
+                            }
+                                    Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
                         }
                     }
-                    // syntax of token has neither higher or lower precedence than the lowest precedence syntax
-                    lowest_precedence_syntax.push(syntax_of_token.clone());
+                    // child has the lowest precendence syntax so far because the vector is empty
+                    lowest_precedence_syntax.push(child.clone());
                     lp_indices.push(this_index.unwrap());
                     Ok((lowest_precedence_syntax, lp_indices, this_index))
                 },
@@ -738,11 +785,10 @@ where
             ("assoc", ConcreteConceptType::Associativity),
             ("right", ConcreteConceptType::Right),
             ("left", ConcreteConceptType::Left),
-            ("prec", ConcreteConceptType::Precedence),
-            ("default", ConcreteConceptType::Default),
             (">", ConcreteConceptType::GreaterThan),
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
+            ("preceeds", ConcreteConceptType::Preceeds)
         ];
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
@@ -777,11 +823,10 @@ where
         self.execute("let (false and _y_) -> false");
         self.execute("let (_x_ and false) -> false");
         self.execute(
-            "let ((_y_ exists_such_that) (_x_ > _y_) and _y_ > _z_) => _x_ > _z_",
+            "let ((_y_ exists_such_that) (_x_ preceeds _y_) and _y_ preceeds _z_) => _x_ preceeds _z_",
         );
-        self.execute("let default > prec ->");
-        self.execute("let (prec ->) > prec :=");
-        self.execute("let (prec :=) > prec let");
+        self.execute("let -> preceeds :=");
+        self.execute("let := preceeds let");
         Ok(())
     }
 
@@ -1077,7 +1122,7 @@ where
         };
         let snap_shot = &self.snap_shot;
         let cache = &mut self.cache;
-        syntax.get_concept().map_or(Err(ZiaError::RedundantReduction), |c| {
+        syntax.get_concept().map_or(Err(ZiaError::RedundantReduction{syntax: syntax.to_string()}), |c| {
             ContextUpdater {
                 cache,
                 delta,
