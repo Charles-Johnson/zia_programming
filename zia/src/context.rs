@@ -610,10 +610,9 @@ where
                  child| {
                     // Increment index
                     let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                    
                     let preceeds = |a, b| {
                         let context_search = self.context_search();
-                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
                         self.concrete_type_of_ast(&context_search.recursively_reduce(
                             &context_search.combine(
                                 a,
@@ -628,7 +627,6 @@ where
                     if let Some(syntax) = lowest_precedence_syntax.first() {
                         match preceeds(syntax, child) {
                             Some(ConcreteConceptType::True) => {
-                        
                                 return Ok((
                                     vec![child.clone()],
                                     vec![this_index.unwrap()],
@@ -657,7 +655,7 @@ where
                                     Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
                                     None => {
                                         let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
                                         let child_precedes_syntax = context_search.combine(
                                             child,
                                             &context_search.combine(
@@ -665,9 +663,9 @@ where
                                                 syntax
                                             ).share()
                                         ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
                                         drop(context_search);
-                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?; 
+                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?;
                                         lowest_precedence_syntax
                                             .push(child.clone());
                                         lp_indices.push(this_index.unwrap());
@@ -676,9 +674,8 @@ where
                                             lp_indices,
                                             this_index,
                                         ));
-                                        
                                     }
-                                 }  
+                                 }
                             },
                             // TODO: remove the need to default (assoc _x_) to right
                             Some(ConcreteConceptType::Right) | None => {
@@ -692,7 +689,7 @@ where
                                     },
                                     Some(ConcreteConceptType::False) => {
                                         let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
                                         let syntax_precedes_child = context_search.combine(
                                             syntax,
                                             &context_search.combine(
@@ -700,9 +697,9 @@ where
                                                 child
                                             ).share()
                                         ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
                                         drop(context_search);
-                                        self.execute_reduction(&syntax_precedes_child, &true_syntax)?; 
+                                        self.execute_reduction(&syntax_precedes_child, &true_syntax)?;
                                         lowest_precedence_syntax
                                             .push(child.clone());
                                         lp_indices.push(this_index.unwrap());
@@ -715,7 +712,7 @@ where
                                     // TODO: remove the need to default (assoc _x_) to right
                             Some(ConcreteConceptType::Right) | None => {
                                         let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap(); 
+                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
                                         let child_precedes_syntax = context_search.combine(
                                             child,
                                             &context_search.combine(
@@ -723,9 +720,9 @@ where
                                                 syntax
                                             ).share()
                                         ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist"); 
+                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
                                         drop(context_search);
-                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?; 
+                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?;
                                         lowest_precedence_syntax
                                             .push(child.clone());
                                         lp_indices.push(this_index.unwrap());
@@ -737,7 +734,7 @@ where
 
                                     }
                             Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
-                                 }  
+                                 }
                             }
                                     Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
                         }
@@ -788,7 +785,7 @@ where
             (">", ConcreteConceptType::GreaterThan),
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
-            ("preceeds", ConcreteConceptType::Preceeds)
+            ("preceeds", ConcreteConceptType::Preceeds),
         ];
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
@@ -1122,16 +1119,21 @@ where
         };
         let snap_shot = &self.snap_shot;
         let cache = &mut self.cache;
-        syntax.get_concept().map_or(Err(ZiaError::RedundantReduction{syntax: syntax.to_string()}), |c| {
-            ContextUpdater {
-                cache,
-                delta,
-                snap_shot,
-                phantom: PhantomData,
-                phantom2: PhantomData,
-            }
-            .delete_reduction(c)
-        })
+        syntax.get_concept().map_or(
+            Err(ZiaError::RedundantReduction {
+                syntax: syntax.to_string(),
+            }),
+            |c| {
+                ContextUpdater {
+                    cache,
+                    delta,
+                    snap_shot,
+                    phantom: PhantomData,
+                    phantom2: PhantomData,
+                }
+                .delete_reduction(c)
+            },
+        )
     }
 
     fn context_search(&self) -> ContextSearch<S, SDCD, D, CCI, SR> {
