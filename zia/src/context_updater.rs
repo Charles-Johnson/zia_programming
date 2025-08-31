@@ -43,17 +43,27 @@ impl<
         SR: SharedReference,
     > ContextUpdater<'_, S, SDCD, D, SR>
 {
-    pub fn redefine(
+    pub fn redefine_composition(
         &mut self,
         concept: &S::ConceptId,
         left: &SharedSyntax<S::ConceptId, SR>,
         right: &SharedSyntax<S::ConceptId, SR>,
+        original_syntax_of_left_concept: &str,
+        original_syntax_of_right_concept: &str,
     ) -> ZiaResult<()> {
         if let Some((left_concept, right_concept)) =
             self.snap_shot.read_concept(self.delta, *concept).get_composition()
         {
-            self.relabel(left_concept, &left.to_string())?;
-            self.relabel(right_concept, &right.to_string())
+            self.relabel(
+                left_concept,
+                original_syntax_of_left_concept,
+                &left.to_string(),
+            )?;
+            self.relabel(
+                right_concept,
+                original_syntax_of_right_concept,
+                &right.to_string(),
+            )
         } else {
             let left_concept = self.concept_from_ast(left)?;
             let right_concept = self.concept_from_ast(right)?;
@@ -61,22 +71,15 @@ impl<
         }
     }
 
-    pub fn cleanly_delete_composition(
+    pub fn redefine(
         &mut self,
         concept: &S::ConceptId,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
     ) -> ZiaResult<()> {
-        match self
-            .snap_shot
-            .read_concept(self.delta, *concept)
-            .get_composition()
-        {
-            None => Err(ZiaError::RedundantCompositionRemoval),
-            Some((left, right)) => {
-                self.try_delete_concept(*concept)?;
-                self.try_delete_concept(left)?;
-                self.try_delete_concept(right)
-            },
-        }
+        let left_concept = self.concept_from_ast(left)?;
+        let right_concept = self.concept_from_ast(right)?;
+        self.insert_composition(*concept, left_concept, right_concept)
     }
 
     /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
@@ -135,7 +138,7 @@ impl<
                     let concept =
                         self.find_or_insert_composition(leftc, rightc);
                     if !string.contains(' ') {
-                        self.label(concept, string)?;
+                        self.label(concept, &ast.to_string(), string)?;
                     }
                     Ok(concept)
                 },
@@ -184,29 +187,38 @@ impl<
     pub fn relabel(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: &str,
         new_label: &str,
     ) -> ZiaResult<()> {
-        self.unlabel(concept)?;
-        self.label(concept, new_label)
+        self.unlabel(concept, original_syntax_of_concept)?;
+        self.label(concept, original_syntax_of_concept, new_label)
     }
 
-    pub fn unlabel(&mut self, concept: S::ConceptId) -> ZiaResult<()> {
+    pub fn unlabel(
+        &mut self,
+        concept: S::ConceptId,
+        syntax: &str,
+    ) -> ZiaResult<()> {
         let concept_of_label = self
             .snap_shot
             .get_concept_of_label(self.delta, concept)
             .expect("No label to remove");
-        self.delete_reduction(concept_of_label)?;
+        self.delete_reduction(concept_of_label, format!("label_of {syntax}"))?;
         Ok(())
     }
 
     pub fn delete_reduction(
         &mut self,
         concept_id: S::ConceptId,
+        syntax: impl Into<String>,
     ) -> ZiaResult<()> {
-        let reducted_concept_id = self
-            .snap_shot
-            .read_concept(self.delta, concept_id)
-            .remove_reduction()?;
+        let Some(reducted_concept_id) =
+            self.snap_shot.read_concept(self.delta, concept_id).get_reduction()
+        else {
+            return Err(ZiaError::RedundantReduction {
+                syntax: syntax.into(),
+            });
+        };
         // update self.delta to include deletion of composition
         // and invalidate cache
         self.delta.update_concept_delta(
@@ -222,6 +234,7 @@ impl<
     pub fn label(
         &mut self,
         concept: S::ConceptId,
+        syntax: &str,
         string: &str,
     ) -> ZiaResult<()> {
         let label_id = self
@@ -238,12 +251,17 @@ impl<
                 _ => None,
             })
             .unwrap_or_else(|| self.new_string(string));
-        self.update_reduction(composition, string_id)
+        self.update_reduction(
+            composition,
+            format!("label_of {syntax}"),
+            string_id,
+        )
     }
 
     pub fn update_reduction(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: String,
         reduction: S::ConceptId,
     ) -> ZiaResult<()> {
         let maybe_normal_form =
@@ -256,7 +274,7 @@ impl<
             .get_reduction()
             .and_then(|r| {
                 (r == reduction).then_some(Err(ZiaError::RedundantReduction {
-                    syntax: concept.to_string(),
+                    syntax: original_syntax_of_concept,
                 }))
             })
         {
@@ -372,9 +390,10 @@ impl<
     pub fn try_delete_concept(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: &str,
     ) -> ZiaResult<()> {
         if self.snap_shot.is_disconnected(self.delta, concept) {
-            self.unlabel(concept)?;
+            self.unlabel(concept, original_syntax_of_concept)?;
             self.remove_concept(concept);
         }
         Ok(())

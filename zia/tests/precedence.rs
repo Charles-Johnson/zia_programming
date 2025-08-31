@@ -19,15 +19,7 @@ extern crate zia;
 use zia::multi_threaded::NEW_CONTEXT;
 
 #[test]
-fn lower_than_default_precedence() {
-    let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("let default > prec b"), "");
-    assert_eq!(context.execute("prec b"), "prec b");
-    assert_eq!(context.execute("c d b"), "(c d) b");
-}
-
-#[test]
 fn default_precedence() {
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("prec a"), "default");
+    assert_eq!(context.execute("a preceeds b"), "a preceeds b");
 }

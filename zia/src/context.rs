@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use maplit::hashset;
+
 use crate::{
     associativity::Associativity,
     ast::{GenericSyntaxTree, SyntaxKey, SyntaxLeaf},
-    concepts::{ConceptTrait, ConcreteConceptType},
+    concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::{GenericCache, SharedSyntax},
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
@@ -33,7 +35,7 @@ use crate::{
     snap_shot::Reader as SnapShotReader,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BinaryHeap, HashMap, HashSet},
     default::Default,
     fmt::Debug,
     marker::PhantomData,
@@ -60,11 +62,27 @@ where
     phantom: PhantomData<SDCD>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct TokenSubsequence<SharedSyntax> {
-    pub syntax: Vec<SharedSyntax>,
-    pub positions: Vec<usize>,
+pub struct TokenSubsequence<CI: ConceptId, SR: SharedReference> {
+    pub syntax: Vec<SR::Share<GenericSyntaxTree<CI, SR>>>,
+    pub positions: BinaryHeap<usize>,
 }
+
+impl<CI: ConceptId, SR: SharedReference> Debug for TokenSubsequence<CI, SR> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenSubsequence")
+            .field(
+                "syntax",
+                &self
+                    .syntax
+                    .iter()
+                    .map(std::convert::AsRef::as_ref)
+                    .collect::<Vec<_>>(),
+            )
+            .field("positions", &self.positions)
+            .finish()
+    }
+}
+
 impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> Clone
     for Context<S, SDCD, D, CCI, SR>
 where
@@ -251,20 +269,18 @@ where
         self.snap_shot.concept_from_label(self.delta.as_ref(), symbol).map_or(
             ConceptKind::New,
             |id| {
-                if let Some(concrete_type) = self
+                self
                     .snap_shot
                     .read_concept(self.delta.as_ref(), id)
-                    .get_concrete_concept_type()
+                    .get_concrete_concept_type().map_or(ConceptKind::Abstract {
+                        id,
+                    } , |concrete_type|
                 {
                     ConceptKind::Concrete {
                         id,
                         concrete_type,
                     }
-                } else {
-                    ConceptKind::Abstract {
-                        id,
-                    }
-                }
+                })
             },
         )
     }
@@ -379,11 +395,12 @@ where
             },
             _ => {},
         };
+        let token_subsequence = self.lowest_precedence_info(syntax_list);
         let TokenSubsequence {
             syntax: lp_syntax,
-            positions: lp_indices,
-        } = self.lowest_precedence_info(syntax_list)?;
-        if lp_indices.is_empty() {
+            positions: mut lp_indices,
+        } = token_subsequence;
+        if dbg!(&lp_indices).is_empty() {
             return Err(ZiaError::LowestPrecendenceNotFound {
                 tokens: syntax_list.iter().map(|s| s.to_string()).collect(),
             });
@@ -405,26 +422,26 @@ where
                     })?;
         match assoc {
             Some(Associativity::Right) => {
-                let tail = lp_indices
-                    .iter()
-                    .rev()
-                    .try_fold(
-                        Err(ZiaError::AmbiguousExpression),
-                        |state, lp_index| {
-                            Ok(Ok(self.associativity_try_fold_handler(
-                                syntax_list,
-                                state.ok(),
-                                *lp_index,
-                                Associativity::Right,
-                            )?))
-                        },
-                    )??
-                    .0;
-                if lp_indices[0] == 0 {
+                let mut min = None;
+                let mut tail: Result<(<SR as SharedReference>::Share<GenericSyntaxTree<CCI, SR>>, usize), _> = Err(ZiaError::AmbiguousExpression);
+                while let Some(lp_index) = lp_indices.pop() {
+                    if Some(lp_index) == min {continue;}
+                    min = Some(lp_index);
+                    let tail_result = self.associativity_try_fold_handler(
+                        syntax_list,
+                        tail.ok(),
+                        lp_index,
+                        Associativity::Right,
+                    );
+                    tail = Ok(tail_result?); 
+                };
+                let tail = tail?.0;
+                let Some(min) = min else {return Err(ZiaError::AmbiguousExpression)};
+                if min == 0 {
                     Ok(tail)
                 } else {
                     let head = self
-                        .ast_from_syntax_list(&syntax_list[..lp_indices[0]])?;
+                        .ast_from_syntax_list(&syntax_list[..min ])?;
                     Ok(self.context_search().combine(&head, &tail).share())
                 }
             },
@@ -441,7 +458,7 @@ where
                 })?
                 .map_or(Err(ZiaError::AmbiguousExpression), |(syntax, _)| {
                     Ok(syntax)
-                }),
+                }), // TODO: taken into account that lp_indices was turned from Vec to BinaryHeap
             None => Err(ZiaError::AmbiguousExpression),
         }
     }
@@ -595,160 +612,124 @@ where
     /// Determine the syntax and the positions in the token sequence of the concepts with the lowest precedence
     #[allow(clippy::too_many_lines)]
     pub fn lowest_precedence_info(
-        &mut self,
+        &self,
         syntax_children: &[SR::Share<GenericSyntaxTree<CCI, SR>>],
-    ) -> ZiaResult<TokenSubsequence<SharedSyntax<CCI, SR>>> {
-        let (syntax, positions, _number_of_tokens) =
-            syntax_children.iter().try_fold(
-                // Initially assume no concepts have the lowest precedence
-                (
-                    Vec::<SharedSyntax<CCI, SR>>::new(),
-                    Vec::<usize>::new(),
-                    None,
-                ),
-                |(mut lowest_precedence_syntax, mut lp_indices, prev_index),
-                 child| {
-                    // Increment index
-                    let this_index = prev_index.map(|x| x + 1).or(Some(0));
-                    let preceeds = |a, b| {
-                        let context_search = self.context_search();
-                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
-                        self.concrete_type_of_ast(&context_search.recursively_reduce(
-                            &context_search.combine(
-                                a,
-                                &context_search.combine(
-                                    &preceeds_syntax,
-                                    b
-                                ).share()
-                            ).share()
-                        ).0)
-                    };
-                    // Compare current token's precedence with each currently assumed lowest syntax
-                    if let Some(syntax) = lowest_precedence_syntax.first() {
-                        match preceeds(syntax, child) {
-                            Some(ConcreteConceptType::True) => {
-                                return Ok((
-                                    vec![child.clone()],
-                                    vec![this_index.unwrap()],
-                                    this_index,
-                                ))
-                            },
-                            Some(ConcreteConceptType::False) => {
-                                 match preceeds(child, syntax) {
-                                    Some(ConcreteConceptType::True) => {
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ))
-                                    },
-                                    Some(ConcreteConceptType::False) => {
-                                        lowest_precedence_syntax
-                                            .push(child.clone());
-                                        lp_indices.push(this_index.unwrap());
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ));
-                                    },
-                                    Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
-                                    None => {
-                                        let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
-                                        let child_precedes_syntax = context_search.combine(
-                                            child,
-                                            &context_search.combine(
-                                                &preceeds_syntax,
-                                                syntax
-                                            ).share()
-                                        ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
-                                        drop(context_search);
-                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?;
-                                        lowest_precedence_syntax
-                                            .push(child.clone());
-                                        lp_indices.push(this_index.unwrap());
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ));
-                                    }
-                                 }
-                            },
-                            // TODO: remove the need to default (assoc _x_) to right
-                            Some(ConcreteConceptType::Right) | None => {
-                                 match preceeds(child, syntax) {
-                                    Some(ConcreteConceptType::True) => {
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ))
-                                    },
-                                    Some(ConcreteConceptType::False) => {
-                                        let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
-                                        let syntax_precedes_child = context_search.combine(
-                                            syntax,
-                                            &context_search.combine(
-                                                &preceeds_syntax,
-                                                child
-                                            ).share()
-                                        ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
-                                        drop(context_search);
-                                        self.execute_reduction(&syntax_precedes_child, &true_syntax)?;
-                                        lowest_precedence_syntax
-                                            .push(child.clone());
-                                        lp_indices.push(this_index.unwrap());
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ));
-                                    },
-                                    // TODO: remove the need to default (assoc _x_) to right
-                            Some(ConcreteConceptType::Right) | None => {
-                                        let context_search = self.context_search();
-                                        let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
-                                        let child_precedes_syntax = context_search.combine(
-                                            child,
-                                            &context_search.combine(
-                                                &preceeds_syntax,
-                                                syntax
-                                            ).share()
-                                        ).share();
-                                        let true_syntax = context_search.concrete_ast(ConcreteConceptType::True).expect("true concept needs to exist");
-                                        drop(context_search);
-                                        self.execute_reduction(&child_precedes_syntax, &true_syntax)?;
-                                        lowest_precedence_syntax
-                                            .push(child.clone());
-                                        lp_indices.push(this_index.unwrap());
-                                        return Ok((
-                                            lowest_precedence_syntax,
-                                            lp_indices,
-                                            this_index,
-                                        ));
+    ) -> TokenSubsequence<CCI, SR> {
+        // TODO: Search for existing precedence relations where either the left and right side
+        // are one of the `syntax_children` elements
+        //   i) If no precedence relations are found, then just assume that all tokens have the
+        //   lowest precedence. No need to save the relative precedence of the syntax children
+        //   ii) If any precedence relations are found then out of the concepts that they
+        //   reference, find the ones with the lowest precedence and also include any concepts that
+        //   weren't referenced and assume that also have the lowest precedence.
+        //
+        // Can find the existing precendence relations by using `self.snap_shot.read_concept`,
+        // combine with ConcreteConceptType::Preceeds,
+        // `Concept::iter_hand_of(Hand::Right)` and filter where the left hand ID is one of the
+        // syntax children. Then reduce these precedence relations to find the lowest precedence
+        // IDs
+        let mut lp_indices = BinaryHeap::<usize>::new();
+        let mut concept_ids = vec![];
+        let mut index_of_concept = HashMap::<CCI, HashSet<usize>>::new();
+        let mut lp_indices_without_concepts = vec![];
+        for (index, syntax) in syntax_children.iter().enumerate() {
+            if let Some(id) = syntax.get_concept() {
+                index_of_concept.entry(id).or_default().insert(index);
+                concept_ids.push(id);
+            } else {
+                lp_indices_without_concepts.push(index);
+            }
+        }
+                                    
+        let precede_concept_id = self.snap_shot.concrete_concept_id(self.delta.as_ref(), ConcreteConceptType::Preceeds).expect("Precede concept must exist");
+        let mut concepts_with_precedence_relations = hashset!{};
+        let precede_concept = self.snap_shot.read_concept(self.delta.as_ref(), precede_concept_id);
+        for (right_id, comp_id) in precede_concept.iter_hand_of(Hand::Left) {
+                if concept_ids.contains(&right_id) {
+                    concepts_with_precedence_relations.insert(right_id);
+                }
 
-                                    }
-                            Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
-                                 }
+            let comp_concept = self.snap_shot.read_concept(self.delta.as_ref(), comp_id);
+            for (left_id, _) in comp_concept.iter_hand_of(Hand::Right) {
+                if concept_ids.contains(&left_id) {
+                    concepts_with_precedence_relations.insert(left_id);
+                }
+            }
+        }
+
+        let preceeds = |a: CCI, b: CCI| {
+            let context_search = self.context_search();
+            let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
+            self.concrete_type_of_ast(&context_search.recursively_reduce(
+                &context_search.combine(
+                    &context_search.to_ast(&a),
+                    &context_search.combine(
+                        &preceeds_syntax,
+                        &context_search.to_ast(&b)
+                    ).share()
+                ).share()
+            ).0)
+        };
+        let mut lowest_precedence_concepts = hashset! {};
+        'a: for concept_id in &concepts_with_precedence_relations {
+             'b: for lowest_precedence_concept in &lowest_precedence_concepts {
+                match dbg!(preceeds(dbg!(*concept_id), dbg!(*lowest_precedence_concept))) {
+                        Some(ConcreteConceptType::True) => {
+                            continue 'a;
+                        },
+                        Some(ConcreteConceptType::False) => {
+                            match preceeds(*lowest_precedence_concept, *concept_id) {
+                                Some(ConcreteConceptType::True) => {
+                                    lowest_precedence_concepts = hashset!{*concept_id};
+                                    continue 'a;
+                                },
+                                Some(ConcreteConceptType::False) => {
+                                    lowest_precedence_concepts.insert(*concept_id);
+                                    continue 'a;
+                                },
+                                Some(ConcreteConceptType::Right) | None => {
+                                    continue 'b; 
+                                },
+                                Some(cct) => panic!("{lowest_precedence_concept} precedes {concept_id} reduces to {cct:?}")
+                            } 
+                        },
+                        Some(ConcreteConceptType::Right) | None => {
+                            match dbg!(preceeds(dbg!(*lowest_precedence_concept), dbg!(*concept_id))) {
+                                Some(ConcreteConceptType::True) => {
+                                    lowest_precedence_concepts = hashset!{*concept_id};
+                                    continue 'a;
+                                },
+                                Some(ConcreteConceptType::False|ConcreteConceptType::Right)| None => {
+                                    continue 'b;
+                                },
+                                Some(cct) => panic!("{lowest_precedence_concept} precedes {concept_id} reduces to {cct:?}")
                             }
-                                    Some(cc) => panic!("_x_ preceeds _y_ evaluates to a non boolean concrete concept: {cc:?}"),
-                        }
-                    }
-                    // child has the lowest precendence syntax so far because the vector is empty
-                    lowest_precedence_syntax.push(child.clone());
-                    lp_indices.push(this_index.unwrap());
-                    Ok((lowest_precedence_syntax, lp_indices, this_index))
-                },
-            )?;
-        Ok(TokenSubsequence {
-            syntax,
-            positions,
-        })
+                        },
+                        Some(cct) => panic!("{concept_id} precedes {lowest_precedence_concept} reduces to {cct:?}"),
+                    } 
+            }
+            lowest_precedence_concepts.insert(*concept_id);
+        }
+        let mut syntax = vec![];
+        if lowest_precedence_concepts.is_empty() {
+            let (more_lp_indices, more_syntax): (Vec<_>, Vec<_>) = concept_ids.into_iter().filter(|id| {
+                !concepts_with_precedence_relations.contains(id)
+            }).flat_map(|id| {
+                index_of_concept[&id].iter().map(|index| {
+                    (*index, syntax_children[*index].clone())
+                })
+            }).unzip();
+            lp_indices.extend(lp_indices_without_concepts);
+            lp_indices.extend(more_lp_indices);
+            syntax.extend(more_syntax);
+        }
+        for lowest_precedence_concept in lowest_precedence_concepts {
+            lp_indices.extend(index_of_concept[&lowest_precedence_concept].iter().inspect(|&index| {
+                syntax.push(syntax_children[*index].clone());
+            }));
+        }
+
+        TokenSubsequence{syntax, positions: lp_indices}
     }
 
     fn ast_from_pair(
@@ -816,14 +797,20 @@ where
     fn setup(&mut self) -> ZiaResult<()> {
         self.label_concrete_concepts()?;
         self.commit()?;
-        self.execute("let (true and true) -> true");
-        self.execute("let (false and _y_) -> false");
-        self.execute("let (_x_ and false) -> false");
-        self.execute(
+        let result = self.execute("let (true and true) -> true"); 
+        debug_assert_eq!(result, "");
+        let result =self.execute("let (false and _y_) -> false"); 
+        debug_assert_eq!(result, "");
+        let result = self.execute("let (_x_ and false) -> false"); 
+        debug_assert_eq!(result, "");
+        let result = self.execute(
             "let ((_y_ exists_such_that) (_x_ preceeds _y_) and _y_ preceeds _z_) => _x_ preceeds _z_",
-        );
-        self.execute("let -> preceeds :=");
-        self.execute("let := preceeds let");
+        ); 
+        debug_assert_eq!(result, "");
+        let result = self.execute("let -> preceeds :="); 
+        debug_assert_eq!(result, "");
+        let result = self.execute("let := preceeds let"); 
+        debug_assert_eq!(result, "");
         Ok(())
     }
 
@@ -1015,23 +1002,26 @@ where
         }
     }
 
+    fn updater(&mut self)  -> ZiaResult<ContextUpdater<S, SDCD, D, SR>> {
+        let maybe_inner_delta = self.delta.get_mut();
+        let Some(delta) = maybe_inner_delta else {
+            return Err(ZiaError::MultiplePointersToDelta);
+        };
+        Ok(ContextUpdater {
+            snap_shot: &self.snap_shot,
+            delta,
+            cache: &mut self.cache,
+            phantom: PhantomData,
+            phantom2: PhantomData,
+        })
+    }
+
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
     fn define(
         &mut self,
         new: &SharedSyntax<CCI, SR>,
         old: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
-        let maybe_inner_delta = self.delta.get_mut();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
-        let mut updater = ContextUpdater {
-            snap_shot: &self.snap_shot,
-            delta,
-            cache: &mut self.cache,
-            phantom: PhantomData,
-            phantom2: PhantomData,
-        };
         match (
             new.get_concept(),
             new.get_expansion(),
@@ -1040,28 +1030,50 @@ where
         ) {
             (_, Some(_), _, None) => Err(ZiaError::BadComposition),
             (_, None, None, None) => Err(ZiaError::RedundantRefactor),
-            (None, _, Some(b), None) => updater.relabel(b, &new.to_string()),
+            (None, _, Some(b), None) => self.updater()?.relabel(b, &old.to_string(), &new.to_string()),
             (None, _, Some(b), Some(_)) => {
+                let syntax = {let search = self.context_search();
+                    let syntax = search.to_ast(&b).to_string(); 
+                    drop(search);
+                    syntax};
                 if self
                     .snap_shot
-                    .get_concept_of_label(updater.delta, b)
+                    .get_concept_of_label(self.delta.as_ref(), b)
                     .is_none()
                 {
-                    updater.label(b, &new.to_string())
+                    self.updater()?.label(b, &syntax, &new.to_string())
                 } else {
-                    updater.relabel(b, &new.to_string())
+                    self.updater()?.relabel(b, &old.to_string(), &new.to_string())
                 }
             },
             (None, _, None, Some((ref left, ref right))) => {
-                updater.define_new_syntax(&new.to_string(), left, right)
+                self.updater()?.define_new_syntax(&new.to_string(), left, right)
             },
             (Some(a), a_comp, Some(b), None) => {
                 if a == b {
-                    updater.cleanly_delete_composition(&a)
+                    let composition = self
+                        .snap_shot
+                        .read_concept(self.delta.as_ref(), a)
+                        .get_composition(); 
+                    match composition 
+                    {
+                        None => Err(ZiaError::RedundantCompositionRemoval),
+                        Some((left, right)) => {
+                            let (left_syntax, right_syntax) = {
+                                let context_search = self.context_search();
+                                (context_search.to_ast(&left).to_string(), context_search.to_ast(&right).to_string())
+                            };
+                            let mut updater = self.updater()?;
+                            updater.try_delete_concept(a, &a.to_string())?;
+                            updater.try_delete_concept(left, &left_syntax)?;
+                            updater.try_delete_concept(right, &right_syntax)
+                        },
+                    }
                 } else if a_comp.is_none() {
                     if self.snap_shot.get_concept(b).is_some() {
-                        updater.unlabel(a)?;
-                        updater.relabel(b, &new.to_string())
+                        let mut updater = self.updater()?;
+                        updater.unlabel(a, &a.to_string())?;
+                        updater.relabel(b, &old.to_string(), &new.to_string())
                     } else {
                         Err(ZiaError::RedundantRefactor)
                     }
@@ -1076,8 +1088,11 @@ where
                     Err(ZiaError::CompositionCollision)
                 }
             },
-            (Some(a), _, None, Some((ref left, ref right))) => {
-                updater.redefine(&a, left, right)
+            (Some(a), Some((ref new_left, ref new_right)), None, Some((ref left, ref right))) => {
+                self.updater()?.redefine_composition(&a, left, right, &new_left.to_string(), &new_right.to_string() )
+            },
+            (Some(a), None, None, Some((ref left, ref right))) => {
+                self.updater()?.redefine(&a, left, right)
             },
         }
     }
@@ -1105,7 +1120,7 @@ where
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
             let normal_form_concept = updater.concept_from_ast(normal_form)?;
-            updater.update_reduction(syntax_concept, normal_form_concept)
+            updater.update_reduction(syntax_concept, syntax.to_string(), normal_form_concept)
         }
     }
 
@@ -1119,8 +1134,8 @@ where
         };
         let snap_shot = &self.snap_shot;
         let cache = &mut self.cache;
-        syntax.get_concept().map_or(
-            Err(ZiaError::RedundantReduction {
+        syntax.get_concept().map_or_else(
+            || Err(ZiaError::RedundantReduction {
                 syntax: syntax.to_string(),
             }),
             |c| {
@@ -1131,7 +1146,7 @@ where
                     phantom: PhantomData,
                     phantom2: PhantomData,
                 }
-                .delete_reduction(c)
+                .delete_reduction(c, syntax.to_string())
             },
         )
     }

@@ -59,7 +59,7 @@ fn implied_reduction_via_implication_chain() {
 
 fn partial_order_transitivity() {
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("default > (prec let)"), "true");
+    assert_eq!(context.execute("-> (preceeds let)"), "true");
 }
 #[test]
 fn partial_order_transitivity_test() {

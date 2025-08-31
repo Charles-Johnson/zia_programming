@@ -7,10 +7,10 @@ use crate::{
 use maplit::hashmap;
 use std::collections::HashMap;
 
-fn concepts() -> [Concept<usize>; 13] {
+fn concepts() -> [Concept<usize>; 11] {
     let mut c_concept = (SpecificPart::default(), 0).into();
     let mut preceeds_concept = (ConcreteConceptType::Preceeds, 1).into();
-    let mut b_concept = (SpecificPart::default(), 2).into();
+    let b_concept = (SpecificPart::default(), 2).into();
     let mut true_concept = (ConcreteConceptType::True, 3).into();
     let mut a_concept = (SpecificPart::default(), 4).into();
     let mut preceeds_a_concept =
@@ -23,11 +23,6 @@ fn concepts() -> [Concept<usize>; 13] {
     let left_concept: Concept<_> = (ConcreteConceptType::Left, 8).into();
     let right_concept: Concept<_> = (ConcreteConceptType::Right, 9).into();
     let label_of_concept: Concept<_> = (ConcreteConceptType::Label, 10).into();
-    let mut preceeds_b_concept =
-        Concept::composition_of(11, &mut preceeds_concept, &mut b_concept);
-    let mut c_preceeds_b_concept =
-        Concept::composition_of(12, &mut c_concept, &mut preceeds_b_concept);
-    c_preceeds_b_concept.make_reduce_to(&mut true_concept);
     [
         c_concept,
         preceeds_concept,
@@ -40,13 +35,11 @@ fn concepts() -> [Concept<usize>; 13] {
         left_concept,
         right_concept,
         label_of_concept,
-        preceeds_b_concept,
-        c_preceeds_b_concept,
     ]
 }
 
 fn labels() -> HashMap<usize, &'static str> {
-    hashmap! {0 => "c", 2 => "b", 4 => "a"}
+    hashmap! {0 => "c", 2 => "b", 4 => "a", 1 => "preceeds"}
 }
 
 #[test]
