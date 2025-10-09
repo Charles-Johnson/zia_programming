@@ -50,7 +50,7 @@ fn concepts() -> [Concept<usize>; 15] {
         example_composition,
         variable_concept,
         concept_b,
-        (ConcreteConceptType::Preceeds, 11).into(),
+        (ConcreteConceptType::Precedes, 11).into(),
         (ConcreteConceptType::Associativity, 12).into(),
         (ConcreteConceptType::Left, 13).into(),
         (ConcreteConceptType::Right, 14).into(),
@@ -65,7 +65,7 @@ fn labels() -> HashMap<usize, &'static str> {
         7 => "example",
         9 => "_x_",
         10 => "b",
-        11 => "preceeds",
+        11 => "precedes",
         12 => "assoc",
         13 => "left",
         14 => "right"

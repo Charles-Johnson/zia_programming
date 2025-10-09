@@ -40,7 +40,7 @@ fn concepts() -> [Concept<usize>; 14] {
         implies_result_concept,
         cause_implies_result_concept,
         concept_b,
-        (ConcreteConceptType::Preceeds, 8).into(),
+        (ConcreteConceptType::Precedes, 8).into(),
         (ConcreteConceptType::Associativity, 9).into(),
         (ConcreteConceptType::Left, 10).into(),
         (ConcreteConceptType::Right, 11).into(),

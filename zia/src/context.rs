@@ -400,7 +400,7 @@ where
             syntax: lp_syntax,
             positions: mut lp_indices,
         } = token_subsequence;
-        if dbg!(&lp_indices).is_empty() {
+        if lp_indices.is_empty() {
             return Err(ZiaError::LowestPrecendenceNotFound {
                 tokens: syntax_list.iter().map(|s| s.to_string()).collect(),
             });
@@ -624,7 +624,7 @@ where
         //   weren't referenced and assume that also have the lowest precedence.
         //
         // Can find the existing precendence relations by using `self.snap_shot.read_concept`,
-        // combine with ConcreteConceptType::Preceeds,
+        // combine with ConcreteConceptType::Precedes,
         // `Concept::iter_hand_of(Hand::Right)` and filter where the left hand ID is one of the
         // syntax children. Then reduce these precedence relations to find the lowest precedence
         // IDs
@@ -641,7 +641,7 @@ where
             }
         }
                                     
-        let precede_concept_id = self.snap_shot.concrete_concept_id(self.delta.as_ref(), ConcreteConceptType::Preceeds).expect("Precede concept must exist");
+        let precede_concept_id = self.snap_shot.concrete_concept_id(self.delta.as_ref(), ConcreteConceptType::Precedes).expect("Precede concept must exist");
         let mut concepts_with_precedence_relations = hashset!{};
         let precede_concept = self.snap_shot.read_concept(self.delta.as_ref(), precede_concept_id);
         for (right_id, comp_id) in precede_concept.iter_hand_of(Hand::Left) {
@@ -657,14 +657,14 @@ where
             }
         }
 
-        let preceeds = |a: CCI, b: CCI| {
+        let precedes = |a: CCI, b: CCI| {
             let context_search = self.context_search();
-            let preceeds_syntax = context_search.concrete_ast(ConcreteConceptType::Preceeds).unwrap();
+            let precedes_syntax = context_search.concrete_ast(ConcreteConceptType::Precedes).unwrap();
             self.concrete_type_of_ast(&context_search.recursively_reduce(
                 &context_search.combine(
                     &context_search.to_ast(&a),
                     &context_search.combine(
-                        &preceeds_syntax,
+                        &precedes_syntax,
                         &context_search.to_ast(&b)
                     ).share()
                 ).share()
@@ -673,12 +673,12 @@ where
         let mut lowest_precedence_concepts = hashset! {};
         'a: for concept_id in &concepts_with_precedence_relations {
              'b: for lowest_precedence_concept in &lowest_precedence_concepts {
-                match dbg!(preceeds(dbg!(*concept_id), dbg!(*lowest_precedence_concept))) {
+                match precedes(*concept_id, *lowest_precedence_concept) {
                         Some(ConcreteConceptType::True) => {
                             continue 'a;
                         },
                         Some(ConcreteConceptType::False) => {
-                            match preceeds(*lowest_precedence_concept, *concept_id) {
+                            match precedes(*lowest_precedence_concept, *concept_id) {
                                 Some(ConcreteConceptType::True) => {
                                     lowest_precedence_concepts = hashset!{*concept_id};
                                     continue 'a;
@@ -694,7 +694,7 @@ where
                             } 
                         },
                         Some(ConcreteConceptType::Right) | None => {
-                            match dbg!(preceeds(dbg!(*lowest_precedence_concept), dbg!(*concept_id))) {
+                            match precedes(*lowest_precedence_concept, *concept_id) {
                                 Some(ConcreteConceptType::True) => {
                                     lowest_precedence_concepts = hashset!{*concept_id};
                                     continue 'a;
@@ -766,7 +766,7 @@ where
             (">", ConcreteConceptType::GreaterThan),
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
-            ("preceeds", ConcreteConceptType::Preceeds),
+            ("precedes", ConcreteConceptType::Precedes),
         ];
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
@@ -804,12 +804,12 @@ where
         let result = self.execute("let (_x_ and false) -> false"); 
         debug_assert_eq!(result, "");
         let result = self.execute(
-            "let ((_y_ exists_such_that) (_x_ preceeds _y_) and _y_ preceeds _z_) => _x_ preceeds _z_",
+            "let ((_y_ exists_such_that) (_x_ precedes _y_) and _y_ precedes _z_) => _x_ precedes _z_",
         ); 
         debug_assert_eq!(result, "");
-        let result = self.execute("let -> preceeds :="); 
+        let result = self.execute("let -> precedes :="); 
         debug_assert_eq!(result, "");
-        let result = self.execute("let := preceeds let"); 
+        let result = self.execute("let := precedes let"); 
         debug_assert_eq!(result, "");
         Ok(())
     }

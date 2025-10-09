@@ -21,5 +21,5 @@ use zia::multi_threaded::NEW_CONTEXT;
 #[test]
 fn default_precedence() {
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("a preceeds b"), "a preceeds b");
+    assert_eq!(context.execute("a precedes b"), "a precedes b");
 }

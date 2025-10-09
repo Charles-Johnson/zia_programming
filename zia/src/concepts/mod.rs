@@ -739,7 +739,7 @@ pub enum ConcreteConceptType {
     GreaterThan,
     Implication,
     ExistsSuchThat,
-    Preceeds,
+    Precedes,
 }
 
 impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {

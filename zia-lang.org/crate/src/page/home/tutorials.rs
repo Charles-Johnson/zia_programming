@@ -54,13 +54,13 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<9>, Tutorial<12>) = (
                 expected_evaluation: "3 * 2"
             },
             TutorialStep {
-                command: "let (prec *) > prec +",
+                command: "let * precedes +",
                 explanation: "We can reduce a multiplication expression to an addition expression but first we define the relative operator precendence",
                 #[cfg(test)]
                 expected_evaluation: ""
             },
             TutorialStep {
-                command: "let (prec +) > (prec ->)",
+                command: "let + (precedes ->)",
                 explanation: "This allows reduction rules to not need as many parentheses",
                 #[cfg(test)]
                 expected_evaluation: ""

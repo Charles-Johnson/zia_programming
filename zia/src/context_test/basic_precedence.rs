@@ -9,15 +9,15 @@ use std::collections::HashMap;
 
 fn concepts() -> [Concept<usize>; 11] {
     let mut c_concept = (SpecificPart::default(), 0).into();
-    let mut preceeds_concept = (ConcreteConceptType::Preceeds, 1).into();
+    let mut precedes_concept = (ConcreteConceptType::Precedes, 1).into();
     let b_concept = (SpecificPart::default(), 2).into();
     let mut true_concept = (ConcreteConceptType::True, 3).into();
     let mut a_concept = (SpecificPart::default(), 4).into();
-    let mut preceeds_a_concept =
-        Concept::composition_of(5, &mut preceeds_concept, &mut a_concept);
-    let mut c_preceeds_a_concept =
-        Concept::composition_of(6, &mut c_concept, &mut preceeds_a_concept);
-    c_preceeds_a_concept.make_reduce_to(&mut true_concept);
+    let mut precedes_a_concept =
+        Concept::composition_of(5, &mut precedes_concept, &mut a_concept);
+    let mut c_precedes_a_concept =
+        Concept::composition_of(6, &mut c_concept, &mut precedes_a_concept);
+    c_precedes_a_concept.make_reduce_to(&mut true_concept);
     let assoc_concept: Concept<_> =
         (ConcreteConceptType::Associativity, 7).into();
     let left_concept: Concept<_> = (ConcreteConceptType::Left, 8).into();
@@ -25,12 +25,12 @@ fn concepts() -> [Concept<usize>; 11] {
     let label_of_concept: Concept<_> = (ConcreteConceptType::Label, 10).into();
     [
         c_concept,
-        preceeds_concept,
+        precedes_concept,
         b_concept,
         true_concept,
         a_concept,
-        preceeds_a_concept,
-        c_preceeds_a_concept,
+        precedes_a_concept,
+        c_precedes_a_concept,
         assoc_concept,
         left_concept,
         right_concept,
@@ -39,7 +39,7 @@ fn concepts() -> [Concept<usize>; 11] {
 }
 
 fn labels() -> HashMap<usize, &'static str> {
-    hashmap! {0 => "c", 2 => "b", 4 => "a", 1 => "preceeds"}
+    hashmap! {0 => "c", 2 => "b", 4 => "a", 1 => "precedes"}
 }
 
 #[test]
