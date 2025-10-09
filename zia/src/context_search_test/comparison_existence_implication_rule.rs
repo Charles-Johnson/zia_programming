@@ -5,7 +5,7 @@ use crate::{
     context_search_test::ReductionReason,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -14,9 +14,9 @@ use std::collections::HashMap;
 
 #[test]
 fn comparison_existence_implication_rule_test() {
-    let context_cache = MultiThreadedContextCache::default();
+    let context_cache = MTContextCache::default();
     let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<_>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<_>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
@@ -39,7 +39,7 @@ fn comparison_existence_implication_rule_test() {
                 &context_search.to_ast(&20), &variable_mask
             ),
             reason: ReductionReason::Existence{
-                substitutions: hashmap!{context_search.to_ast(&5) => context_search.to_ast(&22)},
+                substitutions: hashmap!{context_search.to_ast(&5).key() => context_search.to_ast(&22)},
                 generalisation: context_search.substitute(&context_search.to_ast(&15), &variable_mask),
             }.into()
         }.into()

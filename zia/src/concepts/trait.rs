@@ -86,10 +86,6 @@ pub trait Concept: Sized {
     /// without a quantifying operator like `exists_such_that`
     fn anonymous_variable(&self) -> bool;
 
-    fn remove_reduction(&self) -> ZiaResult<Self::Id> {
-        self.get_reduction().ok_or(ZiaError::RedundantReduction)
-    }
-
     fn find_what_reduces_to_it(&self) -> Self::IdIterator<'_>;
 
     /// Gets the `String` value associated with `self` if it is a string concept. Otherwise returns `None`.
@@ -121,7 +117,7 @@ pub trait Concept: Sized {
         change: ValueChange<[&mut Self; 2]>,
     ) -> ZiaResult<()>;
 
-    // Returns the ID of the composition of self.id() and other_id, if exists where `hand` is the hand of self.id() in the composition
+    /// Returns the ID of the composition of `self.id()` and `other_id`, if exists where `hand` is the hand of `self.id()` in the composition
     fn find_as_hand_in_composition_with(
         &self,
         other_id: Self::Id,

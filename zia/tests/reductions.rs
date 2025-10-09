@@ -99,10 +99,16 @@ fn redundancy() {
     assert_eq!(cont.execute("let a b -> c"), "");
     assert_eq!(
         cont.execute("let a b -> c"),
-        ZiaError::RedundantReduction.to_string()
+        ZiaError::RedundantReduction {
+            syntax: "a b".into()
+        }
+        .to_string()
     );
     assert_eq!(
         cont.execute("let c d -> c d"),
-        ZiaError::RedundantReduction.to_string()
+        ZiaError::RedundantReduction {
+            syntax: "c d".into()
+        }
+        .to_string()
     );
 }

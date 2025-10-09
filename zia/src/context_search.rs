@@ -17,17 +17,16 @@
 use crate::{
     and_also::AndAlso,
     associativity::Associativity,
-    ast::{ExampleSubstitutions, SyntaxTree},
+    ast::{ExampleSubstitutions, GenericSyntaxTree, SyntaxKey},
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     consistent_merge::ConsistentMerge,
-    context_cache::ContextCache,
+    context_cache::{GenericCache, ReductionCache},
     context_delta::{
         DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
     },
-    mixed_concept::MixedConcept,
-    reduction_reason::{
-        RRSharedSyntax, ReductionReason, ReductionResult, SharedSyntax, Syntax,
-    },
+    mixed_concept::{ConceptId, MixedConcept},
+    nester::SharedReference,
+    reduction_reason::{ReductionReason, ReductionResult, SharedSyntax},
     snap_shot::Reader as SnapShotReader,
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
@@ -36,48 +35,73 @@ use log::debug;
 use maplit::{hashmap, hashset};
 use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
-#[derive(Debug)]
-pub struct ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI: MixedConcept>
-where
-    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    C: ContextCache,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+pub struct ContextSearch<
+    's,
+    'v,
+    S,
+    SDCD,
+    D,
+    CCI: ConceptId,
+    SR: SharedReference,
+> where
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     snap_shot: &'s S,
-    variable_mask: VML::Shared,
+    variable_mask: SR::Share<VariableMaskList<CCI, SR>>,
     delta: D,
-    caches: C,
-    syntax_evaluating: HashSet<SharedSyntax<C>>,
+    caches: GenericCache<CCI, SR>,
+    syntax_evaluating: HashSet<SyntaxKey<CCI>>,
     concept_inferring: HashSet<S::ConceptId>,
-    bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
+    bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
     phantom: PhantomData<SDCD>,
     phantom2: PhantomData<CCI>,
 }
-
-impl<'s, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
-    ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference> Debug
+    for ContextSearch<'_, '_, S, SDCD, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    C: ContextCache,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedDelta<S::ConceptId, SDCD, D>>
-        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
+        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextSearch")
+            .field("snap_shot", &self.snap_shot)
+            .field("variable_mask", &"[variable_mask]")
+            .field("delta", &self.delta)
+            .field("caches", &"[caches]")
+            .field("syntax_evaluating", &self.syntax_evaluating)
+            .field("concept_inferring", &self.concept_inferring)
+            .field("bound_variable_syntax", &self.bound_variable_syntax)
+            .field("phantom", &self.phantom)
+            .field("phantom2", &self.phantom2)
+            .finish()
+    }
+}
+
+impl<'s, 'v, S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
+    ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
+where
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
+    SDCD: Clone
+        + AsRef<DirectConceptDelta<S::ConceptId>>
+        + From<DirectConceptDelta<S::ConceptId>>
+        + Debug,
+    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
+        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     fn infer_reduction(
         &self,
         concept: &S::MixedConcept<'_>,
-    ) -> ReductionResult<C::RR> {
+    ) -> ReductionResult<CCI, SR> {
         debug!("infer_reduction({:#?})", concept);
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
@@ -101,7 +125,7 @@ where
                                 (
                                     // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
                                     self.to_ast(&x),
-                                    C::RR::inference(
+                                    ReductionReason::<CCI, SR>::inference(
                                         self.to_ast(&implication_rule_id),
                                         reason,
                                     ),
@@ -123,12 +147,12 @@ where
     pub fn concrete_ast(
         &self,
         cct: ConcreteConceptType,
-    ) -> Option<SharedSyntax<C>> {
+    ) -> Option<SharedSyntax<CCI, SR>> {
         self.concrete_concept_id(cct).map(|id| self.to_ast(&id))
     }
 
     /// Returns the syntax for the reduction of a concept.
-    fn reduce_concept(&self, id: &S::ConceptId) -> ReductionResult<C::RR> {
+    fn reduce_concept(&self, id: &S::ConceptId) -> ReductionResult<CCI, SR> {
         debug!("reduce_concept({})", id);
         let concept = self.snap_shot.read_concept(self.delta.as_ref(), *id);
         if self.concept_inferring.contains(id) {
@@ -143,24 +167,24 @@ where
             } else {
                 Some(self.to_ast(&n))
             }
-            .map(|r| (r, C::RR::explicit()))
+            .map(|r| (r, ReductionReason::<CCI, SR>::explicit()))
         })
     }
 
     // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept
     fn reduce_otherwise_default(
         &self,
-        ast: &SharedSyntax<C>,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        ast: &SharedSyntax<CCI, SR>,
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
         operator_id: &S::ConceptId,
         default_concept_id: &S::ConceptId,
-    ) -> ReductionResult<C::RR> {
-        let mut reduced_pair: ReductionResult<C::RR> = None;
+    ) -> ReductionResult<CCI, SR> {
+        let mut reduced_pair: ReductionResult<CCI, SR> = None;
         let mut operator_composition_check = || {
-            let cache = <C as ContextCache>::SharedReductionCache::default();
+            let cache = SR::share(ReductionCache::<CCI, SR>::default());
             let mut context_search = self.spawn(&cache, self.delta.clone());
-            context_search.syntax_evaluating.insert(ast.clone());
+            context_search.syntax_evaluating.insert(ast.key());
             reduced_pair = context_search.reduce_pair(left, right);
             let operator_concept =
                 self.snap_shot.read_concept(self.delta.as_ref(), *operator_id);
@@ -170,11 +194,12 @@ where
             reduced_pair.is_none()
                 && right.get_concept().and_then(find).is_none()
         };
-        if self.syntax_evaluating.contains(ast) || operator_composition_check()
+        if self.syntax_evaluating.contains(&ast.key())
+            || operator_composition_check()
         {
             Some((
                 self.to_ast(default_concept_id),
-                C::RR::default(*operator_id),
+                ReductionReason::<CCI, SR>::default(*operator_id),
             ))
         } else {
             reduced_pair
@@ -182,7 +207,10 @@ where
     }
 
     /// Reduces the syntax by using the reduction rules of associated concepts.
-    pub fn reduce(&self, ast: &SharedSyntax<C>) -> ReductionResult<C::RR> {
+    pub fn reduce(
+        &self,
+        ast: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
         debug!("reduce({})", ast.to_string());
         self.caches.get_reduction_or_else(ast, || {
             let maybe_concept: Option<CCI> = ast.get_concept();
@@ -197,19 +225,6 @@ where
                     let (ref left, ref right) = ast.get_expansion()?;
                     left.get_concept()
                         .and_then(|lc| match self.concrete_type(&lc) {
-                            Some(ConcreteConceptType::Precedence) => {
-                                let default_concept_id = self
-                                    .concrete_concept_id(
-                                        ConcreteConceptType::Default,
-                                    )?;
-                                self.reduce_otherwise_default(
-                                    ast,
-                                    left,
-                                    right,
-                                    &lc,
-                                    &default_concept_id,
-                                )
-                            },
                             Some(ConcreteConceptType::Associativity) => {
                                 let default_concept_id = self
                                     .concrete_concept_id(
@@ -235,9 +250,9 @@ where
     // Reduces a syntax tree based on the properties of the left and right branches
     fn reduce_pair(
         &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> ReductionResult<C::RR> {
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
         debug!("reduce_pair({}, {})", left.to_string(), right.to_string());
         right
             .get_expansion()
@@ -257,17 +272,21 @@ where
 
     fn recursively_reduce_pair(
         &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> ReductionResult<C::RR> {
-        debug!("recursively_reduce_pair({}, {})", left, right);
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "recursively_reduce_pair({}, {})",
+            left.as_ref(),
+            right.as_ref()
+        );
         let left_result = self.reduce(left);
         let right_result = self.reduce(right);
         let maybe_subbed_r =
             right.get_concept().and_then(|r| self.variable_mask.get(r));
         let maybe_subbed_l =
             left.get_concept().and_then(|l| self.variable_mask.get(l));
-        let cache = <C as ContextCache>::SharedReductionCache::default();
+        let cache = SR::share(ReductionCache::<CCI, SR>::default());
         match (left_result, right_result) {
             (None, None) => {
                 let ast = self.contract_pair(left, right);
@@ -296,7 +315,7 @@ where
                                 (
                                     context_search
                                         .substitute(&ast, &variable_mask),
-                                    C::RR::rule(
+                                    ReductionReason::<CCI, SR>::rule(
                                         self.to_ast(&generalisation),
                                         variable_mask.clone(),
                                         reason,
@@ -309,15 +328,15 @@ where
             (Some((left_ast, left_reason)), None) => Some((
                 self.contract_pair(&left_ast, maybe_subbed_r.unwrap_or(right))
                     .share(),
-                C::RR::partial(
-                    hashmap! {left.clone() => (left_ast, left_reason)},
+                ReductionReason::<CCI, SR>::partial(
+                    hashmap! {left.key() => (left_ast, left_reason)},
                 ),
             )),
             (None, Some((right_ast, right_reason))) => Some((
                 self.contract_pair(maybe_subbed_l.unwrap_or(left), &right_ast)
                     .share(),
-                C::RR::partial(
-                    hashmap! {right.clone() => (right_ast, right_reason)},
+                ReductionReason::<CCI, SR>::partial(
+                    hashmap! {right.key() => (right_ast, right_reason)},
                 ),
             )),
             (
@@ -325,9 +344,9 @@ where
                 Some((right_ast, right_reason)),
             ) => Some((
                 self.contract_pair(&left_ast, &right_ast).share(),
-                C::RR::partial(hashmap! {
-                    left.clone() => (left_ast, left_reason),
-                    right.clone() => (right_ast, right_reason)
+                ReductionReason::<CCI, SR>::partial(hashmap! {
+                    left.key() => (left_ast, left_reason),
+                    right.key() => (right_ast, right_reason)
                 }),
             )),
         }
@@ -335,9 +354,9 @@ where
 
     pub fn substitute(
         &self,
-        ast: &SharedSyntax<C>,
-        variable_mask: &VariableMask<Syntax<C>>,
-    ) -> SharedSyntax<C> {
+        ast: &SharedSyntax<CCI, SR>,
+        variable_mask: &VariableMask<CCI, SR>,
+    ) -> SharedSyntax<CCI, SR> {
         ast.get_concept()
             .and_then(|c| variable_mask.get(&c).cloned())
             .unwrap_or_else(|| {
@@ -357,9 +376,9 @@ where
     /// Returns the abstract syntax from two syntax parts, using the label and concept of the composition of associated concepts if it exists.
     pub fn contract_pair(
         &self,
-        lefthand: &SharedSyntax<C>,
-        righthand: &SharedSyntax<C>,
-    ) -> Syntax<C> {
+        lefthand: &SharedSyntax<CCI, SR>,
+        righthand: &SharedSyntax<CCI, SR>,
+    ) -> GenericSyntaxTree<CCI, SR> {
         lefthand
             .get_concept()
             .and_also(&righthand.get_concept())
@@ -369,7 +388,7 @@ where
                 left_concept
                     .find_as_hand_in_composition_with(*rc, Hand::Left)
                     .map(|def| {
-                        let syntax = Syntax::<C>::from(
+                        let syntax = GenericSyntaxTree::<CCI, SR>::from(
                             self.snap_shot
                                 .get_label(self.delta.as_ref(), def)
                                 .unwrap_or_else(|| {
@@ -387,7 +406,10 @@ where
             .bind_pair(lefthand.clone(), righthand.clone())
     }
 
-    fn find_generalisations(&self, ast: &Syntax<C>) -> HashSet<S::ConceptId> {
+    fn find_generalisations(
+        &self,
+        ast: &GenericSyntaxTree<CCI, SR>,
+    ) -> HashSet<S::ConceptId> {
         let mut generalisations = HashSet::<S::ConceptId>::new();
         if let Some((l, r)) = ast.get_expansion() {
             if let Some(c) = l.get_concept() {
@@ -425,13 +447,13 @@ where
     /// Reduces the syntax as much as possible (returns the normal form syntax).
     pub fn recursively_reduce(
         &self,
-        ast: &SharedSyntax<C>,
-    ) -> MaybeReducedSyntaxWithReason<C::RR> {
-        debug!("recursively_reduce({})", ast);
-        let mut maybe_reason: Option<C::RR> = None;
+        ast: &SharedSyntax<CCI, SR>,
+    ) -> (SharedSyntax<CCI, SR>, Option<ReductionReason<CCI, SR>>) {
+        debug!("recursively_reduce({})", ast.as_ref());
+        let mut maybe_reason: Option<ReductionReason<CCI, SR>> = None;
         let mut reduced_ast = ast.clone();
         while let Some((a, reason)) = self.reduce(&reduced_ast) {
-            maybe_reason = Some(C::RR::recursive_reason(
+            maybe_reason = Some(ReductionReason::<CCI, SR>::recursive_reason(
                 maybe_reason,
                 reason,
                 &reduced_ast,
@@ -443,10 +465,10 @@ where
 
     fn reduce_by_expanded_left_branch(
         &self,
-        leftleft: &SharedSyntax<C>,
-        leftright: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> ReductionResult<C::RR> {
+        leftleft: &SharedSyntax<CCI, SR>,
+        leftright: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
         let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
@@ -463,7 +485,7 @@ where
                     let true_syntax = self.to_ast(&true_id);
                     (
                         true_syntax,
-                        C::RR::existence(
+                        ReductionReason::<CCI, SR>::existence(
                             substitutions.generalisation,
                             right.clone(),
                         ),
@@ -476,17 +498,17 @@ where
 
     fn find_example(
         &self,
-        generalisation: &SharedSyntax<C>,
+        generalisation: &SharedSyntax<CCI, SR>,
         truths: impl Iterator<Item = S::ConceptId>,
-    ) -> Option<ExampleSubstitutions<Syntax<C>>> {
+    ) -> Option<ExampleSubstitutions<CCI, SR>> {
         self.find_examples(generalisation.clone(), truths).next()
     }
 
     #[allow(clippy::too_many_lines)]
     pub fn find_examples_of_inferred_reduction(
         &self,
-        ast_to_reduce: &SharedSyntax<C>,
-    ) -> ReductionResult<C::RR> {
+        ast_to_reduce: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let reduction_operator =
@@ -495,16 +517,23 @@ where
         let variable_reduction_id = spawned_delta
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
         let variable_reduction_syntax =
-            Syntax::<C>::new_leaf_variable(variable_reduction_id).share();
+            GenericSyntaxTree::<CCI, SR>::new_leaf_variable(
+                variable_reduction_id,
+            )
+            .share();
         let variable_condition_id = spawned_delta
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
         let variable_condition_syntax =
-            Syntax::<C>::new_leaf_variable(variable_condition_id).share();
+            GenericSyntaxTree::<CCI, SR>::new_leaf_variable(
+                variable_condition_id,
+            )
+            .share();
         let variable_result_id = spawned_delta
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
         let _variable_result_syntax =
-            Syntax::<C>::new_leaf_variable(variable_result_id).share();
-        let cache = <C as ContextCache>::SharedReductionCache::default();
+            GenericSyntaxTree::<CCI, SR>::new_leaf_variable(variable_result_id)
+                .share();
+        let cache = SR::share(ReductionCache::<CCI, SR>::default());
         let mut spawned_context_search =
             self.spawn(&cache, D::from_nested(spawned_delta));
         if let Some(concept) = ast_to_reduce.get_concept() {
@@ -512,16 +541,16 @@ where
         }
         let implication_syntax = spawned_context_search.to_ast(&implication_id);
         let implication_rule_fn =
-            |condition: &SharedSyntax<C>,
-             prereduction: &SharedSyntax<C>,
-             reduction: &SharedSyntax<C>| {
-                Syntax::<C>::new_pair(
+            |condition: &SharedSyntax<CCI, SR>,
+             prereduction: &SharedSyntax<CCI, SR>,
+             reduction: &SharedSyntax<CCI, SR>| {
+                GenericSyntaxTree::<CCI, SR>::new_pair(
                     condition.clone(),
-                    Syntax::<C>::new_pair(
+                    GenericSyntaxTree::<CCI, SR>::new_pair(
                         implication_syntax.clone(),
-                        Syntax::<C>::new_pair(
+                        GenericSyntaxTree::<CCI, SR>::new_pair(
                             prereduction.clone(),
-                            Syntax::<C>::new_pair(
+                            GenericSyntaxTree::<CCI, SR>::new_pair(
                                 reduction_operator.clone(),
                                 reduction.clone(),
                             )
@@ -553,7 +582,7 @@ where
             .find_map(|substitutions| {
                 substitutions
                     .generalisation
-                    .get(&variable_condition_syntax)
+                    .get(&variable_condition_syntax.key())
                     .and_then(|condition_syntax| {
                         let substituted_condition = self.substitute(
                             condition_syntax,
@@ -568,14 +597,14 @@ where
                         )?;
                         substitutions
                             .generalisation
-                            .get(&variable_reduction_syntax)
+                            .get(&variable_reduction_syntax.key())
                             .map(|result| {
                                 (
                                     self.substitute(
                                         result,
                                         &substitutions.example,
                                     ),
-                                    C::RR::inference(
+                                    ReductionReason::<CCI, SR>::inference(
                                         implication_rule_fn(
                                             condition_syntax,
                                             ast_to_reduce,
@@ -595,12 +624,10 @@ where
 
     fn find_examples<'a>(
         &'a self,
-        generalisation: SharedSyntax<C>,
+        generalisation: SharedSyntax<CCI, SR>,
         equivalence_set: impl Iterator<Item = S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
-    ) -> impl Iterator<Item = ExampleSubstitutions<Syntax<C>>> + 'a {
-        let iterator: Box<
-            dyn Iterator<Item = ExampleSubstitutions<Syntax<C>>>,
-        >;
+    ) -> impl Iterator<Item = ExampleSubstitutions<CCI, SR>> + 'a {
+        let iterator: Box<dyn Iterator<Item = ExampleSubstitutions<CCI, SR>>>;
         if let Some((left, right)) = generalisation.get_expansion() {
             iterator = Box::new(self.find_examples_of_branched_generalisation(
                 left,
@@ -610,16 +637,16 @@ where
         } else {
             debug_assert!(
                 self.contains_bound_variable_syntax(&generalisation),
-                "Generalisation ({generalisation}) doesn't contain bound variables"
+                "Generalisation ({}) doesn't contain bound variables",
+                generalisation.as_ref()
             );
-            iterator = Box::new(equivalence_set
-                .map(move |c| {
-                    let example = self.to_ast(&c);
-                    ExampleSubstitutions {
-                        generalisation: hashmap! {generalisation.clone() => example},
-                        example: hashmap!{}
-                    }
-                }));
+            iterator = Box::new(equivalence_set.map(move |c| {
+                let example = self.to_ast(&c);
+                ExampleSubstitutions {
+                    generalisation: hashmap! {generalisation.key() => example},
+                    example: hashmap! {},
+                }
+            }));
         }
         iterator
     }
@@ -627,47 +654,55 @@ where
     #[allow(clippy::too_many_lines)]
     fn find_examples_of_branched_generalisation<'a>(
         &'a self,
-        left: SharedSyntax<C>,
-        right: SharedSyntax<C>,
+        left: SharedSyntax<CCI, SR>,
+        right: SharedSyntax<CCI, SR>,
         equivalence_set: impl Iterator<Item = S::ConceptId> + 'a,
-    ) -> impl Iterator<Item = ExampleSubstitutions<Syntax<C>>> + 'a {
-        let iterator: Box<
-            dyn Iterator<Item = ExampleSubstitutions<Syntax<C>>>,
-        > = match (
-            self.contains_bound_variable_syntax(&left),
-            self.contains_bound_variable_syntax(&right),
-        ) {
-            (true, true) => {
-                Box::new(
-                    equivalence_set
-                        .filter_map(|equivalent_concept_id| {
-                            self.composition_of_concept(&equivalent_concept_id)
-                        })
-                        .filter_map(
-                            move |(equivalent_left_id, equivalent_right_id)| {
-                                let equivalent_concept =
-                                    self.snap_shot.read_concept(
-                                        self.delta.as_ref(),
-                                        equivalent_left_id,
-                                    );
-                                // TODO handle case when a concept implicitly reduces to `equivalent_concept`
-                                let equivalent_left_equivalence_set =
-                                    equivalent_concept
-                                        .find_what_reduces_to_it()
-                                        .chain(iter::once(equivalent_left_id));
-                                // TODO try to find a case where this needs to be a flat_map method call
-                                let maybe_example = self
+    ) -> impl Iterator<Item = ExampleSubstitutions<CCI, SR>> + 'a {
+        let iterator: Box<dyn Iterator<Item = ExampleSubstitutions<CCI, SR>>> =
+            match (
+                self.contains_bound_variable_syntax(&left),
+                self.contains_bound_variable_syntax(&right),
+            ) {
+                (true, true) => {
+                    Box::new(
+                        equivalence_set
+                            .filter_map(|equivalent_concept_id| {
+                                self.composition_of_concept(
+                                    &equivalent_concept_id,
+                                )
+                            })
+                            .filter_map(
+                                move |(
+                                    equivalent_left_id,
+                                    equivalent_right_id,
+                                )| {
+                                    let equivalent_concept =
+                                        self.snap_shot.read_concept(
+                                            self.delta.as_ref(),
+                                            equivalent_left_id,
+                                        );
+                                    // TODO handle case when a concept implicitly reduces to `equivalent_concept`
+                                    let equivalent_left_equivalence_set =
+                                        equivalent_concept
+                                            .find_what_reduces_to_it()
+                                            .chain(iter::once(
+                                                equivalent_left_id,
+                                            ));
+                                    // TODO try to find a case where this needs to be a flat_map method call
+                                    let maybe_example = self
                                     .find_examples(
                                         left.clone(),
                                         equivalent_left_equivalence_set,
                                     )
                                     .find_map(|left_example| {
                                         let mut right_clone = right.clone();
-                                        let mutable_right =
-                                            Syntax::<C>::make_mut(
-                                                &mut right_clone,
-                                            );
-                                        substitute::<Syntax<C>>(
+                                        let mutable_right = GenericSyntaxTree::<
+                                            CCI,
+                                            SR,
+                                        >::make_mut(
+                                            &mut right_clone
+                                        );
+                                        substitute::<CCI, SR>(
                                             mutable_right,
                                             &left_example.generalisation,
                                         );
@@ -709,7 +744,7 @@ where
                                             )
                                             .0
                                             .get_concept()
-                                            .map_or(false, |id| {
+                                            .is_some_and(|id| {
                                                 equivalent_right_equivalence_set
                                                     .any(
                                                         |equivalent_right_id| {
@@ -724,41 +759,41 @@ where
                                             None
                                         }
                                     });
-                                maybe_example
-                            },
-                        ),
-                )
-            },
-            (true, false) => Box::new(
-                self.find_examples_of_half_generalisation(
-                    left.clone(),
-                    right.clone(),
-                    equivalence_set,
-                    Hand::Right,
-                )
-                .into_iter(),
-            ),
-            (false, true) => Box::new(
-                self.find_examples_of_half_generalisation(
-                    right.clone(),
-                    left.clone(),
-                    equivalence_set,
-                    Hand::Left,
-                )
-                .into_iter(),
-            ),
-            (false, false) => Box::new(iter::empty()),
-        };
+                                    maybe_example
+                                },
+                            ),
+                    )
+                },
+                (true, false) => Box::new(
+                    self.find_examples_of_half_generalisation(
+                        left.clone(),
+                        right.clone(),
+                        equivalence_set,
+                        Hand::Right,
+                    )
+                    .into_iter(),
+                ),
+                (false, true) => Box::new(
+                    self.find_examples_of_half_generalisation(
+                        right.clone(),
+                        left.clone(),
+                        equivalence_set,
+                        Hand::Left,
+                    )
+                    .into_iter(),
+                ),
+                (false, false) => Box::new(iter::empty()),
+            };
         iterator
     }
 
     fn find_examples_of_half_generalisation<'a>(
         &'a self,
-        generalised_part: SharedSyntax<C>,
-        non_generalised_part: SharedSyntax<C>,
+        generalised_part: SharedSyntax<CCI, SR>,
+        non_generalised_part: SharedSyntax<CCI, SR>,
         mut equivalence_set_of_composition: impl Iterator<Item = S::ConceptId> + 'a,
         non_generalised_hand: Hand,
-    ) -> Option<ExampleSubstitutions<Syntax<C>>> {
+    ) -> Option<ExampleSubstitutions<CCI, SR>> {
         let non_generalised_part_clone = non_generalised_part.clone();
         let generalised_part_clone = generalised_part;
         // TODO try to test if this needs to be a flat_map call
@@ -787,7 +822,7 @@ where
                         Hand::Right => (right == non_generalised_id).then_some(left)?,
                     };
                     let example_hand_syntax = self.to_ast(&example_hand);
-                    Syntax::<C>::check_example(
+                    GenericSyntaxTree::<CCI, SR>::check_example(
                         &example_hand_syntax,
                         &generalised_part_clone,
                     )
@@ -807,10 +842,10 @@ where
     // Reduces a syntax tree based on the properties of the left branch and the branches of the right branch
     fn reduce_by_expanded_right_branch(
         &self,
-        left: &SharedSyntax<C>,
-        rightleft: &SharedSyntax<C>,
-        rightright: &SharedSyntax<C>,
-    ) -> ReductionResult<C::RR> {
+        left: &SharedSyntax<CCI, SR>,
+        rightleft: &SharedSyntax<CCI, SR>,
+        rightright: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
             ConcreteConceptType::GreaterThan => {
@@ -831,11 +866,12 @@ where
                 .map(|ast| (ast, comparison_reason.into()))
             },
             ConcreteConceptType::Reduction => {
-                let (x, reason) = C::RR::determine_reduction_truth(
-                    left,
-                    rightright,
-                    |syntax| self.reduce(syntax),
-                )?;
+                let (x, reason) =
+                    ReductionReason::<CCI, SR>::determine_reduction_truth(
+                        left,
+                        rightright,
+                        |syntax| self.reduce(syntax),
+                    )?;
                 self.concrete_ast(if x {
                     ConcreteConceptType::True
                 } else {
@@ -851,7 +887,7 @@ where
     pub fn to_ast(
         &self,
         concept_id: &(impl Into<S::ConceptId> + Copy),
-    ) -> SharedSyntax<C> {
+    ) -> SharedSyntax<CCI, SR> {
         let concept_id = (*concept_id).into();
         self.variable_mask.get(concept_id).cloned().unwrap_or_else(|| {
             self.caches.get_syntax_tree_or_else(concept_id, || {
@@ -871,7 +907,7 @@ where
                     self.snap_shot
                     .bind_concept_to_syntax(
                         self.delta.as_ref(),
-                        Syntax::<C>::from(s),
+                        GenericSyntaxTree::<CCI, SR>::from(s),
                         concept_id,
                     )
                 }).share();
@@ -883,9 +919,9 @@ where
 
     pub fn combine(
         &self,
-        ast: &SharedSyntax<C>,
-        other: &SharedSyntax<C>,
-    ) -> Syntax<C> {
+        ast: &SharedSyntax<CCI, SR>,
+        other: &SharedSyntax<CCI, SR>,
+    ) -> GenericSyntaxTree<CCI, SR> {
         ast.get_concept()
             .and_also(&other.get_concept())
             .and_then(|(l, r)| {
@@ -907,37 +943,44 @@ where
 
     fn join(
         &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
-    ) -> Syntax<C> {
-        Syntax::<C>::from(self.display_joint(left, right))
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
+    ) -> GenericSyntaxTree<CCI, SR> {
+        GenericSyntaxTree::<CCI, SR>::from(self.display_joint(left, right))
             .bind_pair(left.clone(), right.clone())
     }
 
     fn display_joint(
         &self,
-        left: &SharedSyntax<C>,
-        right: &SharedSyntax<C>,
+        left: &SharedSyntax<CCI, SR>,
+        right: &SharedSyntax<CCI, SR>,
     ) -> String {
         // TODO: find a better way of checking that a syntax tree does not a have a labeled root concept
         let mut left_string = left.to_string();
         if left_string.chars().any(char::is_whitespace) {
             left_string = left.get_expansion().map_or_else(
                 || left.to_string(),
-                |(l, r)| self.get_associativity(&r).display_joint_left(l, r),
+                |(l, r)| {
+                    self.get_associativity(&r)
+                        .display_joint_left(l.as_ref(), r.as_ref())
+                },
             );
         }
         let mut right_string = right.to_string();
         if right_string.chars().any(char::is_whitespace) {
             right_string =
                 right.get_expansion().map_or(right_string, |(l, r)| {
-                    self.get_associativity(&l).display_joint_right(l, r)
+                    self.get_associativity(&l)
+                        .display_joint_right(l.as_ref(), r.as_ref())
                 });
         }
         left_string + " " + &right_string
     }
 
-    pub fn get_associativity(&self, ast: &SharedSyntax<C>) -> Associativity {
+    pub fn get_associativity(
+        &self,
+        ast: &SharedSyntax<CCI, SR>,
+    ) -> Associativity {
         self.concrete_concept_id(ConcreteConceptType::Associativity).map_or(
             Associativity::Right,
             |associativity_concept_id| {
@@ -959,7 +1002,7 @@ where
     }
 
     /// Expands syntax by definition of its associated concept.
-    pub fn expand(&self, ast: &SharedSyntax<C>) -> SharedSyntax<C> {
+    pub fn expand(&self, ast: &SharedSyntax<CCI, SR>) -> SharedSyntax<CCI, SR> {
         ast.get_concept().map_or_else(
             || {
                 if let Some((ref left, ref right)) = ast.get_expansion() {
@@ -986,10 +1029,10 @@ where
     #[allow(clippy::too_many_lines)]
     pub fn compare(
         &self,
-        some_syntax: &SharedSyntax<C>,
-        another_syntax: &SharedSyntax<C>,
-    ) -> (Comparison, ComparisonReason<C::RR>) {
-        if some_syntax == another_syntax {
+        some_syntax: &SharedSyntax<CCI, SR>,
+        another_syntax: &SharedSyntax<CCI, SR>,
+    ) -> (Comparison, ComparisonReason<CCI, SR>) {
+        if some_syntax.key() == another_syntax.key() {
             return (Comparison::EqualTo, ComparisonReason::SameSyntax);
         }
 
@@ -1014,10 +1057,10 @@ where
                 reason = local_reason;
                 self.concrete_type_of_ast(&syntax_comparison)
             };
-            let cache = <C as ContextCache>::SharedReductionCache::default();
+            let cache = SR::share(ReductionCache::<CCI,SR>::default());
             (
                 match (
-                    if self.syntax_evaluating.contains(&comparing_syntax) {
+                    if self.syntax_evaluating.contains(&comparing_syntax.key()) {
                         self.caches
                         .get_reduction_or_else(
                             &comparing_syntax.share(),
@@ -1029,7 +1072,7 @@ where
                         let comparing_syntax = comparing_syntax.share();
                         context_search
                         .syntax_evaluating
-                        .insert(comparing_syntax.clone());
+                        .insert(comparing_syntax.key());
                     Some(
                             context_search
                             .recursively_reduce(&comparing_syntax),
@@ -1040,7 +1083,7 @@ where
                     ),
                     if self
                         .syntax_evaluating
-                        .contains(&comparing_reversed_syntax)
+                        .contains(&comparing_reversed_syntax.key())
                         {
                             self.caches
                             .get_reduction_or_else(
@@ -1054,7 +1097,7 @@ where
                         comparing_reversed_syntax.share();
                         context_search
                         .syntax_evaluating
-                        .insert(comparing_reversed_syntax.clone());
+                        .insert(comparing_reversed_syntax.key());
                     Some(
                         context_search
                         .recursively_reduce(&comparing_reversed_syntax),
@@ -1072,7 +1115,7 @@ where
                         Some(ConcreteConceptType::True),
                         Some(ConcreteConceptType::True),
                     ) => {
-                        panic!("{some_syntax:#?} is both greater than and less than {another_syntax:#?}!\nReason: {reason:#?}\n Reversed reason: {reversed_reason:#?}");
+                        panic!("{:#?} is both greater than and less than {:#?}!\nReason: {reason:#?}\n Reversed reason: {reversed_reason:#?}", some_syntax.as_ref(), another_syntax.as_ref());
                     },
                     (Some(ConcreteConceptType::True), _) => {
                         Comparison::GreaterThan
@@ -1088,19 +1131,16 @@ where
                     },
                     _ => Comparison::Incomparable,
                 },
-                C::RR::simplify_reasoning(reason, reversed_reason),
+                ReductionReason::<CCI,SR>::simplify_reasoning(reason, reversed_reason),
             )
         })
     }
 
     pub fn spawn<'b, 'c>(
         &'b self,
-        cache: &'c <C as ContextCache>::SharedReductionCache,
+        cache: &'c SR::Share<ReductionCache<CCI, SR>>,
         delta: D,
-    ) -> Self
-    where
-        VML: VariableMaskList,
-    {
+    ) -> Self {
         ContextSearch::<'s, 'v> {
             concept_inferring: self.concept_inferring.clone(),
             bound_variable_syntax: self.bound_variable_syntax,
@@ -1119,12 +1159,12 @@ where
     /// TODO: refactor into method on struct with `self.snap_shot`, self.delta, `self.bound_variable_syntax` and `self.variable_mask`
     pub fn check_generalisation(
         &self,
-        ast: &SharedSyntax<C>,
+        ast: &SharedSyntax<CCI, SR>,
         generalisation: &S::ConceptId,
-    ) -> Option<VariableMask<Syntax<C>>> {
+    ) -> Option<VariableMask<CCI, SR>> {
         (self.is_free_variable(generalisation)
-            && !self.bound_variable_syntax.contains(ast)
-            && !ast.get_concept().map_or(false, |c| {
+            && !self.bound_variable_syntax.contains(&ast.key())
+            && !ast.get_concept().is_some_and(|c| {
                 self.snap_shot
                     .read_concept(self.delta.as_ref(), c)
                     .bounded_variable()
@@ -1140,7 +1180,7 @@ where
                         .and_then(|(lm, mut rm)| {
                             for (lmk, lmv) in lm {
                                 if let Some(rmv) = rm.get(&lmk) {
-                                    if rmv != &lmv {
+                                    if rmv.key() != lmv.key() {
                                         return None;
                                     }
                                 } else {
@@ -1181,7 +1221,8 @@ where
             && self
                 .variable_mask
                 .tail()
-                .map_or(true, |vml| vml.get(*v).is_none()) // A hack required to prevent stack overflow
+                .map_or(true, |vml| vml.get(*v).is_none())
+        // A hack required to prevent stack overflow
     }
 
     // TODO: move to separate struct that just has self.delta and self.snap_shot
@@ -1223,7 +1264,7 @@ where
     // TODO: refactor into method of struct with access to self.snap_shot and self.delta
     fn concrete_type_of_ast(
         &self,
-        ast: &SharedSyntax<C>,
+        ast: &SharedSyntax<CCI, SR>,
     ) -> Option<ConcreteConceptType> {
         ast.get_concept().and_then(|c| self.concrete_type(&c))
     }
@@ -1240,15 +1281,20 @@ where
     /// TODO: refactor as method on `VariableMaskList`
     fn insert_variable_mask(
         &mut self,
-        variable_mask: VariableMask<Syntax<C>>,
+        variable_mask: VariableMask<CCI, SR>,
     ) -> Result<(), ()> {
-        self.variable_mask =
-            VML::push(&self.variable_mask, variable_mask).ok_or(())?.into();
+        self.variable_mask = SR::share(
+            VariableMaskList::push(&self.variable_mask, variable_mask)
+                .ok_or(())?,
+        );
         Ok(())
     }
 
     // TODO: move to separate struct with access to self.snap_shot, self.bound_variable_syntax, self.delta and self.caches
-    fn contains_bound_variable_syntax(&self, syntax: &SharedSyntax<C>) -> bool {
+    fn contains_bound_variable_syntax(
+        &self,
+        syntax: &SharedSyntax<CCI, SR>,
+    ) -> bool {
         self.caches.remember_if_contains_bound_variable_syntax_or_else(
             syntax,
             || {
@@ -1259,8 +1305,8 @@ where
                         return true;
                     }
                 }
-                self.bound_variable_syntax.contains(syntax)
-                    || syntax.get_concept().map_or(false, |c| {
+                self.bound_variable_syntax.contains(&syntax.key())
+                    || syntax.get_concept().is_some_and(|c| {
                         self.snap_shot
                             .read_concept(self.delta.as_ref(), c)
                             .bounded_variable()
@@ -1269,8 +1315,6 @@ where
         )
     }
 }
-
-type MaybeReducedSyntaxWithReason<RR> = (RRSharedSyntax<RR>, Option<RR>);
 
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
@@ -1282,30 +1326,29 @@ pub enum Comparison {
     LessThanOrEqualTo,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-pub enum ComparisonReason<RR: ReductionReason> {
+#[derive(PartialEq, Debug)]
+pub enum ComparisonReason<CI: ConceptId, SR: SharedReference> {
     SameSyntax,
     Reduction {
-        reason: Option<RR>,
-        reversed_reason: Option<RR>,
+        reason: Option<ReductionReason<CI, SR>>,
+        reversed_reason: Option<ReductionReason<CI, SR>>,
     },
     NoGreaterThanConcept,
 }
 
-impl<'c, 's, 'v, S, C, SDCD, VML, D, CCI: MixedConcept>
-    From<ContextReferences<'c, 's, 'v, S, C, D>>
-    for ContextSearch<'s, 'v, S, C, VML, SDCD, D, CCI>
+impl<CI: ConceptId, SR: SharedReference> Eq for ComparisonReason<CI, SR> {}
+
+impl<'c, 's, 'v, S, SDCD, D, CCI: ConceptId, SR: SharedReference>
+    From<ContextReferences<'c, 's, 'v, S, D, SR, CCI>>
+    for ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
 where
-    S: SnapShotReader<SDCD, ConceptId = CCI> + Sync + std::fmt::Debug,
-    C: ContextCache,
-    Syntax<C>: SyntaxTree<ConceptId = S::ConceptId>,
+    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
     SDCD: Clone
         + AsRef<DirectConceptDelta<S::ConceptId>>
         + From<DirectConceptDelta<S::ConceptId>>
         + Debug,
-    VML: VariableMaskList<Syntax = Syntax<C>>,
-    D: AsRef<NestedDelta<S::ConceptId, SDCD, D>>
-        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D>>,
+    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
+        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
     fn from(
         ContextReferences {
@@ -1313,13 +1356,13 @@ where
             delta,
             cache,
             bound_variable_syntax,
-        }: ContextReferences<'c, 's, 'v, S, C, D>,
+        }: ContextReferences<'c, 's, 'v, S, D, SR, CCI>,
     ) -> Self {
         Self {
             concept_inferring: HashSet::default(),
             bound_variable_syntax,
             snap_shot,
-            variable_mask: VML::from(hashmap! {}).into(),
+            variable_mask: SR::share(VariableMaskList::from(hashmap! {})),
             delta,
             caches: cache.clone(),
             syntax_evaluating: hashset! {},
@@ -1329,11 +1372,19 @@ where
     }
 }
 
-pub struct ContextReferences<'c, 's, 'v, S, C: ContextCache, D> {
+pub struct ContextReferences<
+    'c,
+    's,
+    'v,
+    S,
+    D,
+    SR: SharedReference,
+    CCI: ConceptId,
+> {
     pub snap_shot: &'s S,
     pub delta: D,
-    pub cache: &'c C,
-    pub bound_variable_syntax: &'v HashSet<SharedSyntax<C>>,
+    pub cache: &'c GenericCache<CCI, SR>,
+    pub bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
 }
 
 pub type ReductionTruthResult<RR> = Option<(bool, RR)>;
