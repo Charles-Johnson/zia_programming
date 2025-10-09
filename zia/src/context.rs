@@ -423,15 +423,8 @@ where
         match assoc {
             Some(Associativity::Right) => {
                 let mut min = None;
-                let mut tail: Result<
-                    (
-                        <SR as SharedReference>::Share<
-                            GenericSyntaxTree<CCI, SR>,
-                        >,
-                        usize,
-                    ),
-                    _,
-                > = Err(ZiaError::AmbiguousExpression);
+                let mut tail: Result<(SharedSyntax<CCI, SR>, usize), _> =
+                    Err(ZiaError::AmbiguousExpression);
                 while let Some(lp_index) = lp_indices.pop() {
                     if Some(lp_index) == min {
                         continue;

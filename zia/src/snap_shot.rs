@@ -38,6 +38,7 @@ where
         &self,
         concept_id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'_>>;
+    #[allow(clippy::too_many_lines)]
     fn maybe_read_concept<
         'a,
         D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
