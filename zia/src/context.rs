@@ -269,18 +269,18 @@ where
         self.snap_shot.concept_from_label(self.delta.as_ref(), symbol).map_or(
             ConceptKind::New,
             |id| {
-                self
-                    .snap_shot
+                self.snap_shot
                     .read_concept(self.delta.as_ref(), id)
-                    .get_concrete_concept_type().map_or(ConceptKind::Abstract {
-                        id,
-                    } , |concrete_type|
-                {
-                    ConceptKind::Concrete {
-                        id,
-                        concrete_type,
-                    }
-                })
+                    .get_concrete_concept_type()
+                    .map_or(
+                        ConceptKind::Abstract {
+                            id,
+                        },
+                        |concrete_type| ConceptKind::Concrete {
+                            id,
+                            concrete_type,
+                        },
+                    )
             },
         )
     }
@@ -423,9 +423,19 @@ where
         match assoc {
             Some(Associativity::Right) => {
                 let mut min = None;
-                let mut tail: Result<(<SR as SharedReference>::Share<GenericSyntaxTree<CCI, SR>>, usize), _> = Err(ZiaError::AmbiguousExpression);
+                let mut tail: Result<
+                    (
+                        <SR as SharedReference>::Share<
+                            GenericSyntaxTree<CCI, SR>,
+                        >,
+                        usize,
+                    ),
+                    _,
+                > = Err(ZiaError::AmbiguousExpression);
                 while let Some(lp_index) = lp_indices.pop() {
-                    if Some(lp_index) == min {continue;}
+                    if Some(lp_index) == min {
+                        continue;
+                    }
                     min = Some(lp_index);
                     let tail_result = self.associativity_try_fold_handler(
                         syntax_list,
@@ -433,15 +443,17 @@ where
                         lp_index,
                         Associativity::Right,
                     );
-                    tail = Ok(tail_result?); 
-                };
+                    tail = Ok(tail_result?);
+                }
                 let tail = tail?.0;
-                let Some(min) = min else {return Err(ZiaError::AmbiguousExpression)};
+                let Some(min) = min else {
+                    return Err(ZiaError::AmbiguousExpression);
+                };
                 if min == 0 {
                     Ok(tail)
                 } else {
-                    let head = self
-                        .ast_from_syntax_list(&syntax_list[..min ])?;
+                    let head =
+                        self.ast_from_syntax_list(&syntax_list[..min])?;
                     Ok(self.context_search().combine(&head, &tail).share())
                 }
             },
@@ -458,7 +470,7 @@ where
                 })?
                 .map_or(Err(ZiaError::AmbiguousExpression), |(syntax, _)| {
                     Ok(syntax)
-                }), // TODO: taken into account that lp_indices was turned from Vec to BinaryHeap
+                }), /* TODO: taken into account that lp_indices was turned from Vec to BinaryHeap */
             None => Err(ZiaError::AmbiguousExpression),
         }
     }
@@ -640,16 +652,25 @@ where
                 lp_indices_without_concepts.push(index);
             }
         }
-                                    
-        let precede_concept_id = self.snap_shot.concrete_concept_id(self.delta.as_ref(), ConcreteConceptType::Precedes).expect("Precede concept must exist");
-        let mut concepts_with_precedence_relations = hashset!{};
-        let precede_concept = self.snap_shot.read_concept(self.delta.as_ref(), precede_concept_id);
-        for (right_id, comp_id) in precede_concept.iter_hand_of(Hand::Left) {
-                if concept_ids.contains(&right_id) {
-                    concepts_with_precedence_relations.insert(right_id);
-                }
 
-            let comp_concept = self.snap_shot.read_concept(self.delta.as_ref(), comp_id);
+        let precede_concept_id = self
+            .snap_shot
+            .concrete_concept_id(
+                self.delta.as_ref(),
+                ConcreteConceptType::Precedes,
+            )
+            .expect("Precede concept must exist");
+        let mut concepts_with_precedence_relations = hashset! {};
+        let precede_concept = self
+            .snap_shot
+            .read_concept(self.delta.as_ref(), precede_concept_id);
+        for (right_id, comp_id) in precede_concept.iter_hand_of(Hand::Left) {
+            if concept_ids.contains(&right_id) {
+                concepts_with_precedence_relations.insert(right_id);
+            }
+
+            let comp_concept =
+                self.snap_shot.read_concept(self.delta.as_ref(), comp_id);
             for (left_id, _) in comp_concept.iter_hand_of(Hand::Right) {
                 if concept_ids.contains(&left_id) {
                     concepts_with_precedence_relations.insert(left_id);
@@ -659,20 +680,30 @@ where
 
         let precedes = |a: CCI, b: CCI| {
             let context_search = self.context_search();
-            let precedes_syntax = context_search.concrete_ast(ConcreteConceptType::Precedes).unwrap();
-            self.concrete_type_of_ast(&context_search.recursively_reduce(
-                &context_search.combine(
-                    &context_search.to_ast(&a),
-                    &context_search.combine(
-                        &precedes_syntax,
-                        &context_search.to_ast(&b)
-                    ).share()
-                ).share()
-            ).0)
+            let precedes_syntax = context_search
+                .concrete_ast(ConcreteConceptType::Precedes)
+                .unwrap();
+            self.concrete_type_of_ast(
+                &context_search
+                    .recursively_reduce(
+                        &context_search
+                            .combine(
+                                &context_search.to_ast(&a),
+                                &context_search
+                                    .combine(
+                                        &precedes_syntax,
+                                        &context_search.to_ast(&b),
+                                    )
+                                    .share(),
+                            )
+                            .share(),
+                    )
+                    .0,
+            )
         };
         let mut lowest_precedence_concepts = hashset! {};
         'a: for concept_id in &concepts_with_precedence_relations {
-             'b: for lowest_precedence_concept in &lowest_precedence_concepts {
+            'b: for lowest_precedence_concept in &lowest_precedence_concepts {
                 match precedes(*concept_id, *lowest_precedence_concept) {
                         Some(ConcreteConceptType::True) => {
                             continue 'a;
@@ -688,10 +719,10 @@ where
                                     continue 'a;
                                 },
                                 Some(ConcreteConceptType::Right) | None => {
-                                    continue 'b; 
+                                    continue 'b;
                                 },
                                 Some(cct) => panic!("{lowest_precedence_concept} precedes {concept_id} reduces to {cct:?}")
-                            } 
+                            }
                         },
                         Some(ConcreteConceptType::Right) | None => {
                             match precedes(*lowest_precedence_concept, *concept_id) {
@@ -706,30 +737,39 @@ where
                             }
                         },
                         Some(cct) => panic!("{concept_id} precedes {lowest_precedence_concept} reduces to {cct:?}"),
-                    } 
+                    }
             }
             lowest_precedence_concepts.insert(*concept_id);
         }
         let mut syntax = vec![];
         if lowest_precedence_concepts.is_empty() {
-            let (more_lp_indices, more_syntax): (Vec<_>, Vec<_>) = concept_ids.into_iter().filter(|id| {
-                !concepts_with_precedence_relations.contains(id)
-            }).flat_map(|id| {
-                index_of_concept[&id].iter().map(|index| {
-                    (*index, syntax_children[*index].clone())
+            let (more_lp_indices, more_syntax): (Vec<_>, Vec<_>) = concept_ids
+                .into_iter()
+                .filter(|id| !concepts_with_precedence_relations.contains(id))
+                .flat_map(|id| {
+                    index_of_concept[&id]
+                        .iter()
+                        .map(|index| (*index, syntax_children[*index].clone()))
                 })
-            }).unzip();
+                .unzip();
             lp_indices.extend(lp_indices_without_concepts);
             lp_indices.extend(more_lp_indices);
             syntax.extend(more_syntax);
         }
         for lowest_precedence_concept in lowest_precedence_concepts {
-            lp_indices.extend(index_of_concept[&lowest_precedence_concept].iter().inspect(|&index| {
-                syntax.push(syntax_children[*index].clone());
-            }));
+            lp_indices.extend(
+                index_of_concept[&lowest_precedence_concept].iter().inspect(
+                    |&index| {
+                        syntax.push(syntax_children[*index].clone());
+                    },
+                ),
+            );
         }
 
-        TokenSubsequence{syntax, positions: lp_indices}
+        TokenSubsequence {
+            syntax,
+            positions: lp_indices,
+        }
     }
 
     fn ast_from_pair(
@@ -797,19 +837,19 @@ where
     fn setup(&mut self) -> ZiaResult<()> {
         self.label_concrete_concepts()?;
         self.commit()?;
-        let result = self.execute("let (true and true) -> true"); 
+        let result = self.execute("let (true and true) -> true");
         debug_assert_eq!(result, "");
-        let result =self.execute("let (false and _y_) -> false"); 
+        let result = self.execute("let (false and _y_) -> false");
         debug_assert_eq!(result, "");
-        let result = self.execute("let (_x_ and false) -> false"); 
+        let result = self.execute("let (_x_ and false) -> false");
         debug_assert_eq!(result, "");
         let result = self.execute(
             "let ((_y_ exists_such_that) (_x_ precedes _y_) and _y_ precedes _z_) => _x_ precedes _z_",
-        ); 
+        );
         debug_assert_eq!(result, "");
-        let result = self.execute("let -> precedes :="); 
+        let result = self.execute("let -> precedes :=");
         debug_assert_eq!(result, "");
-        let result = self.execute("let := precedes let"); 
+        let result = self.execute("let := precedes let");
         debug_assert_eq!(result, "");
         Ok(())
     }
@@ -1002,7 +1042,7 @@ where
         }
     }
 
-    fn updater(&mut self)  -> ZiaResult<ContextUpdater<S, SDCD, D, SR>> {
+    fn updater(&mut self) -> ZiaResult<ContextUpdater<'_, S, SDCD, D, SR>> {
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
             return Err(ZiaError::MultiplePointersToDelta);
@@ -1030,12 +1070,16 @@ where
         ) {
             (_, Some(_), _, None) => Err(ZiaError::BadComposition),
             (_, None, None, None) => Err(ZiaError::RedundantRefactor),
-            (None, _, Some(b), None) => self.updater()?.relabel(b, &old.to_string(), &new.to_string()),
+            (None, _, Some(b), None) => {
+                self.updater()?.relabel(b, &old.to_string(), &new.to_string())
+            },
             (None, _, Some(b), Some(_)) => {
-                let syntax = {let search = self.context_search();
-                    let syntax = search.to_ast(&b).to_string(); 
+                let syntax = {
+                    let search = self.context_search();
+                    let syntax = search.to_ast(&b).to_string();
                     drop(search);
-                    syntax};
+                    syntax
+                };
                 if self
                     .snap_shot
                     .get_concept_of_label(self.delta.as_ref(), b)
@@ -1043,7 +1087,11 @@ where
                 {
                     self.updater()?.label(b, &syntax, &new.to_string())
                 } else {
-                    self.updater()?.relabel(b, &old.to_string(), &new.to_string())
+                    self.updater()?.relabel(
+                        b,
+                        &old.to_string(),
+                        &new.to_string(),
+                    )
                 }
             },
             (None, _, None, Some((ref left, ref right))) => {
@@ -1054,14 +1102,16 @@ where
                     let composition = self
                         .snap_shot
                         .read_concept(self.delta.as_ref(), a)
-                        .get_composition(); 
-                    match composition 
-                    {
+                        .get_composition();
+                    match composition {
                         None => Err(ZiaError::RedundantCompositionRemoval),
                         Some((left, right)) => {
                             let (left_syntax, right_syntax) = {
                                 let context_search = self.context_search();
-                                (context_search.to_ast(&left).to_string(), context_search.to_ast(&right).to_string())
+                                (
+                                    context_search.to_ast(&left).to_string(),
+                                    context_search.to_ast(&right).to_string(),
+                                )
                             };
                             let mut updater = self.updater()?;
                             updater.try_delete_concept(a, &a.to_string())?;
@@ -1088,9 +1138,18 @@ where
                     Err(ZiaError::CompositionCollision)
                 }
             },
-            (Some(a), Some((ref new_left, ref new_right)), None, Some((ref left, ref right))) => {
-                self.updater()?.redefine_composition(&a, left, right, &new_left.to_string(), &new_right.to_string() )
-            },
+            (
+                Some(a),
+                Some((ref new_left, ref new_right)),
+                None,
+                Some((ref left, ref right)),
+            ) => self.updater()?.redefine_composition(
+                &a,
+                left,
+                right,
+                &new_left.to_string(),
+                &new_right.to_string(),
+            ),
             (Some(a), None, None, Some((ref left, ref right))) => {
                 self.updater()?.redefine(&a, left, right)
             },
@@ -1120,7 +1179,11 @@ where
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
             let normal_form_concept = updater.concept_from_ast(normal_form)?;
-            updater.update_reduction(syntax_concept, syntax.to_string(), normal_form_concept)
+            updater.update_reduction(
+                syntax_concept,
+                syntax.to_string(),
+                normal_form_concept,
+            )
         }
     }
 
@@ -1135,9 +1198,11 @@ where
         let snap_shot = &self.snap_shot;
         let cache = &mut self.cache;
         syntax.get_concept().map_or_else(
-            || Err(ZiaError::RedundantReduction {
-                syntax: syntax.to_string(),
-            }),
+            || {
+                Err(ZiaError::RedundantReduction {
+                    syntax: syntax.to_string(),
+                })
+            },
             |c| {
                 ContextUpdater {
                     cache,
@@ -1151,7 +1216,7 @@ where
         )
     }
 
-    fn context_search(&self) -> ContextSearch<S, SDCD, D, CCI, SR> {
+    fn context_search(&self) -> ContextSearch<'_, '_, S, SDCD, D, CCI, SR> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: self.delta.clone(),
@@ -1175,7 +1240,6 @@ where
         + From<DirectConceptDelta<S::ConceptId>>,
     D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
 {
-    #[must_use]
     fn default() -> Self {
         Self {
             snap_shot: S::default(),

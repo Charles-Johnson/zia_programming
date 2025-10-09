@@ -200,8 +200,9 @@ where
 
     pub fn iter_concepts(
         &self,
-    ) -> impl Iterator<Item = (&CI, Iter<ConceptDelta<CI, SharedDirectConceptDelta>>)>
-    {
+    ) -> impl Iterator<
+        Item = (&CI, Iter<'_, ConceptDelta<CI, SharedDirectConceptDelta>>),
+    > {
         self.concept.iter().map(|(c, v)| (c, v.iter()))
     }
 

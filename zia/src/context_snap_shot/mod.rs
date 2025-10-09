@@ -351,7 +351,7 @@ where
             .and_then(|c| self.get_labellee(delta, c))
     }
 
-    fn get_concept(&self, id: Self::ConceptId) -> Option<Mixed> {
+    fn get_concept(&self, id: Self::ConceptId) -> Option<Mixed<'_>> {
         if let ConceptId::Committed(id) = id {
             self.concepts.get(id).map(Mixed::from)
         } else {

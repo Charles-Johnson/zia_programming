@@ -46,7 +46,6 @@ impl Page {
 }
 
 impl From<Url> for Page {
-    #[must_use]
     fn from(url: Url) -> Self {
         let (page, title) = match url.path().first().map(String::as_str) {
             None | Some("") => (Self::Home, TITLE_SUFFIX.to_owned()),
