@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Netlify CLI
         if: github.ref == 'refs/heads/master'
-        run: sudo npm install netlify-cli -g
+        run: sudo npm install netlify-cli@17.38.1 -g
 
       - name: Deploy
         if: github.ref == 'refs/heads/master'
