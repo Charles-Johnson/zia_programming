@@ -1,3 +1,4 @@
+use assert_matches::assert_matches;
 use proptest::prelude::*;
 use zia::{multi_threaded::NEW_CONTEXT, ConceptKind, LexemeCategory};
 
@@ -45,9 +46,9 @@ fn lexer_indentifies_concrete_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("let");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(
+    assert_matches!(
         lexemes.first().unwrap().category,
-        LexemeCategory::Concept(ConceptKind::Concrete)
+        LexemeCategory::Concept(ConceptKind::Concrete { .. })
     );
 }
 
@@ -56,9 +57,9 @@ fn lexer_indentifies_abstract_concept() {
     let cont = NEW_CONTEXT.clone();
     let lexemes = cont.lex("and");
     assert_eq!(lexemes.len(), 1);
-    assert_eq!(
+    assert_matches!(
         lexemes.first().unwrap().category,
-        LexemeCategory::Concept(ConceptKind::Abstract)
+        LexemeCategory::Concept(ConceptKind::Abstract { .. })
     );
 }
 

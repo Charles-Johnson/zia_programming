@@ -3,7 +3,7 @@ RUN apt update
 RUN apt install -y curl
 RUN apt-get install ripgrep
 USER node
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.75 -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.81 -y
 ENV PATH="/home/node/.cargo/bin:$PATH"
 RUN rustup component add rust-analyzer
 RUN mkdir -p /home/node/.local/share/nvim/site/autoload
@@ -18,8 +18,12 @@ RUN git clone https://tpope.io/vim/fugitive.git
 RUN mkdir -p /home/node/.config/nvim
 COPY init.vim /home/node/.config/nvim/init.vim
 USER root
-RUN apt update && apt install -y neovim
+RUN curl -o /home/node/nvim.tar.gz -L https://github.com/neovim/neovim/releases/download/v0.8.3/nvim-linux64.tar.gz
+RUN tar -xzvf /home/node/nvim.tar.gz
+RUN mv nvim-linux64 /home/node/nvim
+RUN chown -R node:node /home/node/nvim
 USER node
+ENV PATH=$PATH:/home/node/nvim/bin
 RUN nvim -c "helptags fugitive/doc" -c ":PlugInstall | :q | :q"
 RUN git config --global --add safe.directory /usr/src
 # install coc.nvim extensions
@@ -41,10 +45,11 @@ USER root
 RUN apt install -y build-essential
 RUN apt install -y rsync
 USER node
-RUN cargo install --force wasm-pack
-RUN cargo install --force cargo-make
-RUN rustup toolchain install nightly
-RUN rustup component add rustfmt --toolchain nightly
+RUN cargo install --force wasm-pack --version 0.13.0
+RUN cargo install --force cargo-make --version "0.35.1"
+RUN rustup toolchain install nightly-2024-07-07
+RUN rustup component add rustfmt --toolchain nightly-2024-07-07
 RUN cargo install --force cargo-readme
 RUN git config --global user.email "charlesthomasjohnson0@gmail.com"
 RUN git config --global user.name "Charle Johnson"
+

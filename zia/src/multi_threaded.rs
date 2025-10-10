@@ -1,43 +1,54 @@
 use crate::{
-    ast::impl_syntax_tree,
+    ast::GenericSyntaxTree,
     context::Context as GenericContext,
-    context_cache::impl_cache,
+    context_cache::GenericCache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
     context_search::ContextSearch,
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
-    mixed_concept::MixedConcept,
-    variable_mask_list::impl_variable_mask_list,
+    mixed_concept::ConceptId,
+    nester::SharedReference,
+    reduction_reason::ReductionReason,
+    variable_mask_list::VariableMaskList,
 };
 use lazy_static::lazy_static;
 use std::{fmt::Debug, sync::Arc};
 
-impl_syntax_tree!(Arc, MultiThreadedSyntaxTree);
-impl_cache!(Arc, MultiThreadedContextCache);
-impl_variable_mask_list!(Arc, MultiThreadedVariableMaskList);
-impl_reduction_reason!(Arc, MultiThreadedReductionReason);
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ArcFamily;
+
+impl SharedReference for ArcFamily {
+    type Share<T> = Arc<T>;
+
+    fn share<T>(owned: T) -> Self::Share<T> {
+        Arc::new(owned)
+    }
+
+    fn make_mut<T: Clone>(refcounter: &mut Self::Share<T>) -> &mut T {
+        Arc::make_mut(refcounter)
+    }
+}
+
+pub type MTSyntaxTree<CI> = GenericSyntaxTree<CI, ArcFamily>;
+pub type MTContextCache<CI> = GenericCache<CI, ArcFamily>;
+pub type MTVariableMaskList<CI> = VariableMaskList<CI, ArcFamily>;
+pub type MTReductionReason<CI> = ReductionReason<CI, ArcFamily>;
 
 pub type Context = GenericContext<
-    ContextSnapShot,
-    MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree<ContextConceptId>>,
-    >,
+    ContextSnapShot<ArcFamily>,
     SharedDirectConceptDelta<ContextConceptId>,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ContextConceptId>>,
     SharedContextDelta<ContextConceptId>,
     ContextConceptId,
+    ArcFamily,
 >;
 
 pub type MTContextSearch<'s, 'v, S, CCI> = ContextSearch<
     's,
     'v,
     S,
-    MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree<CCI>>,
-    >,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<CCI>>,
     SharedDirectConceptDelta<CCI>,
     SharedContextDelta<CCI>,
     CCI,
+    ArcFamily,
 >;
 
 // Saves having to construct a new `Context` each time.
@@ -45,27 +56,31 @@ lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new().unwrap();
 }
 
-type MultiThreadedContextDelta<CCI> =
-    NestedDelta<CCI, SharedDirectConceptDelta<CCI>, SharedContextDelta<CCI>>;
+type MultiThreadedContextDelta<CCI> = NestedDelta<
+    CCI,
+    SharedDirectConceptDelta<CCI>,
+    SharedContextDelta<CCI>,
+    ArcFamily,
+>;
 
 #[derive(Debug)]
-pub struct SharedContextDelta<CCI: MixedConcept>(
+pub struct SharedContextDelta<CCI: ConceptId>(
     pub Arc<MultiThreadedContextDelta<CCI>>,
 );
 
-impl<CCI: MixedConcept> Clone for SharedContextDelta<CCI> {
+impl<CCI: ConceptId> Clone for SharedContextDelta<CCI> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<CCI: MixedConcept> Default for SharedContextDelta<CCI> {
+impl<CCI: ConceptId> Default for SharedContextDelta<CCI> {
     fn default() -> Self {
         Self(MultiThreadedContextDelta::default().into())
     }
 }
 
-impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
+impl<CCI: ConceptId> SharedDelta for SharedContextDelta<CCI> {
     type NestedDelta = MultiThreadedContextDelta<CCI>;
 
     fn get_mut(&mut self) -> Option<&mut Self::NestedDelta> {
@@ -86,7 +101,7 @@ impl<CCI: MixedConcept> SharedDelta for SharedContextDelta<CCI> {
     }
 }
 
-impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
+impl<CCI: ConceptId> AsRef<MultiThreadedContextDelta<CCI>>
     for SharedContextDelta<CCI>
 {
     fn as_ref(&self) -> &MultiThreadedContextDelta<CCI> {
@@ -95,3 +110,30 @@ impl<CCI: MixedConcept> AsRef<MultiThreadedContextDelta<CCI>>
 }
 
 pub type SharedDirectConceptDelta<CCI> = Arc<DirectConceptDelta<CCI>>;
+
+#[cfg(test)]
+mod tests {
+    use crate::{nester::NestedSyntaxTree, ConceptKind};
+
+    use super::Context;
+
+    #[test]
+    fn precendence_test() {
+        let ctx = Context::new().unwrap();
+        let lexeme = ctx.lex("(a b) c");
+        let nested_syntax = Context::nest(lexeme).unwrap();
+        assert_eq!(
+            nested_syntax,
+            NestedSyntaxTree::from_concept_kind(&ConceptKind::New, "a".into())
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "b".into()
+                ))
+                .nest()
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "c".into()
+                ))
+        );
+    }
+}

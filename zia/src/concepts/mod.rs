@@ -208,7 +208,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                 {
                     binding_variables.clone_from(&cp.binding_variables);
                     free_variables.clone_from(&cp.free_variables);
-                };
+                }
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
                     free_variables,
@@ -273,7 +273,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                 {
                     binding_variables.clone_from(&cp.binding_variables);
                     free_variables.clone_from(&cp.free_variables);
-                };
+                }
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
                     free_variables,
@@ -736,11 +736,10 @@ pub enum ConcreteConceptType {
     Associativity,
     Right,
     Left,
-    Precedence,
-    Default,
     GreaterThan,
     Implication,
     ExistsSuchThat,
+    Precedes,
 }
 
 impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {
@@ -960,7 +959,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 c.righthand = righthand;
             },
             (Self::Leaf(_), None) => {},
-        };
+        }
         self
     }
 
@@ -995,7 +994,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 },
                 Self::Leaf(LeafCharacter::Constant) => {},
             }
-        };
+        }
         if let SpecificPart::Abstract(ap) = &left.specific_part {
             match &ap.composition {
                 Self::Composition(cp) => {

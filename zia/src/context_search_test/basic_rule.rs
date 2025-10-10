@@ -1,13 +1,12 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
     context_search::ContextReferences,
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
@@ -21,8 +20,9 @@ fn basic_rule() {
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,
+        _,
     >::default();
-    let cache = MultiThreadedContextCache::default();
+    let cache = MTContextCache::default();
     let bound_variables = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,

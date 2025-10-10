@@ -1,16 +1,16 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
     context_search::ContextReferences,
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MTContextSearch, MultiThreadedContextCache, SharedContextDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
         SharedDirectConceptDelta,
     },
 };
+use assert_matches::assert_matches;
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
@@ -58,8 +58,8 @@ fn labels() -> HashMap<usize, &'static str> {
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
     let delta =
-        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
-    let cache = MultiThreadedContextCache::default();
+        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
+    let cache = MTContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
@@ -92,9 +92,12 @@ fn basic_rule() {
         reason: ReductionReason::Explicit.into(),
     };
 
-    assert_eq!(
+    assert_matches!(
         context_search.reduce(&left_and_right_left_and_random_syntax),
-        Some((concrete_syntax().into(), reduction_reason.clone()))
+        Some((syntax, reason)) => {
+            assert_eq!(syntax.key(), concrete_syntax().key());
+            assert_eq!(reason, reduction_reason);
+        }
     );
 
     assert_eq!(
