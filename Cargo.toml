@@ -6,3 +6,5 @@ members = [
 	"zia",
 	"zia-lang.org/crate"
 ]
+
+resolver = "2"

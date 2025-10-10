@@ -1,3 +1,5 @@
+![Maintenance](https://img.shields.io/badge/maintenance-activly--developed-brightgreen.svg)
+
 # zia
 
 [![Crates.io](https://img.shields.io/crates/v/zia.svg)](https://crates.io/crates/zia)
@@ -53,9 +55,9 @@ assert_eq!(context.execute("let a b -> a b"), "");
 assert_eq!(context.execute("a b"), "a b");
 
 // Try to specify a rule that already exists
-assert_eq!(context.execute("let a b -> a b"), ZiaError::RedundantReduction.to_string());
+assert_eq!(context.execute("let a b -> a b"), ZiaError::RedundantReduction{syntax: "a b".to_string()}.to_string());
 assert_eq!(context.execute("let a b -> c"), "");
-assert_eq!(context.execute("let a b -> c"), ZiaError::RedundantReduction.to_string());
+assert_eq!(context.execute("let a b -> c"), ZiaError::RedundantReduction{syntax: "a b".to_string()}.to_string());
 
 // Relabel "label_of" to "표시"
 assert_eq!(context.execute("let 표시 := label_of"), "");

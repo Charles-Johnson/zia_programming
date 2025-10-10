@@ -30,12 +30,12 @@ impl Associativity {
     }
 
     #[must_use]
-    pub fn slice_tokens<'a>(
+    pub fn slice_tokens<'a, T>(
         &self,
-        tokens: &'a [String],
+        tokens: &'a [T],
         prev_lp_index: Option<usize>,
         lp_index: usize,
-    ) -> &'a [String] {
+    ) -> &'a [T] {
         match &self {
             Self::Left => prev_lp_index
                 .map_or_else(|| &tokens[..lp_index], |i| &tokens[i..lp_index]),

@@ -15,7 +15,7 @@ mod not;
 use crate::{
     concepts::{Concept, ConceptTrait},
     mock_snap_shot::ConceptId,
-    multi_threaded::{MultiThreadedReductionReason, MultiThreadedSyntaxTree},
+    multi_threaded::{MTReductionReason, MTSyntaxTree},
 };
 
 pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
@@ -29,5 +29,5 @@ pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
         .collect::<Vec<Concept<ConceptId>>>()
 }
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
-type ReductionReason = MultiThreadedReductionReason<Syntax>;
+type Syntax = MTSyntaxTree<ConceptId>;
+type ReductionReason = MTReductionReason<ConceptId>;

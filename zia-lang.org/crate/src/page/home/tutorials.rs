@@ -1,4 +1,8 @@
-pub const TUTORIALS: (Tutorial<18>, Tutorial<10>) = (
+
+#[cfg(test)]
+use std::time::{Duration, Instant};
+
+pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<12>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -51,13 +55,13 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>) = (
                 expected_evaluation: "3 * 2"
             },
             TutorialStep {
-                command: "let (prec *) > prec +",
+                command: "let * precedes +",
                 explanation: "We can reduce a multiplication expression to an addition expression but first we define the relative operator precendence",
                 #[cfg(test)]
                 expected_evaluation: ""
             },
             TutorialStep {
-                command: "let (prec +) > (prec ->)",
+                command: "let + (precedes ->)",
                 explanation: "This allows reduction rules to not need as many parentheses",
                 #[cfg(test)]
                 expected_evaluation: ""
@@ -176,6 +180,83 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>) = (
                 expected_evaluation: "true"
             },
         ]
+    },
+    Tutorial {
+        title: "Arrays",
+        steps: [
+            TutorialStep {
+                command: "let ([ _x_ ])[ 0 ] -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the base case for array access",
+            },
+            TutorialStep {
+                command: "([ 2 ])[ 0 ]",
+                #[cfg(test)]
+                expected_evaluation: "2",
+                explanation: "We can now access the element of any array with that has a single element"
+            },
+            TutorialStep {
+                command: "let ([ _x_ , _y_)[ 0 ] -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the first element of an array with more than one element"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ])[ 0 ]",
+                #[cfg(test)]
+                expected_evaluation: "5",
+                explanation: "We can access the first element of any array"
+            },
+            TutorialStep {
+                command: "let ([ _x_ , _y_)[ (_i_ +1) ] -> ([ _y_)[ _i_ ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the how to access subsequent elements of an array"
+            },
+            TutorialStep {
+                command: "let 1 := 0 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the number one"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ])[ 1 ]",
+                #[cfg(test)]
+                expected_evaluation: "3",
+                explanation: "We can now access any element of any array"
+            },
+            TutorialStep {
+                command: "let (_x_ ]) push _y_ -> _x_ , _y_ ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the end of an array"
+            },
+            TutorialStep {
+                command: "let ([ _x_) push _y_ -> [ _x_ push _y_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the start of an array"
+            },
+            TutorialStep {
+                command: "([ 5 ]) push 3",
+                #[cfg(test)]
+                expected_evaluation: "[ 5 , 3 ]",
+                explanation: "We can now push to arrays with a single element"
+            },
+            TutorialStep {
+                command: "let (_x_ , _y_) push _z_ -> _x_ , _y_ push _z_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define pushing an element to the middle of an array"
+            },
+            TutorialStep {
+                command: "([ 5 , 3 ]) push 1",
+                #[cfg(test)]
+                expected_evaluation: "[ 5 , 3 , 1 ]",
+                explanation: "We can now push to arrays with multiple elements"
+            },
+        ]
     }
 );
 
@@ -198,7 +279,24 @@ pub struct TutorialStep {
 }
 
 #[cfg(test)]
+impl TutorialStep {
+    fn test(&self, context: &mut zia::multi_threaded::Context) {
+        let i = Instant::now();
+        assert_eq!(
+            context.execute(self.command),
+            self.expected_evaluation,
+            "Failed at {0}",
+            self.command
+        );
+        let time_taken = i.elapsed();
+        let limit_in_seconds = 15;
+        assert!(time_taken < Duration::from_secs(limit_in_seconds), "{0} took longer than {limit_in_seconds} second - it took {time_taken:?}", self.command);
+    }
+}
+
+#[cfg(test)]
 mod test {
+
     use zia::multi_threaded::NEW_CONTEXT;
 
     use super::TUTORIALS;
@@ -207,24 +305,21 @@ mod test {
     fn factorial_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.0.steps {
-            assert_eq!(
-                context.execute(step.command),
-                step.expected_evaluation,
-                "Failed at {0}",
-                step.command
-            );
+            step.test(&mut context);
         }
     }
     #[test]
     fn relationships_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.1.steps {
-            assert_eq!(
-                context.execute(step.command),
-                step.expected_evaluation,
-                "Failed at {0}",
-                step.command
-            );
+            step.test(&mut context);
+        }
+    }
+    #[test]
+    fn array_tutorial() {
+        let mut context = NEW_CONTEXT.clone();
+        for step in TUTORIALS.2.steps {
+            step.test(&mut context);
         }
     }
 }

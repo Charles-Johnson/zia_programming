@@ -1,12 +1,12 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences, ContextSearch},
+    context_search::ContextReferences,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -19,10 +19,11 @@ fn basic_composition() {
         ConceptId,
         SharedDirectConceptDelta<ConceptId>,
         SharedContextDelta<ConceptId>,
+        _,
     >::default();
-    let cache = MultiThreadedContextCache::default();
+    let cache = MTContextCache::default();
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
         delta: SharedContextDelta(delta.into()),
         cache: &cache,
@@ -36,8 +37,8 @@ fn basic_composition() {
         .share();
 
     assert_eq!(
-        context_search.contract_pair(&left_syntax, &right_syntax),
-        composite_syntax
+        context_search.contract_pair(&left_syntax, &right_syntax).key(),
+        composite_syntax.key()
     );
 
     assert_eq!(

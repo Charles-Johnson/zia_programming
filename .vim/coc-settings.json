@@ -1,0 +1,10 @@
+{
+  "coc.preferences.formatOnSaveFiletypes": ["*"],
+  "rust-analyzer.linkedProjects": ["/usr/src/Cargo.toml"],
+  "rust-analyzer.server.extraEnv": {
+    "CARGO_TARGET_DIR": "target",
+    "CARGO_BUILD_RUSTC_WRAPPER": "",
+    "CARGO_BUILD_INCREMENTAL": "true"
+  },
+  "rust-analyzer.check.overrideCommand": ["cargo", "clippy", "--fix", "--allow-dirty", "--message-format=json", "--all-features", "--", "--deny", "warnings", "--deny", "clippy::pedantic", "--deny", "clippy::nursery", "--allow", "clippy::manual_filter_map"]
+}
