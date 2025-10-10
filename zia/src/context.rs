@@ -1160,15 +1160,17 @@ where
             self.try_removing_reduction(syntax)
         } else {
             let context_search = self.context_search();
-            if let Some((existing_reduction, _)) = context_search
-                .reduce(syntax)
-                .or_else(|| context_search
-                    .find_examples_of_inferred_reduction(syntax)
-                ) {
-                    return Err(ZiaError::ExistingReduction{syntax_to_reduce: syntax.to_string(), existing_reduction: existing_reduction.to_string()});
-                } else {
-                    drop(context_search);
-                }
+            if let Some((existing_reduction, _)) =
+                context_search.reduce(syntax).or_else(|| {
+                    context_search.find_examples_of_inferred_reduction(syntax)
+                })
+            {
+                return Err(ZiaError::ExistingReduction {
+                    syntax_to_reduce: syntax.to_string(),
+                    existing_reduction: existing_reduction.to_string(),
+                });
+            }
+            drop(context_search);
             let maybe_inner_delta = self.delta.get_mut();
             let Some(delta) = maybe_inner_delta else {
                 return Err(ZiaError::MultiplePointersToDelta);
