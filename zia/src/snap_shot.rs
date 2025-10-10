@@ -1,5 +1,5 @@
 use crate::{
-    ast::SyntaxTree,
+    ast::GenericSyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_delta::{
         Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
@@ -7,6 +7,7 @@ use crate::{
     },
     errors::{ZiaError, ZiaResult},
     mixed_concept::MixedConcept,
+    nester::SharedReference,
 };
 use std::{
     convert::TryFrom,
@@ -14,7 +15,7 @@ use std::{
     hash::Hash,
 };
 
-pub trait Reader<SDCD>
+pub trait Reader<SDCD, SR: SharedReference>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<Self::ConceptId>>
@@ -37,114 +38,142 @@ where
         &self,
         concept_id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'_>>;
-    fn read_concept<
+    #[allow(clippy::too_many_lines)]
+    fn maybe_read_concept<
         'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        id: Self::ConceptId,
+    ) -> Option<Self::MixedConcept<'a>> {
+        delta.get_concept(&id).and_then(|cds| {
+            let mut concept = self.get_concept(id);
+            for cd in cds {
+                match cd {
+                    ConceptDelta::Direct(dcd) => match dcd.as_ref() {
+                        DirectConceptDelta::New(delta) => {
+                            debug_assert!(concept.is_none()); // Assert that concept hasn't already been committed
+                            concept = Some(
+                                (&NewDirectConceptDelta {
+                                    delta: delta.clone(),
+                                    new_concept_id: id,
+                                })
+                                    .into(),
+                            );
+                        },
+                        DirectConceptDelta::Remove(concept_id) => {
+                            debug_assert_eq!(*concept_id, id);
+                            debug_assert!(concept.is_some());
+                            concept = None;
+                        },
+                        DirectConceptDelta::Compose {
+                            change,
+                            composition_id,
+                        } => {
+                            debug_assert_eq!(*composition_id, id);
+                            match change {
+                                ValueChange::Create(comp) => {
+                                    let [mut left, mut right] = self
+                                        .concepts_from_composition(
+                                            delta, *comp,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Create([
+                                                &mut left, &mut right,
+                                            ]),
+                                        )
+                                        .unwrap();
+                                },
+                                ValueChange::Update {
+                                    before,
+                                    after,
+                                } => {
+                                    let [mut before_left, mut before_right] =
+                                        self.concepts_from_composition(
+                                            delta, *before,
+                                        );
+                                    let [mut after_left, mut after_right] =
+                                        self.concepts_from_composition(
+                                            delta, *after,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Update {
+                                                before: [
+                                                    &mut before_left,
+                                                    &mut before_right,
+                                                ],
+                                                after: [
+                                                    &mut after_left,
+                                                    &mut after_right,
+                                                ],
+                                            },
+                                        )
+                                        .unwrap();
+                                },
+                                ValueChange::Remove(comp) => {
+                                    let [mut left, mut right] = self
+                                        .concepts_from_composition(
+                                            delta, *comp,
+                                        );
+                                    concept
+                                        .as_mut()
+                                        .unwrap()
+                                        .change_composition(
+                                            ValueChange::Remove([
+                                                &mut left, &mut right,
+                                            ]),
+                                        )
+                                        .unwrap();
+                                },
+                            }
+                        },
+                        DirectConceptDelta::Reduce {
+                            change,
+                            unreduced_id,
+                        } => {
+                            debug_assert_eq!(*unreduced_id, id);
+                            concept
+                                .as_mut()
+                                .expect("concept must already exist")
+                                .change_reduction(*change);
+                        },
+                    },
+                    ConceptDelta::Indirect(delta) => {
+                        let c =
+                            concept.as_mut().expect("Concept doesn't exist");
+                        c.apply_indirect(delta);
+                    },
+                }
+            }
+            concept
+        })
+    }
+    fn read_concept<
+        'a,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
+    >(
+        &'a self,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         id: Self::ConceptId,
     ) -> Self::MixedConcept<'a> {
-        delta
-            .get_concept(&id)
-            .and_then(|cds| {
-                let mut concept = self.get_concept(id);
-                for cd in cds {
-                    match cd {
-                        ConceptDelta::Direct(dcd) => match dcd.as_ref() {
-                            DirectConceptDelta::New(delta) => {
-                                debug_assert!(concept.is_none()); // Assert that concept hasn't already been committed
-                                concept = Some((&NewDirectConceptDelta{
-                                    delta: delta.clone(),
-                                    new_concept_id: id
-                                }).into());
-                            },
-                            DirectConceptDelta::Remove(concept_id) => {
-                                debug_assert_eq!(*concept_id, id);
-                                debug_assert!(concept.is_some());
-                                concept = None;
-                            },
-                            DirectConceptDelta::Compose {
-                                change,
-                                composition_id,
-                            } => {
-                                debug_assert_eq!(*composition_id, id);
-                                match change {
-                                    ValueChange::Create(comp) => {
-                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(ValueChange::Create(
-                                                [&mut left, &mut right],
-                                            ))
-                                            .unwrap();
-                                    },
-                                    ValueChange::Update {
-                                        before,
-                                        after,
-                                    } => {
-                                        let [mut before_left, mut before_right] = self.concepts_from_composition(delta, *before);
-                                        let [mut after_left, mut after_right] = self.concepts_from_composition(delta, *after);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(
-                                                ValueChange::Update {
-                                                    before: [
-                                                        &mut before_left,
-                                                        &mut before_right,
-                                                    ],
-                                                    after: [
-                                                        &mut after_left,
-                                                        &mut after_right,
-                                                    ],
-                                                },
-                                            )
-                                            .unwrap();
-                                    },
-                                    ValueChange::Remove(comp) => {
-                                        let [mut left, mut right] = self.concepts_from_composition(delta, *comp);
-                                        concept
-                                            .as_mut()
-                                            .unwrap()
-                                            .change_composition(ValueChange::Remove(
-                                                [&mut left, &mut right],
-                                            ))
-                                            .unwrap();
-                                    },
-                                };
-                            },
-                            DirectConceptDelta::Reduce {
-                                change,
-                                unreduced_id,
-                            } => {
-                                debug_assert_eq!(*unreduced_id, id);
-                                concept
-                                    .as_mut()
-                                    .expect("concept must already exist")
-                                    .change_reduction(*change);
-                            },
-                        },
-                        ConceptDelta::Indirect(delta) => {
-                            let c = concept.as_mut().expect("Concept doesn't exist");
-                            c.apply_indirect(delta);
-                        },
-                    }
-                }
-                concept
-            })
-            .unwrap_or_else(|| {
-                self.get_concept(id)
-                    .unwrap_or_else(|| panic!("No concept with id = {id}"))
-            })
+        self.maybe_read_concept(delta, id).unwrap_or_else(|| {
+            self.get_concept(id)
+                .unwrap_or_else(|| panic!("No concept with id = {id}"))
+        })
     }
     fn concepts_from_composition<
         'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         comp: Composition<Self::ConceptId>,
     ) -> [Self::MixedConcept<'a>; 2] {
         [
@@ -153,43 +182,38 @@ where
         ]
     }
     fn get_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept_id: Self::ConceptId,
     ) -> Option<String>;
     fn ast_from_symbol<
-        Syntax,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         s: &str,
-    ) -> Syntax
+    ) -> GenericSyntaxTree<Self::ConceptId, SR>
     where
-        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
+        SR: SharedReference,
     {
         self.concept_from_label(delta, s).map_or_else(
             || s.into(),
             |concept| {
-                let syntax = Syntax::from(s);
+                let syntax = GenericSyntaxTree::<Self::ConceptId, SR>::from(s);
                 self.bind_concept_to_syntax(delta, syntax, concept)
             },
         )
     }
     fn bind_concept_to_syntax<
-        Syntax,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
-        syntax: Syntax,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        syntax: GenericSyntaxTree<Self::ConceptId, SR>,
         concept: Self::ConceptId,
-    ) -> Syntax
-    where
-        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
-    {
+    ) -> GenericSyntaxTree<Self::ConceptId, SR> {
         if self.concrete_concept_type(delta, concept)
             == Some(ConcreteConceptType::ExistsSuchThat)
         {
@@ -198,35 +222,38 @@ where
             syntax.bind_nonquantifier_concept(concept)
         }
     }
-    fn new_syntax_from_concept_that_has_no_label_or_composition<'a, Syntax>(
+    fn new_syntax_from_concept_that_has_no_label_or_composition<'a>(
         &'a self,
         concept: &Self::MixedConcept<'a>,
-    ) -> Syntax
-    where
-        Syntax: SyntaxTree<ConceptId = Self::ConceptId>,
-    {
+    ) -> GenericSyntaxTree<Self::ConceptId, SR> {
         let quantifier = concept.get_concrete_concept_type()
             == Some(ConcreteConceptType::ExistsSuchThat);
         if quantifier {
-            SyntaxTree::new_quantifier_concept(concept.id())
+            GenericSyntaxTree::<Self::ConceptId, SR>::new_quantifier_concept(
+                concept.id(),
+            )
         } else if concept.anonymous_variable() {
-            SyntaxTree::new_leaf_variable(concept.id())
+            GenericSyntaxTree::<Self::ConceptId, SR>::new_leaf_variable(
+                concept.id(),
+            )
         } else {
-            SyntaxTree::new_constant_concept(concept.id())
+            GenericSyntaxTree::<Self::ConceptId, SR>::new_constant_concept(
+                concept.id(),
+            )
         }
     }
     fn concept_from_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         s: &str,
     ) -> Option<Self::ConceptId>;
     fn get_reduction_of_composition<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> Self::ConceptId {
         self.read_concept(delta, concept)
@@ -244,10 +271,10 @@ where
             .unwrap_or(concept)
     }
     fn is_disconnected<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
@@ -265,10 +292,10 @@ where
                 .is_none()
     }
     fn righthand_of_without_label_is_empty<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         con: Self::ConceptId,
     ) -> bool {
         self.concrete_concept_id(delta, ConcreteConceptType::Label)
@@ -279,10 +306,10 @@ where
             .is_none()
     }
     fn get_normal_form<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         self.read_concept(delta, concept)
@@ -290,10 +317,10 @@ where
             .map(|n| self.get_normal_form(delta, n).unwrap_or(n))
     }
     fn get_concept_of_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         let label_concept_id =
@@ -303,10 +330,10 @@ where
             .find_as_hand_in_composition_with(label_concept_id, Hand::Right)
     }
     fn contains<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         outer: Self::ConceptId,
         inner: Self::ConceptId,
     ) -> bool {
@@ -322,10 +349,10 @@ where
         }
     }
     fn check_reductions<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         outer_concept: Self::ConceptId,
         inner_concept: Self::ConceptId,
     ) -> ZiaResult<()> {
@@ -343,10 +370,10 @@ where
     }
     fn get_reduction_or_reduction_of_composition<
         'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> Self::MixedConcept<'a> {
         self.read_concept(
@@ -357,17 +384,30 @@ where
         )
     }
     fn concrete_concept_id<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId>;
-    fn concrete_concept_type<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+    fn maybe_concrete_concept_type<
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept_id: Self::ConceptId,
-    ) -> Option<ConcreteConceptType>;
+    ) -> Option<ConcreteConceptType> {
+        self.maybe_read_concept(delta, concept_id)
+            .and_then(|c| c.get_concrete_concept_type())
+    }
+
+    fn concrete_concept_type<
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
+    >(
+        &self,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        concept_id: Self::ConceptId,
+    ) -> Option<ConcreteConceptType> {
+        self.read_concept(delta, concept_id).get_concrete_concept_type()
+    }
 }

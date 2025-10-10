@@ -1,37 +1,40 @@
 use crate::{
-    ast::impl_syntax_tree,
     context::Context as GenericContext,
-    context_cache::impl_cache,
     context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
-    context_search::{ContextSearch, Generalisations},
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
     errors::ZiaResult,
-    iteration::Iteration as ContextSearchIteration,
-    snap_shot::Reader as SnapShotReader,
-    variable_mask_list::impl_variable_mask_list,
+    nester::SharedReference,
 };
-use std::{collections::HashSet, fmt::Debug, rc::Rc};
+use std::{fmt::Debug, rc::Rc};
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RcFamily;
 
-impl_syntax_tree!(Rc, SingleThreadedSyntaxTree);
-impl_cache!(Rc, SingleThreadedContextCache);
-impl_variable_mask_list!(Rc, SingleThreadedVariableMaskList);
-impl_reduction_reason!(Rc, SingleThreadedReductionReason);
+impl SharedReference for RcFamily {
+    type Share<T> = Rc<T>;
+
+    fn share<T>(owned: T) -> Self::Share<T> {
+        Rc::new(owned)
+    }
+
+    fn make_mut<T: Clone>(refcounter: &mut Self::Share<T>) -> &mut T {
+        Rc::make_mut(refcounter)
+    }
+}
 
 pub type Context = GenericContext<
-    ContextSnapShot,
-    SingleThreadedContextCache<
-        SingleThreadedReductionReason<
-            SingleThreadedSyntaxTree<ContextConceptId>,
-        >,
-    >,
+    ContextSnapShot<RcFamily>,
     SharedDirectConceptDelta,
-    SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<ContextConceptId>>,
     SharedContextDelta,
     ContextConceptId,
+    RcFamily,
 >;
 
-type SingleThreadedContextDelta =
-    NestedDelta<ContextConceptId, SharedDirectConceptDelta, SharedContextDelta>;
+type SingleThreadedContextDelta = NestedDelta<
+    ContextConceptId,
+    SharedDirectConceptDelta,
+    SharedContextDelta,
+    RcFamily,
+>;
 
 #[derive(Clone, Default, Debug)]
 pub struct SharedContextDelta(Rc<SingleThreadedContextDelta>);
@@ -64,46 +67,3 @@ impl AsRef<SingleThreadedContextDelta> for SharedContextDelta {
 }
 
 type SharedDirectConceptDelta = Rc<DirectConceptDelta<ContextConceptId>>;
-
-impl<'s, 'v, S> ContextSearchIteration
-    for ContextSearch<
-        's,
-        'v,
-        S,
-        SingleThreadedContextCache<
-            SingleThreadedReductionReason<
-                SingleThreadedSyntaxTree<S::ConceptId>,
-            >,
-        >,
-        SingleThreadedVariableMaskList<SingleThreadedSyntaxTree<S::ConceptId>>,
-        SharedDirectConceptDelta,
-        SharedContextDelta,
-        ContextConceptId,
-    >
-where
-    S: SnapShotReader<SharedDirectConceptDelta, ConceptId = ContextConceptId>
-        + Sync
-        + Debug,
-{
-    type ConceptId = S::ConceptId;
-    type Syntax = SingleThreadedSyntaxTree<S::ConceptId>;
-
-    fn filter_generalisations_from_candidates(
-        &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-        candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax> {
-        candidates
-            .iter()
-            .filter_map(|gc| {
-                self.check_generalisation(example, gc).and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
-            })
-            .collect()
-    }
-}

@@ -30,6 +30,7 @@ use crate::{
         NewConceptDelta, NewDirectConceptDelta, SharedDelta, ValueChange,
     },
     delta::Apply,
+    nester::SharedReference,
     snap_shot::Reader as SnapShotReader,
 };
 use bimap::BiMap;
@@ -38,20 +39,22 @@ use std::{
     collections::{HashMap, VecDeque},
     convert::{TryFrom, TryInto},
     fmt::Debug,
+    marker::PhantomData,
 };
 
 /// A container for adding, reading, writing and removing concepts of generic type `T`.
 #[derive(Default, Debug, Clone)]
-pub struct ContextSnapShot {
+pub struct ContextSnapShot<SR: SharedReference> {
     /// Relates a String value to the index where the concept corresponding to the String is stored
     /// in the `concepts` field.
     string_map: HashMap<String, Committed>,
     concepts: SlotMap<Committed, Concept<Committed>>,
     concrete_concepts: BiMap<Committed, ConcreteConceptType>,
     previously_uncommitted_concepts: HashMap<Uncommitted, Committed>,
+    phantom: PhantomData<SR>,
 }
 
-impl ContextSnapShot {
+impl<SR: SharedReference> ContextSnapShot<SR> {
     fn commit_new_concept(
         &mut self,
         id: Uncommitted,
@@ -250,10 +253,12 @@ impl ContextSnapShot {
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>>
             + Debug,
-        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
+        D: SharedDelta<
+            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
+        >,
     >(
         &self,
-        delta: &NestedDelta<ConceptId, SDCD, D>,
+        delta: &NestedDelta<ConceptId, SDCD, D, SR>,
         s: &str,
     ) -> Option<ConceptId> {
         delta.get_string(s).map_or_else(
@@ -292,10 +297,10 @@ impl ContextSnapShot {
             + AsRef<DirectConceptDelta<ConceptId>>
             + From<DirectConceptDelta<ConceptId>>
             + Debug,
-        D: SharedDelta<NestedDelta = NestedDelta<ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<ConceptId, SDCD, D>,
+        delta: &NestedDelta<ConceptId, SDCD, D, SR>,
         c: ConceptId,
     ) -> Option<ConceptId> {
         let concept = self.read_concept(delta, c);
@@ -321,7 +326,7 @@ impl ContextSnapShot {
     }
 }
 
-impl<SDCD> SnapShotReader<SDCD> for ContextSnapShot
+impl<SDCD, SR: SharedReference> SnapShotReader<SDCD, SR> for ContextSnapShot<SR>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
@@ -330,20 +335,23 @@ where
 {
     type CommittedConceptId = Committed;
     type ConceptId = ConceptId;
-    type MixedConcept<'a> = Mixed<'a>;
+    type MixedConcept<'a>
+        = Mixed<'a>
+    where
+        SR: 'a;
 
     fn concept_from_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.get_string_concept(delta, s)
             .and_then(|c| self.get_labellee(delta, c))
     }
 
-    fn get_concept(&self, id: Self::ConceptId) -> Option<Mixed> {
+    fn get_concept(&self, id: Self::ConceptId) -> Option<Mixed<'_>> {
         if let ConceptId::Committed(id) = id {
             self.concepts.get(id).map(Mixed::from)
         } else {
@@ -352,10 +360,10 @@ where
     }
 
     fn get_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D>>,
+        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
@@ -372,16 +380,19 @@ where
     }
 
     fn concrete_concept_id<
-        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
+        D: SharedDelta<
+            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
+        >,
     >(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         let mut id = None;
         for (concept_id, cdv) in
             delta.iter_concepts().filter(|(concept_id, _)| {
-                self.concrete_concept_type(delta, **concept_id) == Some(cc)
+                self.maybe_concrete_concept_type(delta, **concept_id)
+                    == Some(cc)
             })
         {
             for dcd in cdv.filter_map(ConceptDelta::try_direct) {
@@ -402,19 +413,9 @@ where
                 .map(Self::ConceptId::from)
         })
     }
-
-    fn concrete_concept_type<
-        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
-    >(
-        &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D>,
-        concept_id: Self::ConceptId,
-    ) -> Option<ConcreteConceptType> {
-        self.read_concept(delta, concept_id).get_concrete_concept_type()
-    }
 }
 
-impl<SDCD> Apply<SDCD> for ContextSnapShot
+impl<SDCD, SR: SharedReference> Apply<SDCD, SR> for ContextSnapShot<SR>
 where
     SDCD: Clone
         + AsRef<DirectConceptDelta<ConceptId>>
@@ -424,10 +425,12 @@ where
 {
     #[allow(clippy::too_many_lines)]
     fn apply<
-        D: SharedDelta<NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D>>,
+        D: SharedDelta<
+            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
+        >,
     >(
         &mut self,
-        delta: NestedDelta<Self::ConceptId, SDCD, D>,
+        delta: NestedDelta<Self::ConceptId, SDCD, D, SR>,
     ) {
         debug_assert!(self.previously_uncommitted_concepts.is_empty());
         for (concept_id, concept_delta) in delta.concepts_to_apply_in_order() {

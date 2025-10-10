@@ -1,7 +1,7 @@
 use crate::generated::css_classes::C;
 use seed::{button, div, empty, h1, p, prelude::*, style, C};
 
-use super::Msg as HomeMsg;
+use super::{tutorials::Tutorial, Msg as HomeMsg};
 use crate::{
     page::home::{tutorials::TUTORIALS, EDGE_STYLE, TEXT_PADDING},
     Msg,
@@ -56,34 +56,9 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                 ],
                 div![
                     C![C.flex, C.flex_1, C.flex_col],
-                    button![
-                        C![
-                            C.flex_1,
-                            C.border_2,
-                            C.bg_primary,
-                            EDGE_STYLE,
-                            C.text_center,
-                            C.text_secondary
-                        ],
-                        ev(Ev::Click, |_| Msg::Home(HomeMsg::StartTutorial(
-                            &TUTORIALS.0.steps
-                        ))),
-                        TUTORIALS.0.title
-                    ],
-                    button![
-                        C![
-                            C.flex_1,
-                            C.border_2,
-                            C.bg_primary,
-                            EDGE_STYLE,
-                            C.text_center,
-                            C.text_secondary
-                        ],
-                        ev(Ev::Click, |_| Msg::Home(HomeMsg::StartTutorial(
-                            &TUTORIALS.1.steps
-                        ))),
-                        TUTORIALS.1.title
-                    ],
+                    tutorial_button(&TUTORIALS.0).into_nodes(),
+                    tutorial_button(&TUTORIALS.1).into_nodes(),
+                    tutorial_button(&TUTORIALS.2).into_nodes()
                 ]
             ],
             button![
@@ -102,4 +77,23 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     } else {
         empty![]
     }
+}
+
+fn tutorial_button<const N: usize>(
+    tutorial: &'static Tutorial<N>,
+) -> impl IntoNodes<Msg> {
+    button![
+        C![
+            C.flex_1,
+            C.border_2,
+            C.bg_primary,
+            EDGE_STYLE,
+            C.text_center,
+            C.text_secondary
+        ],
+        ev(Ev::Click, move |_| Msg::Home(HomeMsg::StartTutorial(
+            &tutorial.steps
+        ))),
+        &tutorial.title
+    ]
 }

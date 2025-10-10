@@ -90,12 +90,12 @@ pub fn view(model: &HomeModel) -> impl IntoNodes<GlobalMsg> {
                 LexemeCategory::Concept(ConceptKind::Variable) => {
                     Some(C.text_variable_concept)
                 },
-                LexemeCategory::Concept(ConceptKind::Concrete) => {
-                    Some(C.text_concrete_concept)
-                },
-                LexemeCategory::Concept(ConceptKind::Abstract) => {
-                    Some(C.text_abstract_concept)
-                },
+                LexemeCategory::Concept(ConceptKind::Concrete {
+                    ..
+                }) => Some(C.text_concrete_concept),
+                LexemeCategory::Concept(ConceptKind::Abstract {
+                    ..
+                }) => Some(C.text_abstract_concept),
                 LexemeCategory::OpeningParenthesis {
                     closing_position: None,
                 }

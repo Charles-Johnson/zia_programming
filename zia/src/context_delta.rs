@@ -15,22 +15,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    ast::SyntaxTree,
     concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
-    context_cache::ContextCache,
+    context_cache::GenericCache,
     errors::ZiaResult,
-    mixed_concept::MixedConcept,
-    reduction_reason::{ReductionReason, Syntax},
+    mixed_concept::{self, ConceptId, MixedConcept},
+    nester::SharedReference,
 };
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::{self, Debug, Display, Formatter},
-    hash::Hash,
+    marker::PhantomData,
     slice::Iter,
 };
 
 #[derive(Clone)]
-pub struct ContextDelta<ConceptId, SharedDirectConceptDelta> {
+pub struct ContextDelta<
+    ConceptId: mixed_concept::ConceptId,
+    SharedDirectConceptDelta,
+    SR: SharedReference,
+> {
     string: HashMap<String, ValueChange<ConceptId>>,
     number_of_uncommitted_concepts: usize,
     concepts_to_apply_in_order: Vec<(ConceptId, SharedDirectConceptDelta)>,
@@ -38,6 +41,7 @@ pub struct ContextDelta<ConceptId, SharedDirectConceptDelta> {
         ConceptId,
         Vec<ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
     >,
+    phantom: PhantomData<SR>,
 }
 
 pub trait SharedDelta:
@@ -50,8 +54,11 @@ pub trait SharedDelta:
     fn strong_count(&self) -> usize;
 }
 
-impl<ConceptId, SharedDirectConceptDelta>
-    ContextDelta<ConceptId, SharedDirectConceptDelta>
+impl<
+        ConceptId: mixed_concept::ConceptId,
+        SharedDirectConceptDelta,
+        SR: SharedReference,
+    > ContextDelta<ConceptId, SharedDirectConceptDelta, SR>
 {
     fn new(number_of_uncommitted_concepts: usize) -> Self {
         Self {
@@ -59,32 +66,28 @@ impl<ConceptId, SharedDirectConceptDelta>
             concepts_to_apply_in_order: vec![],
             concept: HashMap::new(),
             number_of_uncommitted_concepts,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<ConceptId, SharedDirectConceptDelta>
-    ContextDelta<ConceptId, SharedDirectConceptDelta>
+impl<CI, SharedDirectConceptDelta, SR: SharedReference>
+    ContextDelta<CI, SharedDirectConceptDelta, SR>
 where
-    ConceptId: MixedConcept,
-    SharedDirectConceptDelta: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>,
+    CI: MixedConcept,
+    SharedDirectConceptDelta:
+        Clone + AsRef<DirectConceptDelta<CI>> + From<DirectConceptDelta<CI>>,
 {
-    pub fn update_concept_delta<C>(
+    pub fn update_concept_delta(
         &mut self,
-        concept_delta: DirectConceptDelta<ConceptId>,
-        cache_to_invalidate: &mut C,
-    ) -> ConceptId
-    where
-        C: ContextCache,
-        <C::RR as ReductionReason>::Syntax: SyntaxTree<ConceptId = ConceptId>,
-    {
+        concept_delta: DirectConceptDelta<CI>,
+        cache_to_invalidate: &mut GenericCache<CI, SR>,
+    ) -> CI {
         let concept_delta: SharedDirectConceptDelta = concept_delta.into();
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
-                self.update_new_concept_delta::<Syntax<C>>(delta)
+                self.update_new_concept_delta(delta)
             },
             DirectConceptDelta::Compose {
                 composition_id,
@@ -179,41 +182,31 @@ where
 
     pub const fn concepts_to_apply_in_order(
         &self,
-    ) -> &Vec<(ConceptId, SharedDirectConceptDelta)> {
+    ) -> &Vec<(CI, SharedDirectConceptDelta)> {
         &self.concepts_to_apply_in_order
     }
 
-    pub fn get_string(&self, key: &str) -> Option<&ValueChange<ConceptId>> {
+    pub fn get_string(&self, key: &str) -> Option<&ValueChange<CI>> {
         self.string.get(key)
     }
 
     pub fn get_concept(
         &self,
-        key: &ConceptId,
-    ) -> Option<
-        impl Iterator<Item = &ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
-    > {
+        key: &CI,
+    ) -> Option<impl Iterator<Item = &ConceptDelta<CI, SharedDirectConceptDelta>>>
+    {
         self.concept.get(key).map(|v| v.iter())
     }
 
     pub fn iter_concepts(
         &self,
     ) -> impl Iterator<
-        Item = (
-            &ConceptId,
-            Iter<ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
-        ),
+        Item = (&CI, Iter<'_, ConceptDelta<CI, SharedDirectConceptDelta>>),
     > {
         self.concept.iter().map(|(c, v)| (c, v.iter()))
     }
 
-    fn update_new_concept_delta<Syntax>(
-        &mut self,
-        delta: &NewConceptDelta<ConceptId>,
-    ) -> ConceptId
-    where
-        Syntax: SyntaxTree<ConceptId = ConceptId>,
-    {
+    fn update_new_concept_delta(&mut self, delta: &NewConceptDelta<CI>) -> CI {
         let new_concept_id = self.insert_delta_for_new_concept(delta.clone());
         match delta {
             NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {
@@ -307,54 +300,49 @@ where
                     IndirectConceptDelta::ReducesFrom(new_concept_id).into();
                 self.insert_delta_for_existing_concept(*reduction, cd);
             },
-        };
+        }
         new_concept_id
     }
 
     fn insert_delta_for_existing_concept(
         &mut self,
-        concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
+        concept_id: CI,
+        cd: ConceptDelta<CI, SharedDirectConceptDelta>,
     ) {
         self.insert_delta_for_concept(
             concept_id,
             cd,
-            |last_delta, concept_id: ConceptId| {
-                match last_delta {
-                    ConceptDelta::Direct(dcd)
-                        if matches!(
-                            dcd.as_ref(),
-                            &DirectConceptDelta::Remove(_)
-                        ) =>
-                    {
-                        panic!("Concept {concept_id} already removed");
-                    },
-                    _ => (),
-                };
+            |last_delta, concept_id: CI| match last_delta {
+                ConceptDelta::Direct(dcd)
+                    if matches!(
+                        dcd.as_ref(),
+                        &DirectConceptDelta::Remove(_)
+                    ) =>
+                {
+                    panic!("Concept {concept_id} already removed");
+                },
+                _ => (),
             },
         );
     }
 
     pub fn insert_delta_for_new_concept(
         &mut self,
-        cd: NewConceptDelta<ConceptId>,
-    ) -> ConceptId {
-        // TODO: Explicitly convert to uncommitted concept
-        let concept_id: ConceptId =
-            ConceptId::uncommitted(self.number_of_uncommitted_concepts);
+        cd: NewConceptDelta<CI>,
+    ) -> CI {
+        let concept_id: CI =
+            CI::uncommitted(self.number_of_uncommitted_concepts);
         self.number_of_uncommitted_concepts += 1;
         self.insert_delta_for_concept(
             concept_id,
             ConceptDelta::Direct(DirectConceptDelta::New(cd).into()),
-            |last_delta, concept_id: ConceptId| {
-                match last_delta {
-                    ConceptDelta::Direct(dcd)
-                        if matches!(
-                            dcd.as_ref(),
-                            &DirectConceptDelta::Remove(_)
-                        ) => {},
-                    _ => panic!("Concept {concept_id} already exists"),
-                };
+            |last_delta, concept_id: CI| match last_delta {
+                ConceptDelta::Direct(dcd)
+                    if matches!(
+                        dcd.as_ref(),
+                        &DirectConceptDelta::Remove(_)
+                    ) => {},
+                _ => panic!("Concept {concept_id} already exists"),
             },
         );
         concept_id
@@ -362,12 +350,9 @@ where
 
     fn insert_delta_for_concept(
         &mut self,
-        concept_id: ConceptId,
-        cd: ConceptDelta<ConceptId, SharedDirectConceptDelta>,
-        sanity_check: impl Fn(
-            &ConceptDelta<ConceptId, SharedDirectConceptDelta>,
-            ConceptId,
-        ),
+        concept_id: CI,
+        cd: ConceptDelta<CI, SharedDirectConceptDelta>,
+        sanity_check: impl Fn(&ConceptDelta<CI, SharedDirectConceptDelta>, CI),
     ) {
         match self.concept.entry(concept_id) {
             Entry::Occupied(mut e) => {
@@ -381,14 +366,14 @@ where
             Entry::Vacant(e) => {
                 e.insert(vec![cd]);
             },
-        };
+        }
     }
 }
 
-impl<ConceptId, SharedDirectConceptDelta> Debug
-    for ContextDelta<ConceptId, SharedDirectConceptDelta>
+impl<CI, SharedDirectConceptDelta, SR: SharedReference> Debug
+    for ContextDelta<CI, SharedDirectConceptDelta, SR>
 where
-    ConceptId: Clone + Debug + Display + Eq + Hash,
+    CI: ConceptId,
     SharedDirectConceptDelta: Debug,
 {
     fn fmt(
@@ -421,23 +406,24 @@ where
 }
 
 #[derive(Debug)]
-pub struct NestedDelta<ConceptId, SharedDirectConceptDelta, D>
+pub struct NestedDelta<CI, SharedDirectConceptDelta, D, SR: SharedReference>
 where
-    ConceptId: MixedConcept,
+    CI: ConceptId,
     SharedDirectConceptDelta: Debug,
     D: SharedDelta<NestedDelta = Self>,
 {
     inner_delta: Option<D>,
-    overlay_delta: ContextDelta<ConceptId, SharedDirectConceptDelta>,
+    overlay_delta: ContextDelta<CI, SharedDirectConceptDelta, SR>,
 }
 
 impl<
-        ConceptId,
+        CI,
         SharedDirectConceptDelta,
         D: SharedDelta<NestedDelta = Self>,
-    > Default for NestedDelta<ConceptId, SharedDirectConceptDelta, D>
+        SR: SharedReference,
+    > Default for NestedDelta<CI, SharedDirectConceptDelta, D, SR>
 where
-    ConceptId: MixedConcept + Clone,
+    CI: ConceptId + Clone,
     SharedDirectConceptDelta: Debug,
 {
     fn default() -> Self {
@@ -462,13 +448,13 @@ type BoxedTupleIterator<'a, ConceptId, SharedDirectConceptDelta> = Box<
             ),
         > + 'a,
 >;
-impl<ConceptId, SharedDirectConceptDelta, D>
-    NestedDelta<ConceptId, SharedDirectConceptDelta, D>
+impl<CI, SharedDirectConceptDelta, D, SR: SharedReference>
+    NestedDelta<CI, SharedDirectConceptDelta, D, SR>
 where
-    ConceptId: MixedConcept,
+    CI: MixedConcept,
     SharedDirectConceptDelta: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>
+        + AsRef<DirectConceptDelta<CI>>
+        + From<DirectConceptDelta<CI>>
         + Debug,
     D: SharedDelta<NestedDelta = Self>,
 {
@@ -484,7 +470,7 @@ where
         }
     }
 
-    pub fn get_string(&self, key: &str) -> Option<ValueChange<ConceptId>> {
+    pub fn get_string(&self, key: &str) -> Option<ValueChange<CI>> {
         match (
             self.inner_delta.as_ref().and_then(|d| d.as_ref().get_string(key)),
             self.overlay_delta.get_string(key),
@@ -560,7 +546,7 @@ where
 
     pub fn iter_string(
         &self,
-    ) -> impl Iterator<Item = (&String, ValueChange<ConceptId>)> {
+    ) -> impl Iterator<Item = (&String, ValueChange<CI>)> {
         // need to combine values for same key
         let maybe_inner_strings =
             self.inner_delta.as_ref().map(|d| d.as_ref().iter_string());
@@ -569,13 +555,13 @@ where
             .map_or_else(
                 || {
                     let new_box: Box<
-                        dyn Iterator<Item = (&String, ValueChange<ConceptId>)>,
+                        dyn Iterator<Item = (&String, ValueChange<CI>)>,
                     > = Box::new(std::iter::empty());
                     new_box
                 },
                 |inner_strings| {
                     let new_box: Box<
-                        dyn Iterator<Item = (&String, ValueChange<ConceptId>)>,
+                        dyn Iterator<Item = (&String, ValueChange<CI>)>,
                     > = Box::new(inner_strings.filter(move |(s, _)| {
                         !self.overlay_delta.string.contains_key(*s)
                     }));
@@ -590,9 +576,9 @@ where
 
     pub fn get_concept<'a>(
         &'a self,
-        key: &'a ConceptId,
+        key: &'a CI,
     ) -> Option<
-        impl Iterator<Item = &'a ConceptDelta<ConceptId, SharedDirectConceptDelta>>,
+        impl Iterator<Item = &'a ConceptDelta<CI, SharedDirectConceptDelta>>,
     > {
         let maybe_inner_concept_deltas =
             self.inner_delta.as_ref().and_then(|d| d.as_ref().get_concept(key));
@@ -602,10 +588,7 @@ where
             (Some(cd), None) => {
                 let new_box: Box<
                     dyn Iterator<
-                        Item = &ConceptDelta<
-                            ConceptId,
-                            SharedDirectConceptDelta,
-                        >,
+                        Item = &ConceptDelta<CI, SharedDirectConceptDelta>,
                     >,
                 > = Box::new(cd);
                 Some(new_box)
@@ -613,10 +596,7 @@ where
             (None, Some(cd)) => {
                 let new_box: Box<
                     dyn Iterator<
-                        Item = &ConceptDelta<
-                            ConceptId,
-                            SharedDirectConceptDelta,
-                        >,
+                        Item = &ConceptDelta<CI, SharedDirectConceptDelta>,
                     >,
                 > = Box::new(cd);
                 Some(new_box)
@@ -624,10 +604,7 @@ where
             (Some(inner_cd), Some(outer_cd)) => {
                 let new_box: Box<
                     dyn Iterator<
-                        Item = &ConceptDelta<
-                            ConceptId,
-                            SharedDirectConceptDelta,
-                        >,
+                        Item = &ConceptDelta<CI, SharedDirectConceptDelta>,
                     >,
                 > = Box::new(inner_cd.chain(outer_cd));
                 Some(new_box)
@@ -639,52 +616,46 @@ where
         &'a self,
     ) -> impl Iterator<
         Item = (
-            &'a ConceptId,
+            &'a CI,
             Box<
                 dyn Iterator<
-                        Item = &'a ConceptDelta<
-                            ConceptId,
-                            SharedDirectConceptDelta,
-                        >,
+                        Item = &'a ConceptDelta<CI, SharedDirectConceptDelta>,
                     > + 'a,
             >,
         ),
     > + 'a {
         let inner_delta = self.inner_delta.as_ref();
-        let new_box: BoxedTupleIterator<
-            'a,
-            ConceptId,
-            SharedDirectConceptDelta,
-        > = Box::new(self.overlay_delta.iter_concepts().map(move |(k, v)| {
-            (k, {
-                let inner_concept_iter =
-                    inner_delta.and_then(|d| d.as_ref().get_concept(k));
-                match inner_concept_iter {
-                    None => {
-                        let new_box: Box<
-                            dyn Iterator<
-                                Item = &ConceptDelta<
-                                    ConceptId,
-                                    SharedDirectConceptDelta,
+        let new_box: BoxedTupleIterator<'a, CI, SharedDirectConceptDelta> =
+            Box::new(self.overlay_delta.iter_concepts().map(move |(k, v)| {
+                (k, {
+                    let inner_concept_iter =
+                        inner_delta.and_then(|d| d.as_ref().get_concept(k));
+                    match inner_concept_iter {
+                        None => {
+                            let new_box: Box<
+                                dyn Iterator<
+                                    Item = &ConceptDelta<
+                                        CI,
+                                        SharedDirectConceptDelta,
+                                    >,
                                 >,
-                            >,
-                        > = Box::new(v);
-                        new_box
-                    },
-                    Some(inner_concept_iter) => {
-                        let new_box: Box<
-                            dyn Iterator<
-                                Item = &ConceptDelta<
-                                    ConceptId,
-                                    SharedDirectConceptDelta,
+                            > = Box::new(v);
+                            new_box
+                        },
+                        Some(inner_concept_iter) => {
+                            let new_box: Box<
+                                dyn Iterator<
+                                    Item = &ConceptDelta<
+                                        CI,
+                                        SharedDirectConceptDelta,
+                                    >,
                                 >,
-                            >,
-                        > = Box::new(inner_concept_iter.chain(v));
-                        new_box
-                    },
-                }
-            })
-        }));
+                            > = Box::new(inner_concept_iter.chain(v));
+                            new_box
+                        },
+                    }
+                })
+            }));
         let concepts = &self.overlay_delta.concept;
         self.inner_delta
             .as_ref()
@@ -692,7 +663,7 @@ where
                 || {
                     let new_box: BoxedTupleIterator<
                         'a,
-                        ConceptId,
+                        CI,
                         SharedDirectConceptDelta,
                     > = Box::new(std::iter::empty());
                     new_box
@@ -700,7 +671,7 @@ where
                 |d| {
                     let new_box: BoxedTupleIterator<
                         'a,
-                        ConceptId,
+                        CI,
                         SharedDirectConceptDelta,
                     > = Box::new(
                         d.as_ref()
@@ -713,22 +684,18 @@ where
             .chain(new_box)
     }
 
-    pub fn update_concept_delta<C>(
+    pub fn update_concept_delta(
         &mut self,
-        concept_delta: DirectConceptDelta<ConceptId>,
-        cache_to_invalidate: &mut C,
-    ) -> ConceptId
-    where
-        C: ContextCache,
-        <C::RR as ReductionReason>::Syntax: SyntaxTree<ConceptId = ConceptId>,
-    {
+        concept_delta: DirectConceptDelta<CI>,
+        cache_to_invalidate: &mut GenericCache<CI, SR>,
+    ) -> CI {
         self.overlay_delta
             .update_concept_delta(concept_delta, cache_to_invalidate)
     }
 
     pub fn concepts_to_apply_in_order(
         &self,
-    ) -> Vec<(ConceptId, SharedDirectConceptDelta)> {
+    ) -> Vec<(CI, SharedDirectConceptDelta)> {
         let mut concepts = self
             .inner_delta
             .as_ref()
@@ -740,8 +707,8 @@ where
 
     pub fn insert_delta_for_new_concept(
         &mut self,
-        cd: NewConceptDelta<ConceptId>,
-    ) -> ConceptId {
+        cd: NewConceptDelta<CI>,
+    ) -> CI {
         self.overlay_delta.insert_delta_for_new_concept(cd)
     }
 }

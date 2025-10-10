@@ -23,9 +23,17 @@ pub type ZiaResult<T> = Result<T, ZiaError>;
 /// All the expected ways a Zia command could be invalid.
 #[derive(Debug, PartialEq, Eq, Clone, Error)]
 pub enum ZiaError {
+    /// e.g. an empty string.
+    #[error("No concepts recognised in expression")]
+    EmptyExpression,
+    /// e.g. ((a b).
+    #[error("Not all opening parentheses match closing parentheses")]
+    UnmatchedParentheses,
     /// When specifying a reduction rule that already exists.
-    #[error("That reduction rule already exists.")]
-    RedundantReduction,
+    #[error("That reduction rule for {syntax} already exists.")]
+    RedundantReduction {
+        syntax: String,
+    },
     /// When specifying a definition that already exists.
     #[error("That definition already exists.")]
     RedundantComposition,

@@ -1,16 +1,16 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences, ContextSearch},
+    context_search::ContextReferences,
     mock_snap_shot::MockSnapShot,
     multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedReductionReason,
-        SharedContextDelta, SharedDirectConceptDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
+use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
 fn labels() -> HashMap<usize, &'static str> {
@@ -26,16 +26,14 @@ fn labels() -> HashMap<usize, &'static str> {
     }
 }
 
-type ReductionReason = MultiThreadedReductionReason<Syntax>;
-
 #[test]
 fn existence_inference_rule() {
-    let context_cache = MultiThreadedContextCache::default();
+    let context_cache = MTContextCache::default();
     let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<_>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<_>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
         delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
@@ -45,27 +43,9 @@ fn existence_inference_rule() {
         Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10))
             .share();
     let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
-    let variable_mask = hashmap! {9.into() => context_search.to_ast(&7)};
     assert_eq!(
-        context_search.reduce(&example_syntax),
-        Some((
-            true_syntax.into(),
-            ReductionReason::Rule {
-                generalisation: context_search.to_ast(&2),
-                variable_mask: variable_mask.clone(),
-                reason: ReductionReason::Inference {
-                    implication: context_search
-                        .substitute(&context_search.to_ast(&6), &variable_mask),
-                    reason: ReductionReason::Existence{
-                        generalisation: context_search
-                            .substitute(&context_search.to_ast(&13), &variable_mask),
-                        substitutions: hashmap!{context_search.to_ast(&11) => context_search.to_ast(&3)},
-                    }
-                    .into()
-                }
-                .into()
-            }
-        ))
+        context_search.reduce(&example_syntax).unwrap().0,
+        true_syntax.into(),
     );
 }
 

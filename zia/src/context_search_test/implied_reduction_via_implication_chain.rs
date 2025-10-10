@@ -1,10 +1,11 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
-    context_search::{ContextReferences, ContextSearch},
+    context_search::ContextReferences,
     mock_snap_shot::{ConceptId, MockSnapShot},
     multi_threaded::{
-        MultiThreadedContextCache, SharedContextDelta, SharedDirectConceptDelta,
+        MTContextCache, MTContextSearch, SharedContextDelta,
+        SharedDirectConceptDelta,
     },
 };
 use maplit::{hashmap, hashset};
@@ -79,7 +80,7 @@ fn concepts() -> [Concept<usize>; 26] {
         example_composition,
         variable_concept,
         concept_b,
-        (ConcreteConceptType::Precedence, 11).into(),
+        (ConcreteConceptType::Precedes, 11).into(),
         (ConcreteConceptType::Associativity, 12).into(),
         (ConcreteConceptType::Left, 13).into(),
         (ConcreteConceptType::Right, 14).into(),
@@ -118,12 +119,12 @@ fn labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn inference_rule() {
-    let context_cache = MultiThreadedContextCache::default();
+    let context_cache = MTContextCache::default();
     let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _>::default();
+        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
+    let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
         delta: SharedContextDelta(context_delta.into()),
         cache: &context_cache,
