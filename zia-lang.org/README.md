@@ -1,79 +1,65 @@
-# Fork of Seed Quickstart with Webpack
+# zia-lang.org web app
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/745c7b1d-5894-4f58-be28-e730a11e1ff4/deploy-status)](https://app.netlify.com/sites/quickstart-webpack/deploys)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9ab27d1a-b3f4-4253-8621-8689b21a8c92/deploy-status)](https://app.netlify.com/projects/thirsty-minsky-e69f74/deploys)
 
 <!-- prettier-ignore -->
-> I want to write fast, reliable and efficient web apps. Quickly.  \
-And I like Rust and documentation.
+> Try using Zia in a web browser!
 
 ---
 
-[**LIVE DEMO**: quickstart-webpack.seed-rs.org](https://quickstart-webpack.seed-rs.org)
+[**LIVE DEMO**: zia-lang.org](https://zia-lang.org)
 
 Main components:
 
 - **Seed** - Rust framework, inspired by Elm. [Seed's Awesome list](https://github.com/seed-rs/awesome-seed-rs).
 - **[Tailwind CSS](https://tailwindcss.com/)** - CSS framework. All CSS classes in your project are typed for safe use in Rust code. Unused classes are automatically deleted for much smaller bundle size.
 - **[Webpack](https://webpack.js.org/)** - Bundler. Auto-reload on code change, dev-server accessible from mobile phones, prerendering for static websites... and many more useful features are prepared for you in this quickstart.
-    - Why Webpack instead of Rust-only build pipeline? - [Wiki](https://github.com/seed-rs/seed-quickstart-webpack/wiki/Why-Webpack)
-- **Production-ready starter project** - Example project is based on the website with several pages, favicons, nice fonts, meta tags for social media, buttons for scrolling to top, header which is hidden on scrolling, etc. It can be prerendered, but it also contains loading screen.
-  For more complex project (based on another quickstart) see [seed-rs-realworld](https://github.com/seed-rs/seed-rs-realworld).
+  - Why Webpack instead of Rust-only build pipeline? - [Wiki](https://github.com/seed-rs/seed-quickstart-webpack/wiki/Why-Webpack)
 - **Production-ready configuration** - Project is linted, compiled, prerendered and deployed in CI pipeline (see `.github/workflows/main.yml` and `netlify.toml`). Linters are very strict.
 
 ---
 
-# Zero to Hero
+# Setup
 
-> How to create your new app, modify it and deploy it - step by step guide.
-
-## 1. Create a new project
-
-I want to show you how to create, build and host your website for free, so we will need a public GitHub repository.
-
-1. The simplest way how to do it is to click on the green button **Use this template** on the GitHub [profile](https://github.com/seed-rs/seed-quickstart-webpack) of this quickstart.
-
-1. Clone your new repository to your local machine. I use [GitKraken](https://www.gitkraken.com/), but you are probably better developer than me - use your favorite terminal.
-
-## 2. Install / check required tools
+## 1. Install / check required tools
 
 1. Make sure you have basic tools installed:
 
-   - [Yarn](https://yarnpkg.com/lang/en/docs/install) - run `$ yarn -v` in terminal. It should output something like `1.17.3`
-   - [Node.js](https://nodejs.org) - `$ node -v` => `v10.16.3`
-   - [Rust](https://www.rust-lang.org/tools/install) - `$ rustc -V` => `rustc 1.38.0 (625451e37 2019-09-23)`
+   - [Yarn](https://yarnpkg.com/lang/en/docs/install) - run `$ yarn -v` in terminal. It should output something like `1.22.22`
+   - [Node.js](https://nodejs.org) - `$ node -v` => `v18.20.8`
+   - [Rust](https://www.rust-lang.org/tools/install) - `$ rustc -V` => `rustc 1.81.0 (eeb90cda1 2024-09-04)`
    - Rust target `wasm` - `$ rustup target list` => `.. wasm32-unknown-unknown (installed) ..`
-       - Install: `$ rustup target add wasm32-unknown-unknown`
-       
+     - Install: `$ rustup target add wasm32-unknown-unknown`
+
 1. Platform-specific tools like `ssl` and `pkg-config`:
-    - Follow recommendations in build errors (during the next chapter).
-    - _Note_: Don't hesitate to write a tutorial and create PR or write a Wiki page for your platform.
+
+   - Follow recommendations in build errors (during the next chapter).
+   - _Note_: Don't hesitate to write a tutorial and create PR or write a Wiki page for your platform.
 
 1. These tools are required by some commands:
 
    - [wasm-pack](https://rustwasm.github.io/wasm-pack/)
 
-     - Check: `$ wasm-pack -V` => `wasm-pack 0.8.1`
-     - Install: `$ cargo install --force wasm-pack`
+     - Check: `$ wasm-pack -V` => `wasm-pack 0.13.0`
+     - Install: `$ cargo install --force wasm-pack --version 0.13.0`
 
    - [cargo-make](https://sagiegurari.github.io/cargo-make/)
 
-     - Check: `$ cargo make -V` => `cargo-make 0.22.1`
-     - Install: `$ cargo install --force cargo-make`
+     - Check: `$ cargo make -V` => `cargo-make 0.35.0`
+     - Install: `$ cargo install --force cargo-make --version 0.35.0`
 
    - [nightly rustfmt](https://github.com/rust-lang/rustfmt#on-the-nightly-toolchain)
-     - Check: `$ cargo +nightly fmt -- -V` => `rustfmt 1.4.8-nightly (afb1ee1c 2019-09-08)`
      - Install:
-       1. `$ rustup toolchain install nightly`
-       2. `$ rustup component add rustfmt --toolchain nightly`
+       1. `$ rustup toolchain install nightly-2024-07-07`
+       2. `$ rustup component add rustfmt --toolchain nightly-2024-07-07`
 
-## 3. Prepare your project for work
+## 2. Test local changes in a browser
 
 1. Open terminal in your project and go to directory `crate` - `$ cd crate`
 1. Install Webpack and other dependencies - `$ yarn`
 1. Try to start dev-server - `$ yarn start` - and then open [localhost:8000](http://localhost:8000) in a browser.
 1. Stop server (try `Ctrl+c`).
-1. Try to lint your project - `$ cargo make verify_only` - you shouldn't see any errors.
-1. Modify files like `LICENCE`, `README.md` and `/crate/Cargo.toml` as you wish and push changes into GitHub.
+1. Try to lint any code changes - `$ cargo make --no-workspace verify` - you shouldn't see any errors.
 
 ## 4. Write your website
 
@@ -156,21 +142,13 @@ _Note_: You don't have to follow all steps below - reuse starter project code as
 
 ### TailwindCSS
 
-1. Open `/configs/tailwind.config.js` in your IDE.
-1. Update content or replace it with the default one:
-
-```js
-module.exports = {
-  theme: {},
-  variants: {},
-  plugins: []
-};
-```
+1. Tailwind config is defined [here](configs/tailwind.config.js).
+1. All possible tailwind classes can be imported into the Rust code using `use generated::css_classes::C;`
 
 ### Custom CSS
 
-1. Open `/css/custom.css` in your IDE.
-1. Delete content or update it.
+1. Custom CSS is defined [here](css/custom.css).
+1. It can be referenced in the handlebars templates e.g [entries/templates/loading_page.hbs](entries/templates/loading_page.hbs)
 
 ## 5. Prepare your project for deploy
 
@@ -202,65 +180,7 @@ And how to setup Github Actions with deploy into Netlify.
    - It'll format your code, lint it and start headless tests in Firefox.
    - You can change its behaviour in `/crate/Makefile.tom` - task `verify` (similar task `verify_only` is used in CI).
 
-### Netlify
-
-1. Create a new [Netlify](https://www.netlify.com/) site.
-1. _[Optional]_ Change site name or/and use your own domain.
-1. _[Optional]_ Turn on HTTPS.
-1. _[Optional]_ Add badge to project's `/README.md` (Site detail > `Settings` > `General` > `Status badges`).
-1. Note somewhere **Site id** (Site detail > `Settings` > `General` > _API ID_)
-1. Create and note somewhere **Access token** (Click on your avatar > `User settings` > `Applications` > `New access token` > Name it for instance `GitHub`)
-1. _[Optional]_ Adjust `/netlify.toml` to suit your needs. [Netlify docs](https://www.netlify.com/docs/netlify-toml-reference/).
-
-### Github Actions
-
-1. Open your GitHub repository in your favorite browser.
-1. Click on `Settings` and then on `Secrets`.
-1. Add _secret_ `NETLIFY_SITE_ID` and set it's value to **Site id**.
-1. Add _secret_ `NETLIFY_ACCESS_TOKEN` and set it's value to **Access token**.
-1. Click on `Actions` in the side menu and make sure that `Actions` are enabled.
-1. _[Optional]_ Modify `/.github/workflows/main.yml`.
-   - Replace `yarn build:prerender` with `yarn build:release` if you don't want to prerender pages.
-1. _[Optional]_ Push your code and switch to tab `Actions` to check that everything works.
-
-### Travis CI
-
-<details>
-<summary>Content (this guide and related config file are not maintained)</summary>
-
-1. Sync your [TravisCI](https://travis-ci.org/) account with your GitHub one.
-1. Find repository with your app in [your list](https://travis-ci.org/account/repositories) and click on `Settings`.
-1. Add _Environment Variable_ `NETLIFY_SITE_ID` and set it's value to **Site id**.
-1. Add _Environment Variable_ `NETLIFY_ACCESS_TOKEN` and set it's value to **Access token**.
-1. Switch to tab `Current` and click `Activate repository`.
-1. _[Optional]_ Add badge to project's `/README.md` (Repository detail > Click on badge next to the rep. name > `IMAGE URL` change to `MARKDOWN`)
-1. _[Optional]_ Modify `/.travis.yml`.
-   - Replace `yarn build:prerender` with `yarn build:release` if you don't want to prerender pages.
-   - _Tip:_ If jobs don't want to start after push, check Repository detail > `More options` > `Requests`.
-   
-</details>
-
-## 6. Add your project to Awesome list
-
-1. Create PR or issue in [awesome-seed-rs](https://github.com/seed-rs/awesome-seed-rs).
-
----
-
-# Used in projects
-
-- [seed-rs/seed-rs.org](https://github.com/seed-rs/seed-rs.org)
-- [MartinKavik/kavik.cz](https://github.com/MartinKavik/kavik.cz)
-- _[create PR or Issue]_
-
 # Contributing
 
 - Improved documentation, fixed typos, updated dependencies, ... - create Issue or PR.
 - Ideas, bugs, questions, ... - create Issue.
-
-_Note_: Please squash commits and rebase before creating PR. Thanks!
-
----
-
-## Other Seed projects
-
-- [seed-rs/awesome-seed-rs](https://github.com/seed-rs/awesome-seed-rs)
