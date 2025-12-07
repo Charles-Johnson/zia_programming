@@ -33,13 +33,6 @@
 //! The leaves of the tree can be any unicode string without spaces or parentheses. These symbols may
 //! be recognised by the intepreter as concepts or if not used to label new concepts.
 //!
-//! Currently, only the lowest-level functionality has been implemented. It's important that programs
-//! are represented consistently and transparently within the `Context` in order to achieve a
-//! self-describing system. The syntax shown below may appear awkward but more convenient syntax will
-//! be possible once more functionality is added. For example, the need to group pairs of expressions
-//! in parentheses will be alleviated by functionality to set the relative precedence and associativity
-//! of concepts.
-//!
 //! So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
 //! `->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `precedes`, `>`, `=>` and
 //! `exists_such_that` but the concepts can be renamed (via the `:=` concept, as shown below) to
