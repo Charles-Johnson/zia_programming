@@ -92,4 +92,5 @@ RUN apt install -y \
   libxtst6 \
   libatk-bridge2.0-0 
 RUN apt install -y libgtk-3-0
+RUN rustup default 1.82
 USER node

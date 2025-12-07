@@ -13,5 +13,5 @@ license = "GPL-3.0"
 maintenance = {status = "actively-developed"}
 
 [dependencies]
-zia = { path = "../zia", version = "0.5.0"}
+zia = { path = "../zia", version="0.6.0"}
 linefeed = "0.5.3"
