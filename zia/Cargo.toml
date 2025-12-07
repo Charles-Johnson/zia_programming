@@ -36,4 +36,4 @@ simple_logger = "1.15.0"
 [dev-dependencies]
 proptest = "0.9.1"
 pretty_assertions = "1.4.0"
-assert_matches = "*"
+assert_matches = "1.5.0"
