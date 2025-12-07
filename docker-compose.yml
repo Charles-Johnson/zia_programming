@@ -4,6 +4,7 @@ services:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
       - CARGO_REGISTRY_TOKEN
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -22,6 +23,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -40,6 +42,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -58,6 +61,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
