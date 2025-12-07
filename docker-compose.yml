@@ -3,6 +3,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+      - CARGO_REGISTRY_TOKEN
     image: devimage
     pull_policy: never
     volumes:
