@@ -17,6 +17,10 @@
   "reactSnap": {
     "source": "dist",
     "externalServer": true,
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
     "port": 8000
   },
   "devDependencies": {

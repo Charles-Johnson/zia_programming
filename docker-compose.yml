@@ -89,7 +89,7 @@ services:
       [
         "sh",
         "-c",
-        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn && yarn build:prerender",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn && yarn build:prerender && yarn run serve:dist",
       ]
     working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
