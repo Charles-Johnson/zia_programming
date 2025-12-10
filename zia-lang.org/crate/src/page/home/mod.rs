@@ -6,8 +6,9 @@ mod tutorials;
 use std::mem::swap;
 
 use crate::{generated::css_classes::C, Msg as GlobalMsg};
+use js_sys::Array;
 use seed::{div, log, prelude::*, style, window, C};
-use web_sys::{HtmlDivElement, HtmlTextAreaElement};
+use web_sys::{console::error, HtmlDivElement, HtmlTextAreaElement};
 use zia::single_threaded::Context;
 
 use self::tutorials::TutorialStep;
@@ -93,21 +94,28 @@ pub fn update(
             });
         },
         Msg::SetCommandInput(s) => {
-            let textarea_element = model.command_input.get().unwrap();
-            textarea_element.set_value(&s);
-            textarea_element.focus().unwrap();
-            model.input = s;
-            orders.after_next_render(|_| {
-                let app = window()
-                    .document()
-                    .unwrap()
-                    .get_element_by_id("app")
-                    .unwrap();
-                let scroll_height = app.scroll_height();
-                // Prevents latest history from being displayed underneath command input
-                // Doesn't seem to work in android browsers but works in android PWA
-                app.set_scroll_top(scroll_height);
-            });
+            if let Some(textarea_element) = model.command_input.get() {
+                textarea_element.set_value(&s);
+                textarea_element.focus().unwrap();
+                model.input = s;
+                orders.after_next_render(|_| {
+                    let app = window()
+                        .document()
+                        .unwrap()
+                        .get_element_by_id("app")
+                        .unwrap();
+                    let scroll_height = app.scroll_height();
+                    // Prevents latest history from being displayed underneath command input
+                    // Doesn't seem to work in android browsers but works in android PWA
+                    app.set_scroll_top(scroll_height);
+                });
+            } else {
+                let array = Array::new();
+                array.push(&JsValue::from_str(
+                    "No command input text area element found!",
+                ));
+                error(&array);
+            }
         },
         Msg::Input(s) => model.input = s,
         Msg::StartEmptySession => {

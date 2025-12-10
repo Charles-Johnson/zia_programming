@@ -3,6 +3,8 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+      - CARGO_REGISTRY_TOKEN
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -21,6 +23,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -39,6 +42,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -57,6 +61,7 @@ services:
     environment:
       - CARGO_HOME=/usr/src/.cargo
       - DISPLAY
+    build: ./nvim
     image: devimage
     pull_policy: never
     volumes:
@@ -89,7 +94,7 @@ services:
       [
         "sh",
         "-c",
-        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn && yarn build:prerender",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && cd zia-lang.org && yarn && yarn build:prerender && yarn run serve:dist",
       ]
     working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}

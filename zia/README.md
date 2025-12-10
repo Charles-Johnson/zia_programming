@@ -6,11 +6,11 @@
 
 ## Interpreter for the Zia programming language
 
+> I gave a talk about this at the Rust Seoul meetup: <https://www.youtube.com/watch?v=LbFTP3pITWU>
+
 The Zia project aims to develop a programming language that can be used to program itself.
-Instead of storing the source code as plain text and editing the raw text (which can easily break
-the program), the runtime environment of the interpreter (the `Context`) can be saved to disk and
-used in other programs. All the programming is done using an interactive shell such as
-[`IZia`](https://github.com/Charles-Johnson/zia_programming/tree/master/izia) or via an [online IDE](https://zia-lang.org).
+You can try out interactive tutorials via the [online editor](https://zia-lang.org) or install
+a command line REPL, (`izia`)[<https://github.com/Charles-Johnson/zia_programming/tree/master/izia>].
 The commands sent are interpreted based on the `Context`. They are used to incrementally modify, test
 and debug the `Context`.
 
@@ -21,17 +21,10 @@ binary tree of height 2 with leaves `"ll"`, `"lr"`, `"rl"`, `"rr"` going from le
 The leaves of the tree can be any unicode string without spaces or parentheses. These symbols may
 be recognised by the intepreter as concepts or if not used to label new concepts.
 
-Currently, only the lowest-level functionality has been implemented. It's important that programs
-are represented consistently and transparently within the `Context` in order to achieve a
-self-describing system. The syntax shown below may appear awkward but more convenient syntax will
-be possible once more functionality is added. For example, the need to group pairs of expressions
-in parentheses will be alleviated by functionality to set the relative precedence and associativity
-of concepts.
-
 So far there are 10 built-in concepts. A new `Context` labels these with the symbols, `label_of`,
-`->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `prec`, `deafult`, `>`, `=>` and
-`exists_such_that` but the labels can be changed to different symbols for different languages or
-disciplines.
+`->`, `:=`, `let`, `true`, `false`, `assoc`, `right`, `left`, `precedes`, `>`, `=>` and
+`exists_such_that` but the concepts can be renamed (via the `:=` concept, as shown below) to
+different symbols for different languages or disciplines.
 
 ## Examples
 
