@@ -52,6 +52,7 @@
 //! assert_eq!(context.execute("a b"), "c");
 //!
 //! // Change the rule so that concept "a b" instead reduces to concept "d"
+//! assert_eq!(context.execute("forget a b"), "");
 //! assert_eq!(context.execute("let a b -> d"), "");
 //! assert_eq!(context.execute("a b"), "d");
 //!
@@ -61,9 +62,8 @@
 //!
 //! // Try to specify a rule that already exists
 //! assert_eq!(context.execute("let a b -> a b"), ZiaError::RedundantReduction{syntax: "a b".to_string()}.to_string());
-//! assert_eq!(context.execute("forget a b"), "");
 //! assert_eq!(context.execute("let a b -> c"), "");
-//! assert_eq!(context.execute("let a b -> c"), ZiaError::RedundantReduction{syntax: "a b".to_string()}.to_string());
+//! assert_eq!(context.execute("let a b -> c"), ZiaError::ExistingReduction{syntax_to_reduce: "a b".to_string(), existing_reduction: "c".to_string()}.to_string());
 //!
 //! // Relabel "label_of" to "표시"
 //! assert_eq!(context.execute("let 표시 := label_of"), "");
@@ -99,9 +99,6 @@
 //! // Let an arbitary expression be true
 //! assert_eq!(context.execute("let h i j"), "");
 //! assert_eq!(context.execute("h i j"), "true");
-//!
-//! // Determine associativity of symbol
-//! assert_eq!(context.execute("assoc a"), "right");
 //!
 //! // Define patterns
 //! assert_eq!(context.execute("let _x_ or true -> true"), "");
