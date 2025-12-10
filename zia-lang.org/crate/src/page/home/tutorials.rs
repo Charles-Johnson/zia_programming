@@ -1,7 +1,7 @@
 #[cfg(test)]
 use std::time::{Duration, Instant};
 
-pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<12>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<30>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -254,6 +254,114 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<12>) = (
                 #[cfg(test)]
                 expected_evaluation: "[ 5 , 3 , 1 ]",
                 explanation: "We can now push to arrays with multiple elements"
+            },
+            TutorialStep {
+                command: "let (_x_ +1) > _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "The successor is always greater"
+            },
+            TutorialStep {
+                command: "let 2 := 1 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Let's define two to test this"
+            },
+            TutorialStep {
+                command: "2 > 1",
+                #[cfg(test)]
+                expected_evaluation: "true",
+                explanation: ""
+            },
+            TutorialStep {
+                command: "let _x_ - 0 -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the base case for subtraction"
+            },
+            TutorialStep {
+                command: "let (_x_ > _y_) => ((_x_ +1) - (_y_ +1) -> _x_ - _y_)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "This is how to simplify a subtraction expression"
+            },
+            TutorialStep {
+                command: "2 - 1",
+                #[cfg(test)]
+                expected_evaluation: "1",
+                explanation: ""
+            },
+            TutorialStep {
+                command: "let (_x_ > _y_) => (_x_ / _y_ -> ((_x_ - _y_) / _y_) +1)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "This is how to simplify a division expression"
+            },
+            TutorialStep {
+                command: "let 3 := 2 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define three to test"
+            },
+            TutorialStep {
+                command: "3 / 2",
+                #[cfg(test)]
+                expected_evaluation: "1",
+                explanation: "Let's test evaluating an integer division expression"
+            },
+            TutorialStep {
+                command: "let _y_ / _y_ -> 1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "A number divided by itself is always one"
+            },
+            TutorialStep {
+                command: "let (_y_ > _x_) => (_x_ / _y_ -> 0)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Integer by a larger number is zero"
+            },
+            TutorialStep {
+                command: "let _y_ % _y_ -> 0",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "There's no remainder when dividing something by itself"
+            },
+            TutorialStep {
+                command: "let (_x_ > _y_) => (_x_ % _y_ -> (_x_ - _y_) % _y_)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "This is how to simplify a modulo expression"
+            },
+            TutorialStep {
+                command: "let (_y_ > _x_) => (_x_ % _y_ -> _x_)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "This is how to simplify another modulo expression"
+            },
+            TutorialStep {
+                command: "let bits_of 0 -> [ 0 ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Zero can be represented in binary as a single zero"
+            },
+            TutorialStep {
+                command: "let bits_of 1 -> [ 1 ]",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "One can be represented in binary as a single one"
+            },
+            TutorialStep {
+                command: "let (_x_ > 1) => (bits_of _x_ -> (bits_of (_x_ / 2)) push _x_ % 2)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Binary representations of larger numbers can be defined recursively using integer substraction and modulo"
+            },
+            TutorialStep {
+                command: "bits_of 2",
+                #[cfg(test)]
+                expected_evaluation: "[ 1 , 0 ]",
+                explanation: "Two represented in binary is 10"
             },
         ]
     }
