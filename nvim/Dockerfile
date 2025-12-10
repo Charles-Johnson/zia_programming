@@ -12,7 +12,7 @@ RUN curl -o /home/node/.local/share/nvim/site/autoload/plug.vim \
 RUN mkdir -p /home/node/.local/share/nvim/site/pack/tpope/start
 WORKDIR /home/node/.local/share/nvim/site/pack/tpope/start
 USER root
-RUN apt install -y git
+RUN apt update && apt install -y git
 USER node
 RUN git clone https://tpope.io/vim/fugitive.git
 RUN mkdir -p /home/node/.config/nvim
@@ -45,11 +45,52 @@ USER root
 RUN apt install -y build-essential
 RUN apt install -y rsync
 USER node
+RUN rustup default 1.88 # required for home@0.5.12
 RUN cargo install --force wasm-pack --version 0.13.0
 RUN cargo install --force cargo-make --version "0.35.1"
+RUN cargo install --force cargo-readme
+RUN rustup default 1.81
 RUN rustup toolchain install nightly-2024-07-07
 RUN rustup component add rustfmt --toolchain nightly-2024-07-07
-RUN cargo install --force cargo-readme
 RUN git config --global user.email "charlesthomasjohnson0@gmail.com"
 RUN git config --global user.name "Charle Johnson"
-
+USER root
+RUN apt install -y \
+  libgconf-2-4 \
+  libasound2 \
+  libatk1.0-0 \
+  libatspi2.0-0 \
+  libc6 \
+  libcairo2 \
+  libcups2 \
+  libdbus-1-3 \
+  libdrm2 \
+  libexpat1 \
+  libgbm1 \
+  libglib2.0-0 \
+  libnspr4 \
+  libnss3 \
+  libpango-1.0-0 \
+  libpangocairo-1.0-0 \
+  libstdc++6 \
+  libudev1 \
+  libuuid1 \
+  libx11-6 \
+  libx11-xcb1 \
+  libxcb1 \
+  libxcomposite1 \
+  libxcursor1 \
+  libxdamage1 \
+  libxext6 \
+  libxfixes3 \
+  libxi6 \
+  libxkbcommon0 \
+  libxrandr2 \
+  libxrender1 \
+  libxshmfence1 \
+  libxss1 \
+  libxtst6 \
+  libatk-bridge2.0-0 
+RUN apt install -y libgtk-3-0
+RUN rustup default 1.82
+USER node
