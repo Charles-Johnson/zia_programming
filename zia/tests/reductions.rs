@@ -81,6 +81,7 @@ fn broken_middle_chain() {
 fn change_reduction_rule() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("let a b -> c"), "");
+    assert_eq!(cont.execute("forget a b"), "");
     assert_eq!(cont.execute("let a b -> d"), "");
     assert_eq!(cont.execute("a b"), "d");
 }
@@ -90,6 +91,7 @@ fn leapfrog_reduction_rule() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("let a b -> c d"), "");
     assert_eq!(cont.execute("let c d -> e"), "");
+    assert_eq!(cont.execute("forget a b"), "");
     assert_eq!(cont.execute("let a b -> e"), "");
 }
 // It is redundant to specify a reduction rule that is already true
@@ -99,8 +101,9 @@ fn redundancy() {
     assert_eq!(cont.execute("let a b -> c"), "");
     assert_eq!(
         cont.execute("let a b -> c"),
-        ZiaError::RedundantReduction {
-            syntax: "a b".into()
+        ZiaError::ExistingReduction {
+            syntax_to_reduce: "a b".into(),
+            existing_reduction: "c".into()
         }
         .to_string()
     );

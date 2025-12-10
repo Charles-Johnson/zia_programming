@@ -171,41 +171,6 @@ where
         })
     }
 
-    // If (operator right)  cannot by trying be reduced by other means, then it should reduce to default_concept
-    fn reduce_otherwise_default(
-        &self,
-        ast: &SharedSyntax<CCI, SR>,
-        left: &SharedSyntax<CCI, SR>,
-        right: &SharedSyntax<CCI, SR>,
-        operator_id: &S::ConceptId,
-        default_concept_id: &S::ConceptId,
-    ) -> ReductionResult<CCI, SR> {
-        let mut reduced_pair: ReductionResult<CCI, SR> = None;
-        let mut operator_composition_check = || {
-            let cache = SR::share(ReductionCache::<CCI, SR>::default());
-            let mut context_search = self.spawn(&cache, self.delta.clone());
-            context_search.syntax_evaluating.insert(ast.key());
-            reduced_pair = context_search.reduce_pair(left, right);
-            let operator_concept =
-                self.snap_shot.read_concept(self.delta.as_ref(), *operator_id);
-            let find = |c| {
-                operator_concept.find_as_hand_in_composition_with(c, Hand::Left)
-            };
-            reduced_pair.is_none()
-                && right.get_concept().and_then(find).is_none()
-        };
-        if self.syntax_evaluating.contains(&ast.key())
-            || operator_composition_check()
-        {
-            Some((
-                self.to_ast(default_concept_id),
-                ReductionReason::<CCI, SR>::default(*operator_id),
-            ))
-        } else {
-            reduced_pair
-        }
-    }
-
     /// Reduces the syntax by using the reduction rules of associated concepts.
     pub fn reduce(
         &self,
@@ -223,24 +188,7 @@ where
                 .and_then(|c| self.reduce_concept(&c))
                 .or_else(|| {
                     let (ref left, ref right) = ast.get_expansion()?;
-                    left.get_concept()
-                        .and_then(|lc| match self.concrete_type(&lc) {
-                            Some(ConcreteConceptType::Associativity) => {
-                                let default_concept_id = self
-                                    .concrete_concept_id(
-                                        ConcreteConceptType::Right,
-                                    )?;
-                                self.reduce_otherwise_default(
-                                    ast,
-                                    left,
-                                    right,
-                                    &lc,
-                                    &default_concept_id,
-                                )
-                            },
-                            _ => None,
-                        })
-                        .or_else(|| self.reduce_pair(left, right))
+                    self.reduce_pair(left, right)
                 });
             self.caches.insert_reduction(ast, &reduction_result);
             reduction_result
