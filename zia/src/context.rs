@@ -800,6 +800,7 @@ where
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
             ("precedes", ConcreteConceptType::Precedes),
+            ("forget", ConcreteConceptType::Forget),
         ];
         let maybe_inner_delta = self.delta.get_mut();
         let Some(delta) = maybe_inner_delta else {
@@ -956,6 +957,10 @@ where
                         maybe_ast.map(|ast| self.execute_reduction(right, &ast))
                     })
                     .map(|r| r.map(|()| String::new())),
+                ConcreteConceptType::Forget => right.get_concept().map(|c| {
+                    self.updater()?.delete_reduction(c, right.to_string())?;
+                    Ok(String::new())
+                }),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
                     + &right
                         .get_concept()
