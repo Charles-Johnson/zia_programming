@@ -4,10 +4,7 @@ use crate::{
     context_search::{Comparison, ComparisonReason, ContextReferences},
     context_search_test::ReductionReason,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{
-        MTContextCache, MTContextSearch, SharedContextDelta,
-        SharedDirectConceptDelta,
-    },
+    multi_threaded::{MTContextCache, MTContextSearch},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -15,17 +12,12 @@ use std::collections::HashMap;
 #[test]
 fn basic_comparison() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedDelta::<
-        ConceptId,
-        SharedDirectConceptDelta<ConceptId>,
-        SharedContextDelta<ConceptId>,
-        _,
-    >::default();
+    let delta = NestedDelta::<ConceptId, _>::default();
     let cache = MTContextCache::default();
     let bound_variables = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: SharedContextDelta(delta.into()),
+        delta: delta.into(),
         cache: &cache,
         bound_variable_syntax: &bound_variables,
     });

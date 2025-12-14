@@ -27,7 +27,7 @@ use crate::{
     context_delta,
     context_delta::{
         Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
-        NewConceptDelta, NewDirectConceptDelta, SharedDelta, ValueChange,
+        NewConceptDelta, NewDirectConceptDelta, ValueChange,
     },
     delta::Apply,
     nester::SharedReference,
@@ -248,17 +248,9 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
         self.string_map.remove(string).expect("No string to remove!");
     }
 
-    fn get_string_concept<
-        SDCD: Clone
-            + AsRef<DirectConceptDelta<ConceptId>>
-            + From<DirectConceptDelta<ConceptId>>
-            + Debug,
-        D: SharedDelta<
-            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
-        >,
-    >(
+    fn get_string_concept(
         &self,
-        delta: &NestedDelta<ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<ConceptId, SR>,
         s: &str,
     ) -> Option<ConceptId> {
         delta.get_string(s).map_or_else(
@@ -292,15 +284,9 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
         )
     }
 
-    fn get_labellee<
-        SDCD: Clone
-            + AsRef<DirectConceptDelta<ConceptId>>
-            + From<DirectConceptDelta<ConceptId>>
-            + Debug,
-        D: SharedDelta<NestedDelta = NestedDelta<ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_labellee(
         &self,
-        delta: &NestedDelta<ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<ConceptId, SR>,
         c: ConceptId,
     ) -> Option<ConceptId> {
         let concept = self.read_concept(delta, c);
@@ -326,13 +312,7 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
     }
 }
 
-impl<SDCD, SR: SharedReference> SnapShotReader<SDCD, SR> for ContextSnapShot<SR>
-where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>
-        + Debug,
-{
+impl<SR: SharedReference> SnapShotReader<SR> for ContextSnapShot<SR> {
     type CommittedConceptId = Committed;
     type ConceptId = ConceptId;
     type MixedConcept<'a>
@@ -340,11 +320,9 @@ where
     where
         SR: 'a;
 
-    fn concept_from_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn concept_from_label(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         s: &str,
     ) -> Option<Self::ConceptId> {
         self.get_string_concept(delta, s)
@@ -359,11 +337,9 @@ where
         }
     }
 
-    fn get_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_label(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> Option<String> {
         self.get_concept_of_label(delta, concept).map_or_else(
@@ -379,13 +355,9 @@ where
         )
     }
 
-    fn concrete_concept_id<
-        D: SharedDelta<
-            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
-        >,
-    >(
+    fn concrete_concept_id(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId> {
         let mut id = None;
@@ -415,23 +387,12 @@ where
     }
 }
 
-impl<SDCD, SR: SharedReference> Apply<SDCD, SR> for ContextSnapShot<SR>
+impl<SR: SharedReference> Apply<SR> for ContextSnapShot<SR>
 where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<ConceptId>>
-        + From<DirectConceptDelta<ConceptId>>
-        + Debug,
     Uncommitted: TryFrom<Self::ConceptId, Error = ()>,
 {
     #[allow(clippy::too_many_lines)]
-    fn apply<
-        D: SharedDelta<
-            NestedDelta = NestedDelta<concept_id::ConceptId, SDCD, D, SR>,
-        >,
-    >(
-        &mut self,
-        delta: NestedDelta<Self::ConceptId, SDCD, D, SR>,
-    ) {
+    fn apply(&mut self, delta: NestedDelta<Self::ConceptId, SR>) {
         debug_assert!(self.previously_uncommitted_concepts.is_empty());
         for (concept_id, concept_delta) in delta.concepts_to_apply_in_order() {
             match concept_delta.as_ref() {
