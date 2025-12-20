@@ -24,6 +24,7 @@ pub trait Concept: Sized {
     type IdIterator<'a>: Iterator<Item = Self::Id>
     where
         Self: 'a;
+    type OwnedIdPairIterator: Iterator<Item = (Self::Id, Self::Id)> + 'static;
     fn id(&self) -> Self::Id;
 
     fn maybe_composition(&self) -> Option<MaybeComposition<Self::Id>>;
@@ -103,8 +104,20 @@ pub trait Concept: Sized {
         }
         self.iter_hand_of(hand).map(f::<Self::Id>)
     }
+    fn into_iter_composition_ids(
+        self,
+        hand: Hand,
+    ) -> Map<Self::OwnedIdPairIterator, SelectElementFromPairFn<Self::Id>> {
+        // the argument is dropped in the function but destructors cannot run in const contexts
+        #[allow(clippy::missing_const_for_fn)]
+        fn f<Id>(p: (Id, Id)) -> Id {
+            p.1
+        }
+        self.into_iter_hand_of(hand).map(f::<Self::Id>)
+    }
 
     fn iter_hand_of(&self, hand: Hand) -> Self::IdPairIterator<'_>;
+    fn into_iter_hand_of(self, hand: Hand) -> Self::OwnedIdPairIterator;
 
     /// Gets the index of the concept that `self` may reduce to.
     fn get_reduction(&self) -> Option<Self::Id>;
