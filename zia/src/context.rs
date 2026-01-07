@@ -96,10 +96,10 @@ impl<S, CCI: MixedConcept, SR: SharedReference> Context<S, CCI, SR>
 where
     S: SnapShotReader<SR, ConceptId = CCI> + Default + Sync + Apply<SR> + Debug,
 {
-    pub fn new() -> ZiaResult<Self> {
+    pub fn new() -> Self {
         let mut cont = Self::default();
-        cont.setup()?;
-        Ok(cont)
+        cont.setup();
+        cont
     }
 
     pub fn lex(&self, command: &str) -> Vec<Lexeme<CCI>> {
@@ -259,13 +259,10 @@ where
         let string = self.execute_without_closing_scope(command);
         self.new_variable_concepts_by_label = HashMap::new();
         self.bounded_variable_syntax = HashSet::new();
-        string.unwrap()
+        string
     }
 
-    fn execute_without_closing_scope(
-        &mut self,
-        command: &str,
-    ) -> ZiaResult<String> {
+    fn execute_without_closing_scope(&mut self, command: &str) -> String {
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
@@ -277,8 +274,8 @@ where
                 self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
-        self.commit()?;
-        Ok(string)
+        self.commit();
+        string
     }
 
     pub fn create_variable_concepts(
@@ -743,15 +740,14 @@ where
         self.context_search().combine(left, right)
     }
 
-    fn commit(&mut self) -> ZiaResult<()> {
+    fn commit(&mut self) {
         let mut delta = SR::share(NestedDelta::default());
         std::mem::swap(&mut self.delta, &mut delta);
         self.snap_shot.apply(delta.as_ref().clone()); // TODO: avoiding cloning using
                                                       // Arc::try_unwrap or Rc::try_unwrap
-        Ok(())
     }
 
-    fn label_concrete_concepts(&mut self) -> ZiaResult<()> {
+    fn label_concrete_concepts(&mut self) {
         let labels = vec![
             (":=", ConcreteConceptType::Define),
             ("->", ConcreteConceptType::Reduction),
@@ -785,12 +781,11 @@ where
                 Some(label_id),
             );
         }
-        Ok(())
     }
 
-    fn setup(&mut self) -> ZiaResult<()> {
-        self.label_concrete_concepts()?;
-        self.commit()?;
+    fn setup(&mut self) {
+        self.label_concrete_concepts();
+        self.commit();
         let result = self.execute("let (true and true) -> true");
         debug_assert_eq!(result, "");
         let result = self.execute("let (false and _y_) -> false");
@@ -805,7 +800,6 @@ where
         debug_assert_eq!(result, "");
         let result = self.execute("let := precedes let");
         debug_assert_eq!(result, "");
-        Ok(())
     }
 
     fn reduce_and_call_pair(
@@ -918,7 +912,7 @@ where
                     })
                     .map(|r| r.map(|()| String::new())),
                 ConcreteConceptType::Forget => right.get_concept().map(|c| {
-                    self.updater()?.delete_reduction(c, right.to_string())?;
+                    self.updater().delete_reduction(c, right.to_string())?;
                     Ok(String::new())
                 }),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
@@ -1000,13 +994,13 @@ where
         }
     }
 
-    fn updater(&mut self) -> ZiaResult<ContextUpdater<'_, S, SR>> {
+    fn updater(&mut self) -> ContextUpdater<'_, S, SR> {
         let delta = SR::make_mut(&mut self.delta);
-        Ok(ContextUpdater {
+        ContextUpdater {
             snap_shot: &self.snap_shot,
             delta,
             cache: &mut self.cache,
-        })
+        }
     }
 
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
@@ -1024,7 +1018,7 @@ where
             (_, Some(_), _, None) => Err(ZiaError::BadComposition),
             (_, None, None, None) => Err(ZiaError::RedundantRefactor),
             (None, _, Some(b), None) => {
-                self.updater()?.relabel(b, &old.to_string(), &new.to_string())
+                self.updater().relabel(b, &old.to_string(), &new.to_string())
             },
             (None, _, Some(b), Some(_)) => {
                 let syntax = {
@@ -1038,9 +1032,9 @@ where
                     .get_concept_of_label(self.delta.as_ref(), b)
                     .is_none()
                 {
-                    self.updater()?.label(b, &syntax, &new.to_string())
+                    self.updater().label(b, &syntax, &new.to_string())
                 } else {
-                    self.updater()?.relabel(
+                    self.updater().relabel(
                         b,
                         &old.to_string(),
                         &new.to_string(),
@@ -1048,7 +1042,7 @@ where
                 }
             },
             (None, _, None, Some((ref left, ref right))) => {
-                self.updater()?.define_new_syntax(&new.to_string(), left, right)
+                self.updater().define_new_syntax(&new.to_string(), left, right)
             },
             (Some(a), a_comp, Some(b), None) => {
                 if a == b {
@@ -1066,7 +1060,7 @@ where
                                     context_search.to_ast(&right).to_string(),
                                 )
                             };
-                            let mut updater = self.updater()?;
+                            let mut updater = self.updater();
                             updater.try_delete_concept(a, &a.to_string())?;
                             updater.try_delete_concept(left, &left_syntax)?;
                             updater.try_delete_concept(right, &right_syntax)
@@ -1074,7 +1068,7 @@ where
                     }
                 } else if a_comp.is_none() {
                     if self.snap_shot.get_concept(b).is_some() {
-                        let mut updater = self.updater()?;
+                        let mut updater = self.updater();
                         updater.unlabel(a, &a.to_string())?;
                         updater.relabel(b, &old.to_string(), &new.to_string())
                     } else {
@@ -1096,7 +1090,7 @@ where
                 Some((ref new_left, ref new_right)),
                 None,
                 Some((ref left, ref right)),
-            ) => self.updater()?.redefine_composition(
+            ) => self.updater().redefine_composition(
                 &a,
                 left,
                 right,
@@ -1104,7 +1098,7 @@ where
                 &new_right.to_string(),
             ),
             (Some(a), None, None, Some((ref left, ref right))) => {
-                self.updater()?.redefine(&a, left, right)
+                self.updater().redefine(&a, left, right)
             },
         }
     }
