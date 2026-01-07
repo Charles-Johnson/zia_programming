@@ -45,7 +45,7 @@ impl<CI: ConceptId, SR: SharedReference> GenericSyntaxTree<CI, SR> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SyntaxKey<CI: ConceptId> {
     syntax: Option<String>,
-    concept: Option<CI>,
+    pub concept: Option<CI>,
 }
 
 impl<CI: ConceptId, SR: SharedReference> PartialEq<Self>
