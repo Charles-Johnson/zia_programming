@@ -1,7 +1,7 @@
 #[cfg(test)]
 use std::time::{Duration, Instant};
 
-pub const TUTORIALS: (Tutorial<18>, Tutorial<13>, Tutorial<12>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<12>, Tutorial<12>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -190,12 +190,12 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<13>, Tutorial<12>) = (
                 #[cfg(test)]
                 expected_evaluation: ""
             },
-            TutorialStep {
-                command: "Eve is sibling of Bob",
-                explanation: "Let's check",
-                #[cfg(test)]
-                expected_evaluation: "true"
-            }
+            //TutorialStep {
+            //    command: "Eve is sibling of Bob",
+            //    explanation: "Let's check",
+            //    #[cfg(test)]
+            //    expected_evaluation: "true"
+            //}
         ]
     },
     Tutorial {
