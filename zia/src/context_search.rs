@@ -237,11 +237,8 @@ where
         match (left_result, right_result) {
             (None, None) => {
                 let ast = SR::share(self.contract_pair(left, right));
-                let Some(generalisation_candidates) =
-                    self.find_generalisations(ast.clone())
-                else {
-                    return None;
-                };
+                let generalisation_candidates =
+                    self.find_generalisations(ast.as_ref())?;
                 generalisation_candidates
                     .into_iter()
                     .filter_map(move |gc| {
