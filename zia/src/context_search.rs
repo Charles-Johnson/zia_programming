@@ -1372,7 +1372,7 @@ impl<
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            while let Some(id) = self.composition_id_iter.next() {
+            for id in self.composition_id_iter.by_ref() {
                 if self.generalisations.insert(id) {
                     return Some(id);
                 }
@@ -1401,11 +1401,7 @@ impl<
                         .map(|r| r.into_iter_composition_ids(Hand::Right))
                 },
             ) {
-                (Some(iter), None) => {
-                    self.concepts_used = true;
-                    Box::new(iter)
-                },
-                (None, Some(iter)) => {
+                (Some(iter), None) | (None, Some(iter)) => {
                     self.concepts_used = true;
                     Box::new(iter)
                 },
@@ -1433,8 +1429,9 @@ impl<
                         }),
                     ) {
                         (None, None) => return None,
-                        (Some(iter), None) => Box::new(iter),
-                        (None, Some(iter)) => Box::new(iter),
+                        (Some(iter), None) | (None, Some(iter)) => {
+                            Box::new(iter)
+                        },
                         (Some(l_iter), Some(r_iter)) => {
                             Box::new(l_iter.chain(r_iter))
                         },
