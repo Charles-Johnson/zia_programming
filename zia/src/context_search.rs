@@ -175,9 +175,11 @@ where
     ) -> ReductionResult<CCI, SR> {
         debug!("reduce({})", ast.to_string());
         self.caches.get_reduction_or_else(ast, || {
+            debug!("Cache miss: {}", ast.as_ref());
             let maybe_concept: Option<CCI> = ast.get_concept();
             if let Some(id) = maybe_concept {
                 if self.concrete_type(&id).is_some() {
+                    // TODO: cache this result without breaking tests
                     return None;
                 }
             }
