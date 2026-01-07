@@ -67,6 +67,7 @@ impl ConceptTrait for Mixed<'_> {
         = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>
     where
         Self: 'b;
+    type OwnedIdPairIterator = Box<dyn Iterator<Item = (ConceptId, ConceptId)>>;
 
     fn id(&self) -> Self::Id {
         match self {
@@ -325,6 +326,7 @@ impl ConceptTrait for Mixed<'_> {
             Self::Uncommitted(c) => c.get_concrete_concept_type(),
         }
     }
+
     fn into_iter_hand_of(self, hand: Hand) -> Self::OwnedIdPairIterator {
         match self {
             Self::PreviouslyCommitted {
@@ -353,6 +355,4 @@ impl ConceptTrait for Mixed<'_> {
             Self::Uncommitted(c) => Box::new(c.into_iter_hand_of(hand)),
         }
     }
-
-    type OwnedIdPairIterator = Box<dyn Iterator<Item = (ConceptId, ConceptId)>>;
 }
