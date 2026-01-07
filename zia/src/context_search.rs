@@ -561,6 +561,11 @@ where
                             })
                     })
             });
+        for item in spawned_context_search.caches.reductions.head.as_ref() {
+            if let Some(c) = item.key().concept {
+                self.caches.insert_reduction(&self.to_ast(&c), item.value());
+            }
+        }
         result
     }
 
