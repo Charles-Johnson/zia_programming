@@ -203,12 +203,24 @@ impl<CI: ConceptId, SR: SharedReference> ReductionCacheList<CI, SR> {
         ast: &SharedSyntax<CI, SR>,
         reduction_result: &ReductionResult<CI, SR>,
     ) {
-        if !ast.is_variable()
-            && reduction_result
-                .as_ref()
-                .map_or(true, |(r, _)| r.key() != ast.key())
+        if reduction_result.as_ref().map_or(true, |(r, _)| r.key() != ast.key())
         {
+            debug!(
+                "Caching reduction: {} -> {}",
+                ast.as_ref(),
+                reduction_result
+                    .as_ref()
+                    .map_or_else(|| String::from("None"), |r| r.0.to_string())
+            );
             self.head.insert(ast.key(), reduction_result.clone());
+        } else {
+            debug!(
+                "Skipping caching reduction: {} -> {}",
+                ast.as_ref(),
+                reduction_result
+                    .as_ref()
+                    .map_or_else(|| String::from("None"), |r| r.0.to_string())
+            );
         }
     }
 }
