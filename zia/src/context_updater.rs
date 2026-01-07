@@ -5,7 +5,7 @@ use crate::{
     context_cache::GenericCache,
     context_delta::{
         Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
-        SharedDelta, ValueAndTypeChange, ValueChange,
+        ValueAndTypeChange, ValueChange,
     },
     errors::ZiaResult,
     nester::SharedReference,
@@ -14,35 +14,13 @@ use crate::{
     ZiaError,
 };
 
-use std::{fmt::Debug, marker::PhantomData};
-
-pub struct ContextUpdater<
-    'a,
-    S: Reader<SDCD, SR>,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Debug,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
-    SR: SharedReference,
-> {
+pub struct ContextUpdater<'a, S: Reader<SR>, SR: SharedReference> {
     pub cache: &'a mut GenericCache<S::ConceptId, SR>,
-    pub delta: &'a mut NestedDelta<S::ConceptId, SDCD, D, SR>,
+    pub delta: &'a mut NestedDelta<S::ConceptId, SR>,
     pub snap_shot: &'a S,
-    pub phantom: PhantomData<D>,
-    pub phantom2: PhantomData<SR>,
 }
 
-impl<
-        S: Reader<SDCD, SR>,
-        SDCD: Clone
-            + AsRef<DirectConceptDelta<S::ConceptId>>
-            + From<DirectConceptDelta<S::ConceptId>>
-            + Debug,
-        D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
-        SR: SharedReference,
-    > ContextUpdater<'_, S, SDCD, D, SR>
-{
+impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
     pub fn redefine_composition(
         &mut self,
         concept: &S::ConceptId,

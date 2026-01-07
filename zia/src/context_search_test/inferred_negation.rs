@@ -2,11 +2,8 @@ use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
     context_delta::NestedDelta,
     context_search::ContextReferences,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{
-        MTContextCache, MTContextSearch, SharedContextDelta,
-        SharedDirectConceptDelta,
-    },
+    mock_snap_shot::MockSnapShot,
+    multi_threaded::{MTContextCache, MTContextSearch},
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -56,13 +53,12 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn inferred_negation() {
     let context_cache = MTContextCache::default();
-    let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
+    let context_delta = NestedDelta::<_, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variable_syntax = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
-        delta: SharedContextDelta(context_delta.into()),
+        delta: context_delta.into(),
         cache: &context_cache,
         bound_variable_syntax: &bound_variable_syntax,
     });

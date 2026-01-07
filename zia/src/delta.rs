@@ -1,9 +1,6 @@
 use crate::{
-    context_delta::{DirectConceptDelta, NestedDelta, SharedDelta},
-    nester::SharedReference,
-    snap_shot::Reader,
+    context_delta::NestedDelta, nester::SharedReference, snap_shot::Reader,
 };
-use std::fmt::Debug;
 //  Library for the Zia programming language.
 // Copyright (C) 2018 to 2019  Charles Johnson
 //
@@ -20,17 +17,6 @@ use std::fmt::Debug;
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-pub trait Apply<SDCD, SR: SharedReference>: Reader<SDCD, SR>
-where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<Self::ConceptId>>
-        + From<DirectConceptDelta<Self::ConceptId>>
-        + Debug,
-{
-    fn apply<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
-        &mut self,
-        _: NestedDelta<Self::ConceptId, SDCD, D, SR>,
-    );
+pub trait Apply<SR: SharedReference>: Reader<SR> {
+    fn apply(&mut self, _: NestedDelta<Self::ConceptId, SR>);
 }

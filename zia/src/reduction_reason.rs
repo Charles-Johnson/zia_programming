@@ -149,7 +149,7 @@ impl<CI: ConceptId, SR: SharedReference> Debug for ReductionReason<CI, SR> {
         }
     }
 }
-// TODO: implement more efficient way of comparing HashMaps with SharedSyntax values
+/// Use `compare_syntax_maps` for comparison
 pub fn convert_to_syntax_keys<
     K: Eq + Hash + Clone,
     CI: ConceptId,
@@ -160,16 +160,44 @@ pub fn convert_to_syntax_keys<
     h.iter().map(|(k, v)| (k.clone(), v.key())).collect()
 }
 
-type PartialReductionReasonKeys<CI, SR> =
-    HashMap<SyntaxKey<CI>, (SyntaxKey<CI>, ReductionReason<CI, SR>)>;
+pub fn compare_syntax_maps<
+    K: Eq + Hash + Clone,
+    CI: ConceptId,
+    SR: SharedReference,
+>(
+    h1: &HashMap<K, SharedSyntax<CI, SR>>,
+    h2: &HashMap<K, SharedSyntax<CI, SR>>,
+) -> bool {
+    if h2.len() != h1.len() {
+        return false;
+    }
+    for (k1, s1) in h1 {
+        match h2.get(k1) {
+            None => return false,
+            Some(s2) if s2.as_ref() != s1.as_ref() => return false,
+            _ => continue,
+        }
+    }
+    true
+}
 
-// TODO: implement more efficient way of comparing PartialReductionReasons
-fn collect_to_syntax_keys<CI: ConceptId, SR: SharedReference>(
-    h: &PartialReductionReasons<CI, SR>,
-) -> PartialReductionReasonKeys<CI, SR> {
-    h.iter()
-        .map(|(k, (v1, v2))| (k.clone(), (v1.key(), v2.clone())))
-        .collect::<HashMap<_, _>>()
+fn compare<CI: ConceptId, SR: SharedReference>(
+    h1: &PartialReductionReasons<CI, SR>,
+    h2: &PartialReductionReasons<CI, SR>,
+) -> bool {
+    if h2.len() != h1.len() {
+        return false;
+    };
+    for (k1, (s1, r1)) in h1 {
+        match h2.get(k1) {
+            None => return false,
+            Some((s2, r2)) if s2.as_ref() != s1.as_ref() || r2 != r1 => {
+                return false
+            },
+            _ => continue,
+        }
+    }
+    true
 }
 impl<CI: ConceptId, SR: SharedReference> PartialEq for ReductionReason<CI, SR> {
     fn eq(&self, other: &Self) -> bool {
@@ -184,7 +212,7 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq for ReductionReason<CI, SR> {
                 reason: r1,
             } => {
                 matches!(other, Self::Rule{generalisation: g2, variable_mask: vm2,
-            reason:r2} if g1.key() == g2.key() && convert_to_syntax_keys::<CI, CI, SR>(vm1) == convert_to_syntax_keys::<CI, CI, SR>(vm2) && r1.as_ref() == r2.as_ref())
+            reason:r2} if g1.key() == g2.key() && compare_syntax_maps::<CI, CI, SR>(vm1, vm2) && r1.as_ref() == r2.as_ref())
             },
             Self::Inference {
                 implication: i1,
@@ -196,13 +224,13 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq for ReductionReason<CI, SR> {
                 operator: o1,
             } => matches!(other, Self::Default { operator: o2 } if o1 == o2),
             Self::Partial(p1) => {
-                matches!(other, Self::Partial(p2) if collect_to_syntax_keys(p1) == collect_to_syntax_keys(p2))
+                matches!(other, Self::Partial(p2) if compare(p1, p2))
             },
             Self::Existence {
                 substitutions: s1,
                 generalisation: g1,
             } => {
-                matches!(other, Self::Existence { substitutions: s2, generalisation: g2 } if convert_to_syntax_keys::<SyntaxKey<CI>, CI, SR>(s1)== convert_to_syntax_keys::<SyntaxKey<CI>, CI, SR>(s2) && g1.key() == g2.key())
+                matches!(other, Self::Existence { substitutions: s2, generalisation: g2 } if compare_syntax_maps::<SyntaxKey<CI>, CI, SR>(s1, s2) && g1.key() == g2.key())
             },
             Self::Recursive {
                 syntax: s1,

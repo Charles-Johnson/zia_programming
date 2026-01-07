@@ -21,9 +21,7 @@ use crate::{
     ast::{GenericSyntaxTree, SyntaxKey, SyntaxLeaf},
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::{GenericCache, SharedSyntax},
-    context_delta::{
-        DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
-    },
+    context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
     context_search::{ContextReferences, ContextSearch},
     context_updater::ContextUpdater,
     delta::Apply,
@@ -38,28 +36,17 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     default::Default,
     fmt::Debug,
-    marker::PhantomData,
 };
 
-pub struct Context<S, SDCD, D, CCI: ConceptId, SR: SharedReference>
+pub struct Context<S, CCI: ConceptId, SR: SharedReference>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
-        + Default
-        + Sync
-        + Apply<SDCD, SR>
-        + Debug,
-    SDCD: Clone
-        + Debug
-        + AsRef<DirectConceptDelta<CCI>>
-        + From<DirectConceptDelta<CCI>>,
-    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Default + Sync + Apply<SR> + Debug,
 {
     snap_shot: S,
-    delta: D,
+    delta: SR::Share<NestedDelta<CCI, SR>>,
     cache: GenericCache<CCI, SR>,
     new_variable_concepts_by_label: HashMap<String, CCI>,
     bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
-    phantom: PhantomData<SDCD>,
 }
 
 pub struct TokenSubsequence<CI: ConceptId, SR: SharedReference> {
@@ -83,25 +70,18 @@ impl<CI: ConceptId, SR: SharedReference> Debug for TokenSubsequence<CI, SR> {
     }
 }
 
-impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> Clone
-    for Context<S, SDCD, D, CCI, SR>
+impl<S, CCI: ConceptId, SR: SharedReference> Clone for Context<S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
+    S: SnapShotReader<SR, ConceptId = CCI>
         + Default
         + Sync
-        + Apply<SDCD, SR>
+        + Apply<SR>
         + Debug
         + Clone,
-    SDCD: Clone
-        + Debug
-        + AsRef<DirectConceptDelta<CCI>>
-        + From<DirectConceptDelta<CCI>>,
-    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
 {
     fn clone(&self) -> Self {
         Self {
-            delta: D::default(),
-            phantom: self.phantom,
+            delta: SR::share(NestedDelta::default()),
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
             new_variable_concepts_by_label: self
@@ -112,24 +92,14 @@ where
     }
 }
 
-impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
-    Context<S, SDCD, D, CCI, SR>
+impl<S, CCI: MixedConcept, SR: SharedReference> Context<S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
-        + Default
-        + Sync
-        + Apply<SDCD, SR>
-        + Debug,
-    SDCD: Clone
-        + Debug
-        + AsRef<DirectConceptDelta<CCI>>
-        + From<DirectConceptDelta<CCI>>,
-    D: SharedDelta<NestedDelta = NestedDelta<CCI, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Default + Sync + Apply<SR> + Debug,
 {
-    pub fn new() -> ZiaResult<Self> {
+    pub fn new() -> Self {
         let mut cont = Self::default();
-        cont.setup()?;
-        Ok(cont)
+        cont.setup();
+        cont
     }
 
     pub fn lex(&self, command: &str) -> Vec<Lexeme<CCI>> {
@@ -289,13 +259,10 @@ where
         let string = self.execute_without_closing_scope(command);
         self.new_variable_concepts_by_label = HashMap::new();
         self.bounded_variable_syntax = HashSet::new();
-        string.unwrap()
+        string
     }
 
-    fn execute_without_closing_scope(
-        &mut self,
-        command: &str,
-    ) -> ZiaResult<String> {
+    fn execute_without_closing_scope(&mut self, command: &str) -> String {
         let string = self
             .ast_from_expression(command)
             .and_then(|mut a| {
@@ -307,8 +274,8 @@ where
                 self.call(&a)
             })
             .unwrap_or_else(|e| e.to_string());
-        self.commit()?;
-        Ok(string)
+        self.commit();
+        string
     }
 
     pub fn create_variable_concepts(
@@ -331,8 +298,7 @@ where
                             NewConceptDelta::FreeVariable
                         },
                     );
-                    let maybe_inner_delta = self.delta.get_mut();
-                    let delta = maybe_inner_delta?;
+                    let delta = SR::make_mut(&mut self.delta);
                     // This might lead to variables being committed to snap shot unnecessarily
                     let concept_id = delta
                         .update_concept_delta(direct_delta, &mut self.cache);
@@ -476,10 +442,7 @@ where
     ) -> ZiaResult<SharedSyntax<CCI, SR>> {
         let concept_id = concept.map_or_else(
             || {
-                let maybe_inner_delta = self.delta.get_mut();
-                let Some(delta) = maybe_inner_delta else {
-                    return Err(ZiaError::MultiplePointersToDelta);
-                };
+                let delta = SR::make_mut(&mut self.delta);
                 if let Some(id) =
                     self.snap_shot.concept_from_label(delta, syntax)
                 {
@@ -493,8 +456,6 @@ where
                     snap_shot: &self.snap_shot,
                     delta,
                     cache: &mut self.cache,
-                    phantom: PhantomData,
-                    phantom2: PhantomData,
                 };
                 Ok(updater.new_labelled_concept(syntax, None, label_id))
             },
@@ -779,14 +740,14 @@ where
         self.context_search().combine(left, right)
     }
 
-    fn commit(&mut self) -> ZiaResult<()> {
-        let taken_delta = std::mem::take(&mut self.delta);
-        let delta = taken_delta.into_nested()?;
-        self.snap_shot.apply(delta);
-        Ok(())
+    fn commit(&mut self) {
+        let mut delta = SR::share(NestedDelta::default());
+        std::mem::swap(&mut self.delta, &mut delta);
+        self.snap_shot.apply(delta.as_ref().clone()); // TODO: avoiding cloning using
+                                                      // Arc::try_unwrap or Rc::try_unwrap
     }
 
-    fn label_concrete_concepts(&mut self) -> ZiaResult<()> {
+    fn label_concrete_concepts(&mut self) {
         let labels = vec![
             (":=", ConcreteConceptType::Define),
             ("->", ConcreteConceptType::Reduction),
@@ -802,16 +763,11 @@ where
             ("precedes", ConcreteConceptType::Precedes),
             ("forget", ConcreteConceptType::Forget),
         ];
-        let maybe_inner_delta = self.delta.get_mut();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
+        let delta = SR::make_mut(&mut self.delta);
         let mut updater = ContextUpdater {
             snap_shot: &self.snap_shot,
             delta,
             cache: &mut self.cache,
-            phantom: PhantomData,
-            phantom2: PhantomData,
         };
         let label_id = updater.new_labelled_concept(
             "label_of",
@@ -825,12 +781,11 @@ where
                 Some(label_id),
             );
         }
-        Ok(())
     }
 
-    fn setup(&mut self) -> ZiaResult<()> {
-        self.label_concrete_concepts()?;
-        self.commit()?;
+    fn setup(&mut self) {
+        self.label_concrete_concepts();
+        self.commit();
         let result = self.execute("let (true and true) -> true");
         debug_assert_eq!(result, "");
         let result = self.execute("let (false and _y_) -> false");
@@ -845,7 +800,6 @@ where
         debug_assert_eq!(result, "");
         let result = self.execute("let := precedes let");
         debug_assert_eq!(result, "");
-        Ok(())
     }
 
     fn reduce_and_call_pair(
@@ -958,7 +912,7 @@ where
                     })
                     .map(|r| r.map(|()| String::new())),
                 ConcreteConceptType::Forget => right.get_concept().map(|c| {
-                    self.updater()?.delete_reduction(c, right.to_string())?;
+                    self.updater().delete_reduction(c, right.to_string())?;
                     Ok(String::new())
                 }),
                 ConcreteConceptType::Label => Some(Ok("'".to_string()
@@ -1040,18 +994,13 @@ where
         }
     }
 
-    fn updater(&mut self) -> ZiaResult<ContextUpdater<'_, S, SDCD, D, SR>> {
-        let maybe_inner_delta = self.delta.get_mut();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
-        Ok(ContextUpdater {
+    fn updater(&mut self) -> ContextUpdater<'_, S, SR> {
+        let delta = SR::make_mut(&mut self.delta);
+        ContextUpdater {
             snap_shot: &self.snap_shot,
             delta,
             cache: &mut self.cache,
-            phantom: PhantomData,
-            phantom2: PhantomData,
-        })
+        }
     }
 
     /// If the new syntax is an expanded expression then this returns `Err(ZiaError::BadComposition)`. Otherwise the result depends on whether the new or old syntax is associated with a concept and whether the old syntax is an expanded expression.
@@ -1069,7 +1018,7 @@ where
             (_, Some(_), _, None) => Err(ZiaError::BadComposition),
             (_, None, None, None) => Err(ZiaError::RedundantRefactor),
             (None, _, Some(b), None) => {
-                self.updater()?.relabel(b, &old.to_string(), &new.to_string())
+                self.updater().relabel(b, &old.to_string(), &new.to_string())
             },
             (None, _, Some(b), Some(_)) => {
                 let syntax = {
@@ -1083,9 +1032,9 @@ where
                     .get_concept_of_label(self.delta.as_ref(), b)
                     .is_none()
                 {
-                    self.updater()?.label(b, &syntax, &new.to_string())
+                    self.updater().label(b, &syntax, &new.to_string())
                 } else {
-                    self.updater()?.relabel(
+                    self.updater().relabel(
                         b,
                         &old.to_string(),
                         &new.to_string(),
@@ -1093,7 +1042,7 @@ where
                 }
             },
             (None, _, None, Some((ref left, ref right))) => {
-                self.updater()?.define_new_syntax(&new.to_string(), left, right)
+                self.updater().define_new_syntax(&new.to_string(), left, right)
             },
             (Some(a), a_comp, Some(b), None) => {
                 if a == b {
@@ -1111,7 +1060,7 @@ where
                                     context_search.to_ast(&right).to_string(),
                                 )
                             };
-                            let mut updater = self.updater()?;
+                            let mut updater = self.updater();
                             updater.try_delete_concept(a, &a.to_string())?;
                             updater.try_delete_concept(left, &left_syntax)?;
                             updater.try_delete_concept(right, &right_syntax)
@@ -1119,7 +1068,7 @@ where
                     }
                 } else if a_comp.is_none() {
                     if self.snap_shot.get_concept(b).is_some() {
-                        let mut updater = self.updater()?;
+                        let mut updater = self.updater();
                         updater.unlabel(a, &a.to_string())?;
                         updater.relabel(b, &old.to_string(), &new.to_string())
                     } else {
@@ -1141,7 +1090,7 @@ where
                 Some((ref new_left, ref new_right)),
                 None,
                 Some((ref left, ref right)),
-            ) => self.updater()?.redefine_composition(
+            ) => self.updater().redefine_composition(
                 &a,
                 left,
                 right,
@@ -1149,7 +1098,7 @@ where
                 &new_right.to_string(),
             ),
             (Some(a), None, None, Some((ref left, ref right))) => {
-                self.updater()?.redefine(&a, left, right)
+                self.updater().redefine(&a, left, right)
             },
         }
     }
@@ -1176,16 +1125,11 @@ where
                 });
             }
             drop(context_search);
-            let maybe_inner_delta = self.delta.get_mut();
-            let Some(delta) = maybe_inner_delta else {
-                return Err(ZiaError::MultiplePointersToDelta);
-            };
+            let delta = SR::make_mut(&mut self.delta);
             let mut updater = ContextUpdater {
                 snap_shot: &self.snap_shot,
                 delta,
                 cache: &mut self.cache,
-                phantom: PhantomData,
-                phantom2: PhantomData,
             };
             let syntax_concept = updater.concept_from_ast(syntax)?;
             let normal_form_concept = updater.concept_from_ast(normal_form)?;
@@ -1201,10 +1145,7 @@ where
         &mut self,
         syntax: &GenericSyntaxTree<CCI, SR>,
     ) -> ZiaResult<()> {
-        let maybe_inner_delta = self.delta.get_mut();
-        let Some(delta) = maybe_inner_delta else {
-            return Err(ZiaError::MultiplePointersToDelta);
-        };
+        let delta = SR::make_mut(&mut self.delta);
         let snap_shot = &self.snap_shot;
         let cache = &mut self.cache;
         syntax.get_concept().map_or_else(
@@ -1218,15 +1159,13 @@ where
                     cache,
                     delta,
                     snap_shot,
-                    phantom: PhantomData,
-                    phantom2: PhantomData,
                 }
                 .delete_reduction(c, syntax.to_string())
             },
         )
     }
 
-    fn context_search(&self) -> ContextSearch<'_, '_, S, SDCD, D, CCI, SR> {
+    fn context_search(&self) -> ContextSearch<'_, '_, S, CCI, SR> {
         ContextSearch::from(ContextReferences {
             snap_shot: &self.snap_shot,
             delta: self.delta.clone(),
@@ -1236,45 +1175,24 @@ where
     }
 }
 
-impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> Default
-    for Context<S, SDCD, D, CCI, SR>
+impl<S, CCI: ConceptId, SR: SharedReference> Default for Context<S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
-        + Default
-        + Sync
-        + Apply<SDCD, SR>
-        + Debug,
-    SDCD: Clone
-        + Debug
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Default + Sync + Apply<SR> + Debug,
 {
     fn default() -> Self {
         Self {
             snap_shot: S::default(),
-            delta: D::default(),
+            delta: SR::share(NestedDelta::default()),
             cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
-            phantom: PhantomData,
         }
     }
 }
 
-impl<S, SDCD, D, CCI: ConceptId, SR: SharedReference> From<S>
-    for Context<S, SDCD, D, CCI, SR>
+impl<S, CCI: ConceptId, SR: SharedReference> From<S> for Context<S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI>
-        + Default
-        + Sync
-        + Apply<SDCD, SR>
-        + Debug,
-    SDCD: Clone
-        + Debug
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Default + Sync + Apply<SR> + Debug,
 {
     fn from(snap_shot: S) -> Self {
         Self {

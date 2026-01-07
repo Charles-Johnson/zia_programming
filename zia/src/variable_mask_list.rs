@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
     context_cache::SharedSyntax, mixed_concept::ConceptId,
-    nester::SharedReference, reduction_reason::convert_to_syntax_keys,
+    nester::SharedReference, reduction_reason::compare_syntax_maps,
 };
 
 #[derive(Clone)]
@@ -16,8 +16,7 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq
     for VariableMaskList<CI, SR>
 {
     fn eq(&self, other: &Self) -> bool {
-        convert_to_syntax_keys::<CI, CI, SR>(&self.head)
-            == convert_to_syntax_keys::<CI, CI, SR>(&other.head)
+        compare_syntax_maps::<CI, CI, SR>(&self.head, &other.head)
             && self.tail.as_ref().map(std::convert::AsRef::as_ref)
                 == other.tail.as_ref().map(std::convert::AsRef::as_ref)
     }
@@ -64,8 +63,7 @@ impl<CI: ConceptId, SR: SharedReference> VariableMaskList<CI, SR> {
     }
 
     pub fn contains(&self, node: &VariableMask<CI, SR>) -> bool {
-        convert_to_syntax_keys::<CI, CI, SR>(&self.head)
-            == convert_to_syntax_keys::<CI, CI, SR>(node)
+        compare_syntax_maps::<CI, CI, SR>(&self.head, node)
             || self.tail.as_ref().is_some_and(|vml| vml.as_ref().contains(node))
     }
 

@@ -26,7 +26,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            context: Context::new().unwrap(),
+            context: Context::new(),
             input: String::new(),
             history: Vec::new(),
             command_input: ElRef::new(),
@@ -39,7 +39,7 @@ impl Default for Model {
 
 impl Model {
     fn reset(&mut self) {
-        self.context = Context::new().unwrap();
+        self.context = Context::new();
         self.history = Vec::new();
         self.menu.is_open = false;
     }
