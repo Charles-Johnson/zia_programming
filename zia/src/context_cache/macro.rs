@@ -149,7 +149,7 @@ impl<CI: ConceptId, SR: SharedReference> InferenceCacheList<CI, SR> {
 
 #[derive(Debug, Clone)]
 pub struct ReductionCacheList<CI: ConceptId, SR: SharedReference> {
-    head: SR::Share<ReductionCache<CI, SR>>,
+    pub head: SR::Share<ReductionCache<CI, SR>>,
     tail: Option<SR::Share<Self>>,
 }
 

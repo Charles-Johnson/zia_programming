@@ -260,8 +260,9 @@ where
                         context_search
                             .insert_variable_mask(variable_mask.clone())
                             .ok()?;
-                        context_search.reduce_concept(&generalisation).map(
-                            |(ast, reason)| {
+                        let reduction_result = context_search
+                            .reduce_concept(&generalisation)
+                            .map(|(ast, reason)| {
                                 (
                                     context_search
                                         .substitute(&ast, &variable_mask),
@@ -271,8 +272,17 @@ where
                                         reason,
                                     ),
                                 )
-                            },
-                        )
+                            });
+                        for item in
+                            context_search.caches.reductions.head.as_ref()
+                        {
+                            let Some(c) = item.key().concept else {
+                                continue;
+                            };
+                            let ast = self.to_ast(&c);
+                            self.caches.insert_reduction(&ast, item.value());
+                        }
+                        reduction_result
                     })
             },
             (Some((left_ast, left_reason)), None) => Some((
