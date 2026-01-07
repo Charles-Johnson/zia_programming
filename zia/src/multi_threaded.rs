@@ -39,7 +39,7 @@ pub type MTContextSearch<'s, 'v, S, CCI> =
 
 // Saves having to construct a new `Context` each time.
 lazy_static! {
-    pub static ref NEW_CONTEXT: Context = Context::new().unwrap();
+    pub static ref NEW_CONTEXT: Context = Context::new();
 }
 
 #[cfg(test)]
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn precendence_test() {
-        let ctx = Context::new().unwrap();
+        let ctx = Context::new();
         let lexeme = ctx.lex("(a b) c");
         let nested_syntax = Context::nest(lexeme).unwrap();
         assert_eq!(
