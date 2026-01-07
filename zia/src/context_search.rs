@@ -365,7 +365,7 @@ where
 
     fn find_generalisations<'a>(
         &'a self,
-        ast: SR::Share<GenericSyntaxTree<CCI, SR>>,
+        ast: &GenericSyntaxTree<CCI, SR>,
     ) -> Option<impl Iterator<Item = S::ConceptId> + 'a> {
         GeneralisationFinder::<'a, S, CCI, SR>::new(
             ast,
@@ -400,6 +400,12 @@ where
         leftright: &SharedSyntax<CCI, SR>,
         right: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "reduce_by_expanded_left_branch({}, {}, {})",
+            leftleft.as_ref(),
+            leftright.as_ref(),
+            right.as_ref()
+        );
         let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
@@ -432,6 +438,7 @@ where
         generalisation: &SharedSyntax<CCI, SR>,
         truths: impl Iterator<Item = S::ConceptId>,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
+        debug!("find_example({})", generalisation.as_ref());
         self.find_examples(generalisation.clone(), truths).next()
     }
 
@@ -440,6 +447,10 @@ where
         &self,
         ast_to_reduce: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "find_examples_of_inferred_reduction({})",
+            ast_to_reduce.as_ref()
+        );
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let reduction_operator =
@@ -558,6 +569,7 @@ where
         generalisation: SharedSyntax<CCI, SR>,
         equivalence_set: impl Iterator<Item = S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
     ) -> impl Iterator<Item = ExampleSubstitutions<CCI, SR>> + 'a {
+        debug!("find_examples({})", generalisation.as_ref());
         let iterator: Box<dyn Iterator<Item = ExampleSubstitutions<CCI, SR>>>;
         if let Some((left, right)) = generalisation.get_expansion() {
             iterator = Box::new(self.find_examples_of_branched_generalisation(
@@ -697,7 +709,7 @@ where
                 },
                 (true, false) => Box::new(
                     self.find_examples_of_half_generalisation(
-                        left.clone(),
+                        &left,
                         right.clone(),
                         equivalence_set,
                         Hand::Right,
@@ -706,7 +718,7 @@ where
                 ),
                 (false, true) => Box::new(
                     self.find_examples_of_half_generalisation(
-                        right.clone(),
+                        &right,
                         left.clone(),
                         equivalence_set,
                         Hand::Left,
@@ -720,53 +732,89 @@ where
 
     fn find_examples_of_half_generalisation<'a>(
         &'a self,
-        generalised_part: SharedSyntax<CCI, SR>,
+        generalised_part: &SharedSyntax<CCI, SR>,
         non_generalised_part: SharedSyntax<CCI, SR>,
         mut equivalence_set_of_composition: impl Iterator<Item = S::ConceptId> + 'a,
         non_generalised_hand: Hand,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
-        let non_generalised_part_clone = non_generalised_part.clone();
-        let generalised_part_clone = generalised_part;
+        debug!("find_examples_of_half_generalisation({}, {}, {non_generalised_hand:?})", generalised_part.as_ref(), non_generalised_part.as_ref());
         // TODO try to test if this needs to be a flat_map call
         equivalence_set_of_composition.find_map(move |equivalent_concept_id| {
-            let equivalent_concept = self
-                .snap_shot
-                .read_concept(self.delta.as_ref(), equivalent_concept_id);
-            let (left, right) = equivalent_concept.get_composition()?;
-            let (equivalent_non_generalised_hand, equivalent_generalised_hand) = match non_generalised_hand {
-                Hand::Left => (left, right),
-                Hand::Right => (right, left)
-            };
-            if Some(equivalent_non_generalised_hand) != non_generalised_part_clone.get_concept() {
-                if self.snap_shot.read_concept(self.delta.as_ref(), equivalent_non_generalised_hand).free_variable() {
-                    return self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
-                        // Could have a more efficient method for this
-                        subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part_clone.clone()}, ..Default::default()})
-                    })
-                }
-                return None;
-            }
-            self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).or_else(|| {
-        let non_generalised_id = non_generalised_part.get_concept()?;
-                    let example_hand = match non_generalised_hand {
-                        Hand::Left => (left == non_generalised_id).then_some(right)?,
-                        Hand::Right => (right == non_generalised_id).then_some(left)?,
-                    };
-                    let example_hand_syntax = self.to_ast(&example_hand);
-                    GenericSyntaxTree::<CCI, SR>::check_example(
-                        &example_hand_syntax,
-                        &generalised_part_clone,
+            self.find_example_of_half_generalisation(
+                generalised_part,
+                &non_generalised_part,
+                equivalent_concept_id,
+                non_generalised_hand,
+                |example_hand| {
+                    // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
+                    let equivalence_set = iter::once(example_hand);
+                    let non_generalised_hand_concept = self
+                        .snap_shot
+                        .read_concept(self.delta.as_ref(), example_hand);
+                    self.find_example(
+                        generalised_part,
+                        equivalence_set.chain(
+                            non_generalised_hand_concept
+                                .find_what_reduces_to_it(),
+                        ),
                     )
-                    .or_else(|| {
-                        // TODO handle case when a concept implicitly reduces to `non_generalised_hand`
-                        let equivalence_set = iter::once(example_hand);
-                        let non_generalised_hand_concept = self
-                            .snap_shot
-                            .read_concept(self.delta.as_ref(), example_hand);
-                        self.find_example(&generalised_part_clone, equivalence_set.chain(non_generalised_hand_concept
-                                .find_what_reduces_to_it()))
-                    })
-            })
+                },
+            )
+        })
+    }
+
+    fn find_example_of_half_generalisation(
+        &self,
+        generalised_part_clone: &SharedSyntax<CCI, SR>,
+        non_generalised_part: &SharedSyntax<CCI, SR>,
+        equivalent_concept_id: S::ConceptId,
+        non_generalised_hand: Hand,
+        or_else: impl FnOnce(S::ConceptId) -> Option<ExampleSubstitutions<CCI, SR>>,
+    ) -> Option<ExampleSubstitutions<CCI, SR>> {
+        // TODO cache this calculation
+        let equivalent_concept = self
+            .snap_shot
+            .read_concept(self.delta.as_ref(), equivalent_concept_id);
+        let (left, right) = equivalent_concept.get_composition()?;
+        let (equivalent_non_generalised_hand, equivalent_generalised_hand) =
+            match non_generalised_hand {
+                Hand::Left => (left, right),
+                Hand::Right => (right, left),
+            };
+        if Some(equivalent_non_generalised_hand)
+            != non_generalised_part.get_concept()
+        {
+            if self
+                .snap_shot
+                .read_concept(
+                    self.delta.as_ref(),
+                    equivalent_non_generalised_hand,
+                )
+                .free_variable()
+            {
+                return self.find_example(generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
+                        // Could have a more efficient method for this
+                        subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part.clone()}, ..Default::default()})
+                    });
+            }
+            return None;
+        }
+        self.find_example(
+            generalised_part_clone,
+            iter::once(equivalent_generalised_hand),
+        )
+        .or_else(|| {
+            let non_generalised_id = non_generalised_part.get_concept()?;
+            let example_hand = match non_generalised_hand {
+                Hand::Left => (left == non_generalised_id).then_some(right)?,
+                Hand::Right => (right == non_generalised_id).then_some(left)?,
+            };
+            let example_hand_syntax = self.to_ast(&example_hand);
+            GenericSyntaxTree::<CCI, SR>::check_example(
+                &example_hand_syntax,
+                generalised_part_clone,
+            )
+            .or_else(|| or_else(example_hand))
         })
     }
 
@@ -777,6 +825,12 @@ where
         rightleft: &SharedSyntax<CCI, SR>,
         rightright: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "reduce_by_expanded_right_branch({}, {}, {})",
+            left.as_ref(),
+            rightleft.as_ref(),
+            rightright.as_ref()
+        );
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
             ConcreteConceptType::GreaterThan => {
@@ -1272,21 +1326,21 @@ impl<
     > GeneralisationFinder<'a, S, CI, SR>
 {
     fn new(
-        ast: SR::Share<GenericSyntaxTree<CI, SR>>,
+        ast: &GenericSyntaxTree<CI, SR>,
         snap_shot: &'a S,
         delta: SR::Share<NestedDelta<CI, SR>>,
         generalisations: SR::Share<DashSet<CI>>,
     ) -> Option<Self> {
         ast.get_expansion().map(move |(l, r)| {
             let left_finder = GeneralisationFinder::new(
-                l.clone(),
+                l.as_ref(),
                 snap_shot,
                 delta.clone(),
                 generalisations.clone(),
             )
             .map(Box::new);
             let right_finder = GeneralisationFinder::new(
-                r.clone(),
+                r.as_ref(),
                 snap_shot,
                 delta.clone(),
                 generalisations.clone(),
