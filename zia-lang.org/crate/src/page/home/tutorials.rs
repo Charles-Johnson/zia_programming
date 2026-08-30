@@ -1,7 +1,7 @@
 #[cfg(test)]
 use std::time::{Duration, Instant};
 
-pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<12>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<18>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -254,6 +254,42 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<12>) = (
                 #[cfg(test)]
                 expected_evaluation: "[ 5 , 3 , 1 ]",
                 explanation: "We can now push to arrays with multiple elements"
+            },
+            TutorialStep {
+                command: "let (_x_ +1) > _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "The successor is always greater"
+            },
+            TutorialStep {
+                command: "let 2 := 1 +1",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Let's define two to test this"
+            },
+            TutorialStep {
+                command: "2 > 1",
+                #[cfg(test)]
+                expected_evaluation: "true",
+                explanation: ""
+            },
+            TutorialStep {
+                command: "let _x_ - 0 -> _x_",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "Define the base case for subtraction"
+            },
+            TutorialStep {
+                command: "let (_x_ > _y_) => ((_x_ +1) - (_y_ +1) -> _x_ - _y_)",
+                #[cfg(test)]
+                expected_evaluation: "",
+                explanation: "This is how to simplify a subtraction expression"
+            },
+            TutorialStep {
+                command: "2 - 1",
+                #[cfg(test)]
+                expected_evaluation: "1",
+                explanation: ""
             },
         ]
     }
