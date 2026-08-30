@@ -1292,7 +1292,7 @@ impl<
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            while let Some(id) = self.composition_id_iter.next() {
+            for id in self.composition_id_iter.by_ref() {
                 if self.generalisations.insert(id) {
                     return Some(id);
                 }
