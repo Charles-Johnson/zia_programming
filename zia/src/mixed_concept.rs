@@ -3,10 +3,7 @@ use std::{
     hash::Hash,
 };
 
-pub trait ConceptId:
-    Clone + Copy + Debug + Display + Eq + Hash + 'static
-{
-}
+pub trait ConceptId: Clone + Copy + Debug + Display + Eq + Hash {}
 pub trait MixedConcept: ConceptId {
     fn uncommitted(id: usize) -> Self;
 }
