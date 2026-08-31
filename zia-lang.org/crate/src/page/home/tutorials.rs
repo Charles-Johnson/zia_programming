@@ -196,6 +196,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<12>, Tutorial<18>) = (
             //    #[cfg(test)]
             //    expected_evaluation: "true"
             //}
+            }
         ]
     },
     Tutorial {
@@ -342,7 +343,7 @@ impl TutorialStep {
             self.command
         );
         let time_taken = i.elapsed();
-        let limit_in_seconds = 10;
+        let limit_in_seconds = 7;
         assert!(time_taken < Duration::from_secs(limit_in_seconds), "{0} took longer than {limit_in_seconds} second - it took {time_taken:?}", self.command);
     }
 }

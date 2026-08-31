@@ -29,15 +29,9 @@ use crate::{
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
 };
-use dashmap::DashSet;
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    iter::{self, empty},
-    marker::PhantomData,
-};
+use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
 pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
 where
@@ -96,38 +90,21 @@ where
                 let result = composition_concept
                     .iter_hand_of(Hand::Right)
                     .find_map(|(condition_id, implication_rule_id)| {
-                        let implication_rule =
-                            self.to_ast(&implication_rule_id);
-                        if let Some((reduction, _)) =
-                            self.reduce(&implication_rule)
-                        {
-                            if self.concrete_type_of_ast(&reduction)
-                                == Some(ConcreteConceptType::True)
-                            {
-                                let condition = self.to_ast(&condition_id);
-                                let (reduced_condition, reason) =
-                                    self.reduce(&condition)?;
-                                let x = reduced_condition.get_concept()?;
-                                self.is_concrete_type(
-                                    ConcreteConceptType::True,
-                                    &x,
+                        let condition = self.to_ast(&condition_id);
+                        let (reduced_condition, reason) =
+                            self.reduce(&condition)?;
+                        let x = reduced_condition.get_concept()?;
+                        self.is_concrete_type(ConcreteConceptType::True, &x)
+                            .map(|x| {
+                                (
+                                    // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
+                                    self.to_ast(&x),
+                                    ReductionReason::<CCI, SR>::inference(
+                                        self.to_ast(&implication_rule_id),
+                                        reason,
+                                    ),
                                 )
-                                .map(|x| {
-                                    (
-                                        // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
-                                        self.to_ast(&x),
-                                        ReductionReason::<CCI, SR>::inference(
-                                            self.to_ast(&implication_rule_id),
-                                            reason,
-                                        ),
-                                    )
-                                })
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
+                            })
                     });
                 result
             });
