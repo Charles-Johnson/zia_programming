@@ -3,7 +3,7 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_delta::{
         Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
-        NewDirectConceptDelta, SharedDelta, ValueChange,
+        NewDirectConceptDelta, ValueChange,
     },
     errors::{ZiaError, ZiaResult},
     mixed_concept::MixedConcept,
@@ -15,12 +15,8 @@ use std::{
     hash::Hash,
 };
 
-pub trait Reader<SDCD, SR: SharedReference>
+pub trait Reader<SR: SharedReference>
 where
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<Self::ConceptId>>
-        + From<DirectConceptDelta<Self::ConceptId>>
-        + Debug,
     Self::CommittedConceptId: TryFrom<Self::ConceptId>,
     Self::ConceptId: From<Self::CommittedConceptId>,
 {
@@ -39,12 +35,9 @@ where
         concept_id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'_>>;
     #[allow(clippy::too_many_lines)]
-    fn maybe_read_concept<
-        'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn maybe_read_concept<'a>(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         id: Self::ConceptId,
     ) -> Option<Self::MixedConcept<'a>> {
         delta.get_concept(&id).and_then(|cds| {
@@ -155,12 +148,9 @@ where
             concept
         })
     }
-    fn read_concept<
-        'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn read_concept<'a>(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         id: Self::ConceptId,
     ) -> Self::MixedConcept<'a> {
         self.maybe_read_concept(delta, id).unwrap_or_else(|| {
@@ -168,12 +158,9 @@ where
                 .unwrap_or_else(|| panic!("No concept with id = {id}"))
         })
     }
-    fn concepts_from_composition<
-        'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn concepts_from_composition<'a>(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         comp: Composition<Self::ConceptId>,
     ) -> [Self::MixedConcept<'a>; 2] {
         [
@@ -181,18 +168,14 @@ where
             self.read_concept(delta, comp.right_id),
         ]
     }
-    fn get_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_label(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept_id: Self::ConceptId,
     ) -> Option<String>;
-    fn ast_from_symbol<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn ast_from_symbol(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         s: &str,
     ) -> GenericSyntaxTree<Self::ConceptId, SR>
     where
@@ -206,11 +189,9 @@ where
             },
         )
     }
-    fn bind_concept_to_syntax<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn bind_concept_to_syntax(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         syntax: GenericSyntaxTree<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> GenericSyntaxTree<Self::ConceptId, SR> {
@@ -242,18 +223,14 @@ where
             )
         }
     }
-    fn concept_from_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn concept_from_label(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         s: &str,
     ) -> Option<Self::ConceptId>;
-    fn get_reduction_of_composition<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_reduction_of_composition(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> Self::ConceptId {
         self.read_concept(delta, concept)
@@ -270,11 +247,9 @@ where
             })
             .unwrap_or(concept)
     }
-    fn is_disconnected<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn is_disconnected(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> bool {
         self.read_concept(delta, concept).get_reduction().is_none()
@@ -291,11 +266,9 @@ where
                 .next()
                 .is_none()
     }
-    fn righthand_of_without_label_is_empty<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn righthand_of_without_label_is_empty(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         con: Self::ConceptId,
     ) -> bool {
         self.concrete_concept_id(delta, ConcreteConceptType::Label)
@@ -305,22 +278,18 @@ where
             })
             .is_none()
     }
-    fn get_normal_form<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_normal_form(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         self.read_concept(delta, concept)
             .get_reduction()
             .map(|n| self.get_normal_form(delta, n).unwrap_or(n))
     }
-    fn get_concept_of_label<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_concept_of_label(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> Option<Self::ConceptId> {
         let label_concept_id =
@@ -329,11 +298,9 @@ where
         self.read_concept(delta, concept)
             .find_as_hand_in_composition_with(label_concept_id, Hand::Right)
     }
-    fn contains<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn contains(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         outer: Self::ConceptId,
         inner: Self::ConceptId,
     ) -> bool {
@@ -348,11 +315,9 @@ where
             false
         }
     }
-    fn check_reductions<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn check_reductions(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         outer_concept: Self::ConceptId,
         inner_concept: Self::ConceptId,
     ) -> ZiaResult<()> {
@@ -368,12 +333,9 @@ where
             },
         )
     }
-    fn get_reduction_or_reduction_of_composition<
-        'a,
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn get_reduction_or_reduction_of_composition<'a>(
         &'a self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept: Self::ConceptId,
     ) -> Self::MixedConcept<'a> {
         self.read_concept(
@@ -383,29 +345,23 @@ where
             ),
         )
     }
-    fn concrete_concept_id<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn concrete_concept_id(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         cc: ConcreteConceptType,
     ) -> Option<Self::ConceptId>;
-    fn maybe_concrete_concept_type<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn maybe_concrete_concept_type(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.maybe_read_concept(delta, concept_id)
             .and_then(|c| c.get_concrete_concept_type())
     }
 
-    fn concrete_concept_type<
-        D: SharedDelta<NestedDelta = NestedDelta<Self::ConceptId, SDCD, D, SR>>,
-    >(
+    fn concrete_concept_type(
         &self,
-        delta: &NestedDelta<Self::ConceptId, SDCD, D, SR>,
+        delta: &NestedDelta<Self::ConceptId, SR>,
         concept_id: Self::ConceptId,
     ) -> Option<ConcreteConceptType> {
         self.read_concept(delta, concept_id).get_concrete_concept_type()

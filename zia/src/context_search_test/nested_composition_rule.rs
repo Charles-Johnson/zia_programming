@@ -4,11 +4,8 @@ use crate::{
     context_delta::NestedDelta,
     context_search::ContextReferences,
     context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{
-        MTContextCache, MTContextSearch, SharedContextDelta,
-        SharedDirectConceptDelta,
-    },
+    mock_snap_shot::MockSnapShot,
+    multi_threaded::{MTContextCache, MTContextSearch},
 };
 use assert_matches::assert_matches;
 use maplit::{hashmap, hashset};
@@ -57,13 +54,12 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        NestedDelta::<_, SharedDirectConceptDelta<ConceptId>, _, _>::default();
+    let delta = NestedDelta::<_, _>::default();
     let cache = MTContextCache::default();
     let bound_variable_syntax = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &snapshot,
-        delta: SharedContextDelta(delta.into()),
+        delta: delta.into(),
         cache: &cache,
         bound_variable_syntax: &bound_variable_syntax,
     });

@@ -4,10 +4,7 @@ use crate::{
     context_delta::NestedDelta,
     context_search::ContextReferences,
     mock_snap_shot::MockSnapShot,
-    multi_threaded::{
-        MTContextCache, MTContextSearch, SharedContextDelta,
-        SharedDirectConceptDelta,
-    },
+    multi_threaded::{MTContextCache, MTContextSearch},
 };
 use maplit::{hashmap, hashset};
 use pretty_assertions::assert_eq;
@@ -29,13 +26,12 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn existence_inference_rule() {
     let context_cache = MTContextCache::default();
-    let context_delta =
-        NestedDelta::<_, SharedDirectConceptDelta<_>, _, _>::default();
+    let context_delta = NestedDelta::<_, _>::default();
     let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
     let bound_variables = hashset! {};
     let context_search = MTContextSearch::from(ContextReferences {
         snap_shot: &context_snap_shot,
-        delta: SharedContextDelta(context_delta.into()),
+        delta: context_delta.into(),
         cache: &context_cache,
         bound_variable_syntax: &bound_variables,
     });

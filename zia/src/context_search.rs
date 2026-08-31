@@ -21,9 +21,7 @@ use crate::{
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     consistent_merge::ConsistentMerge,
     context_cache::{GenericCache, ReductionCache},
-    context_delta::{
-        DirectConceptDelta, NestedDelta, NewConceptDelta, SharedDelta,
-    },
+    context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
     mixed_concept::{ConceptId, MixedConcept},
     nester::SharedReference,
     reduction_reason::{ReductionReason, ReductionResult, SharedSyntax},
@@ -35,48 +33,30 @@ use log::debug;
 use maplit::{hashmap, hashset};
 use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
-pub struct ContextSearch<
-    's,
-    'v,
-    S,
-    SDCD,
-    D,
-    CCI: ConceptId,
-    SR: SharedReference,
-> where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Debug,
-    D: SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
+where
+    S: SnapShotReader<SR, ConceptId = CCI> + Sync + std::fmt::Debug,
 {
     snap_shot: &'s S,
     variable_mask: SR::Share<VariableMaskList<CCI, SR>>,
-    delta: D,
+    delta: SR::Share<NestedDelta<CCI, SR>>,
     caches: GenericCache<CCI, SR>,
     syntax_evaluating: HashSet<SyntaxKey<CCI>>,
     concept_inferring: HashSet<S::ConceptId>,
     bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
-    phantom: PhantomData<SDCD>,
+    phantom: PhantomData<SR::Share<DirectConceptDelta<CCI>>>,
     phantom2: PhantomData<CCI>,
 }
-impl<S, SDCD, D, CCI: MixedConcept, SR: SharedReference> Debug
-    for ContextSearch<'_, '_, S, SDCD, D, CCI, SR>
+impl<S, CCI: MixedConcept, SR: SharedReference> Debug
+    for ContextSearch<'_, '_, S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Debug,
-    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
-        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Sync + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ContextSearch")
             .field("snap_shot", &self.snap_shot)
             .field("variable_mask", &"[variable_mask]")
-            .field("delta", &self.delta)
+            .field("delta", self.delta.as_ref())
             .field("caches", &"[caches]")
             .field("syntax_evaluating", &self.syntax_evaluating)
             .field("concept_inferring", &self.concept_inferring)
@@ -87,16 +67,10 @@ where
     }
 }
 
-impl<'s, 'v, S, SDCD, D, CCI: MixedConcept, SR: SharedReference>
-    ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
+impl<'s, 'v, S, CCI: MixedConcept, SR: SharedReference>
+    ContextSearch<'s, 'v, S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Debug,
-    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
-        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Sync + std::fmt::Debug,
 {
     fn infer_reduction(
         &self,
@@ -483,7 +457,7 @@ where
                 .share();
         let cache = SR::share(ReductionCache::<CCI, SR>::default());
         let mut spawned_context_search =
-            self.spawn(&cache, D::from_nested(spawned_delta));
+            self.spawn(&cache, SR::share(spawned_delta));
         if let Some(concept) = ast_to_reduce.get_concept() {
             spawned_context_search.concept_inferring.insert(concept);
         }
@@ -1087,7 +1061,7 @@ where
     pub fn spawn<'b, 'c>(
         &'b self,
         cache: &'c SR::Share<ReductionCache<CCI, SR>>,
-        delta: D,
+        delta: SR::Share<NestedDelta<CCI, SR>>,
     ) -> Self {
         ContextSearch::<'s, 'v> {
             concept_inferring: self.concept_inferring.clone(),
@@ -1264,6 +1238,11 @@ where
     }
 }
 
+// struct GeneralisationFinder<'a, CI, SR> {
+//   ast: &'a GenericSyntaxTree<CI, SR>,
+//   snap_shot: &
+//}
+
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
     GreaterThan,
@@ -1286,17 +1265,11 @@ pub enum ComparisonReason<CI: ConceptId, SR: SharedReference> {
 
 impl<CI: ConceptId, SR: SharedReference> Eq for ComparisonReason<CI, SR> {}
 
-impl<'c, 's, 'v, S, SDCD, D, CCI: ConceptId, SR: SharedReference>
-    From<ContextReferences<'c, 's, 'v, S, D, SR, CCI>>
-    for ContextSearch<'s, 'v, S, SDCD, D, CCI, SR>
+impl<'c, 's, 'v, S, CCI: ConceptId, SR: SharedReference>
+    From<ContextReferences<'c, 's, 'v, S, SR, CCI>>
+    for ContextSearch<'s, 'v, S, CCI, SR>
 where
-    S: SnapShotReader<SDCD, SR, ConceptId = CCI> + Sync + std::fmt::Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Debug,
-    D: AsRef<NestedDelta<S::ConceptId, SDCD, D, SR>>
-        + SharedDelta<NestedDelta = NestedDelta<S::ConceptId, SDCD, D, SR>>,
+    S: SnapShotReader<SR, ConceptId = CCI> + Sync + std::fmt::Debug,
 {
     fn from(
         ContextReferences {
@@ -1304,7 +1277,7 @@ where
             delta,
             cache,
             bound_variable_syntax,
-        }: ContextReferences<'c, 's, 'v, S, D, SR, CCI>,
+        }: ContextReferences<'c, 's, 'v, S, SR, CCI>,
     ) -> Self {
         Self {
             concept_inferring: HashSet::default(),
@@ -1320,17 +1293,10 @@ where
     }
 }
 
-pub struct ContextReferences<
-    'c,
-    's,
-    'v,
-    S,
-    D,
-    SR: SharedReference,
-    CCI: ConceptId,
-> {
+pub struct ContextReferences<'c, 's, 'v, S, SR: SharedReference, CCI: ConceptId>
+{
     pub snap_shot: &'s S,
-    pub delta: D,
+    pub delta: SR::Share<NestedDelta<CCI, SR>>,
     pub cache: &'c GenericCache<CCI, SR>,
     pub bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
 }
