@@ -8,3 +8,4 @@ zia-lang.org/crate/target/**
 zia-lang.org/yarn-error.log
 /.cargo/
 .env
+*.diff
