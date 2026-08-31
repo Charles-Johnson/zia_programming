@@ -196,7 +196,6 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<12>, Tutorial<18>) = (
             //    #[cfg(test)]
             //    expected_evaluation: "true"
             //}
-            }
         ]
     },
     Tutorial {

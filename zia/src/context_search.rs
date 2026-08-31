@@ -29,9 +29,15 @@ use crate::{
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
 };
+use dashmap::DashSet;
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
+use std::{
+    collections::HashSet,
+    fmt::Debug,
+    iter::{self, empty},
+    marker::PhantomData,
+};
 
 pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
 where
