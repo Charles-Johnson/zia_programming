@@ -152,9 +152,11 @@ where
     ) -> ReductionResult<CCI, SR> {
         debug!("reduce({})", ast.to_string());
         self.caches.get_reduction_or_else(ast, || {
+            debug!("Cache miss: {}", ast.as_ref());
             let maybe_concept: Option<CCI> = ast.get_concept();
             if let Some(id) = maybe_concept {
                 if self.concrete_type(&id).is_some() {
+                    // TODO: cache this result without breaking tests
                     return None;
                 }
             }
@@ -232,8 +234,9 @@ where
                         context_search
                             .insert_variable_mask(variable_mask.clone())
                             .ok()?;
-                        context_search.reduce_concept(&generalisation).map(
-                            |(ast, reason)| {
+                        let reduction_result = context_search
+                            .reduce_concept(&generalisation)
+                            .map(|(ast, reason)| {
                                 (
                                     context_search
                                         .substitute(&ast, &variable_mask),
@@ -243,8 +246,17 @@ where
                                         reason,
                                     ),
                                 )
-                            },
-                        )
+                            });
+                        for item in
+                            context_search.caches.reductions.head.as_ref()
+                        {
+                            let Some(c) = item.key().concept else {
+                                continue;
+                            };
+                            let ast = self.to_ast(&c);
+                            self.caches.insert_reduction(&ast, item.value());
+                        }
+                        reduction_result
                     })
             },
             (Some((left_ast, left_reason)), None) => Some((

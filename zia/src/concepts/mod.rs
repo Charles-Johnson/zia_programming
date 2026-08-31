@@ -26,7 +26,10 @@ use crate::{
 };
 use maplit::{hashmap, hashset};
 use std::{
-    collections::{hash_map::Iter, HashMap, HashSet},
+    collections::{
+        hash_map::{IntoIter, Iter},
+        HashMap, HashSet,
+    },
     fmt::{Debug, Display},
     hash::Hash,
     iter::{Copied, Map},
@@ -441,6 +444,7 @@ impl<'a, Id: Copy + Debug + Eq + Hash> From<&'a NewDirectConceptDelta<Id, Id>>
 type CopyPairFn<T> = fn((&T, &T)) -> (T, T);
 
 type CopiedPairIter<'a, T> = Map<Iter<'a, T, T>, CopyPairFn<T>>;
+type OwnedPairIter<T> = IntoIter<T, T>;
 
 impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
     for Concept<Id>
@@ -449,6 +453,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
     type IdIterator<'a> =
         Copied<std::collections::hash_set::Iter<'a, Self::Id>>;
     type IdPairIterator<'a> = CopiedPairIter<'a, Self::Id>;
+    type OwnedIdPairIterator = OwnedPairIter<Self::Id>;
 
     fn id(&self) -> Id {
         self.id
@@ -701,6 +706,14 @@ impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
         }
         .iter()
         .map(copy_pair_elements)
+    }
+
+    fn into_iter_hand_of(self, hand: Hand) -> Self::OwnedIdPairIterator {
+        match hand {
+            Hand::Left => self.concrete_part.lefthand_of,
+            Hand::Right => self.concrete_part.righthand_of,
+        }
+        .into_iter()
     }
 }
 

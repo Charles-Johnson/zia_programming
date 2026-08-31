@@ -147,7 +147,7 @@ fn main() {
             });
         }
     }
-    let mut context = Context::new().unwrap();
+    let mut context = Context::new();
     for command in commands {
         context.execute(&command);
     }
