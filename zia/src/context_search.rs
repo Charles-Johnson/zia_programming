@@ -29,15 +29,9 @@ use crate::{
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
 };
-use dashmap::DashSet;
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    iter::{self, empty},
-    marker::PhantomData,
-};
+use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
 pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
 where
@@ -96,38 +90,21 @@ where
                 let result = composition_concept
                     .iter_hand_of(Hand::Right)
                     .find_map(|(condition_id, implication_rule_id)| {
-                        let implication_rule =
-                            self.to_ast(&implication_rule_id);
-                        if let Some((reduction, _)) =
-                            self.reduce(&implication_rule)
-                        {
-                            if self.concrete_type_of_ast(&reduction)
-                                == Some(ConcreteConceptType::True)
-                            {
-                                let condition = self.to_ast(&condition_id);
-                                let (reduced_condition, reason) =
-                                    self.reduce(&condition)?;
-                                let x = reduced_condition.get_concept()?;
-                                self.is_concrete_type(
-                                    ConcreteConceptType::True,
-                                    &x,
+                        let condition = self.to_ast(&condition_id);
+                        let (reduced_condition, reason) =
+                            self.reduce(&condition)?;
+                        let x = reduced_condition.get_concept()?;
+                        self.is_concrete_type(ConcreteConceptType::True, &x)
+                            .map(|x| {
+                                (
+                                    // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
+                                    self.to_ast(&x),
+                                    ReductionReason::<CCI, SR>::inference(
+                                        self.to_ast(&implication_rule_id),
+                                        reason,
+                                    ),
                                 )
-                                .map(|x| {
-                                    (
-                                        // TODO: this should be the "true" concept only if the implication result is equivalent to the `concept`
-                                        self.to_ast(&x),
-                                        ReductionReason::<CCI, SR>::inference(
-                                            self.to_ast(&implication_rule_id),
-                                            reason,
-                                        ),
-                                    )
-                                })
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
+                            })
                     });
                 result
             });
@@ -236,12 +213,9 @@ where
         let cache = SR::share(ReductionCache::<CCI, SR>::default());
         match (left_result, right_result) {
             (None, None) => {
-                let ast = SR::share(self.contract_pair(left, right));
-                let Some(generalisation_candidates) =
-                    self.find_generalisations(ast.clone())
-                else {
-                    return None;
-                };
+                let ast = self.contract_pair(left, right);
+                let generalisation_candidates = self.find_generalisations(&ast);
+                let ast = ast.share();
                 generalisation_candidates
                     .into_iter()
                     .filter_map(move |gc| {
@@ -366,16 +340,42 @@ where
             .bind_pair(lefthand.clone(), righthand.clone())
     }
 
-    fn find_generalisations<'a>(
-        &'a self,
-        ast: SR::Share<GenericSyntaxTree<CCI, SR>>,
-    ) -> Option<impl Iterator<Item = S::ConceptId> + 'a> {
-        GeneralisationFinder::<'a, S, CCI, SR>::new(
-            ast,
-            self.snap_shot,
-            self.delta.clone(),
-            SR::share(DashSet::default()),
-        )
+    fn find_generalisations(
+        &self,
+        ast: &GenericSyntaxTree<CCI, SR>,
+    ) -> HashSet<S::ConceptId> {
+        let mut generalisations = HashSet::<S::ConceptId>::new();
+        if let Some((l, r)) = ast.get_expansion() {
+            if let Some(c) = l.get_concept() {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta.as_ref(), c)
+                        .iter_composition_ids(Hand::Left),
+                );
+            }
+            if let Some(c) = r.get_concept() {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta.as_ref(), c)
+                        .iter_composition_ids(Hand::Right),
+                );
+            }
+            self.find_generalisations(&l).iter().for_each(|g| {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta.as_ref(), *g)
+                        .iter_composition_ids(Hand::Left),
+                );
+            });
+            self.find_generalisations(&r).iter().for_each(|g| {
+                generalisations.extend(
+                    self.snap_shot
+                        .read_concept(self.delta.as_ref(), *g)
+                        .iter_composition_ids(Hand::Right),
+                );
+            });
+        }
+        generalisations
     }
 
     /// Reduces the syntax as much as possible (returns the normal form syntax).
@@ -1250,149 +1250,10 @@ where
     }
 }
 
-struct GeneralisationFinder<
-    'a,
-    S: SnapShotReader<SR, ConceptId = CI>,
-    CI: ConceptId + 'static,
-    SR: SharedReference,
-> {
-    snap_shot: &'a S,
-    generalisations: SR::Share<DashSet<CI>>,
-    delta: SR::Share<NestedDelta<CI, SR>>,
-    concepts_used: bool,
-    composition_id_iter: Box<dyn Iterator<Item = CI>>,
-    left_syntax: SR::Share<GenericSyntaxTree<CI, SR>>,
-    right_syntax: SR::Share<GenericSyntaxTree<CI, SR>>,
-    left_finder: Option<Box<Self>>,
-    right_finder: Option<Box<Self>>,
-}
-
-impl<
-        'a,
-        S: SnapShotReader<SR, ConceptId = CI>,
-        CI: ConceptId + 'static,
-        SR: SharedReference,
-    > GeneralisationFinder<'a, S, CI, SR>
-{
-    fn new(
-        ast: SR::Share<GenericSyntaxTree<CI, SR>>,
-        snap_shot: &'a S,
-        delta: SR::Share<NestedDelta<CI, SR>>,
-        generalisations: SR::Share<DashSet<CI>>,
-    ) -> Option<Self> {
-        ast.get_expansion().map(move |(l, r)| {
-            let left_finder = GeneralisationFinder::new(
-                l.clone(),
-                snap_shot,
-                delta.clone(),
-                generalisations.clone(),
-            )
-            .map(Box::new);
-            let right_finder = GeneralisationFinder::new(
-                r.clone(),
-                snap_shot,
-                delta.clone(),
-                generalisations.clone(),
-            )
-            .map(Box::new);
-            Self {
-                generalisations,
-                snap_shot,
-                delta,
-                composition_id_iter: Box::new(empty()),
-                left_syntax: l,
-                right_syntax: r,
-                left_finder,
-                right_finder,
-                concepts_used: false,
-            }
-        })
-    }
-}
-
-impl<
-        'a,
-        S: SnapShotReader<SR, ConceptId = CI>,
-        CI: ConceptId + 'static,
-        SR: SharedReference,
-    > Iterator for GeneralisationFinder<'a, S, CI, SR>
-{
-    type Item = CI;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            while let Some(id) = self.composition_id_iter.next() {
-                if self.generalisations.insert(id) {
-                    return Some(id);
-                }
-            }
-
-            // Need to replenish composition_id_iter
-            self.composition_id_iter = match (
-                if self.concepts_used {
-                    None
-                } else {
-                    self.left_syntax
-                        .get_concept()
-                        .map(|c| {
-                            self.snap_shot.read_concept(self.delta.as_ref(), c)
-                        })
-                        .map(|l| l.into_iter_composition_ids(Hand::Left))
-                },
-                if self.concepts_used {
-                    None
-                } else {
-                    self.right_syntax
-                        .get_concept()
-                        .map(|c| {
-                            self.snap_shot.read_concept(self.delta.as_ref(), c)
-                        })
-                        .map(|r| r.into_iter_composition_ids(Hand::Right))
-                },
-            ) {
-                (Some(iter), None) => {
-                    self.concepts_used = true;
-                    Box::new(iter)
-                },
-                (None, Some(iter)) => {
-                    self.concepts_used = true;
-                    Box::new(iter)
-                },
-                (Some(l_iter), Some(r_iter)) => {
-                    self.concepts_used = true;
-                    Box::new(l_iter.chain(r_iter))
-                },
-                (None, None) => {
-                    self.concepts_used = true;
-                    match (
-                        self.left_finder.as_deref_mut().and_then(|finder| {
-                            let g = finder.next()?;
-
-                            let concept = self
-                                .snap_shot
-                                .read_concept(self.delta.as_ref(), g);
-                            Some(concept.into_iter_composition_ids(Hand::Left))
-                        }),
-                        self.right_finder.as_mut().and_then(|finder| {
-                            finder.next().map(|g| {
-                                self.snap_shot
-                                    .read_concept(self.delta.as_ref(), g)
-                                    .into_iter_composition_ids(Hand::Right)
-                            })
-                        }),
-                    ) {
-                        (None, None) => return None,
-                        (Some(iter), None) => Box::new(iter),
-                        (None, Some(iter)) => Box::new(iter),
-                        (Some(l_iter), Some(r_iter)) => {
-                            Box::new(l_iter.chain(r_iter))
-                        },
-                    }
-                },
-            };
-        }
-    }
-}
+// struct GeneralisationFinder<'a, CI, SR> {
+//   ast: &'a GenericSyntaxTree<CI, SR>,
+//   snap_shot: &
+//}
 
 #[derive(PartialEq, Debug, Eq)]
 pub enum Comparison {
