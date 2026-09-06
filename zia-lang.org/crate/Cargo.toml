@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 
 [dev-dependencies]
 wasm-bindgen-test = "=0.3.18"
+simple_logger = "1.15.0"
 
 [dependencies]
 zia = { path = "../../zia", version = "0.6.0"}

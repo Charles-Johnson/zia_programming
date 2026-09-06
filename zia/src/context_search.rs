@@ -403,6 +403,12 @@ where
         leftright: &SharedSyntax<CCI, SR>,
         right: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "reduce_by_expanded_left_branch({}, {}, {})",
+            leftleft.as_ref(),
+            leftright.as_ref(),
+            right.as_ref()
+        );
         let cct = self.concrete_type_of_ast(leftright)?;
         match cct {
             ConcreteConceptType::ExistsSuchThat
@@ -435,6 +441,7 @@ where
         generalisation: &SharedSyntax<CCI, SR>,
         truths: impl Iterator<Item = S::ConceptId>,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
+        debug!("find_example({})", generalisation.as_ref());
         self.find_examples(generalisation.clone(), truths).next()
     }
 
@@ -443,6 +450,10 @@ where
         &self,
         ast_to_reduce: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "find_examples_of_inferred_reduction({})",
+            ast_to_reduce.as_ref()
+        );
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let reduction_operator =
@@ -561,6 +572,7 @@ where
         generalisation: SharedSyntax<CCI, SR>,
         equivalence_set: impl Iterator<Item = S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
     ) -> impl Iterator<Item = ExampleSubstitutions<CCI, SR>> + 'a {
+        debug!("find_examples({})", generalisation.as_ref());
         let iterator: Box<dyn Iterator<Item = ExampleSubstitutions<CCI, SR>>>;
         if let Some((left, right)) = generalisation.get_expansion() {
             iterator = Box::new(self.find_examples_of_branched_generalisation(
@@ -728,6 +740,7 @@ where
         mut equivalence_set_of_composition: impl Iterator<Item = S::ConceptId> + 'a,
         non_generalised_hand: Hand,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
+        debug!("find_examples_of_half_generalisation({}, {}, {non_generalised_hand:?})", generalised_part.as_ref(), non_generalised_part.as_ref());
         let non_generalised_part_clone = non_generalised_part.clone();
         let generalised_part_clone = generalised_part;
         // TODO try to test if this needs to be a flat_map call
@@ -780,6 +793,12 @@ where
         rightleft: &SharedSyntax<CCI, SR>,
         rightright: &SharedSyntax<CCI, SR>,
     ) -> ReductionResult<CCI, SR> {
+        debug!(
+            "reduce_by_expanded_right_branch({}, {}, {})",
+            left.as_ref(),
+            rightleft.as_ref(),
+            rightright.as_ref()
+        );
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
             ConcreteConceptType::GreaterThan => {
