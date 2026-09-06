@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 
 [dev-dependencies]
 wasm-bindgen-test = "=0.3.18"
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 simple_logger = "1.15.0"
 
 [dependencies]

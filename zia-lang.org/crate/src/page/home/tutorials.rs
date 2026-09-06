@@ -345,6 +345,8 @@ mod test {
     }
     #[test]
     fn relationships_tutorial() {
+        #[cfg(not(target_arch = "wasm32"))]
+        simple_logger::init().unwrap();
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.1.steps {
             step.test(&mut context);
