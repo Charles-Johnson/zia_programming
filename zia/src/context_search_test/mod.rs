@@ -12,10 +12,20 @@ mod inferred_negation;
 mod nested_composition_rule;
 mod not;
 
+use std::{collections::HashSet, sync::Arc};
+
+use dashmap::DashMap;
+
 use crate::{
+    ast::SyntaxKey,
     concepts::{Concept, ConceptTrait},
-    mock_snap_shot::ConceptId,
-    multi_threaded::{MTReductionReason, MTSyntaxTree},
+    context_delta::NestedDelta,
+    context_search::{ContextReferences, ContextSearch},
+    mock_snap_shot::{ConceptId, MockSnapShot},
+    multi_threaded::{
+        ArcFamily, MTContextCache, MTContextSearch, MTReductionReason,
+        MTSyntaxTree,
+    },
 };
 
 pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
@@ -28,6 +38,22 @@ pub fn check_order(concepts: &[Concept<usize>]) -> Vec<Concept<ConceptId>> {
         })
         .collect::<Vec<Concept<ConceptId>>>()
 }
-
+type ContextSearchTest<'a, 'b> =
+    ContextSearch<'a, 'b, MockSnapShot, ConceptId, ArcFamily>;
 type Syntax = MTSyntaxTree<ConceptId>;
 type ReductionReason = MTReductionReason<ConceptId>;
+fn new_context_search_test<'a, 'b>(
+    snap_shot: &'a MockSnapShot,
+    bound_variables: &'b HashSet<SyntaxKey<ConceptId>>,
+) -> ContextSearchTest<'a, 'b> {
+    let delta = NestedDelta::<ConceptId, _>::default();
+    let cache = MTContextCache::default();
+
+    MTContextSearch::from(ContextReferences {
+        snap_shot,
+        delta: delta.into(),
+        cache: &cache,
+        bound_variable_syntax: bound_variables,
+        half_generalisation_cache: Arc::new(DashMap::new()),
+    })
+}

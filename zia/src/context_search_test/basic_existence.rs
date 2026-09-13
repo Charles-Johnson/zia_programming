@@ -1,11 +1,8 @@
 use super::Syntax;
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedDelta,
-    context_search::ContextReferences,
-    context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MTContextCache, MTContextSearch},
+    context_search_test::{new_context_search_test, ReductionReason},
+    mock_snap_shot::MockSnapShot,
 };
 use maplit::{hashmap, hashset};
 use std::collections::HashMap;
@@ -13,16 +10,9 @@ use std::collections::HashMap;
 #[test]
 fn basic_existence() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedDelta::<ConceptId, _>::default();
-    let cache = MTContextCache::default();
     let variable_syntax = Syntax::from("_x_").share();
     let bound_variables = hashset! {variable_syntax.key()};
-    let context_search = MTContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: delta.into(),
-        cache: &cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let exists_such_that_syntax = context_search.to_ast(&0);
     let variable_exists_such_that_variable_is_true_syntax = context_search
         .combine(
