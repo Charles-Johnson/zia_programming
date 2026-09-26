@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use maplit::hashset;
 
 use crate::{
@@ -24,7 +24,8 @@ use crate::{
     context_cache::{GenericCache, SharedSyntax},
     context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
     context_search::{
-        ContextReferences, ContextSearch, HalfGeneralisationCache,
+        ContextReferences, ContextSearch, GeneralisationSet,
+        HalfGeneralisationCache, SyntaxSet,
     },
     context_updater::ContextUpdater,
     delta::Apply,
@@ -39,7 +40,6 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     default::Default,
     fmt::Debug,
-    sync::Arc,
 };
 
 pub struct Context<S, CCI: ConceptId, SR: SharedReference>
@@ -52,6 +52,8 @@ where
     new_variable_concepts_by_label: HashMap<String, CCI>,
     bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
     half_generalisation_cache: HalfGeneralisationCache<CCI, SR>,
+    generalisations_without_examples: GeneralisationSet<SR, CCI>,
+    syntax_with_no_inferred_reductions: SyntaxSet<SR, CCI>,
 }
 
 pub struct TokenSubsequence<CI: ConceptId, SR: SharedReference> {
@@ -86,6 +88,9 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            generalisations_without_examples: self
+                .generalisations_without_examples
+                .clone(),
             half_generalisation_cache: self.half_generalisation_cache.clone(),
             delta: SR::share(NestedDelta::default()),
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
@@ -94,6 +99,9 @@ where
                 .new_variable_concepts_by_label
                 .clone(),
             snap_shot: self.snap_shot.clone(),
+            syntax_with_no_inferred_reductions: self
+                .syntax_with_no_inferred_reductions
+                .clone(),
         }
     }
 }
@@ -1178,6 +1186,10 @@ where
             cache: &self.cache,
             bound_variable_syntax: &self.bounded_variable_syntax,
             half_generalisation_cache: self.half_generalisation_cache.clone(),
+            generalisations_without_examples: SR::share(DashSet::new()),
+            syntax_with_no_inferred_reductions: self
+                .syntax_with_no_inferred_reductions
+                .clone(),
         })
     }
 }
@@ -1193,7 +1205,9 @@ where
             cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
-            half_generalisation_cache: Arc::new(DashMap::new()),
+            half_generalisation_cache: SR::share(DashMap::new()),
+            generalisations_without_examples: SR::share(DashSet::new()),
+            syntax_with_no_inferred_reductions: SR::share(DashSet::new()),
         }
     }
 }

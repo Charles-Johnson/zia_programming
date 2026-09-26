@@ -29,11 +29,11 @@ use crate::{
     substitute::substitute,
     variable_mask_list::{VariableMask, VariableMaskList},
 };
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use log::debug;
 use maplit::{hashmap, hashset};
 use std::{
-    collections::HashSet, fmt::Debug, iter, marker::PhantomData, sync::Arc,
+    collections::HashSet, fmt::Debug, iter, marker::PhantomData,
 };
 
 pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
@@ -50,7 +50,13 @@ where
     phantom: PhantomData<SR::Share<DirectConceptDelta<CCI>>>,
     phantom2: PhantomData<CCI>,
     cached_example_of_half_generalisation: HalfGeneralisationCache<CCI, SR>,
+    generalisations_without_examples: GeneralisationSet<SR, CCI>,
+    syntax_with_no_inferred_reductions: SyntaxSet<SR, CCI>,
 }
+pub type SyntaxSet<SR, CCI> =
+    <SR as SharedReference>::Share<DashSet<SyntaxKey<CCI>>>;
+pub type GeneralisationSet<SR, CCI> =
+    <SR as SharedReference>::Share<DashSet<(SyntaxKey<CCI>, CCI)>>;
 type HalfGeneralisationKey<CCI> = (SyntaxKey<CCI>, SyntaxKey<CCI>, CCI, Hand);
 
 impl<S, CCI: MixedConcept, SR: SharedReference> Debug
@@ -238,6 +244,7 @@ where
                             &cache,
                             self.delta.clone(),
                             self.cached_example_of_half_generalisation.clone(),
+                            self.generalisations_without_examples.clone(),
                         );
                         // Stack overflow occurs if you remove this
                         context_search
@@ -450,17 +457,26 @@ where
                 let true_concept =
                     self.snap_shot.read_concept(self.delta.as_ref(), true_id);
                 let truths = true_concept.find_what_reduces_to_it();
-                self.find_example(right, truths).map(|substitutions| {
-                    // TODO: determine whether substitutions.example should be considered
-                    let true_syntax = self.to_ast(&true_id);
-                    (
-                        true_syntax,
-                        ReductionReason::<CCI, SR>::existence(
-                            substitutions.generalisation,
-                            right.clone(),
-                        ),
-                    )
-                })
+                let key = (right.key(), true_id);
+                if self.generalisations_without_examples.contains(&key) {
+                    return None;
+                };
+                let maybe_example =
+                    self.find_example(right, truths).map(|substitutions| {
+                        // TODO: determine whether substitutions.example should be considered
+                        let true_syntax = self.to_ast(&true_id);
+                        (
+                            true_syntax,
+                            ReductionReason::<CCI, SR>::existence(
+                                substitutions.generalisation,
+                                right.clone(),
+                            ),
+                        )
+                    });
+                if maybe_example.is_none() {
+                    self.generalisations_without_examples.insert(key);
+                }
+                maybe_example
             },
             _ => None,
         }
@@ -471,7 +487,6 @@ where
         generalisation: &SharedSyntax<CCI, SR>,
         truths: impl Iterator<Item = S::ConceptId>,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
-        debug!("find_example({})", generalisation.as_ref());
         self.find_examples(generalisation.clone(), truths).next()
     }
 
@@ -484,6 +499,16 @@ where
             "find_examples_of_inferred_reduction({})",
             ast_to_reduce.as_ref()
         );
+        if self
+            .syntax_with_no_inferred_reductions
+            .contains(&ast_to_reduce.key())
+        {
+            debug!(
+                "find_examples_of_inferred_reduction({}) -> Cache hit",
+                ast_to_reduce.as_ref()
+            );
+            return None;
+        }
         let implication_id =
             self.concrete_concept_id(ConcreteConceptType::Implication)?;
         let reduction_operator =
@@ -513,6 +538,7 @@ where
             &cache,
             SR::share(spawned_delta),
             self.cached_example_of_half_generalisation.clone(),
+            self.generalisations_without_examples.clone(),
         );
         if let Some(concept) = ast_to_reduce.get_concept() {
             spawned_context_search.concept_inferring.insert(concept);
@@ -547,17 +573,31 @@ where
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
+
+        let irp = implication_rule_pattern.share();
+        let key = (irp.key(), true_id);
+        if self.generalisations_without_examples.contains(&key) {
+            debug!(
+                "find_examples_of_inferred_reduction({}) -> Cache hit",
+                ast_to_reduce.as_ref()
+            );
+            return None;
+        }
+        debug!(
+            "find_examples_of_inferred_reduction({}) -> Cache miss",
+            ast_to_reduce.as_ref()
+        );
         let equivalent_concept =
             self.snap_shot.read_concept(self.delta.as_ref(), true_id);
         // TODO handle case when a concept implicitly reduces to `equivalent_concept`
         let truths = equivalent_concept
             .find_what_reduces_to_it()
             .chain(iter::once(true_id));
-
-        let irp = implication_rule_pattern.share();
+        let mut implication_found = false;
         let result = spawned_context_search
             .find_examples(irp, truths)
             .find_map(|substitutions| {
+                implication_found = true;
                 substitutions
                     .generalisation
                     .get(&variable_condition_syntax.key())
@@ -597,6 +637,17 @@ where
                             })
                     })
             });
+        if !implication_found {
+            self.generalisations_without_examples.insert(key);
+        }
+        if result.is_none() {
+            self.syntax_with_no_inferred_reductions.insert(ast_to_reduce.key());
+        }
+        debug!(
+            "find_examples_of_inferred_reduction({}) -> {:?}",
+            ast_to_reduce.as_ref(),
+            result.as_ref().map(|(s, r)| (s.as_ref(), r))
+        );
         result
     }
 
@@ -605,7 +656,6 @@ where
         generalisation: SharedSyntax<CCI, SR>,
         equivalence_set: impl Iterator<Item = S::ConceptId> + 'a, /* All concepts that are equal to generalisation */
     ) -> impl Iterator<Item = ExampleSubstitutions<CCI, SR>> + 'a {
-        debug!("find_examples({})", generalisation.as_ref());
         let iterator: Box<dyn Iterator<Item = ExampleSubstitutions<CCI, SR>>>;
         if let Some((left, right)) = generalisation.get_expansion() {
             iterator = Box::new(self.find_examples_of_branched_generalisation(
@@ -655,6 +705,14 @@ where
                                     equivalent_left_id,
                                     equivalent_right_id,
                                 )| {
+                                    let key = (left.key(), equivalent_left_id);
+                                    if self
+                                        .generalisations_without_examples
+                                        .contains(&key)
+                                    {
+                                        return None;
+                                    }
+                                    let mut generalisation_found = false;
                                     let equivalent_concept =
                                         self.snap_shot.read_concept(
                                             self.delta.as_ref(),
@@ -674,6 +732,7 @@ where
                                         equivalent_left_equivalence_set,
                                     )
                                     .find_map(|left_example| {
+                                        generalisation_found = true;
                                         let mut right_clone = right.clone();
                                         let mutable_right = GenericSyntaxTree::<
                                             CCI,
@@ -692,6 +751,10 @@ where
                                                 &right_clone,
                                                 &left_example.example,
                                             );
+                                        let key = (
+                                          substituted_right.key(),
+                                          equivalent_right_id
+                                        );
                                         let equivalent_concept =
                                             self.snap_shot.read_concept(
                                                 self.delta.as_ref(),
@@ -708,15 +771,22 @@ where
                                         if self.contains_bound_variable_syntax(
                                             &substituted_right,
                                         ) {
-                                            self.find_examples(
-                                    substituted_right,
-                                    equivalent_right_equivalence_set,
-                                )
-                                .find_map(|right_example| {
-                                // TODO find test case where this needs to be filter_map
-                                    right_example
-                                        .consistent_merge(left_example.clone())
-                                })
+                                            if self.generalisations_without_examples.contains(&key) {return None}
+                                            let mut example_found = false;
+                                            let merged_example = self.find_examples(
+                                                substituted_right,
+                                                equivalent_right_equivalence_set,
+                                            )
+                                            .find_map(|right_example| {
+                                                example_found = true;
+                                                // TODO find test case where this needs to be filter_map
+                                                right_example
+                                                    .consistent_merge(left_example.clone())
+                                            });
+                                            if !example_found {
+                                                self.generalisations_without_examples.insert(key);
+                                            }
+                                            merged_example
                                         } else if self
                                             .recursively_reduce(
                                                 &substituted_right,
@@ -738,6 +808,9 @@ where
                                             None
                                         }
                                     });
+                                    if !generalisation_found {
+                                        self.generalisations_without_examples.insert(key);
+                                    }
                                     maybe_example
                                 },
                             ),
@@ -773,7 +846,6 @@ where
         mut equivalence_set_of_composition: impl Iterator<Item = S::ConceptId> + 'a,
         non_generalised_hand: Hand,
     ) -> Option<ExampleSubstitutions<CCI, SR>> {
-        debug!("find_examples_of_half_generalisation({}, {}, {non_generalised_hand:?})", generalised_part.as_ref(), non_generalised_part.as_ref());
         let non_generalised_part_clone = non_generalised_part.clone();
         let generalised_part_clone = generalised_part;
         // TODO try to test if this needs to be a flat_map call
@@ -794,8 +866,13 @@ where
                 Hand::Right => (right, left)
             };
             let compute = || {
+                debug!("find_example_of_half_generalisation({:?}, {:?}, {equivalent_concept_id}, {non_generalised_hand:?}) -> Cache miss", generalised_part_clone.key(), non_generalised_part.key());
                 let result = if Some(equivalent_non_generalised_hand) == non_generalised_part_clone.get_concept() {
-                    self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).or_else(|| {
+                    let key = (generalised_part_clone.key(), equivalent_generalised_hand);
+                    if self.generalisations_without_examples.contains(&key) {return None};
+                    self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand))
+                    .or_else(|| {
+                        self.generalisations_without_examples.insert(key);
                         let non_generalised_id = non_generalised_part.get_concept()?;
                         let example_hand = match non_generalised_hand {
                             Hand::Left => (left == non_generalised_id).then_some(right)?,
@@ -812,22 +889,37 @@ where
                             let non_generalised_hand_concept = self
                                 .snap_shot
                                 .read_concept(self.delta.as_ref(), example_hand);
-                            self.find_example(&generalised_part_clone, equivalence_set.chain(non_generalised_hand_concept
-                                    .find_what_reduces_to_it()))
+                            let key = (generalised_part_clone.key(), example_hand);
+                            if self.generalisations_without_examples.contains(&key) {return None};
+                            let maybe_example = self.find_example(&generalised_part_clone, equivalence_set.chain(non_generalised_hand_concept
+                                    .find_what_reduces_to_it()));
+                            if maybe_example.is_none() {
+                                self.generalisations_without_examples.insert(key);
+                            }
+                            maybe_example
                         })
                     })
                 } else if self.snap_shot.read_concept(self.delta.as_ref(), equivalent_non_generalised_hand).free_variable() {
-                    self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
+                    let key = (generalised_part_clone.key(), equivalent_generalised_hand);
+                    if self.generalisations_without_examples.contains(&key) {return None};
+                    let maybe_example = self.find_example(&generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
                         // Could have a more efficient method for this
                         subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part_clone.clone()}, ..Default::default()})
-                    })
+                    });
+                    if maybe_example.is_none() {
+                        self.generalisations_without_examples.insert(key);
+                    }
+                    maybe_example
                 } else {
                     None
                 };
                 self.cached_example_of_half_generalisation.insert(key.clone(), result.clone());
                 result
             };
-            let result = self.cached_example_of_half_generalisation.get(&key).map_or_else(compute, |result| result.clone());
+            let result = self.cached_example_of_half_generalisation.get(&key).map_or_else(compute, |result| {
+                debug!("find_example_of_half_generalisation({:?}, {:?}, {equivalent_concept_id}, {non_generalised_hand:?}) -> Cache hit", generalised_part_clone.key(), non_generalised_part.key());
+                result.clone()
+            });
             result
         })
     }
@@ -1067,13 +1159,17 @@ where
                         )
                         .map(|(s, r)| (s, Some(r)))
                     } else {
-                        let mut context_search = self.spawn(&cache, self.delta.clone(), self.cached_example_of_half_generalisation.clone());
+                        let mut context_search = self.spawn(
+                            &cache,
+                            self.delta.clone(),
+                            self.cached_example_of_half_generalisation.clone(),
+                            self.generalisations_without_examples.clone()
+                        );
                         let comparing_syntax = comparing_syntax.share();
                         context_search
-                        .syntax_evaluating
-                        .insert(comparing_syntax.key());
-                    Some(
-                            context_search
+                            .syntax_evaluating
+                            .insert(comparing_syntax.key());
+                        Some(context_search
                             .recursively_reduce(&comparing_syntax),
                         )
                     }
@@ -1091,17 +1187,26 @@ where
                             )
                             .map(|(s, r)| (s, Some(r)))
                         } else {
-                            let mut context_search = self.spawn(&cache, self.delta.clone(), self.cached_example_of_half_generalisation.clone());
-                        let comparing_reversed_syntax =
-                        comparing_reversed_syntax.share();
-                        context_search
-                        .syntax_evaluating
-                        .insert(comparing_reversed_syntax.key());
-                    Some(
-                        context_search
-                        .recursively_reduce(&comparing_reversed_syntax),
-                    )
-                }
+                            let mut context_search = self.spawn(
+                                &cache,
+                                self.delta.clone(),
+                                self.cached_example_of_half_generalisation.clone(),
+                                SR::share(DashSet::new()) // cloning
+                                                         // self.cached_example_of_half_generalisation
+                                                         // causes
+                                                         // comparison_existence_implication_rule_test
+                                                         // to fail
+                            );
+                            let comparing_reversed_syntax =
+                                comparing_reversed_syntax.share();
+                                context_search
+                                    .syntax_evaluating
+                                    .insert(comparing_reversed_syntax.key());
+                            Some(
+                                context_search
+                                .recursively_reduce(&comparing_reversed_syntax),
+                            )
+                        }
                 .and_then(
                         determine_concrete_type_whilst_noting_reversed_reason,
                     ),
@@ -1140,8 +1245,13 @@ where
         cache: &'c SR::Share<ReductionCache<CCI, SR>>,
         delta: SR::Share<NestedDelta<CCI, SR>>,
         cached_example_of_half_generalisation: HalfGeneralisationCache<CCI, SR>,
+        generalisations_without_examples: GeneralisationSet<SR, CCI>,
     ) -> Self {
         ContextSearch::<'s, 'v> {
+            syntax_with_no_inferred_reductions: self
+                .syntax_with_no_inferred_reductions
+                .clone(),
+            generalisations_without_examples,
             cached_example_of_half_generalisation,
             concept_inferring: self.concept_inferring.clone(),
             bound_variable_syntax: self.bound_variable_syntax,
@@ -1357,9 +1467,13 @@ where
             cache,
             bound_variable_syntax,
             half_generalisation_cache,
+            generalisations_without_examples,
+            syntax_with_no_inferred_reductions,
         }: ContextReferences<'c, 's, 'v, S, SR, CCI>,
     ) -> Self {
         Self {
+            generalisations_without_examples,
+            syntax_with_no_inferred_reductions,
             cached_example_of_half_generalisation: half_generalisation_cache,
             concept_inferring: HashSet::default(),
             bound_variable_syntax,
@@ -1381,8 +1495,10 @@ pub struct ContextReferences<'c, 's, 'v, S, SR: SharedReference, CCI: ConceptId>
     pub cache: &'c GenericCache<CCI, SR>,
     pub bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
     pub half_generalisation_cache: HalfGeneralisationCache<CCI, SR>,
+    pub generalisations_without_examples: GeneralisationSet<SR, CCI>,
+    pub syntax_with_no_inferred_reductions: SyntaxSet<SR, CCI>,
 }
-pub type HalfGeneralisationCache<CCI, SR> = Arc<
+pub type HalfGeneralisationCache<CCI, SR> = <SR as SharedReference>::Share<
     DashMap<HalfGeneralisationKey<CCI>, Option<ExampleSubstitutions<CCI, SR>>>,
 >;
 pub type ReductionTruthResult<RR> = Option<(bool, RR)>;
