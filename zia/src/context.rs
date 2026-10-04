@@ -24,8 +24,7 @@ use crate::{
     context_cache::{GenericCache, SharedSyntax},
     context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
     context_search::{
-        ContextReferences, ContextSearch, GeneralisationSet,
-        HalfGeneralisationCache, SyntaxSet,
+        ContextReferences, ContextSearch, HalfGeneralisationCache, SyntaxSet,
     },
     context_updater::ContextUpdater,
     delta::Apply,
@@ -52,7 +51,6 @@ where
     new_variable_concepts_by_label: HashMap<String, CCI>,
     bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
     half_generalisation_cache: HalfGeneralisationCache<CCI, SR>,
-    generalisations_without_examples: GeneralisationSet<SR, CCI>,
     syntax_with_no_inferred_reductions: SyntaxSet<SR, CCI>,
 }
 
@@ -88,20 +86,13 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            generalisations_without_examples: self
-                .generalisations_without_examples
-                .clone(),
-            half_generalisation_cache: self.half_generalisation_cache.clone(),
+            half_generalisation_cache: SR::share(DashMap::new()),
             delta: SR::share(NestedDelta::default()),
-            bounded_variable_syntax: self.bounded_variable_syntax.clone(),
-            cache: self.cache.clone(),
-            new_variable_concepts_by_label: self
-                .new_variable_concepts_by_label
-                .clone(),
+            bounded_variable_syntax: HashSet::new(),
+            cache: GenericCache::default(),
+            new_variable_concepts_by_label: HashMap::new(),
             snap_shot: self.snap_shot.clone(),
-            syntax_with_no_inferred_reductions: self
-                .syntax_with_no_inferred_reductions
-                .clone(),
+            syntax_with_no_inferred_reductions: SR::share(DashSet::new()),
         }
     }
 }
@@ -759,6 +750,8 @@ where
         std::mem::swap(&mut self.delta, &mut delta);
         self.snap_shot.apply(delta.as_ref().clone()); // TODO: avoiding cloning using
                                                       // Arc::try_unwrap or Rc::try_unwrap
+        self.half_generalisation_cache.clear();
+        self.syntax_with_no_inferred_reductions.clear();
     }
 
     fn label_concrete_concepts(&mut self) {
@@ -1186,10 +1179,10 @@ where
             cache: &self.cache,
             bound_variable_syntax: &self.bounded_variable_syntax,
             half_generalisation_cache: self.half_generalisation_cache.clone(),
-            generalisations_without_examples: SR::share(DashSet::new()),
             syntax_with_no_inferred_reductions: self
                 .syntax_with_no_inferred_reductions
                 .clone(),
+            generalisations_without_examples: SR::share(DashSet::new()),
         })
     }
 }
@@ -1206,7 +1199,6 @@ where
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
             half_generalisation_cache: SR::share(DashMap::new()),
-            generalisations_without_examples: SR::share(DashSet::new()),
             syntax_with_no_inferred_reductions: SR::share(DashSet::new()),
         }
     }
