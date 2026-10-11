@@ -416,7 +416,11 @@ where
         &self,
         ast: &SharedSyntax<CCI, SR>,
     ) -> (SharedSyntax<CCI, SR>, Option<ReductionReason<CCI, SR>>) {
-        debug!("recursively_reduce({})", ast.as_ref());
+        debug!(
+            "recursively_reduce({}) with variables {:?}",
+            ast.as_ref(),
+            self.variable_mask.as_ref()
+        );
         let mut maybe_reason: Option<ReductionReason<CCI, SR>> = None;
         let mut reduced_ast = ast.clone();
         while let Some((a, reason)) = self.reduce(&reduced_ast) {
@@ -505,10 +509,6 @@ where
             );
             return None;
         }
-        let implication_id =
-            self.concrete_concept_id(ConcreteConceptType::Implication)?;
-        let reduction_operator =
-            self.concrete_ast(ConcreteConceptType::Reduction)?;
         let mut spawned_delta = NestedDelta::spawn(self.delta.clone());
         let variable_reduction_id = spawned_delta
             .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
@@ -528,40 +528,19 @@ where
         let mut spawned_context_search = self.spawn(
             &cache,
             SR::share(spawned_delta),
-            self.cached_example_of_half_generalisation.clone(),
+            SR::share(DashMap::new()),
             self.generalisations_without_examples.clone(),
         );
         if let Some(concept) = ast_to_reduce.get_concept() {
             spawned_context_search.concept_inferring.insert(concept);
         }
-        let implication_syntax = spawned_context_search.to_ast(&implication_id);
         // TODO: handle simpler pattern with the implicit (-> true)
-        let implication_rule_fn =
-            |condition: &SharedSyntax<CCI, SR>,
-             prereduction: &SharedSyntax<CCI, SR>,
-             reduction: &SharedSyntax<CCI, SR>| {
-                GenericSyntaxTree::<CCI, SR>::new_pair(
-                    condition.clone(),
-                    GenericSyntaxTree::<CCI, SR>::new_pair(
-                        implication_syntax.clone(),
-                        GenericSyntaxTree::<CCI, SR>::new_pair(
-                            prereduction.clone(),
-                            GenericSyntaxTree::<CCI, SR>::new_pair(
-                                reduction_operator.clone(),
-                                reduction.clone(),
-                            )
-                            .share(),
-                        )
-                        .share(),
-                    )
-                    .share(),
-                )
-            };
-        let implication_rule_pattern = implication_rule_fn(
-            &variable_condition_syntax,
-            ast_to_reduce,
-            &variable_reduction_syntax,
-        );
+        let implication_rule_pattern = spawned_context_search
+            .implication_rule_fn(
+                &variable_condition_syntax,
+                ast_to_reduce,
+                &variable_reduction_syntax,
+            )?;
         let true_id = spawned_context_search
             .concrete_concept_id(ConcreteConceptType::True)
             .expect("true concept must exist");
@@ -590,44 +569,13 @@ where
             .find_examples(irp, truths)
             .find_map(|substitutions| {
                 implication_found = true;
-                substitutions
-                    .generalisation
-                    .get(&variable_condition_syntax.key())
-                    .and_then(|condition_syntax| {
-                        let substituted_condition = self.substitute(
-                            condition_syntax,
-                            &substitutions.example,
-                        );
-                        let (condition_normal_form, reason) =
-                            spawned_context_search
-                                .recursively_reduce(&substituted_condition);
-                        spawned_context_search.is_concrete_type(
-                            ConcreteConceptType::True,
-                            &condition_normal_form.get_concept()?,
-                        )?;
-                        substitutions
-                            .generalisation
-                            .get(&variable_reduction_syntax.key())
-                            .map(|result| {
-                                (
-                                    self.substitute(
-                                        result,
-                                        &substitutions.example,
-                                    ),
-                                    ReductionReason::<CCI, SR>::inference(
-                                        implication_rule_fn(
-                                            condition_syntax,
-                                            ast_to_reduce,
-                                            result,
-                                        )
-                                        .share(),
-                                        reason.unwrap_or_else(
-                                            ReductionReason::explicit,
-                                        ),
-                                    ),
-                                )
-                            })
-                    })
+                self.inferred_reduction_if_condition_holds(
+                    &spawned_context_search,
+                    &substitutions,
+                    &variable_reduction_syntax,
+                    &variable_condition_syntax,
+                    ast_to_reduce,
+                )
             });
         if !implication_found {
             self.generalisations_without_examples.insert(key);
@@ -643,7 +591,7 @@ where
                 )
                 .share();
             let cache = SR::share(ReductionCache::<CCI, SR>::default());
-            let mut spawned_context_search = spawned_context_search.spawn(
+            let spawned_context_search = spawned_context_search.spawn(
                 &cache,
                 SR::share(spawned_delta),
                 spawned_context_search
@@ -651,11 +599,12 @@ where
                     .clone(),
                 spawned_context_search.generalisations_without_examples.clone(),
             );
-            let implication_rule_pattern = implication_rule_fn(
-                &variable_condition_syntax,
-                ast_to_reduce,
-                &variable_reduction_syntax,
-            );
+            let implication_rule_pattern = spawned_context_search
+                .implication_rule_fn(
+                    &variable_condition_syntax,
+                    ast_to_reduce,
+                    &variable_reduction_syntax,
+                )?;
             let true_id = spawned_context_search
                 .concrete_concept_id(ConcreteConceptType::True)
                 .expect("true concept must exist");
@@ -667,10 +616,11 @@ where
             let truths = equivalent_concept
                 .find_what_reduces_to_it()
                 .chain(iter::once(true_id));
+
             result = spawned_context_search
                 .find_examples(irp, truths)
                 .find_map(|substitutions| {
-                    let Some(prereduction_candidate) = substitutions.generalisation.get(&variable_prereduction_syntax.key()) else {return None};
+                    let prereduction_candidate = substitutions.generalisation.get(&variable_prereduction_syntax.key())?;
                     if !prereduction_candidate.is_leaf_variable() {
                         // TODO: consider variable expressions that ast_to_reduce matches
                         // i.e. using check_generalisation
@@ -683,46 +633,9 @@ where
                         spawned_context_search.cached_example_of_half_generalisation.clone(),
                         spawned_context_search.generalisations_without_examples.clone()
                     );
-                    let vm = hashmap! {prereduction_candidate.get_concept().expect("leaf variable should have concept") => ast_to_reduce.clone()}; 
-                    spawned_context_search.insert_variable_mask(vm);
-                    substitutions
-                        .generalisation
-                        .get(&variable_condition_syntax.key())
-                        .and_then(|condition_syntax| {
-                            let substituted_condition = self.substitute(
-                                condition_syntax,
-                                &substitutions.example,
-                            );
-                            let (condition_normal_form, reason) =
-                                spawned_context_search
-                                    .recursively_reduce(&substituted_condition);
-                            spawned_context_search.is_concrete_type(
-                                ConcreteConceptType::True,
-                                &condition_normal_form.get_concept()?,
-                            )?;
-                            substitutions
-                                .generalisation
-                                .get(&variable_reduction_syntax.key())
-                                .map(|result| {
-                                    (
-                                        self.substitute(
-                                            result,
-                                            &substitutions.example,
-                                        ),
-                                        ReductionReason::<CCI, SR>::inference(
-                                            implication_rule_fn(
-                                                condition_syntax,
-                                                ast_to_reduce,
-                                                result,
-                                            )
-                                            .share(),
-                                            reason.unwrap_or_else(
-                                                ReductionReason::explicit,
-                                            ),
-                                        ),
-                                    )
-                                })
-                        })
+                    let vm = hashmap! {prereduction_candidate.get_concept().expect("leaf variable should have concept") => ast_to_reduce.clone()};
+                    spawned_context_search.insert_variable_mask(vm).unwrap();
+                    self.inferred_reduction_if_condition_holds(&spawned_context_search, &substitutions, &variable_reduction_syntax, &variable_condition_syntax, ast_to_reduce)
                 });
             if result.is_none() {
                 self.syntax_with_no_inferred_reductions
@@ -736,6 +649,77 @@ where
             result.as_ref().map(|(s, r)| (s.to_string(), r.to_string()))
         );
         result
+    }
+
+    fn implication_rule_fn(
+        &self,
+        condition: &SharedSyntax<CCI, SR>,
+        prereduction: &SharedSyntax<CCI, SR>,
+        reduction: &SharedSyntax<CCI, SR>,
+    ) -> Option<GenericSyntaxTree<CCI, SR>> {
+        let implication_id =
+            self.concrete_concept_id(ConcreteConceptType::Implication)?;
+        let implication_syntax = self.to_ast(&implication_id);
+        let reduction_operator =
+            self.concrete_ast(ConcreteConceptType::Reduction)?;
+        Some(GenericSyntaxTree::<CCI, SR>::new_pair(
+            condition.clone(),
+            GenericSyntaxTree::<CCI, SR>::new_pair(
+                implication_syntax,
+                GenericSyntaxTree::<CCI, SR>::new_pair(
+                    prereduction.clone(),
+                    GenericSyntaxTree::<CCI, SR>::new_pair(
+                        reduction_operator,
+                        reduction.clone(),
+                    )
+                    .share(),
+                )
+                .share(),
+            )
+            .share(),
+        ))
+    }
+
+    fn inferred_reduction_if_condition_holds(
+        &self,
+        spawned_context_search: &Self,
+        substitutions: &ExampleSubstitutions<CCI, SR>,
+        reduction_syntax: &SharedSyntax<CCI, SR>,
+        variable_condition_syntax: &SharedSyntax<CCI, SR>,
+        ast_to_reduce: &SharedSyntax<CCI, SR>,
+    ) -> ReductionResult<CCI, SR> {
+        substitutions
+            .generalisation
+            .get(&variable_condition_syntax.key())
+            .and_then(|condition_syntax| {
+                let substituted_condition =
+                    self.substitute(condition_syntax, &substitutions.example);
+                let (condition_normal_form, reason) = spawned_context_search
+                    .recursively_reduce(&substituted_condition);
+                spawned_context_search.is_concrete_type(
+                    ConcreteConceptType::True,
+                    &condition_normal_form.get_concept()?,
+                )?;
+                substitutions.generalisation.get(&reduction_syntax.key()).map(
+                    |result| {
+                        (
+                            self.substitute(result, &substitutions.example),
+                            ReductionReason::<CCI, SR>::inference(
+                                spawned_context_search
+                                    .implication_rule_fn(
+                                        condition_syntax,
+                                        ast_to_reduce,
+                                        result,
+                                    )
+                                    .unwrap()
+                                    .share(),
+                                reason
+                                    .unwrap_or_else(ReductionReason::explicit),
+                            ),
+                        )
+                    },
+                )
+            })
     }
 
     fn find_examples<'a>(
