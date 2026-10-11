@@ -1,14 +1,12 @@
 use super::Syntax;
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedDelta,
-    context_search::ContextReferences,
+    context_search_test::new_context_search_test,
     mock_snap_shot::MockSnapShot,
-    multi_threaded::{MTContextCache, MTContextSearch},
 };
-use maplit::{hashmap, hashset};
+use maplit::hashmap;
 use pretty_assertions::assert_eq;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn concepts() -> [Concept<usize>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
@@ -71,16 +69,9 @@ fn labels() -> HashMap<usize, &'static str> {
 
 #[test]
 fn inference_rule() {
-    let context_cache = MTContextCache::default();
-    let context_delta = NestedDelta::<_, _>::default();
-    let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let bound_variable_syntax = hashset! {};
-    let context_search = MTContextSearch::from(ContextReferences {
-        snap_shot: &context_snap_shot,
-        delta: context_delta.into(),
-        cache: &context_cache,
-        bound_variable_syntax: &bound_variable_syntax,
-    });
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let example_syntax =
         Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10));
     let true_syntax = context_search.to_ast(&1);

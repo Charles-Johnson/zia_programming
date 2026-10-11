@@ -1,26 +1,17 @@
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedDelta,
-    context_search::{Comparison, ComparisonReason, ContextReferences},
-    context_search_test::ReductionReason,
+    context_search::{Comparison, ComparisonReason},
+    context_search_test::{new_context_search_test, ReductionReason},
     mock_snap_shot::MockSnapShot,
-    multi_threaded::{MTContextCache, MTContextSearch},
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn comparison_existence_implication_rule_test() {
-    let context_cache = MTContextCache::default();
-    let context_delta = NestedDelta::<_, _>::default();
-    let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let bound_variables = hashset! {};
-    let context_search = MTContextSearch::from(ContextReferences {
-        snap_shot: &context_snap_shot,
-        delta: context_delta.into(),
-        cache: &context_cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let a_syntax = context_search.to_ast(&21);
     let c_syntax = context_search.to_ast(&23);
     let variable_mask = hashmap! {

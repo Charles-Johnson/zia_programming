@@ -1,26 +1,17 @@
 use super::Syntax;
 use crate::{
     concepts::{Concept, SpecificPart},
-    context_delta::NestedDelta,
-    context_search::ContextReferences,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MTContextCache, MTContextSearch},
+    context_search_test::new_context_search_test,
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedDelta::<ConceptId, _>::default();
-    let cache = MTContextCache::default();
-    let bound_variables = hashset! {};
-    let context_search = MTContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: delta.into(),
-        cache: &cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let left_syntax = Syntax::from("b").bind_nonquantifier_concept(1).share();
     let right_syntax = Syntax::from("c").bind_nonquantifier_concept(2).share();
     let composite_syntax = Syntax::from("a")

@@ -732,7 +732,7 @@ pub enum SpecificPart<Id: Eq + Hash> {
     String(String),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Hand {
     Left,
     Right,
