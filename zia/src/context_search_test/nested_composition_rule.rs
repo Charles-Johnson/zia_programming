@@ -1,15 +1,12 @@
 use super::Syntax;
 use crate::{
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::NestedDelta,
-    context_search::ContextReferences,
-    context_search_test::ReductionReason,
+    context_search_test::{new_context_search_test, ReductionReason},
     mock_snap_shot::MockSnapShot,
-    multi_threaded::{MTContextCache, MTContextSearch},
 };
 use assert_matches::assert_matches;
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
 fn concepts() -> [Concept<usize>; 8] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
@@ -54,15 +51,8 @@ fn labels() -> HashMap<usize, &'static str> {
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta = NestedDelta::<_, _>::default();
-    let cache = MTContextCache::default();
-    let bound_variable_syntax = hashset! {};
-    let context_search = MTContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: delta.into(),
-        cache: &cache,
-        bound_variable_syntax: &bound_variable_syntax,
-    });
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let concrete_syntax =
         || Syntax::from("concrete").bind_nonquantifier_concept(0);
     let left_syntax =

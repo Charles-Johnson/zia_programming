@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use dashmap::DashMap;
 use maplit::hashset;
 
 use crate::{
@@ -22,7 +23,9 @@ use crate::{
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::{GenericCache, SharedSyntax},
     context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
-    context_search::{ContextReferences, ContextSearch},
+    context_search::{
+        ContextReferences, ContextSearch, HalfGeneralisationCache,
+    },
     context_updater::ContextUpdater,
     delta::Apply,
     errors::{ZiaError, ZiaResult},
@@ -36,6 +39,7 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     default::Default,
     fmt::Debug,
+    sync::Arc,
 };
 
 pub struct Context<S, CCI: ConceptId, SR: SharedReference>
@@ -47,6 +51,7 @@ where
     cache: GenericCache<CCI, SR>,
     new_variable_concepts_by_label: HashMap<String, CCI>,
     bounded_variable_syntax: HashSet<SyntaxKey<CCI>>,
+    half_generalisation_cache: HalfGeneralisationCache<CCI, SR>,
 }
 
 pub struct TokenSubsequence<CI: ConceptId, SR: SharedReference> {
@@ -81,6 +86,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            half_generalisation_cache: self.half_generalisation_cache.clone(),
             delta: SR::share(NestedDelta::default()),
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
@@ -1171,6 +1177,7 @@ where
             delta: self.delta.clone(),
             cache: &self.cache,
             bound_variable_syntax: &self.bounded_variable_syntax,
+            half_generalisation_cache: self.half_generalisation_cache.clone(),
         })
     }
 }
@@ -1186,6 +1193,7 @@ where
             cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
+            half_generalisation_cache: Arc::new(DashMap::new()),
         }
     }
 }
