@@ -829,22 +829,20 @@ where
                         )
                     })
                 })
+            } else if self
+                .snap_shot
+                .read_concept(
+                    self.delta.as_ref(),
+                    equivalent_non_generalised_hand,
+                )
+                .free_variable()
+            {
+                self.find_example(generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
+                    // Could have a more efficient method for this
+                    subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part.clone()}, ..Default::default()})
+                })
             } else {
-                if self
-                    .snap_shot
-                    .read_concept(
-                        self.delta.as_ref(),
-                        equivalent_non_generalised_hand,
-                    )
-                    .free_variable()
-                {
-                    self.find_example(generalised_part_clone, iter::once(equivalent_generalised_hand)).and_then(|subs| {
-                        // Could have a more efficient method for this
-                        subs.consistent_merge(ExampleSubstitutions{example: hashmap!{equivalent_non_generalised_hand => non_generalised_part.clone()}, ..Default::default()})
-                    })
-                } else {
-                    None
-                }
+                None
             };
             self.cached_example_of_half_generalisation
                 .insert(key.clone(), result.clone());
