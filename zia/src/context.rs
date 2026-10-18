@@ -39,7 +39,6 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     default::Default,
     fmt::Debug,
-    sync::Arc,
 };
 
 pub struct Context<S, CCI: ConceptId, SR: SharedReference>
@@ -86,7 +85,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            half_generalisation_cache: self.half_generalisation_cache.clone(),
+            half_generalisation_cache: SR::share(DashMap::default()),
             delta: SR::share(NestedDelta::default()),
             bounded_variable_syntax: self.bounded_variable_syntax.clone(),
             cache: self.cache.clone(),
@@ -1193,7 +1192,7 @@ where
             cache: GenericCache::<CCI, SR>::default(),
             new_variable_concepts_by_label: HashMap::new(),
             bounded_variable_syntax: HashSet::new(),
-            half_generalisation_cache: Arc::new(DashMap::new()),
+            half_generalisation_cache: SR::share(DashMap::new()),
         }
     }
 }
