@@ -17,7 +17,7 @@ extern crate zia;
 #[macro_use]
 extern crate proptest;
 
-use zia::{multi_threaded::NEW_CONTEXT, ZiaError};
+use zia::{multi_threaded::NEW_CONTEXT, Associativity, ZiaError};
 
 #[test]
 fn empty_parentheses() {
@@ -30,7 +30,12 @@ fn ambiguous_expression() {
     assert_eq!(cont.execute("let assoc c -> left"), "");
     assert_eq!(
         cont.execute("a b c"),
-        ZiaError::AmbiguousExpression.to_string()
+        ZiaError::DifferentAssociativityAmongstLowestPrecendenceTokens {
+            associativity: Associativity::Left,
+            other_associativity: Associativity::Right,
+            token: "c".to_string()
+        }
+        .to_string()
     );
 }
 proptest! {

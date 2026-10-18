@@ -1,77 +1,70 @@
 use crate::{
-    ast::impl_syntax_tree,
+    ast::GenericSyntaxTree,
     context::Context as GenericContext,
-    context_cache::impl_cache,
-    context_delta::DirectConceptDelta,
-    context_search::{
-        ContextSearch, Generalisations, Iteration as ContextSearchIteration,
-    },
+    context_cache::GenericCache,
+    context_search::ContextSearch,
     context_snap_shot::{ConceptId as ContextConceptId, ContextSnapShot},
-    snap_shot::Reader as SnapShotReader,
-    variable_mask_list::impl_variable_mask_list,
+    nester::SharedReference,
+    reduction_reason::ReductionReason,
+    variable_mask_list::VariableMaskList,
 };
 use lazy_static::lazy_static;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashSet, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
-impl_syntax_tree!(Arc, MultiThreadedSyntaxTree);
-impl_cache!(Arc, MultiThreadedContextCache);
-impl_variable_mask_list!(Arc, MultiThreadedVariableMaskList);
-impl_reduction_reason!(Arc, MultiThreadedReductionReason);
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ArcFamily;
 
-pub type Context = GenericContext<
-    ContextSnapShot,
-    MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree<ContextConceptId>>,
-    >,
-    SharedDirectConceptDelta<ContextConceptId>,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ContextConceptId>>,
->;
+impl SharedReference for ArcFamily {
+    type Share<T> = Arc<T>;
+
+    fn share<T>(owned: T) -> Self::Share<T> {
+        Arc::new(owned)
+    }
+
+    fn make_mut<T: Clone>(refcounter: &mut Self::Share<T>) -> &mut T {
+        Arc::make_mut(refcounter)
+    }
+}
+
+pub type MTSyntaxTree<CI> = GenericSyntaxTree<CI, ArcFamily>;
+pub type MTContextCache<CI> = GenericCache<CI, ArcFamily>;
+pub type MTVariableMaskList<CI> = VariableMaskList<CI, ArcFamily>;
+pub type MTReductionReason<CI> = ReductionReason<CI, ArcFamily>;
+
+pub type Context =
+    GenericContext<ContextSnapShot<ArcFamily>, ContextConceptId, ArcFamily>;
+
+pub type MTContextSearch<'s, 'v, S, CCI> =
+    ContextSearch<'s, 'v, S, CCI, ArcFamily>;
 
 // Saves having to construct a new `Context` each time.
 lazy_static! {
     pub static ref NEW_CONTEXT: Context = Context::new();
 }
 
-pub type SharedDirectConceptDelta<ConceptId> =
-    Arc<DirectConceptDelta<ConceptId>>;
+#[cfg(test)]
+mod tests {
+    use crate::{nester::NestedSyntaxTree, ConceptKind};
 
-impl<'a, S, SDCD> ContextSearchIteration
-    for ContextSearch<
-        'a,
-        S,
-        MultiThreadedContextCache<
-            MultiThreadedReductionReason<MultiThreadedSyntaxTree<S::ConceptId>>,
-        >,
-        SDCD,
-        MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<S::ConceptId>>,
-    >
-where
-    S: SnapShotReader<SDCD> + Sync + Debug,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>
-        + Sync,
-{
-    type ConceptId = S::ConceptId;
-    type Syntax = MultiThreadedSyntaxTree<S::ConceptId>;
+    use super::Context;
 
-    fn filter_generalisations_from_candidates(
-        &self,
-        example: &<Self::Syntax as SyntaxTree>::SharedSyntax,
-        candidates: HashSet<Self::ConceptId>,
-    ) -> Generalisations<Self::Syntax> {
-        candidates
-            .par_iter()
-            .filter_map(|gc| {
-                self.check_generalisation(example, *gc).and_then(|vm| {
-                    if vm.is_empty() {
-                        None
-                    } else {
-                        Some((*gc, vm))
-                    }
-                })
-            })
-            .collect()
+    #[test]
+    fn precendence_test() {
+        let ctx = Context::new();
+        let lexeme = ctx.lex("(a b) c");
+        let nested_syntax = Context::nest(lexeme).unwrap();
+        assert_eq!(
+            nested_syntax,
+            NestedSyntaxTree::from_concept_kind(&ConceptKind::New, "a".into())
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "b".into()
+                ))
+                .nest()
+                .append_node(NestedSyntaxTree::from_concept_kind(
+                    &ConceptKind::New,
+                    "c".into()
+                ))
+        );
     }
 }

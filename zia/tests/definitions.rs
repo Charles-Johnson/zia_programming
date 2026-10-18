@@ -52,7 +52,7 @@ fn bad_refactor() {
     assert_eq!(cont.execute("let a := b c"), "");
     assert_eq!(
         cont.execute("let b := a"),
-        ZiaError::CompositionCollision.to_string()
+        ZiaError::InfiniteComposition.to_string()
     );
 }
 

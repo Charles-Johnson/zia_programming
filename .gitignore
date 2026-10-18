@@ -1,4 +1,3 @@
-Cargo.lock
 /target/
 **/*.rs.bk
 zia/target/
@@ -7,3 +6,6 @@ zia-lang.org/dist
 zia-lang.org/crate/src/generated
 zia-lang.org/crate/target/**
 zia-lang.org/yarn-error.log
+/.cargo/
+.env
+*.diff

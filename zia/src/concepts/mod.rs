@@ -26,18 +26,116 @@ use crate::{
 };
 use maplit::{hashmap, hashset};
 use std::{
-    collections::{hash_map::Iter, HashMap, HashSet},
+    collections::{
+        hash_map::{IntoIter, Iter},
+        HashMap, HashSet,
+    },
     fmt::{Debug, Display},
     hash::Hash,
     iter::{Copied, Map},
 };
 
 /// Data type for any type of concept.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Concept<Id: Eq + Hash> {
     id: Id,
     concrete_part: ConcreteConcept<Id>,
     specific_part: SpecificPart<Id>,
+}
+
+#[cfg(test)]
+impl From<Concept<usize>> for Concept<crate::mock_snap_shot::ConceptId> {
+    fn from(value: Concept<usize>) -> Self {
+        Self {
+            id: value.id.into(),
+            concrete_part: value.concrete_part.into(),
+            specific_part: value.specific_part.into(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<ConcreteConcept<usize>>
+    for ConcreteConcept<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: ConcreteConcept<usize>) -> Self {
+        Self {
+            lefthand_of: value
+                .lefthand_of
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+            righthand_of: value
+                .righthand_of
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+            reduces_from: value
+                .reduces_from
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<SpecificPart<usize>>
+    for SpecificPart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: SpecificPart<usize>) -> Self {
+        match value {
+            SpecificPart::Abstract(a) => Self::Abstract(a.into()),
+            SpecificPart::Concrete(c) => Self::Concrete(c),
+            SpecificPart::String(s) => Self::String(s),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<AbstractPart<usize>>
+    for AbstractPart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: AbstractPart<usize>) -> Self {
+        Self {
+            composition: value.composition.into(),
+            reduces_to: value.reduces_to.map(std::convert::Into::into),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<MaybeComposition<usize>>
+    for MaybeComposition<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: MaybeComposition<usize>) -> Self {
+        match value {
+            MaybeComposition::Composition(cp) => Self::Composition(cp.into()),
+            MaybeComposition::Leaf(lc) => Self::Leaf(lc),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<CompositePart<usize>>
+    for CompositePart<crate::mock_snap_shot::ConceptId>
+{
+    fn from(value: CompositePart<usize>) -> Self {
+        Self {
+            lefthand: value.lefthand.into(),
+            righthand: value.righthand.into(),
+            free_variables: value
+                .free_variables
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+            binding_variables: value
+                .binding_variables
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
+        }
+    }
 }
 
 impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
@@ -111,9 +209,9 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &right.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
-                };
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
+                }
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
                     free_variables,
@@ -143,6 +241,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ),
                 })
             } else {
+                // TODO: handle case of variables
                 Err(ZiaError::BadComposition)
             }
         } else {
@@ -175,9 +274,9 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ..
                 }) = &left.specific_part
                 {
-                    binding_variables = cp.binding_variables.clone();
-                    free_variables = cp.free_variables.clone();
-                };
+                    binding_variables.clone_from(&cp.binding_variables);
+                    free_variables.clone_from(&cp.free_variables);
+                }
                 ap.composition = MaybeComposition::Composition(CompositePart {
                     binding_variables,
                     free_variables,
@@ -207,6 +306,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
                     ),
                 })
             } else {
+                // TODO! handle case of variables
                 Err(ZiaError::BadComposition)
             }
         } else {
@@ -289,7 +389,7 @@ impl<Id: Copy + Debug + Display + Eq + Hash> Concept<Id> {
         }
     }
 
-    pub fn get_hand_of(&self, hand: Hand) -> &HashMap<Id, Id> {
+    pub const fn get_hand_of(&self, hand: Hand) -> &HashMap<Id, Id> {
         match hand {
             Hand::Left => &self.concrete_part.lefthand_of,
             Hand::Right => &self.concrete_part.righthand_of,
@@ -306,21 +406,21 @@ impl<Id: Copy + Display + Hash + Eq> Debug for Concept<Id> {
         if !self.concrete_part.lefthand_of.is_empty() {
             string += " lefthand_of: {";
             for key in self.concrete_part.lefthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.righthand_of.is_empty() {
             string += " righthand_of: {";
             for key in self.concrete_part.righthand_of.values() {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
         if !self.concrete_part.reduces_from.is_empty() {
             string += " reduces_from: {";
             for key in &self.concrete_part.reduces_from {
-                string += &format!("{},", key);
+                string += &format!("{key},");
             }
             string += "},";
         }
@@ -344,6 +444,7 @@ impl<'a, Id: Copy + Debug + Eq + Hash> From<&'a NewDirectConceptDelta<Id, Id>>
 type CopyPairFn<T> = fn((&T, &T)) -> (T, T);
 
 type CopiedPairIter<'a, T> = Map<Iter<'a, T, T>, CopyPairFn<T>>;
+type OwnedPairIter<T> = IntoIter<T, T>;
 
 impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
     for Concept<Id>
@@ -352,6 +453,7 @@ impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
     type IdIterator<'a> =
         Copied<std::collections::hash_set::Iter<'a, Self::Id>>;
     type IdPairIterator<'a> = CopiedPairIter<'a, Self::Id>;
+    type OwnedIdPairIterator = OwnedPairIter<Self::Id>;
 
     fn id(&self) -> Id {
         self.id
@@ -605,13 +707,21 @@ impl<Id: Copy + Display + Eq + Hash + Debug + 'static> ConceptTrait
         .iter()
         .map(copy_pair_elements)
     }
+
+    fn into_iter_hand_of(self, hand: Hand) -> Self::OwnedIdPairIterator {
+        match hand {
+            Hand::Left => self.concrete_part.lefthand_of,
+            Hand::Right => self.concrete_part.righthand_of,
+        }
+        .into_iter()
+    }
 }
 
-fn copy_pair_elements<T: Copy>((x, y): (&T, &T)) -> (T, T) {
+const fn copy_pair_elements<T: Copy>((x, y): (&T, &T)) -> (T, T) {
     (*x, *y)
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SpecificPart<Id: Eq + Hash> {
     /// A concrete concept cannot be further reduced or defined as a composition.
     Concrete(ConcreteConceptType),
@@ -622,7 +732,7 @@ pub enum SpecificPart<Id: Eq + Hash> {
     String(String),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Hand {
     Left,
     Right,
@@ -639,11 +749,11 @@ pub enum ConcreteConceptType {
     Associativity,
     Right,
     Left,
-    Precedence,
-    Default,
     GreaterThan,
     Implication,
     ExistsSuchThat,
+    Precedes,
+    Forget,
 }
 
 impl<Id: Eq + Hash> From<ConcreteConceptType> for SpecificPart<Id> {
@@ -713,14 +823,14 @@ impl<Id: Copy + Eq + Hash> From<&NewConceptDelta<Id>> for SpecificPart<Id> {
 }
 
 impl<Id: Copy + Debug + Eq + Hash> SpecificPart<Id> {
-    pub fn free_variable() -> Self {
+    pub const fn free_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::FreeVariable),
             reduces_to: None,
         })
     }
 
-    pub fn bound_variable() -> Self {
+    pub const fn bound_variable() -> Self {
         Self::Abstract(AbstractPart {
             composition: MaybeComposition::Leaf(LeafCharacter::BoundVariable),
             reduces_to: None,
@@ -755,15 +865,15 @@ impl<Id: Copy + Display + Eq + Hash> Debug for SpecificPart<Id> {
         formatter: &mut std::fmt::Formatter,
     ) -> Result<(), std::fmt::Error> {
         formatter.write_str(&match *self {
-            Self::Concrete(ref cc) => format!("{:#?}", cc),
-            Self::Abstract(ref ap) => format!("{:#?}", ap),
+            Self::Concrete(ref cc) => format!("{cc:#?}"),
+            Self::Abstract(ref ap) => format!("{ap:#?}"),
             Self::String(ref s) => format_string(s),
         })
     }
 }
 
 pub fn format_string(s: &str) -> String {
-    format!("\"{}\"", s)
+    format!("\"{s}\"")
 }
 
 impl<Id: Eq + Hash> From<(AbstractPart<Id>, Id)> for Concept<Id> {
@@ -789,7 +899,7 @@ impl<Id: Eq + Hash> From<(String, Id)> for Concept<Id> {
 }
 
 /// An abstract concept can reduce to other concepts and be defined as a composition of two other concepts.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AbstractPart<Id: Eq + Hash> {
     /// The concept may be defined as a composition of two other concepts.
     composition: MaybeComposition<Id>,
@@ -797,7 +907,7 @@ pub struct AbstractPart<Id: Eq + Hash> {
     reduces_to: Option<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompositePart<Id: Eq + Hash> {
     /// concept id for lefthand part of the composition
     pub lefthand: Id,
@@ -809,14 +919,14 @@ pub struct CompositePart<Id: Eq + Hash> {
     binding_variables: HashSet<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MaybeComposition<Id: Eq + Hash> {
     Composition(CompositePart<Id>),
     // true if concept is variable
     Leaf(LeafCharacter),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LeafCharacter {
     Constant,      // Has a constant meaning regardless of the context search
     FreeVariable, /* Can substitute consistently with any other concept within a context search when finding generalisations */
@@ -828,7 +938,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
         &self,
     ) -> MaybeComposition<NewId> {
         match self {
-            MaybeComposition::Composition(cp) => {
+            Self::Composition(cp) => {
                 MaybeComposition::Composition(CompositePart {
                     lefthand: cp.lefthand.into(),
                     righthand: cp.righthand.into(),
@@ -836,7 +946,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                     free_variables: hashset! {},
                 })
             },
-            MaybeComposition::Leaf(l) => MaybeComposition::Leaf(*l),
+            Self::Leaf(l) => MaybeComposition::Leaf(*l),
         }
     }
 
@@ -863,7 +973,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 c.righthand = righthand;
             },
             (Self::Leaf(_), None) => {},
-        };
+        }
         self
     }
 
@@ -898,7 +1008,7 @@ impl<Id: Copy + Debug + Eq + Hash> MaybeComposition<Id> {
                 },
                 Self::Leaf(LeafCharacter::Constant) => {},
             }
-        };
+        }
         if let SpecificPart::Abstract(ap) = &left.specific_part {
             match &ap.composition {
                 Self::Composition(cp) => {
@@ -939,13 +1049,11 @@ impl<Id: Copy + Display + Eq + Hash> Debug for AbstractPart<Id> {
             ..
         }) = self.composition
         {
-            formatter.write_str(&format!(
-                "composition: {}, {},",
-                lefthand, righthand
-            ))?;
+            formatter
+                .write_str(&format!("composition: {lefthand}, {righthand},"))?;
         }
         self.reduces_to.iter().try_for_each(|r| {
-            formatter.write_str(&format!("reduces_to: {},", r))
+            formatter.write_str(&format!("reduces_to: {r},"))
         })?;
         formatter.write_str("}")
     }
@@ -961,7 +1069,7 @@ impl<Id: Eq + Hash> Default for AbstractPart<Id> {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ConcreteConcept<Id: Eq + Hash> {
     /// Maps each concept that is the righthand of a composition with the current concept being the lefthand to that composition's concept
     lefthand_of: HashMap<Id, Id>,

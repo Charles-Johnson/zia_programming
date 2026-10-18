@@ -1,17 +1,14 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch},
-    context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    context_search_test::{new_context_search_test, ReductionReason},
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use assert_matches::assert_matches;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
-fn concepts() -> [Concept<ConceptId>; 8] {
+fn concepts() -> [Concept<usize>; 8] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
     let mut left_concept = (SpecificPart::default(), 2).into();
     let mut right_left_concept = (SpecificPart::default(), 3).into();
@@ -42,7 +39,7 @@ fn concepts() -> [Concept<ConceptId>; 8] {
     ]
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "concrete",
         2 => "left",
@@ -54,16 +51,8 @@ fn labels() -> HashMap<ConceptId, &'static str> {
 #[test]
 fn basic_rule() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<_, SharedDirectConceptDelta<ConceptId>>::default();
-    let cache = MultiThreadedContextCache::default();
-    let bound_variable_syntax = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: &delta,
-        cache: &cache,
-        bound_variable_syntax: &bound_variable_syntax,
-    });
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let concrete_syntax =
         || Syntax::from("concrete").bind_nonquantifier_concept(0);
     let left_syntax =
@@ -80,18 +69,21 @@ fn basic_rule() {
     )
     .into();
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(2), left_syntax);
+    assert_eq!(context_search.to_ast(&0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(&2), left_syntax);
 
     let reduction_reason = ReductionReason::Rule {
-        generalisation: context_search.to_ast(1),
-        variable_mask: hashmap! {4 => Syntax::from("random").into()},
+        generalisation: context_search.to_ast(&1),
+        variable_mask: hashmap! {4.into() => Syntax::from("random").into()},
         reason: ReductionReason::Explicit.into(),
     };
 
-    assert_eq!(
+    assert_matches!(
         context_search.reduce(&left_and_right_left_and_random_syntax),
-        Some((concrete_syntax().into(), reduction_reason.clone()))
+        Some((syntax, reason)) => {
+            assert_eq!(syntax.key(), concrete_syntax().key());
+            assert_eq!(reason, reduction_reason);
+        }
     );
 
     assert_eq!(

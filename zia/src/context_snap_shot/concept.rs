@@ -51,24 +51,23 @@ impl<'a> From<&'a Concept<Committed>> for Mixed<'a> {
     }
 }
 
-impl<'a, 'b> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>>
-    for Mixed<'b>
-{
+impl<'a> From<&'a NewDirectConceptDelta<ConceptId, ConceptId>> for Mixed<'_> {
     fn from(delta: &'a NewDirectConceptDelta<ConceptId, ConceptId>) -> Self {
         Mixed::Uncommitted(Box::new(delta.into()))
     }
 }
 
-impl<'a> ConceptTrait for Mixed<'a> {
+impl ConceptTrait for Mixed<'_> {
     type Id = ConceptId;
     type IdIterator<'b>
+        = Box<dyn Iterator<Item = Self::Id> + 'b>
     where
-        Self: 'b,
-    = Box<dyn Iterator<Item = Self::Id> + 'b>;
+        Self: 'b;
     type IdPairIterator<'b>
+        = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>
     where
-        Self: 'b,
-    = Box<dyn Iterator<Item = (Self::Id, Self::Id)> + 'b>;
+        Self: 'b;
+    type OwnedIdPairIterator = Box<dyn Iterator<Item = (ConceptId, ConceptId)>>;
 
     fn id(&self) -> Self::Id {
         match self {
@@ -302,14 +301,12 @@ impl<'a> ConceptTrait for Mixed<'a> {
                     Some(None) => return None,
                     Some(Some(c)) => return Some(*c),
                     None => (),
-                };
-                if let Ok(other_id) = other_id.try_into() {
+                }
+                other_id.try_into().map_or(None, |other_id| {
                     original_concept
                         .find_as_hand_in_composition_with(other_id, hand)
                         .map(Into::into)
-                } else {
-                    None
-                }
+                })
             },
             Self::Uncommitted(c) => {
                 c.find_as_hand_in_composition_with(other_id, hand)
@@ -327,6 +324,35 @@ impl<'a> ConceptTrait for Mixed<'a> {
                 ..
             } => original_concept.get_concrete_concept_type(),
             Self::Uncommitted(c) => c.get_concrete_concept_type(),
+        }
+    }
+
+    fn into_iter_hand_of(self, hand: Hand) -> Self::OwnedIdPairIterator {
+        match self {
+            Self::PreviouslyCommitted {
+                original_concept,
+                changes,
+                ..
+            } => Box::new(
+                original_concept
+                    .iter_hand_of(hand)
+                    .filter_map(move |(o, c)| {
+                        let o = o.into();
+                        match match hand {
+                            Hand::Left => &changes.lefthand_of,
+                            Hand::Right => &changes.righthand_of,
+                        }
+                        .get(&o)
+                        {
+                            None => Some((o, c.into())),
+                            Some(None) => None,
+                            Some(Some(c)) => Some((o, *c)),
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter(),
+            ),
+            Self::Uncommitted(c) => Box::new(c.into_iter_hand_of(hand)),
         }
     }
 }

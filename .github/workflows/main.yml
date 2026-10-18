@@ -1,6 +1,6 @@
 name: Main
 
-on: 
+on:
   pull_request:
     branches:
       - master
@@ -20,7 +20,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2024-07-07
           components: rustfmt
 
       - name: Install cargo-make

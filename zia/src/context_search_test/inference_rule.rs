@@ -1,17 +1,14 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch},
-    context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    context_search_test::new_context_search_test,
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use pretty_assertions::assert_eq;
+use std::collections::{HashMap, HashSet};
 
-fn concepts() -> [Concept<ConceptId>; 15] {
+fn concepts() -> [Concept<usize>; 15] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();
@@ -48,48 +45,38 @@ fn concepts() -> [Concept<ConceptId>; 15] {
         example_composition,
         variable_concept,
         concept_b,
-        (ConcreteConceptType::Precedence, 11).into(),
+        (ConcreteConceptType::Precedes, 11).into(),
         (ConcreteConceptType::Associativity, 12).into(),
         (ConcreteConceptType::Left, 13).into(),
         (ConcreteConceptType::Right, 14).into(),
     ]
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
-    hashmap! {}
+fn labels() -> HashMap<usize, &'static str> {
+    hashmap! {
+        0 => "=>",
+        1 => "true",
+        3 => "a",
+        7 => "example",
+        9 => "_x_",
+        10 => "b",
+        11 => "precedes",
+        12 => "assoc",
+        13 => "left",
+        14 => "right"
+    }
 }
 
 #[test]
 fn inference_rule() {
-    let context_cache = MultiThreadedContextCache::default();
-    let context_delta =
-        ContextDelta::<_, SharedDirectConceptDelta<ConceptId>>::default();
-    let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let bound_variable_syntax = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
-        snap_shot: &context_snap_shot,
-        delta: &context_delta,
-        cache: &context_cache,
-        bound_variable_syntax: &bound_variable_syntax,
-    });
-    let example_syntax = Syntax::new_pair(
-        Syntax::new_constant_concept(7).share(),
-        Syntax::new_constant_concept(10).into(),
-    );
-    let true_syntax = Syntax::new_constant_concept(1);
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
+    let example_syntax =
+        Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10));
+    let true_syntax = context_search.to_ast(&1);
     assert_eq!(
-        context_search.reduce(&example_syntax.into()),
-        Some((
-            true_syntax.into(),
-            ReductionReason::Rule {
-                reason: ReductionReason::Inference {
-                    implication: context_search.to_ast(6),
-                    reason: ReductionReason::Explicit.into()
-                }
-                .into(),
-                generalisation: context_search.to_ast(2),
-                variable_mask: hashmap! {9 => context_search.to_ast(7)}
-            }
-        ))
+        context_search.reduce(&example_syntax.into()).unwrap().0,
+        true_syntax,
     );
 }

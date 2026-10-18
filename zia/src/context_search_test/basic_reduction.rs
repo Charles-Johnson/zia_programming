@@ -1,30 +1,17 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch},
-    context_search_test::ReductionReason,
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    context_search_test::{new_context_search_test, ReductionReason},
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn basic_reduction() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
-    let cache = MultiThreadedContextCache::default();
-    let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: &delta,
-        cache: &cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let abstract_syntax =
         || Syntax::from("abstract").bind_nonquantifier_concept(1);
     let concrete_syntax =
@@ -54,20 +41,20 @@ fn basic_reduction() {
         concrete_syntax().into()
     );
 
-    assert_eq!(context_search.to_ast(0), concrete_syntax().into());
-    assert_eq!(context_search.to_ast(1), abstract_syntax().into());
+    assert_eq!(context_search.to_ast(&0), concrete_syntax().into());
+    assert_eq!(context_search.to_ast(&1), abstract_syntax().into());
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "concrete",
         1 => "abstract",
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 2] {
+fn concepts() -> [Concept<usize>; 2] {
     let mut concrete_concept = (ConcreteConceptType::True, 0).into();
-    let mut abstract_concept: Concept<ConceptId> =
+    let mut abstract_concept: Concept<usize> =
         (SpecificPart::default(), 1).into();
     abstract_concept.make_reduce_to(&mut concrete_concept);
     [concrete_concept, abstract_concept]

@@ -1,19 +1,14 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, ConcreteConceptType, SpecificPart},
-    context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch},
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedReductionReason,
-        SharedDirectConceptDelta,
-    },
+    context_search_test::new_context_search_test,
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use pretty_assertions::assert_eq;
+use std::collections::{HashMap, HashSet};
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "=>",
         1 => "true",
@@ -26,50 +21,22 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-type ReductionReason = MultiThreadedReductionReason<Syntax>;
-
 #[test]
 fn existence_inference_rule() {
-    let context_cache = MultiThreadedContextCache::default();
-    let context_delta =
-        ContextDelta::<_, SharedDirectConceptDelta<_>>::default();
-    let context_snap_shot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
-        snap_shot: &context_snap_shot,
-        delta: &context_delta,
-        cache: &context_cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let example_syntax =
-        Syntax::new_pair(context_search.to_ast(7), context_search.to_ast(10))
+        Syntax::new_pair(context_search.to_ast(&7), context_search.to_ast(&10))
             .share();
     let true_syntax = Syntax::from("true").bind_nonquantifier_concept(1);
-    let variable_mask = hashmap! {9 => context_search.to_ast(7)};
     assert_eq!(
-        context_search.reduce(&example_syntax),
-        Some((
-            true_syntax.into(),
-            ReductionReason::Rule {
-                generalisation: context_search.to_ast(2),
-                variable_mask: variable_mask.clone(),
-                reason: ReductionReason::Inference {
-                    implication: context_search
-                        .substitute(&context_search.to_ast(6), &variable_mask),
-                    reason: ReductionReason::Existence{
-                        generalisation: context_search
-                            .substitute(&context_search.to_ast(13), &variable_mask),
-                        substitutions: hashmap!{context_search.to_ast(11) => context_search.to_ast(3)},
-                    }
-                    .into()
-                }
-                .into()
-            }
-        ))
+        context_search.reduce(&example_syntax).unwrap().0,
+        true_syntax.into(),
     );
 }
 
-fn concepts() -> [Concept<ConceptId>; 17] {
+fn concepts() -> [Concept<usize>; 17] {
     let mut implication_concept = (ConcreteConceptType::Implication, 0).into();
     let mut true_concept = (ConcreteConceptType::True, 1).into();
     let mut concept_a = (SpecificPart::default(), 3).into();

@@ -1,29 +1,17 @@
 use super::Syntax;
 use crate::{
-    ast::SyntaxTree,
     concepts::{Concept, SpecificPart},
-    context_delta::ContextDelta,
-    context_search::{ContextReferences, ContextSearch},
-    mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{MultiThreadedContextCache, SharedDirectConceptDelta},
+    context_search_test::new_context_search_test,
+    mock_snap_shot::MockSnapShot,
 };
-use maplit::{hashmap, hashset};
-use std::collections::HashMap;
+use maplit::hashmap;
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn basic_composition() {
     let snapshot = MockSnapShot::new_test_case(&concepts(), &labels());
-    let delta =
-        ContextDelta::<ConceptId, SharedDirectConceptDelta<ConceptId>>::default(
-        );
-    let cache = MultiThreadedContextCache::default();
-    let bound_variables = hashset! {};
-    let context_search = ContextSearch::from(ContextReferences {
-        snap_shot: &snapshot,
-        delta: &delta,
-        cache: &cache,
-        bound_variable_syntax: &bound_variables,
-    });
+    let bound_variables = HashSet::new();
+    let context_search = new_context_search_test(&snapshot, &bound_variables);
     let left_syntax = Syntax::from("b").bind_nonquantifier_concept(1).share();
     let right_syntax = Syntax::from("c").bind_nonquantifier_concept(2).share();
     let composite_syntax = Syntax::from("a")
@@ -32,8 +20,8 @@ fn basic_composition() {
         .share();
 
     assert_eq!(
-        context_search.contract_pair(&left_syntax, &right_syntax),
-        composite_syntax
+        context_search.contract_pair(&left_syntax, &right_syntax).key(),
+        composite_syntax.key()
     );
 
     assert_eq!(
@@ -41,12 +29,12 @@ fn basic_composition() {
         composite_syntax
     );
 
-    assert_eq!(context_search.to_ast(0), composite_syntax);
-    assert_eq!(context_search.to_ast(1), left_syntax);
-    assert_eq!(context_search.to_ast(2), right_syntax);
+    assert_eq!(context_search.to_ast(&0), composite_syntax);
+    assert_eq!(context_search.to_ast(&1), left_syntax);
+    assert_eq!(context_search.to_ast(&2), right_syntax);
 }
 
-fn labels() -> HashMap<ConceptId, &'static str> {
+fn labels() -> HashMap<usize, &'static str> {
     hashmap! {
         0 => "a",
         1 => "b",
@@ -54,7 +42,7 @@ fn labels() -> HashMap<ConceptId, &'static str> {
     }
 }
 
-fn concepts() -> [Concept<ConceptId>; 3] {
+fn concepts() -> [Concept<usize>; 3] {
     let mut left_concept = (SpecificPart::default(), 1).into();
     let mut right_concept = (SpecificPart::default(), 2).into();
     let composite_concept =

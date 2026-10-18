@@ -1,45 +1,95 @@
 use crate::{
-    ast::SyntaxTree,
+    and_also::AndAlso,
+    ast::GenericSyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
-    context_cache::ContextCache,
+    context_cache::GenericCache,
     context_delta::{
-        Composition, ContextDelta, DirectConceptDelta, NewConceptDelta,
-        ValueChange,
+        Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
+        ValueAndTypeChange, ValueChange,
     },
-    context_search::{ReductionReason, Syntax},
     errors::ZiaResult,
+    nester::SharedReference,
+    reduction_reason::SharedSyntax,
     snap_shot::Reader,
     ZiaError,
 };
 
-pub struct ContextUpdater<
-    'a,
-    S: Reader<SDCD>,
-    C: ContextCache,
-    SDCD: Clone
-        + AsRef<DirectConceptDelta<S::ConceptId>>
-        + From<DirectConceptDelta<S::ConceptId>>,
-> {
+pub struct ContextUpdater<'a, S: Reader<SR>, SR: SharedReference> {
+    pub cache: &'a mut GenericCache<S::ConceptId, SR>,
+    pub delta: &'a mut NestedDelta<S::ConceptId, SR>,
     pub snap_shot: &'a S,
-    pub cache: &'a mut C,
-    pub delta: &'a mut ContextDelta<S::ConceptId, SDCD>,
 }
 
-impl<
-        'a,
-        S: Reader<SDCD>,
-        C: ContextCache,
-        SDCD: Clone
-            + AsRef<DirectConceptDelta<S::ConceptId>>
-            + From<DirectConceptDelta<S::ConceptId>>,
-    > ContextUpdater<'a, S, C, SDCD>
-where
-    <<C as ContextCache>::RR as ReductionReason>::Syntax:
-        SyntaxTree<ConceptId = S::ConceptId>,
-{
+impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
+    pub fn redefine_composition(
+        &mut self,
+        concept: &S::ConceptId,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
+        original_syntax_of_left_concept: &str,
+        original_syntax_of_right_concept: &str,
+    ) -> ZiaResult<()> {
+        if let Some((left_concept, right_concept)) =
+            self.snap_shot.read_concept(self.delta, *concept).get_composition()
+        {
+            self.relabel(
+                left_concept,
+                original_syntax_of_left_concept,
+                &left.to_string(),
+            )?;
+            self.relabel(
+                right_concept,
+                original_syntax_of_right_concept,
+                &right.to_string(),
+            )
+        } else {
+            let left_concept = self.concept_from_ast(left)?;
+            let right_concept = self.concept_from_ast(right)?;
+            self.insert_composition(*concept, left_concept, right_concept)
+        }
+    }
+
+    pub fn redefine(
+        &mut self,
+        concept: &S::ConceptId,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
+    ) -> ZiaResult<()> {
+        let left_concept = self.concept_from_ast(left)?;
+        let right_concept = self.concept_from_ast(right)?;
+        self.insert_composition(*concept, left_concept, right_concept)
+    }
+
+    /// Returns the index of a concept labelled by `syntax` and composed of concepts from `left` and `right`.
+    pub fn define_new_syntax(
+        &mut self,
+        syntax: &str,
+        left: &SharedSyntax<S::ConceptId, SR>,
+        right: &SharedSyntax<S::ConceptId, SR>,
+    ) -> ZiaResult<()> {
+        let new_syntax_tree = left
+            .get_concept()
+            .and_also(&right.get_concept())
+            .and_then(|(l, r)| {
+                self.snap_shot
+                    .read_concept(self.delta, *l)
+                    .find_as_hand_in_composition_with(*r, Hand::Left)
+                    .map(|concept| {
+                        let syntax =
+                            GenericSyntaxTree::<S::ConceptId, SR>::from(syntax);
+                        self.snap_shot
+                            .bind_concept_to_syntax(self.delta, syntax, concept)
+                    })
+            })
+            .unwrap_or_else(|| syntax.into())
+            .bind_pair(left.clone(), right.clone());
+        self.concept_from_ast(&new_syntax_tree)?;
+        Ok(())
+    }
+
     pub fn concept_from_ast(
         &mut self,
-        ast: &Syntax<C>,
+        ast: &GenericSyntaxTree<S::ConceptId, SR>,
     ) -> ZiaResult<S::ConceptId> {
         if let Some(c) = ast.get_concept() {
             Ok(c)
@@ -66,7 +116,7 @@ where
                     let concept =
                         self.find_or_insert_composition(leftc, rightc);
                     if !string.contains(' ') {
-                        self.label(concept, string)?;
+                        self.label(concept, &ast.to_string(), string)?;
                     }
                     Ok(concept)
                 },
@@ -115,28 +165,38 @@ where
     pub fn relabel(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: &str,
         new_label: &str,
     ) -> ZiaResult<()> {
-        self.unlabel(concept)?;
-        self.label(concept, new_label)
+        self.unlabel(concept, original_syntax_of_concept)?;
+        self.label(concept, original_syntax_of_concept, new_label)
     }
 
-    pub fn unlabel(&mut self, concept: S::ConceptId) -> ZiaResult<()> {
+    pub fn unlabel(
+        &mut self,
+        concept: S::ConceptId,
+        syntax: &str,
+    ) -> ZiaResult<()> {
         let concept_of_label = self
             .snap_shot
             .get_concept_of_label(self.delta, concept)
             .expect("No label to remove");
-        self.delete_reduction(concept_of_label)
+        self.delete_reduction(concept_of_label, format!("label_of {syntax}"))?;
+        Ok(())
     }
 
     pub fn delete_reduction(
         &mut self,
         concept_id: S::ConceptId,
+        syntax: impl Into<String>,
     ) -> ZiaResult<()> {
-        let reducted_concept_id = self
-            .snap_shot
-            .read_concept(self.delta, concept_id)
-            .remove_reduction()?;
+        let Some(reducted_concept_id) =
+            self.snap_shot.read_concept(self.delta, concept_id).get_reduction()
+        else {
+            return Err(ZiaError::RedundantReduction {
+                syntax: syntax.into(),
+            });
+        };
         // update self.delta to include deletion of composition
         // and invalidate cache
         self.delta.update_concept_delta(
@@ -152,6 +212,7 @@ where
     pub fn label(
         &mut self,
         concept: S::ConceptId,
+        syntax: &str,
         string: &str,
     ) -> ZiaResult<()> {
         let label_id = self
@@ -159,13 +220,26 @@ where
             .concrete_concept_id(self.delta, ConcreteConceptType::Label)
             .ok_or(ZiaError::NoLabelConcept)?;
         let composition = self.find_or_insert_composition(label_id, concept);
-        let string_id = self.new_string(string);
-        self.update_reduction(composition, string_id)
+
+        let string_id = self
+            .delta
+            .get_string(string)
+            .and_then(|v| match v {
+                ValueAndTypeChange::Create(id) => Some(id),
+                _ => None,
+            })
+            .unwrap_or_else(|| self.new_string(string));
+        self.update_reduction(
+            composition,
+            format!("label_of {syntax}"),
+            string_id,
+        )
     }
 
     pub fn update_reduction(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: String,
         reduction: S::ConceptId,
     ) -> ZiaResult<()> {
         let maybe_normal_form =
@@ -177,14 +251,18 @@ where
             .read_concept(self.delta, concept)
             .get_reduction()
             .and_then(|r| {
-                (r == reduction).then(|| Err(ZiaError::RedundantReduction))
+                (r == reduction).then_some(Err(ZiaError::RedundantReduction {
+                    syntax: original_syntax_of_concept,
+                }))
             })
         {
             result
         } else if reduction
             == self.snap_shot.get_reduction_of_composition(self.delta, concept)
         {
-            Err(ZiaError::RedundantReduction)
+            Err(ZiaError::RedundantReduction {
+                syntax: concept.to_string(),
+            })
         } else {
             let change = maybe_normal_form.map_or_else(
                 || ValueChange::Create(reduction),
@@ -267,10 +345,9 @@ where
     }
 
     fn remove_string(&mut self, string: &str) {
-        let index = *(self
+        let index = self
             .delta
-            .string()
-            .get(string)
+            .get_string(string)
             .and_then(|sd| match sd {
                 ValueChange::Update {
                     after,
@@ -279,7 +356,7 @@ where
                 ValueChange::Create(index) => Some(index),
                 ValueChange::Remove(_) => None,
             })
-            .expect("string already removed or doesn't exist"));
+            .expect("string already removed or doesn't exist");
         self.blindly_remove_concept(index);
     }
 
@@ -291,9 +368,10 @@ where
     pub fn try_delete_concept(
         &mut self,
         concept: S::ConceptId,
+        original_syntax_of_concept: &str,
     ) -> ZiaResult<()> {
         if self.snap_shot.is_disconnected(self.delta, concept) {
-            self.unlabel(concept)?;
+            self.unlabel(concept, original_syntax_of_concept)?;
             self.remove_concept(concept);
         }
         Ok(())

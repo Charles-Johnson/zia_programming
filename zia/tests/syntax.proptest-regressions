@@ -6,3 +6,6 @@
 # everyone who runs the test benefits from these saved cases.
 cc 0e86e99d5e09d217c020d6176077975edafc4d4de9fc282a94b6a8ba1c231854 # shrinks to a = "!", b = "a", c = "𑊊"
 cc 179e5d7b2c463efbd666fa00b99240b90d061cc015d672cdb11aca664e784fd4 # shrinks to a = "b", b = "b", c = "b"
+cc 09af4c275247069e7395351d0acff66709b1c5de7fbfa072dd770b8f2dee25c4 # shrinks to a = "("
+cc e9b3362f6b56ee17a4cf67e7bca9a881d980e19e508a8dfc72bad84153d92d02 # shrinks to a = ""
+cc 1e17315465e19f95906797d52c33a52d71dad16081e1b2bc2bf9586f8b1b266e # shrinks to a = "a)"

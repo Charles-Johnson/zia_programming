@@ -4,6 +4,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
+#![allow(unused_doc_comments)]
 
 mod generated;
 mod page;
@@ -45,11 +46,10 @@ impl Page {
 }
 
 impl From<Url> for Page {
-    #[must_use]
     fn from(url: Url) -> Self {
         let (page, title) = match url.path().first().map(String::as_str) {
             None | Some("") => (Self::Home, TITLE_SUFFIX.to_owned()),
-            _ => (Self::NotFound, format!("404 - {}", TITLE_SUFFIX)),
+            _ => (Self::NotFound, format!("404 - {TITLE_SUFFIX}")),
         };
         document().set_title(&title);
         page
@@ -61,9 +61,9 @@ impl From<Url> for Page {
 // ------ ------
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    orders
-        .subscribe(Msg::UrlChanged)
-        .after_next_render(|_| Msg::FocusOnCommandInput);
+    orders.subscribe(Msg::UrlChanged).after_next_render(|_| {
+        Msg::Home(home::Msg::SetCommandInput(String::new()))
+    });
 
     Model {
         page: url.into(),
@@ -82,7 +82,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 pub enum Msg {
     UrlChanged(subs::UrlChanged),
     Home(home::Msg),
-    FocusOnCommandInput,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -91,9 +90,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.page = url.into();
         },
         Msg::Home(hm) => home::update(hm, &mut model.home_page_model, orders),
-        Msg::FocusOnCommandInput => {
-            model.home_page_model.focus_on_command_input();
-        },
     }
 }
 
@@ -113,23 +109,23 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
     let prerendered = true;
     div![
         C![
-            (!prerendered).then(|| C.fade_in),
+            (!prerendered).then_some(C.fade_in),
             C.h_screen,
             C.flex,
             C.flex_col,
             C.font_monospace
         ],
-        page::partial::header::view().into_nodes(),
         match model.page {
             Page::Home => page::home::view(&model.home_page_model).into_nodes(),
             Page::NotFound => page::not_found::view().into_nodes(),
         },
+        page::partial::header::view().into_nodes(),
     ]
 }
 
 #[must_use]
 pub fn image_src(image: &str) -> String {
-    format!("{}/{}", IMAGES_PATH, image)
+    format!("{IMAGES_PATH}/{image}")
 }
 
 // ------ ------

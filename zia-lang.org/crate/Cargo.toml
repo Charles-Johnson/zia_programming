@@ -13,17 +13,20 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dev-dependencies]
-wasm-bindgen-test = "^0.3.18"
+wasm-bindgen-test = "=0.3.18"
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+simple_logger = "1.15.0"
 
 [dependencies]
-zia = { path = "../../zia", version = "0.5.0"}
-seed = "0.8.0"
+zia = { path = "../../zia", version = "0.6.0"}
+seed = "0.9.0"
 console_error_panic_hook = "0.1.7"
 
 [dependencies.web-sys]
 version = "^0.3.45"
 features = [
-  "KeyboardEvent"
+  "KeyboardEvent",
+  "HtmlDivElement"
 ]
 
 [dev-dependencies.web-sys]
@@ -42,3 +45,4 @@ features = [
 [profile.release]
 lto = true
 opt-level = 's'
+strip = true

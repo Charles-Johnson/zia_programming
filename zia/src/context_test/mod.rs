@@ -4,20 +4,9 @@ mod infered_precedence;
 use crate::{
     context::Context as GenericContext,
     mock_snap_shot::{ConceptId, MockSnapShot},
-    multi_threaded::{
-        MultiThreadedContextCache, MultiThreadedReductionReason,
-        MultiThreadedSyntaxTree, MultiThreadedVariableMaskList,
-        SharedDirectConceptDelta,
-    },
+    multi_threaded::{ArcFamily, MTSyntaxTree},
 };
 
-pub type Context = GenericContext<
-    MockSnapShot,
-    MultiThreadedContextCache<
-        MultiThreadedReductionReason<MultiThreadedSyntaxTree<ConceptId>>,
-    >,
-    SharedDirectConceptDelta<ConceptId>,
-    MultiThreadedVariableMaskList<MultiThreadedSyntaxTree<ConceptId>>,
->;
+pub type Context = GenericContext<MockSnapShot, ConceptId, ArcFamily>;
 
-type Syntax = MultiThreadedSyntaxTree<ConceptId>;
+type Syntax = MTSyntaxTree<ConceptId>;

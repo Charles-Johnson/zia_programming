@@ -20,8 +20,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
-      
+          toolchain: 1.81.0
+
       - name: Release zia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}
         working-directory: ./zia
@@ -29,7 +29,7 @@ jobs:
       - name: Sleep for 30 seconds
         uses: jakejarvis/wait-action@master
         with:
-          time: '30s'
+          time: "30s"
 
       - name: Release izia
         run: cargo package && cargo publish --token ${{secrets.CRATES_TOKEN}}

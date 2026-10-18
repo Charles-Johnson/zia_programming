@@ -1,22 +1,19 @@
 #![allow(clippy::redundant_pub_crate)]
 
 mod r#macro;
-mod r#trait;
 
 use crate::{
-    ast::SyntaxTree,
-    context_search::{ReductionReason, ReductionResult},
+    ast::{GenericSyntaxTree, SyntaxKey},
+    nester::SharedReference,
+    reduction_reason::ReductionResult,
 };
 use dashmap::DashMap;
-pub(crate) use r#macro::impl_cache;
-pub use r#trait::ContextCache;
+pub(crate) use r#macro::GenericCache;
 
-pub type ReductionCache<RR> = DashMap<
-    <<RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax,
-    ReductionResult<RR>,
->;
+pub type ReductionCache<CI, SR> =
+    DashMap<SyntaxKey<CI>, ReductionResult<CI, SR>>;
 
-pub type ConceptId<RR> =
-    <<RR as ReductionReason>::Syntax as SyntaxTree>::ConceptId;
-pub type SharedSyntax<RR> =
-    <<RR as ReductionReason>::Syntax as SyntaxTree>::SharedSyntax;
+pub type InferenceCache<CI, SR> = DashMap<CI, ReductionResult<CI, SR>>;
+
+pub type SharedSyntax<CI, SR> =
+    <SR as SharedReference>::Share<GenericSyntaxTree<CI, SR>>;
