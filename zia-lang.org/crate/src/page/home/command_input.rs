@@ -149,7 +149,7 @@ fn textarea_view(
 ) -> impl IntoNodes<GlobalMsg> {
     textarea![
         &class,
-        attrs! {At::Type => "text", At::Name => "input"},
+        attrs! {At::Type => "text", At::Name => "input", At::Id => "command_input"},
         style! {
             St::Resize => "none",
             St::Height => height,
