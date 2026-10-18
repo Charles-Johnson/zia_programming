@@ -799,7 +799,7 @@ where
         let result = self.execute("let (_x_ and false) -> false");
         debug_assert_eq!(result, "");
         let result = self.execute(
-            "let ((_y_ exists_such_that) (_x_ precedes _y_) and _y_ precedes _z_) => _x_ precedes _z_",
+            "let ((_x_ precedes _y_) and _y_ precedes _z_) => _x_ precedes _z_",
         );
         debug_assert_eq!(result, "");
         let result = self.execute("let -> precedes :=");
