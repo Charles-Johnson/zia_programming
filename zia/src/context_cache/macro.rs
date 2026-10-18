@@ -1,5 +1,7 @@
 #![allow(clippy::single_component_path_imports)]
 
+use std::mem::take;
+
 use crate::{
     ast::SyntaxKey,
     concepts::ConceptTrait,
@@ -30,9 +32,32 @@ impl<CI: ConceptId, SR: SharedReference> Default for GenericCache<CI, SR> {
 }
 
 impl<CI: ConceptId, SR: SharedReference> GenericCache<CI, SR> {
-    pub fn invalidate(&mut self) {
-        std::mem::take(self);
-        debug!("Cache invalidated");
+    /// if `reduction_forgotten` is `false`, then only the syntax that reduces to None should be
+    /// cleaned up. If no reductions were forgotten, then the inferences cache should only be
+    /// cleared with keys that map to None.
+    /// Only the head of the inference and reduction caches will be invalidated to prevent
+    /// the cache of parent contexts form being invalidated.
+    pub fn invalidate_reductions(&mut self, reduction_forgotten: bool) {
+        if reduction_forgotten {
+            take(SR::make_mut(&mut self.inferences));
+            take(SR::make_mut(&mut self.reductions));
+        } else {
+            let mut list_to_cleanup = Some(&mut self.inferences);
+            while let Some(list) = list_to_cleanup {
+                list.head.retain(|_, v| v.is_some());
+                list_to_cleanup = SR::make_mut(list).tail.as_mut();
+            }
+            let mut list_to_cleanup = Some(&mut self.reductions);
+            while let Some(list) = list_to_cleanup {
+                list.head.retain(|_, v| v.is_some());
+                list_to_cleanup = SR::make_mut(list).tail.as_mut();
+            }
+        }
+        take(SR::make_mut(&mut self.contains_bound_variable_syntax));
+        take(SR::make_mut(&mut self.syntax_trees));
+    }
+    pub fn on_definition_changed(&mut self) {
+        take(self);
     }
 
     pub fn spawn(&self, cache: &SR::Share<ReductionCache<CI, SR>>) -> Self {
