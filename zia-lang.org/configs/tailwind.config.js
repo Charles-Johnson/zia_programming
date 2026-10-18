@@ -3,15 +3,17 @@ function* range(start, end, step) {
   if (start > end) return;
   yield start;
   yield* range(start + step, end, step);
-};
+}
 
 // For NodeJS < 12
-Object.fromEntries = Object.fromEntries || ((iterable) => {
-  return [...iterable].reduce((obj, [key, val]) => {
-    obj[key] = val
-    return obj
-  }, {})
-});
+Object.fromEntries =
+  Object.fromEntries ||
+  ((iterable) => {
+    return [...iterable].reduce((obj, [key, val]) => {
+      obj[key] = val;
+      return obj;
+    }, {});
+  });
 
 const colors = {
   primary: "#0B723B",
@@ -20,43 +22,43 @@ const colors = {
   abstract_concept: "#BF00FF",
   concrete_concept: "#4000FF",
   new_concept: "#80FF00",
-  unmatched_parenthesis: "#FF0000"
+  unmatched_parenthesis: "#FF0000",
 };
 
 const spacing = {
-  2: '0.5rem',
-  5: '1.25rem',
-  6: '1.5rem',
-  8: '2rem',
-  10: '2.5rem',
-  16: '4rem',
-  20: '5rem',
-  24: '6rem',
+  2: "0.5rem",
+  5: "1.25rem",
+  6: "1.5rem",
+  8: "2rem",
+  10: "2.5rem",
+  16: "4rem",
+  20: "5rem",
+  24: "6rem",
 };
 
 const theme = {
   spacing,
   screens: {
-    'sm': '569px',
+    sm: "569px",
     // => @media (min-width: 569px) { ... }
 
-    'lg': '1025px',
+    lg: "1025px",
     // => @media (min-width: 1025px) { ... }
   },
   fontFamily: {
-    display: ['Metropolis', 'sans-serif'],
-    monospace: ['Courier New', 'monospace'],
+    display: ["Metropolis", "sans-serif"],
+    monospace: ["Courier New", "monospace"],
   },
   fontSize: { 29: "29px", 45: "45px", 55: "55px" },
   colors,
   borderRadius: {
-    '28px': '28px'
+    "28px": "28px",
   },
   columns: {},
   animation: {},
   aspectRatio: {},
   backgroundImage: {},
-  backgroundPsotion: {},
+  backgroundPosition: {},
   backgroundSize: {},
   blur: {},
   brightness: {},
@@ -66,7 +68,7 @@ const theme = {
   borderOpacity: {},
   borderSpacing: {},
   borderWidth: {
-    2: "2px"
+    2: "2px",
   },
   boxShadow: {},
   boxShadowColor: {},
@@ -83,16 +85,16 @@ const theme = {
   hueRotate: {},
   invert: {},
   flex: {
-    1: '1 1 0%',
-    2: '2 2 0%',
+    1: "1 1 0%",
+    2: "2 2 0%",
   },
   flexBasis: {},
   flexGrow: {
-    DEFAULT: '1',
+    DEFAULT: "1",
   },
   flexShrink: {},
   fontWeight: {
-    thin: '100',
+    thin: "100",
   },
   gap: {},
   gradientColorStops: {},
@@ -153,11 +155,11 @@ const theme = {
   translate: {},
   width: { ...spacing },
   willChange: {},
-  zIndex: {}
+  zIndex: {},
 };
 
 module.exports = {
   theme,
   variants: {},
-  plugins: []
-}
+  plugins: [],
+};
