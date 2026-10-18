@@ -19,6 +19,25 @@ services:
       ]
     working_dir: /usr/src
     user: ${UID:-1000}:${GID:-1000}
+  wasm_test:
+    environment:
+      - CARGO_HOME=/usr/src/.cargo
+      - DISPLAY
+    build: ./nvim
+    image: devimage
+    pull_policy: never
+    volumes:
+      - .:/usr/src
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /home/charles/SideProjects/zia_programming/target:/usr/src/target
+    command:
+      [
+        "sh",
+        "-c",
+        "rsync -avzh /home/node/.cargo /usr/src/.cargo && ls -al target && wasm-pack test --headless --chrome zia-lang.org/crate -- --nocapture",
+      ]
+    user: ${UID:-1000}:${GID:-1000}
+    working_dir: /usr/src
   test:
     environment:
       - CARGO_HOME=/usr/src/.cargo
