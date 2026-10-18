@@ -7,11 +7,11 @@ use crate::{
     Msg,
 };
 
-pub struct Model {
+pub struct Modal {
     pub is_open: bool,
 }
 
-impl Default for Model {
+impl Default for Modal {
     fn default() -> Self {
         Self {
             is_open: true,
@@ -19,7 +19,7 @@ impl Default for Model {
     }
 }
 
-pub fn view(model: &Model) -> impl IntoNodes<Msg> {
+pub fn view(model: &Modal) -> impl IntoNodes<Msg> {
     if model.is_open {
         div![
             C![
@@ -31,14 +31,16 @@ pub fn view(model: &Model) -> impl IntoNodes<Msg> {
                 TEXT_PADDING,
                 C.text_center,
                 C.text_primary,
-                C.self_stretch
+                C.self_stretch,
+                C.bg_secondary
             ],
             style! {
                 St::Position => "fixed",
-                St::Top => vh(25),
-                St::Left => vw(25),
-                St::Height => vh(50),
-                St::Width => vw(50)
+                St::Top => vh(50),
+                St::Left => vw(50),
+                St::Transform => "translate(-50%, -50%)",
+                St::MinHeight => vh(50),
+                St::MinWidth => vw(50)
             },
             h1![C![C.flex_1], "Zia"],
             p![C![C.flex_1], "A programming language that defines itself"],

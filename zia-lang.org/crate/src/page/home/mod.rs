@@ -19,7 +19,7 @@ pub struct Model {
     history: Vec<InterpreterHistoryEntry>,
     command_input: ElRef<HtmlTextAreaElement>,
     possible_explanation: ElRef<HtmlDivElement>,
-    menu: menu::Model,
+    menu: menu::Modal,
     active_tutorial: Option<tutorials::Model>,
 }
 
@@ -31,7 +31,7 @@ impl Default for Model {
             history: Vec::new(),
             command_input: ElRef::new(),
             possible_explanation: ElRef::new(),
-            menu: menu::Model::default(),
+            menu: menu::Modal::default(),
             active_tutorial: None,
         }
     }
@@ -134,6 +134,7 @@ pub fn update(
             });
         },
         Msg::Submit => {
+            model.menu.is_open = false;
             let mut input = String::new();
             swap(&mut input, &mut model.input);
             let output = model.context.execute(&input);
