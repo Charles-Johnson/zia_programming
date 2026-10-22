@@ -116,6 +116,7 @@ where
                     .into();
                     self.insert_delta_for_existing_concept(*right_id, cd);
                 }
+                cache_to_invalidate.on_definition_changed();
                 *composition_id
             },
             DirectConceptDelta::Reduce {
@@ -145,6 +146,10 @@ where
                         IndirectConceptDelta::ReducesFrom(*unreduced_id).into();
                     self.insert_delta_for_existing_concept(*after, cd);
                 }
+                cache_to_invalidate.invalidate_reductions(matches!(
+                    change,
+                    ValueChange::Remove(_) | ValueAndTypeChange::Update { .. }
+                ));
                 *unreduced_id
             },
             DirectConceptDelta::Remove(concept_id_to_remove) => {
@@ -152,11 +157,11 @@ where
                     *concept_id_to_remove,
                     dcd,
                 );
+                cache_to_invalidate.on_definition_changed();
                 *concept_id_to_remove
             },
         };
         self.concepts_to_apply_in_order.push((concept_id, concept_delta));
-        cache_to_invalidate.invalidate();
         concept_id
     }
 
