@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 use maplit::hashmap;
 
@@ -32,9 +36,6 @@ pub enum ReductionReason<CI: ConceptId, SR: SharedReference> {
         implication: SharedSyntax<CI, SR>,
         reason: SR::Share<Self>,
     },
-    Default {
-        operator: CI,
-    },
     Partial(PartialReductionReasons<CI, SR>),
     Existence {
         substitutions: Substitutions<CI, SR>,
@@ -56,6 +57,47 @@ pub enum ReductionReason<CI: ConceptId, SR: SharedReference> {
         left: SharedSyntax<CI, SR>,
         right: SharedSyntax<CI, SR>,
     },
+}
+
+impl<CI: ConceptId, SR: SharedReference> Display for ReductionReason<CI, SR> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Comparison(reason) => {
+                write!(f, "Compares because of {:?}", reason.as_ref())
+            },
+            Self::Explicit => write!(f, "Explicitly reduces"),
+            Self::Rule {
+                generalisation,
+                variable_mask,
+                reason,
+            } => write!(f, "Reduces following the pattern {} applied with the variables, {:?}, because {}", generalisation.as_ref(), variable_mask.iter().map(|(k, v)| (k, v.as_ref())).collect::<HashMap<_,_>>(), reason.as_ref()),
+            Self::Inference {
+                implication,
+                reason,
+            } => write!(f, "Inferred via {} because of {}", implication.as_ref(), reason.as_ref()),
+            Self::Partial(reason) => write!(f, "Partially reduces because of {:?})", reason.iter().map(|(k, (s, r))| (k, (s.as_ref(), r))).collect::<HashMap::<_, _>>()),
+            Self::Existence {
+                substitutions,
+                generalisation,
+            } => write!(f, "Example found for {} with substitutions: {:?}", generalisation.as_ref(), substitutions.iter().map(|(k, v)| (k, v.as_ref())).collect::<HashMap<_,_>>() ),
+            Self::Recursive {
+                syntax,
+                reason,
+                from,
+            } => write!(f, "Recursively reduces from {} to {} because of {}", from.as_ref(), syntax.as_ref(), reason.as_ref()),
+            Self::SyntaxCannotReduceToItself => todo!(),
+            Self::LeftReducesToRight {
+                reason,
+                left,
+                right,
+            } => todo!(),
+            Self::RightReducesToLeft {
+                reason,
+                left,
+                right,
+            } => todo!(),
+        }
+    }
 }
 
 impl<CI: ConceptId, SR: SharedReference> Eq for ReductionReason<CI, SR> {}
@@ -88,9 +130,6 @@ impl<CI: ConceptId, SR: SharedReference> Debug for ReductionReason<CI, SR> {
                 .field("implication", implication.as_ref())
                 .field("reason", reason.as_ref())
                 .finish(),
-            Self::Default {
-                operator,
-            } => f.debug_struct("Default").field("operator", operator).finish(),
             Self::Partial(arg0) => f
                 .debug_tuple("Partial")
                 .field(
@@ -220,9 +259,6 @@ impl<CI: ConceptId, SR: SharedReference> PartialEq for ReductionReason<CI, SR> {
             } => {
                 matches!(other, Self::Inference {implication:i2, reason:r2} if i1.as_ref() == i2.as_ref() && r1.as_ref() == r2.as_ref())
             },
-            Self::Default {
-                operator: o1,
-            } => matches!(other, Self::Default { operator: o2 } if o1 == o2),
             Self::Partial(p1) => {
                 matches!(other, Self::Partial(p2) if compare(p1, p2))
             },
@@ -399,12 +435,6 @@ impl<CI: ConceptId, SR: SharedReference> ReductionReason<CI, SR> {
 
     pub const fn explicit() -> Self {
         Self::Explicit
-    }
-
-    pub const fn default(operator: CI) -> Self {
-        Self::Default {
-            operator,
-        }
     }
 
     pub fn rule(

@@ -14,7 +14,7 @@ mod not;
 
 use std::{collections::HashSet, sync::Arc};
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 
 use crate::{
     ast::SyntaxKey,
@@ -55,5 +55,7 @@ fn new_context_search_test<'a, 'b>(
         cache: &cache,
         bound_variable_syntax: bound_variables,
         half_generalisation_cache: Arc::new(DashMap::new()),
+        generalisations_without_examples: Arc::new(DashSet::new()),
+        syntax_with_no_inferred_reductions: Arc::new(DashSet::new()),
     })
 }

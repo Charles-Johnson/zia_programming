@@ -50,8 +50,10 @@ fn implicitly_negated_condition() {
 
 #[test]
 fn implied_reduction_via_implication_chain() {
+    #[cfg(not(target_arch = "wasm32"))]
+    simple_logger::init().unwrap();
     let mut context = NEW_CONTEXT.clone();
-    assert_eq!(context.execute("let (a _x_) => not (b _x_)"), "");
+    assert_eq!(context.execute("let (a _x_) => (not (b _x_) -> true)"), "");
     assert_eq!(context.execute("let (not _x_) => (_x_ -> false)"), "");
     assert_eq!(context.execute("let a c"), "");
     assert_eq!(context.execute("b c"), "false");
