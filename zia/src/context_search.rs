@@ -32,9 +32,7 @@ use crate::{
 use dashmap::DashMap;
 use log::debug;
 use maplit::{hashmap, hashset};
-use std::{
-    collections::HashSet, fmt::Debug, iter, marker::PhantomData, sync::Arc,
-};
+use std::{collections::HashSet, fmt::Debug, iter, marker::PhantomData};
 
 pub struct ContextSearch<'s, 'v, S, CCI: ConceptId, SR: SharedReference>
 where
@@ -1382,7 +1380,7 @@ pub struct ContextReferences<'c, 's, 'v, S, SR: SharedReference, CCI: ConceptId>
     pub bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
     pub half_generalisation_cache: HalfGeneralisationCache<CCI, SR>,
 }
-pub type HalfGeneralisationCache<CCI, SR> = Arc<
+pub type HalfGeneralisationCache<CCI, SR> = <SR as SharedReference>::Share<
     DashMap<HalfGeneralisationKey<CCI>, Option<ExampleSubstitutions<CCI, SR>>>,
 >;
 pub type ReductionTruthResult<RR> = Option<(bool, RR)>;
