@@ -1116,8 +1116,6 @@ where
     ) -> ZiaResult<()> {
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
-        } else if syntax.key() == normal_form.key() {
-            self.try_removing_reduction(syntax)
         } else {
             let context_search = self.context_search();
             if let Some((existing_reduction, _)) =
@@ -1145,30 +1143,6 @@ where
                 normal_form_concept,
             )
         }
-    }
-
-    fn try_removing_reduction(
-        &mut self,
-        syntax: &GenericSyntaxTree<CCI, SR>,
-    ) -> ZiaResult<()> {
-        let delta = SR::make_mut(&mut self.delta);
-        let snap_shot = &self.snap_shot;
-        let cache = &mut self.cache;
-        syntax.get_concept().map_or_else(
-            || {
-                Err(ZiaError::RedundantReduction {
-                    syntax: syntax.to_string(),
-                })
-            },
-            |c| {
-                ContextUpdater {
-                    cache,
-                    delta,
-                    snap_shot,
-                }
-                .delete_reduction(c, syntax.to_string())
-            },
-        )
     }
 
     fn context_search(&self) -> ContextSearch<'_, '_, S, CCI, SR> {
