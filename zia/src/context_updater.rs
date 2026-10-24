@@ -252,7 +252,7 @@ impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
             .get_reduction()
             .and_then(|r| {
                 (r == reduction).then_some(Err(ZiaError::RedundantReduction {
-                    syntax: original_syntax_of_concept,
+                    syntax: original_syntax_of_concept.to_string(),
                 }))
             })
         {
@@ -261,7 +261,7 @@ impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
             == self.snap_shot.get_reduction_of_composition(self.delta, concept)
         {
             Err(ZiaError::RedundantReduction {
-                syntax: concept.to_string(),
+                syntax: original_syntax_of_concept,
             })
         } else {
             let change = maybe_normal_form.map_or_else(

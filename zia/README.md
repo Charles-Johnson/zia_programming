@@ -1,4 +1,4 @@
-![Maintenance](https://img.shields.io/badge/maintenance-activly--developed-brightgreen.svg)
+![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
 
 # zia
 
@@ -44,8 +44,11 @@ assert_eq!(context.execute("forget a b"), "");
 assert_eq!(context.execute("let a b -> d"), "");
 assert_eq!(context.execute("a b"), "d");
 
-// Change the rule so "a b" doesn't reduce any further
-assert_eq!(context.execute("let a b -> a b"), "");
+// Trying to reduce an expression to itself leads to an error
+assert_eq!(context.execute("let a b -> a b"), ZiaError::ExistingReduction{syntax_to_reduce: "a b".to_string(), existing_reduction: "d".to_string()}.to_string());
+
+// Forget "a b" so "a b" doesn't reduce any further
+assert_eq!(context.execute("forget a b"), "");
 assert_eq!(context.execute("a b"), "a b");
 
 // Try to specify a rule that already exists

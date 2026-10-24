@@ -63,7 +63,7 @@ fn broken_end_chain() {
     let mut cont = NEW_CONTEXT.clone();
     assert_eq!(cont.execute("let a b -> c d"), "");
     assert_eq!(cont.execute("let c d -> e"), "");
-    assert_eq!(cont.execute("let c d -> c d"), "");
+    assert_eq!(cont.execute("forget c d"), "");
     assert_eq!(cont.execute("a b"), "c d");
 }
 // A concept that used to triply reduce but whose second reduction no longer reduces should triply reduce to its second reduction.
@@ -73,7 +73,7 @@ fn broken_middle_chain() {
     assert_eq!(cont.execute("let a b -> c d"), "");
     assert_eq!(cont.execute("let c d -> e f"), "");
     assert_eq!(cont.execute("let e f -> g"), "");
-    assert_eq!(cont.execute("let e f -> e f"), "");
+    assert_eq!(cont.execute("forget e f"), "");
     assert_eq!(cont.execute("a b"), "e f");
 }
 // Checking that reduction rules can be changed correctly
