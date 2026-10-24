@@ -749,7 +749,6 @@ pub enum ConcreteConceptType {
     Associativity,
     Right,
     Left,
-    GreaterThan,
     Implication,
     ExistsSuchThat,
     Precedes,
