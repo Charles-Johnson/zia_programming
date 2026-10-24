@@ -15,8 +15,13 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    concepts::{ConcreteConceptType, LefthandOf, RighthandOf},
+    concepts::{
+        Concept, ConcreteConceptType, LefthandOf, RighthandOf, SpecificPart,
+    },
     context_cache::GenericCache,
+    context_snap_shot::{
+        ConceptId as ContextConceptId, ContextSnapShot, Uncommitted,
+    },
     mixed_concept::{self, ConceptId, MixedConcept},
     nester::SharedReference,
 };
@@ -35,8 +40,8 @@ pub struct ContextDelta<
     string: HashMap<String, ValueChange<ConceptId>>,
     number_of_uncommitted_concepts: usize,
     concepts_to_apply_in_order:
-        Vec<(ConceptId, SR::Share<DirectConceptDelta<ConceptId>>)>,
-    concept: HashMap<ConceptId, Vec<ConceptDelta<ConceptId, SR>>>,
+        Vec<(ConceptId, SR::Share<DirectContextConceptDelta<ConceptId, SR>>)>,
+    concept: HashMap<ConceptId, Vec<ContextConceptDelta<ConceptId, SR>>>,
     phantom: PhantomData<SR>,
 }
 
@@ -60,14 +65,14 @@ where
 {
     pub fn update_concept_delta(
         &mut self,
-        concept_delta: DirectConceptDelta<CI>,
+        concept_delta: DirectConceptDelta<CI, ND>,
         cache_to_invalidate: &mut GenericCache<CI, SR>,
     ) -> CI {
         let concept_delta = SR::share(concept_delta);
         let dcd = ConceptDelta::Direct(concept_delta.clone());
         let concept_id = match concept_delta.as_ref() {
             DirectConceptDelta::New(delta) => {
-                self.update_new_concept_delta(delta)
+                self.update_new_concept_delta(delta.clone())
             },
             DirectConceptDelta::Compose {
                 composition_id,
@@ -162,7 +167,7 @@ where
 
     pub const fn concepts_to_apply_in_order(
         &self,
-    ) -> &Vec<(CI, SR::Share<DirectConceptDelta<CI>>)> {
+    ) -> &Vec<(CI, SR::Share<DirectConceptDelta<CI, SR, ND>>)> {
         &self.concepts_to_apply_in_order
     }
 
@@ -183,101 +188,12 @@ where
         self.concept.iter().map(|(c, v)| (c, v.iter()))
     }
 
-    fn update_new_concept_delta(&mut self, delta: &NewConceptDelta<CI>) -> CI {
+    fn update_new_concept_delta(
+        &mut self,
+        delta: SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>,
+    ) -> CI {
         let new_concept_id = self.insert_delta_for_new_concept(delta.clone());
-        match delta {
-            NewConceptDelta::FreeVariable | NewConceptDelta::BoundVariable => {
-                // Nothing extra needed because nothing else refers to the variable concept yet
-            },
-            NewConceptDelta::String(s) => {
-                self.string
-                    .entry(s.into())
-                    .and_modify(|v| match v {
-                        ValueChange::Create(_)
-                        | ValueChange::Update {
-                            ..
-                        } => panic!("String \"{s}\" already exists"),
-                        ValueChange::Remove(id) => {
-                            *v = ValueChange::Update {
-                                before: *id,
-                                after: new_concept_id,
-                            }
-                        },
-                    })
-                    .or_insert_with(|| ValueChange::Create(new_concept_id));
-            },
-            NewConceptDelta::Composition(Composition {
-                left_id,
-                right_id,
-            }) => {
-                let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
-                    composition: new_concept_id,
-                    righthand: *right_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*left_id, cd);
-                let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
-                    composition: new_concept_id,
-                    lefthand: *left_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*right_id, cd);
-            },
-            NewConceptDelta::Left {
-                composition_id,
-                right_id,
-                ..
-            } => {
-                let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
-                    composition: *composition_id,
-                    lefthand: new_concept_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*right_id, cd);
-                let cd = IndirectConceptDelta::ComposedOf(Composition {
-                    left_id: new_concept_id,
-                    right_id: *right_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
-            NewConceptDelta::Right {
-                composition_id,
-                left_id,
-                ..
-            } => {
-                let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
-                    composition: *composition_id,
-                    righthand: new_concept_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*left_id, cd);
-                let cd = IndirectConceptDelta::ComposedOf(Composition {
-                    left_id: *left_id,
-                    right_id: new_concept_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
-            NewConceptDelta::Double {
-                composition_id,
-                ..
-            } => {
-                let cd = IndirectConceptDelta::ComposedOf(Composition {
-                    left_id: new_concept_id,
-                    right_id: new_concept_id,
-                })
-                .into();
-                self.insert_delta_for_existing_concept(*composition_id, cd);
-            },
-            NewConceptDelta::ReducesTo {
-                reduction,
-            } => {
-                let cd =
-                    IndirectConceptDelta::ReducesFrom(new_concept_id).into();
-                self.insert_delta_for_existing_concept(*reduction, cd);
-            },
-        }
+        delta.update_context_delta(self, new_concept_id);
         new_concept_id
     }
 
@@ -305,7 +221,7 @@ where
 
     pub fn insert_delta_for_new_concept(
         &mut self,
-        cd: NewConceptDelta<CI>,
+        cd: SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>,
     ) -> CI {
         let concept_id: CI =
             CI::uncommitted(self.number_of_uncommitted_concepts);
@@ -559,8 +475,15 @@ where
                 Some(new_box)
             },
             (Some(inner_cd), Some(outer_cd)) => {
-                let new_box: Box<dyn Iterator<Item = &ConceptDelta<CI, SR>>> =
-                    Box::new(inner_cd.chain(outer_cd));
+                let new_box: Box<
+                    dyn Iterator<
+                        Item = &ConceptDelta<
+                            CI,
+                            SR,
+                            SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>,
+                        >,
+                    >,
+                > = Box::new(inner_cd.chain(outer_cd));
                 Some(new_box)
             },
         }
@@ -571,7 +494,15 @@ where
     ) -> impl Iterator<
         Item = (
             &'a CI,
-            Box<dyn Iterator<Item = &'a ConceptDelta<CI, SR>> + 'a>,
+            Box<
+                dyn Iterator<
+                        Item = &'a ConceptDelta<
+                            CI,
+                            SR,
+                            SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>,
+                        >,
+                    > + 'a,
+            >,
         ),
     > + 'a {
         let inner_delta = self.inner_delta.as_ref();
@@ -619,7 +550,7 @@ where
 
     pub fn update_concept_delta(
         &mut self,
-        concept_delta: DirectConceptDelta<CI>,
+        concept_delta: DirectConceptDelta<CI, ND>,
         cache_to_invalidate: &mut GenericCache<CI, SR>,
     ) -> CI {
         self.overlay_delta
@@ -628,7 +559,7 @@ where
 
     pub fn concepts_to_apply_in_order(
         &self,
-    ) -> Vec<(CI, SR::Share<DirectConceptDelta<CI>>)> {
+    ) -> Vec<(CI, SR::Share<DirectContextConceptDelta<CI, SR>>)> {
         let mut concepts = self
             .inner_delta
             .as_ref()
@@ -640,22 +571,22 @@ where
 
     pub fn insert_delta_for_new_concept(
         &mut self,
-        cd: NewConceptDelta<CI>,
+        cd: SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>,
     ) -> CI {
         self.overlay_delta.insert_delta_for_new_concept(cd)
     }
 }
 
 #[derive(Clone)]
-pub enum ConceptDelta<Id: ConceptId, SR: SharedReference> {
-    Direct(SR::Share<DirectConceptDelta<Id>>),
+pub enum ConceptDelta<Id: ConceptId, SR: SharedReference, ND> {
+    Direct(SR::Share<DirectConceptDelta<Id, ND>>),
     Indirect(IndirectConceptDelta<Id>),
 }
 
-impl<Id: ConceptId, SR: SharedReference> ConceptDelta<Id, SR> {
+impl<Id: ConceptId, SR: SharedReference, ND> ConceptDelta<Id, SR, ND> {
     pub const fn try_direct(
         &self,
-    ) -> Option<&SR::Share<DirectConceptDelta<Id>>> {
+    ) -> Option<&SR::Share<DirectConceptDelta<Id, ND>>> {
         if let Self::Direct(dcd) = &self {
             Some(dcd)
         } else {
@@ -664,15 +595,15 @@ impl<Id: ConceptId, SR: SharedReference> ConceptDelta<Id, SR> {
     }
 }
 
-impl<Id: ConceptId, SR: SharedReference> From<IndirectConceptDelta<Id>>
-    for ConceptDelta<Id, SR>
+impl<Id: ConceptId, SR: SharedReference, ND> From<IndirectConceptDelta<Id>>
+    for ConceptDelta<Id, SR, ND>
 {
     fn from(icd: IndirectConceptDelta<Id>) -> Self {
         Self::Indirect(icd)
     }
 }
 
-impl<Id, SR> Debug for ConceptDelta<Id, SR>
+impl<Id, SR, ND> Debug for ConceptDelta<Id, SR, ND>
 where
     Id: ConceptId,
     SR: SharedReference,
@@ -721,9 +652,9 @@ pub enum IndirectConceptDelta<Id> {
     ComposedOf(Composition<Id>),
 }
 
-#[derive(Clone, Debug)]
-pub enum DirectConceptDelta<Id: Clone + Display> {
-    New(NewConceptDelta<Id>),
+#[derive(Clone)]
+pub enum DirectConceptDelta<Id: Clone + Display, ND> {
+    New(ND),
     Compose {
         composition_id: Id,
         change: ValueChange<Composition<Id>>,
@@ -735,36 +666,398 @@ pub enum DirectConceptDelta<Id: Clone + Display> {
     Remove(Id),
 }
 
-#[derive(Clone, Debug)]
-pub struct NewDirectConceptDelta<Id, UncommittedId> {
-    pub delta: NewConceptDelta<Id>,
+impl<Id: Clone + Debug + Display, ND: AsRef<dyn Debug>> Debug
+    for DirectConceptDelta<Id, ND>
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::New(arg0) => {
+                let arg0: Box<dyn Debug> = Box::new(arg0.as_ref());
+                f.debug_tuple("New").field(&arg0).finish()
+            },
+            Self::Compose {
+                composition_id,
+                change,
+            } => f
+                .debug_struct("Compose")
+                .field("composition_id", composition_id)
+                .field("change", change)
+                .finish(),
+            Self::Reduce {
+                unreduced_id,
+                change,
+            } => f
+                .debug_struct("Reduce")
+                .field("unreduced_id", unreduced_id)
+                .field("change", change)
+                .finish(),
+            Self::Remove(arg0) => f.debug_tuple("Remove").field(arg0).finish(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct NewDirectConceptDelta<D, UncommittedId> {
+    pub delta: D,
     pub new_concept_id: UncommittedId,
 }
 
-#[derive(Clone, Debug)]
-pub enum NewConceptDelta<Id> {
-    String(String),
-    Composition(Composition<Id>),
-    FreeVariable,
-    BoundVariable,
-    Left {
-        composition_id: Id,
-        right_id: Id,
-        concrete_type: Option<ConcreteConceptType>,
-    },
-    Right {
-        composition_id: Id,
-        left_id: Id,
-        concrete_type: Option<ConcreteConceptType>,
-    },
-    /// Used for e.g. `let label_of label_of -> 'label_of'`
-    Double {
-        composition_id: Id,
-        concrete_type: Option<ConcreteConceptType>,
-    },
-    ReducesTo {
-        reduction: Id,
-    },
+pub trait NewConceptDelta: Debug {
+    type Id: ConceptId;
+    type SR: SharedReference;
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    );
+}
+
+pub trait NewSnapshotConceptDelta {
+    type SR: SharedReference;
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<Self::SR>,
+        new_concept_id: Uncommitted,
+    );
+}
+type ContextConceptDelta<CI, SR: SharedReference> =
+    ConceptDelta<CI, SR, SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>>;
+type DirectContextConceptDelta<CI, SR: SharedReference> =
+    DirectConceptDelta<CI, SR::Share<dyn NewConceptDelta<Id = CI, SR = SR>>>;
+#[derive(Debug)]
+pub struct NewStringConceptDelta<Id, SR>(String, PhantomData<(Id, SR)>);
+impl<T: Into<String>, Id, SR> From<T> for NewStringConceptDelta<Id, SR> {
+    fn from(value: T) -> Self {
+        Self(value.into(), PhantomData)
+    }
+}
+impl<SR: SharedReference> NewSnapshotConceptDelta
+    for NewStringConceptDelta<ContextConceptId, SR>
+{
+    type SR = SR;
+
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<Self::SR>,
+        new_concept_id: Uncommitted,
+    ) {
+        let s = &self.0;
+        let new_concept_id =
+            snap_shot.commit_new_concept(new_concept_id, |new_concept_id| {
+                (SpecificPart::String(s.into()), new_concept_id).into()
+            });
+        snap_shot.insert_string(s, new_concept_id);
+    }
+}
+impl<Id: Debug + ConceptId, SR: SharedReference> NewConceptDelta
+    for NewStringConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let s = &self.0;
+        context_delta
+            .string
+            .entry(s.into())
+            .and_modify(|v| match v {
+                ValueChange::Create(_)
+                | ValueChange::Update {
+                    ..
+                } => panic!("String \"{s}\" already exists"),
+                ValueChange::Remove(id) => {
+                    *v = ValueChange::Update {
+                        before: *id,
+                        after: new_concept_id,
+                    }
+                },
+            })
+            .or_insert_with(|| ValueChange::Create(new_concept_id));
+    }
+}
+#[derive(Debug)]
+pub struct NewCompositionConceptDelta<Id, SR>(Composition<Id>, PhantomData<SR>);
+impl<Id: Debug + MixedConcept, SR: SharedReference> NewConceptDelta
+    for NewCompositionConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let Composition {
+            left_id,
+            right_id,
+        } = self.0;
+        let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+            composition: new_concept_id,
+            righthand: right_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(left_id, cd);
+        let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+            composition: new_concept_id,
+            lefthand: left_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(right_id, cd);
+    }
+}
+#[derive(Debug)]
+pub struct NewFreeVariableConceptDelta<Id, SR>(PhantomData<(Id, SR)>);
+impl<Id: Debug, SR> Default for NewFreeVariableConceptDelta<Id, SR> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+impl<Id: Debug + ConceptId, SR: SharedReference> NewConceptDelta
+    for NewFreeVariableConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        _context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        _new_concept_id: Self::Id,
+    ) {
+        // Nothing extra needed because nothing else refers to the variable concept yet
+    }
+}
+impl<SR: SharedReference> NewSnapshotConceptDelta
+    for NewFreeVariableConceptDelta<ContextConceptId, SR>
+{
+    type SR = SR;
+
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<Self::SR>,
+        new_concept_id: Uncommitted,
+    ) {
+        snap_shot
+            .commit_new_concept(new_concept_id, Concept::make_free_variable);
+    }
+}
+#[derive(Debug)]
+pub struct NewBoundVariableConceptDelta<Id, SR>(PhantomData<(Id, SR)>);
+impl<Id, SR> Default for NewBoundVariableConceptDelta<Id, SR> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+impl<SR: SharedReference> NewSnapshotConceptDelta
+    for NewBoundVariableConceptDelta<ContextConceptId, SR>
+{
+    type SR = SR;
+
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<Self::SR>,
+        new_concept_id: Uncommitted,
+    ) {
+        snap_shot
+            .commit_new_concept(new_concept_id, Concept::make_bound_variable);
+    }
+}
+
+impl<Id: Debug + ConceptId, SR: SharedReference> NewConceptDelta
+    for NewBoundVariableConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+    fn update_context_delta(
+        &self,
+        _context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        _new_concept_id: Self::Id,
+    ) {
+        // Nothing extra needed because nothing else refers to the variable concept yet
+    }
+}
+#[derive(Debug)]
+pub struct NewLeftConceptDelta<Id, SR> {
+    composition_id: Id,
+    right_id: Id,
+    concrete_type: Option<ConcreteConceptType>,
+    phantom: PhantomData<SR>,
+}
+impl<Id: Debug + MixedConcept, SR: SharedReference> NewConceptDelta
+    for NewLeftConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let Self {
+            composition_id,
+            right_id,
+            ..
+        } = self;
+        let cd = IndirectConceptDelta::RighthandOf(RighthandOf {
+            composition: *composition_id,
+            lefthand: new_concept_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(*right_id, cd);
+        let cd = IndirectConceptDelta::ComposedOf(Composition {
+            left_id: new_concept_id,
+            right_id: *right_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(*composition_id, cd);
+    }
+}
+#[derive(Debug)]
+pub struct NewRightConceptDelta<Id, SR> {
+    pub composition_id: Id,
+    pub left_id: Id,
+    pub concrete_type: Option<ConcreteConceptType>,
+    pub phantom: PhantomData<SR>,
+}
+impl<Id: Debug + MixedConcept, SR: SharedReference> NewConceptDelta
+    for NewRightConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let Self {
+            composition_id,
+            left_id,
+            ..
+        } = self;
+        let cd = IndirectConceptDelta::LefthandOf(LefthandOf {
+            composition: *composition_id,
+            righthand: new_concept_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(*left_id, cd);
+        let cd = IndirectConceptDelta::ComposedOf(Composition {
+            left_id: *left_id,
+            right_id: new_concept_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(*composition_id, cd);
+    }
+}
+#[derive(Debug)]
+/// Used for e.g. `let label_of label_of -> 'label_of'`
+pub struct NewDoubleConceptDelta<Id, SR> {
+    pub composition_id: Id,
+    pub concrete_type: Option<ConcreteConceptType>,
+    pub phantom: PhantomData<SR>,
+}
+impl<Id: MixedConcept, SR: SharedReference> NewConceptDelta
+    for NewDoubleConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let Self {
+            composition_id,
+            ..
+        } = self;
+        let cd = IndirectConceptDelta::ComposedOf(Composition {
+            left_id: new_concept_id,
+            right_id: new_concept_id,
+        })
+        .into();
+        context_delta.insert_delta_for_existing_concept(*composition_id, cd);
+    }
+}
+
+impl<SR: SharedReference> NewSnapshotConceptDelta
+    for NewDoubleConceptDelta<ContextConceptId, SR>
+{
+    type SR = SR;
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<SR>,
+        new_concept_id: Uncommitted,
+    ) {
+        let new_concept_id = snap_shot
+            .commit_new_concept_with_dependent_concepts(
+                new_concept_id,
+                [snap_shot
+                    .convert_to_committed_concept_id(self.composition_id)],
+                |[composition], new_concept_id| {
+                    Concept::double(
+                        new_concept_id,
+                        composition,
+                        self.concrete_type,
+                    )
+                },
+            );
+        if let Some(cct) = self.concrete_type {
+            snap_shot.insert_concrete_concept(new_concept_id, cct);
+        }
+    }
+}
+#[derive(Debug)]
+pub struct NewReducesToConceptDelta<Id, SR> {
+    reduction: Id,
+    phantom: PhantomData<SR>,
+}
+impl<Id, SR> From<Id> for NewReducesToConceptDelta<Id, SR> {
+    fn from(reduction: Id) -> Self {
+        Self {
+            reduction,
+            phantom: PhantomData,
+        }
+    }
+}
+impl<Id: MixedConcept, SR: SharedReference> NewConceptDelta
+    for NewReducesToConceptDelta<Id, SR>
+{
+    type Id = Id;
+    type SR = SR;
+
+    fn update_context_delta(
+        &self,
+        context_delta: &mut ContextDelta<Self::Id, Self::SR>,
+        new_concept_id: Self::Id,
+    ) {
+        let cd = IndirectConceptDelta::ReducesFrom(new_concept_id).into();
+        context_delta.insert_delta_for_existing_concept(self.reduction, cd);
+    }
+}
+
+impl<SR: SharedReference> NewSnapshotConceptDelta
+    for NewReducesToConceptDelta<ContextConceptId, SR>
+{
+    type SR = SR;
+    fn apply(
+        &self,
+        snap_shot: &mut ContextSnapShot<SR>,
+        new_concept_id: Uncommitted,
+    ) {
+        snap_shot.commit_new_concept_with_dependent_concepts(
+            new_concept_id,
+            [snap_shot.convert_to_committed_concept_id(self.reduction)],
+            |[reduction_concept], new_concept_id| {
+                Concept::reduction_to(new_concept_id, reduction_concept)
+            },
+        );
+    }
 }
 
 pub type ValueChange<T> = ValueAndTypeChange<T, T>;
@@ -783,6 +1076,14 @@ pub enum ValueAndTypeChange<T, U> {
 pub struct Composition<Id> {
     pub left_id: Id,
     pub right_id: Id,
+}
+
+impl<Id, SR: SharedReference> From<Composition<Id>>
+    for NewCompositionConceptDelta<Id, SR>
+{
+    fn from(value: Composition<Id>) -> Self {
+        Self(value, PhantomData)
+    }
 }
 
 impl<Id: Display> Display for Composition<Id> {

@@ -1,4 +1,4 @@
-FROM node:18-slim
+FROM node:22-slim
 RUN apt update
 RUN apt install -y curl
 RUN apt-get install ripgrep
@@ -45,7 +45,7 @@ USER root
 RUN apt install -y build-essential
 RUN apt install -y rsync
 USER node
-RUN rustup default 1.88 # required for home@0.5.12
+RUN rustup default 1.89 # required for uuid@1.28.0
 RUN cargo install --force wasm-pack --version 0.13.0
 RUN cargo install --force cargo-make --version "0.35.1"
 RUN cargo install --force cargo-readme
@@ -92,5 +92,5 @@ RUN apt install -y \
   libxtst6 \
   libatk-bridge2.0-0 
 RUN apt install -y libgtk-3-0
-RUN rustup default 1.82
+RUN rustup default 1.86
 USER node

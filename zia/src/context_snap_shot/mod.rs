@@ -24,10 +24,10 @@ pub use concept_id::{ConceptId, Uncommitted};
 
 use crate::{
     concepts::{Concept, ConceptTrait, ConcreteConceptType, SpecificPart},
-    context_delta,
     context_delta::{
-        Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
-        NewConceptDelta, NewDirectConceptDelta, ValueChange,
+        self, Composition, ConceptDelta, DirectConceptDelta, NestedDelta,
+        NewConceptDelta, NewDirectConceptDelta, NewSnapshotConceptDelta,
+        ValueChange,
     },
     delta::Apply,
     nester::SharedReference,
@@ -55,7 +55,21 @@ pub struct ContextSnapShot<SR: SharedReference> {
 }
 
 impl<SR: SharedReference> ContextSnapShot<SR> {
-    fn commit_new_concept(
+    pub fn insert_string(
+        &mut self,
+        s: impl Into<String>,
+        new_concept_id: Committed,
+    ) {
+        self.string_map.insert(s.into(), new_concept_id);
+    }
+    pub fn insert_concrete_concept(
+        &mut self,
+        new_concept_id: Committed,
+        cct: ConcreteConceptType,
+    ) {
+        self.concrete_concepts.insert(new_concept_id, cct);
+    }
+    pub fn commit_new_concept(
         &mut self,
         id: Uncommitted,
         f: impl FnOnce(Committed) -> Concept<Committed>,
@@ -65,7 +79,7 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
         committed_id
     }
 
-    fn commit_new_concept_with_dependent_concepts<const N: usize>(
+    pub fn commit_new_concept_with_dependent_concepts<const N: usize>(
         &mut self,
         id: Uncommitted,
         dependencies: [Committed; N],
@@ -86,7 +100,7 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
         committed_id
     }
 
-    fn convert_to_committed_concept_id(&self, id: ConceptId) -> Committed {
+    pub fn convert_to_committed_concept_id(&self, id: ConceptId) -> Committed {
         match id {
             ConceptId::Committed(cci) => cci,
             ConceptId::Uncommitted(uci) => *self
@@ -106,25 +120,17 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
     #[allow(clippy::too_many_lines)]
     fn apply_new_concept(
         &mut self,
-        ndcd: &NewDirectConceptDelta<ConceptId, Uncommitted>,
+        ndcd: &NewDirectConceptDelta<
+            SR::Share<dyn NewSnapshotConceptDelta<SR = SR>>,
+            Uncommitted,
+        >,
     ) {
         let NewDirectConceptDelta {
             new_concept_id,
             delta,
         } = ndcd;
+        delta.apply(self, *new_concept_id);
         match delta {
-            NewConceptDelta::FreeVariable => {
-                self.commit_new_concept(
-                    *new_concept_id,
-                    Concept::make_free_variable,
-                );
-            },
-            NewConceptDelta::BoundVariable => {
-                self.commit_new_concept(
-                    *new_concept_id,
-                    Concept::make_bound_variable,
-                );
-            },
             NewConceptDelta::String(s) => {
                 let new_concept_id = self.commit_new_concept(
                     *new_concept_id,
@@ -171,27 +177,6 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
                     self.concrete_concepts.insert(new_concept_id, *cct);
                 }
             },
-            NewConceptDelta::Double {
-                composition_id,
-                concrete_type,
-                ..
-            } => {
-                let new_concept_id = self
-                    .commit_new_concept_with_dependent_concepts(
-                        *new_concept_id,
-                        [self.convert_to_committed_concept_id(*composition_id)],
-                        |[composition], new_concept_id| {
-                            Concept::double(
-                                new_concept_id,
-                                composition,
-                                *concrete_type,
-                            )
-                        },
-                    );
-                if let Some(cct) = concrete_type {
-                    self.concrete_concepts.insert(new_concept_id, *cct);
-                }
-            },
             NewConceptDelta::Right {
                 composition_id,
                 left_id,
@@ -217,17 +202,6 @@ impl<SR: SharedReference> ContextSnapShot<SR> {
                 if let Some(cct) = concrete_type {
                     self.concrete_concepts.insert(new_concept_id, *cct);
                 }
-            },
-            NewConceptDelta::ReducesTo {
-                reduction,
-            } => {
-                self.commit_new_concept_with_dependent_concepts(
-                    *new_concept_id,
-                    [self.convert_to_committed_concept_id(*reduction)],
-                    |[reduction_concept], new_concept_id| {
-                        Concept::reduction_to(new_concept_id, reduction_concept)
-                    },
-                );
             },
         }
     }

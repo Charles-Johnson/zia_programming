@@ -58,9 +58,8 @@ impl<NestedSyntax: PartialEq, SR: SharedReference> Eq
 {
 }
 pub trait SharedReference: Debug + Clone + PartialEq + Eq {
-    type Share<T>: AsRef<T> + Borrow<T> + Clone + Deref<Target = T>;
-    fn share<T>(owned: T) -> Self::Share<T>;
-
+    type Share<T: ?Sized>: AsRef<T> + Borrow<T> + Clone + Deref<Target = T>;
+    fn share<T: ?Sized>(owned: T) -> Self::Share<T>;
     fn make_mut<T: Clone>(refcounter: &mut Self::Share<T>) -> &mut T;
 }
 

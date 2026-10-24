@@ -1,10 +1,14 @@
+use std::marker::PhantomData;
+
 use crate::{
     and_also::AndAlso,
     ast::GenericSyntaxTree,
     concepts::{ConceptTrait, ConcreteConceptType, Hand},
     context_cache::GenericCache,
     context_delta::{
-        Composition, DirectConceptDelta, NestedDelta, NewConceptDelta,
+        Composition, DirectConceptDelta, NestedDelta,
+        NewCompositionConceptDelta, NewConceptDelta, NewDoubleConceptDelta,
+        NewReducesToConceptDelta, NewRightConceptDelta, NewStringConceptDelta,
         ValueAndTypeChange, ValueChange,
     },
     errors::ZiaResult,
@@ -135,27 +139,39 @@ impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
                 || concrete_type == Some(ConcreteConceptType::Label)
         );
         let new_concept_label_id = {
-            let direct_delta =
-                DirectConceptDelta::New(NewConceptDelta::String(string.into()));
+            let direct_delta = DirectConceptDelta::New(SR::share(
+                NewStringConceptDelta::from(string),
+            )
+                as SR::Share<dyn NewConceptDelta<Id = S::ConceptId, SR = SR>>);
             self.delta.update_concept_delta(direct_delta, self.cache)
         };
         let composition_id = {
-            let direct_delta =
-                DirectConceptDelta::New(NewConceptDelta::ReducesTo {
-                    reduction: new_concept_label_id,
-                });
+            let direct_delta = DirectConceptDelta::New(SR::share(
+                NewReducesToConceptDelta::from(new_concept_label_id),
+            )
+                as SR::Share<dyn NewConceptDelta<Id = S::ConceptId, SR = SR>>);
             self.delta.update_concept_delta(direct_delta, self.cache)
         };
         {
             let direct_delta = DirectConceptDelta::New(label_id.map_or(
-                NewConceptDelta::Double {
+                SR::share(NewDoubleConceptDelta {
                     composition_id,
                     concrete_type,
-                },
-                |left_id| NewConceptDelta::Right {
-                    composition_id,
-                    left_id,
-                    concrete_type,
+                    phantom: PhantomData,
+                })
+                    as SR::Share<
+                        dyn NewConceptDelta<Id = S::ConceptId, SR = SR>,
+                    >,
+                |left_id| {
+                    SR::share(NewRightConceptDelta {
+                        composition_id,
+                        left_id,
+                        concrete_type,
+                        phantom: PhantomData,
+                    })
+                        as SR::Share<
+                            dyn NewConceptDelta<Id = S::ConceptId, SR = SR>,
+                        >
                 },
             ));
             self.delta.update_concept_delta(direct_delta, self.cache)
@@ -285,7 +301,10 @@ impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
         string: impl Into<String> + Clone,
     ) -> S::ConceptId {
         self.delta.update_concept_delta(
-            DirectConceptDelta::New(NewConceptDelta::String(string.into())),
+            DirectConceptDelta::New(SR::share(NewStringConceptDelta::from(
+                string,
+            ))
+                as SR::Share<dyn NewConceptDelta<Id = S::ConceptId, SR = SR>>),
             self.cache,
         )
     }
@@ -300,15 +319,19 @@ impl<S: Reader<SR>, SR: SharedReference> ContextUpdater<'_, S, SR> {
             .read_concept(self.delta, lefthand)
             .find_as_hand_in_composition_with(righthand, Hand::Left);
         match pair {
-            None => self.delta.update_concept_delta(
-                DirectConceptDelta::New(NewConceptDelta::Composition(
-                    Composition {
-                        left_id: lefthand,
-                        right_id: righthand,
-                    },
-                )),
-                self.cache,
-            ),
+            None => {
+                let delta = NewCompositionConceptDelta::from(Composition {
+                    left_id: lefthand,
+                    right_id: righthand,
+                })
+                    as SR::Share<
+                        dyn NewConceptDelta<Id = S::ConceptId, SR = SR>,
+                    >;
+                self.delta.update_concept_delta(
+                    DirectConceptDelta::New(delta),
+                    self.cache,
+                )
+            },
             Some(def) => def,
         }
     }
