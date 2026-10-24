@@ -312,8 +312,7 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<18>, Tutorial<4>) = (
                 command: "let (_y_ exists_such_that) (_x_ -> _y_ and _z_ -> _y_) => _x_ = _y_",
                 explanation: "For the associativity property, we first need to define equality",
                 #[cfg(test)]
-                expected_evaluation: ""
-                
+                expected_evaluation: "" 
             },
             TutorialStep {
                 command: "let (_s_ with _o_ form a group) => (_a_ in _s_ and _b_ in _s_ and _c_ in _s_) => _a_ _o_ (_b_ _o_ _c_) = (_a_ _o_ _b_) _o_ _c_",
