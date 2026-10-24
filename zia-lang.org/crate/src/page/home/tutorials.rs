@@ -1,7 +1,7 @@
 #[cfg(test)]
 use std::time::{Duration, Instant};
 
-pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<18>) = (
+pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<18>, Tutorial<4>) = (
     Tutorial {
         title: "Factorial",
         steps: [
@@ -292,6 +292,36 @@ pub const TUTORIALS: (Tutorial<18>, Tutorial<10>, Tutorial<18>) = (
                 explanation: ""
             },
         ]
+    },
+    Tutorial {
+        title: "Group Theory",
+        steps: [
+            TutorialStep {
+                command: "let (_s_ with _o_ form a group) => _a_ in _s_ and _b_ in _s_ => _a_ _o_ _b_ in _s_",
+                explanation: "We can express the closure property of a group",
+                #[cfg(test)]
+                expected_evaluation: "",
+            },
+            TutorialStep {
+                command: "let (_s_ with _o_ form a group) => (_a_ in _s_) => (_i_ exists_such_that) ((_a_ _o_ _i_ -> _a_) and _i_ _o_ _a_ -> _a_) and (_b_ exists_such_that) (_b_ in _s_ and (_a_ _o_ _b_ -> _i_) and _b_ _o_ _a_ -> _i_)",
+                explanation: "We can also express the inverse and identity properties",
+                #[cfg(test)]
+                expected_evaluation: "",
+            },
+            TutorialStep {
+                command: "let (_y_ exists_such_that) (_x_ -> _y_ and _z_ -> _y_) => _x_ = _y_",
+                explanation: "For the associativity property, we first need to define equality",
+                #[cfg(test)]
+                expected_evaluation: ""
+                
+            },
+            TutorialStep {
+                command: "let (_s_ with _o_ form a group) => (_a_ in _s_ and _b_ in _s_ and _c_ in _s_) => _a_ _o_ (_b_ _o_ _c_) = (_a_ _o_ _b_) _o_ _c_",
+                explanation: "Now the associativity property can be defined",
+                #[cfg(test)]
+                expected_evaluation: ""
+            }
+        ],
     }
 );
 
@@ -356,6 +386,13 @@ mod test {
     fn array_tutorial() {
         let mut context = NEW_CONTEXT.clone();
         for step in TUTORIALS.2.steps {
+            step.test(&mut context);
+        }
+    }
+    #[test]
+    fn group_theory_tutorial() {
+        let mut context = NEW_CONTEXT.clone();
+        for step in TUTORIALS.3.steps {
             step.test(&mut context);
         }
     }
