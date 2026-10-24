@@ -21,7 +21,7 @@ use crate::{
     concepts::{format_string, ConceptTrait, ConcreteConceptType, Hand},
     consistent_merge::ConsistentMerge,
     context_cache::{GenericCache, ReductionCache},
-    context_delta::{DirectConceptDelta, NestedDelta, NewConceptDelta},
+    context_delta::{DirectConceptDelta, NestedDelta, NewBoundVariableConceptDelta},
     mixed_concept::{ConceptId, MixedConcept},
     nester::SharedReference,
     reduction_reason::{ReductionReason, ReductionResult, SharedSyntax},
@@ -47,7 +47,7 @@ where
     syntax_evaluating: HashSet<SyntaxKey<CCI>>,
     concept_inferring: HashSet<S::ConceptId>,
     bound_variable_syntax: &'v HashSet<SyntaxKey<CCI>>,
-    phantom: PhantomData<SR::Share<DirectConceptDelta<CCI>>>,
+    phantom: PhantomData<SR::Share<DirectConceptDelta<CCI, SR>>>,
     phantom2: PhantomData<CCI>,
     cached_example_of_half_generalisation: HalfGeneralisationCache<CCI, SR>,
 }
@@ -490,21 +490,21 @@ where
             self.concrete_ast(ConcreteConceptType::Reduction)?;
         let mut spawned_delta = NestedDelta::spawn(self.delta.clone());
         let variable_reduction_id = spawned_delta
-            .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+            .insert_delta_for_new_concept(NewBoundVariableConceptDelta::default());
         let variable_reduction_syntax =
             GenericSyntaxTree::<CCI, SR>::new_leaf_variable(
                 variable_reduction_id,
             )
             .share();
         let variable_condition_id = spawned_delta
-            .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+            .insert_delta_for_new_concept(NewBoundVariableConceptDelta::default());
         let variable_condition_syntax =
             GenericSyntaxTree::<CCI, SR>::new_leaf_variable(
                 variable_condition_id,
             )
             .share();
         let variable_result_id = spawned_delta
-            .insert_delta_for_new_concept(NewConceptDelta::BoundVariable);
+            .insert_delta_for_new_concept(NewBoundVariableConceptDelta::default());
         let _variable_result_syntax =
             GenericSyntaxTree::<CCI, SR>::new_leaf_variable(variable_result_id)
                 .share();

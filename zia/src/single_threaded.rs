@@ -8,7 +8,7 @@ use std::{fmt::Debug, rc::Rc};
 pub struct RcFamily;
 
 impl SharedReference for RcFamily {
-    type Share<T> = Rc<T>;
+    type Share<T: ?Sized> = Rc<T>;
 
     fn share<T>(owned: T) -> Self::Share<T> {
         Rc::new(owned)
