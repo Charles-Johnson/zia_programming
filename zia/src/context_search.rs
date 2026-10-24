@@ -847,23 +847,6 @@ where
         );
         let cct = self.concrete_type_of_ast(rightleft)?;
         match cct {
-            ConcreteConceptType::GreaterThan => {
-                let (comparison, comparison_reason) =
-                    self.compare(left, rightright);
-                match comparison {
-                    Comparison::GreaterThan => {
-                        self.concrete_ast(ConcreteConceptType::True)
-                    },
-                    Comparison::EqualTo
-                    | Comparison::LessThan
-                    | Comparison::LessThanOrEqualTo => {
-                        self.concrete_ast(ConcreteConceptType::False)
-                    },
-                    Comparison::GreaterThanOrEqualTo
-                    | Comparison::Incomparable => None,
-                }
-                .map(|ast| (ast, comparison_reason.into()))
-            },
             ConcreteConceptType::Reduction => {
                 let (x, reason) =
                     ReductionReason::<CCI, SR>::determine_reduction_truth(
@@ -1023,116 +1006,6 @@ where
                 }
             },
         )
-    }
-
-    #[allow(clippy::too_many_lines)]
-    pub fn compare(
-        &self,
-        some_syntax: &SharedSyntax<CCI, SR>,
-        another_syntax: &SharedSyntax<CCI, SR>,
-    ) -> (Comparison, ComparisonReason<CCI, SR>) {
-        if some_syntax.key() == another_syntax.key() {
-            return (Comparison::EqualTo, ComparisonReason::SameSyntax);
-        }
-
-        self.concrete_concept_id(ConcreteConceptType::GreaterThan).map_or((Comparison::Incomparable, ComparisonReason::NoGreaterThanConcept), |greater_than_concept_id|
-        {
-            let greater_than_syntax = self.to_ast(&greater_than_concept_id);
-            let comparing_syntax = self.combine(
-                some_syntax,
-                &self.combine(&greater_than_syntax, another_syntax).share(),
-            );
-            let comparing_reversed_syntax = self.combine(
-                another_syntax,
-                &self.combine(&greater_than_syntax, some_syntax).share(),
-            );
-            let mut reason = None;
-            let mut reversed_reason = None;
-            let determine_concrete_type_whilst_noting_reversed_reason =|(reversed_comparison, local_reversed_reason)| {
-                reversed_reason = local_reversed_reason;
-                self.concrete_type_of_ast(&reversed_comparison)
-            };
-            let determine_concrete_type_whilst_noting_reason =|(syntax_comparison, local_reason)| {
-                reason = local_reason;
-                self.concrete_type_of_ast(&syntax_comparison)
-            };
-            let cache = SR::share(ReductionCache::<CCI,SR>::default());
-            (
-                match (
-                    if self.syntax_evaluating.contains(&comparing_syntax.key()) {
-                        self.caches
-                        .get_reduction_or_else(
-                            &comparing_syntax.share(),
-                            || None,
-                        )
-                        .map(|(s, r)| (s, Some(r)))
-                    } else {
-                        let mut context_search = self.spawn(&cache, self.delta.clone(), self.cached_example_of_half_generalisation.clone());
-                        let comparing_syntax = comparing_syntax.share();
-                        context_search
-                        .syntax_evaluating
-                        .insert(comparing_syntax.key());
-                    Some(
-                            context_search
-                            .recursively_reduce(&comparing_syntax),
-                        )
-                    }
-                    .and_then(
-                        determine_concrete_type_whilst_noting_reason,
-                    ),
-                    if self
-                        .syntax_evaluating
-                        .contains(&comparing_reversed_syntax.key())
-                        {
-                            self.caches
-                            .get_reduction_or_else(
-                                &comparing_reversed_syntax.share(),
-                                || None,
-                            )
-                            .map(|(s, r)| (s, Some(r)))
-                        } else {
-                            let mut context_search = self.spawn(&cache, self.delta.clone(), self.cached_example_of_half_generalisation.clone());
-                        let comparing_reversed_syntax =
-                        comparing_reversed_syntax.share();
-                        context_search
-                        .syntax_evaluating
-                        .insert(comparing_reversed_syntax.key());
-                    Some(
-                        context_search
-                        .recursively_reduce(&comparing_reversed_syntax),
-                    )
-                }
-                .and_then(
-                        determine_concrete_type_whilst_noting_reversed_reason,
-                    ),
-                ) {
-                    (
-                        Some(ConcreteConceptType::False),
-                        Some(ConcreteConceptType::False),
-                    ) => Comparison::EqualTo,
-                    (
-                        Some(ConcreteConceptType::True),
-                        Some(ConcreteConceptType::True),
-                    ) => {
-                        panic!("{:#?} is both greater than and less than {:#?}!\nReason: {reason:#?}\n Reversed reason: {reversed_reason:#?}", some_syntax.as_ref(), another_syntax.as_ref());
-                    },
-                    (Some(ConcreteConceptType::True), _) => {
-                        Comparison::GreaterThan
-                    },
-                    (_, Some(ConcreteConceptType::True)) => {
-                        Comparison::LessThan
-                    },
-                    (Some(ConcreteConceptType::False), _) => {
-                        Comparison::LessThanOrEqualTo
-                    },
-                    (_, Some(ConcreteConceptType::False)) => {
-                        Comparison::GreaterThanOrEqualTo
-                    },
-                    _ => Comparison::Incomparable,
-                },
-                ReductionReason::<CCI,SR>::simplify_reasoning(reason, reversed_reason),
-            )
-        })
     }
 
     pub fn spawn<'b, 'c>(
@@ -1321,16 +1194,6 @@ where
 //   ast: &'a GenericSyntaxTree<CI, SR>,
 //   snap_shot: &
 //}
-
-#[derive(PartialEq, Debug, Eq)]
-pub enum Comparison {
-    GreaterThan,
-    LessThan,
-    Incomparable,
-    EqualTo,
-    GreaterThanOrEqualTo,
-    LessThanOrEqualTo,
-}
 
 #[derive(PartialEq, Debug)]
 pub enum ComparisonReason<CI: ConceptId, SR: SharedReference> {

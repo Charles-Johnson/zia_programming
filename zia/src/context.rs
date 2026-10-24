@@ -763,7 +763,6 @@ where
             ("assoc", ConcreteConceptType::Associativity),
             ("right", ConcreteConceptType::Right),
             ("left", ConcreteConceptType::Left),
-            (">", ConcreteConceptType::GreaterThan),
             ("=>", ConcreteConceptType::Implication),
             ("exists_such_that", ConcreteConceptType::ExistsSuchThat),
             ("precedes", ConcreteConceptType::Precedes),

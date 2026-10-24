@@ -1,10 +1,8 @@
-mod basic_comparison;
 mod basic_composition;
 mod basic_existence;
 mod basic_inference;
 mod basic_reduction;
 mod basic_rule;
-mod comparison_existence_implication_rule;
 mod existence_inference_rule;
 mod implied_reduction_via_implication_chain;
 mod inference_rule;
