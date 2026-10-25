@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 extern crate zia;
 
-use zia::multi_threaded::NEW_CONTEXT;
+use zia::{multi_threaded::NEW_CONTEXT, ZiaError};
 
 #[test]
 fn single_variable_reduction() {
@@ -32,4 +32,13 @@ fn repeated_variable_reduction() {
     assert_eq!(context.execute("b + b"), "2 b");
     // Check whether a + b doesn't reduce if a != b
     assert_eq!(context.execute("b + c"), "b + c");
+}
+
+#[test]
+fn forbid_generic_reduction_rule() {
+    let mut context = NEW_CONTEXT.clone();
+    assert_eq!(
+        context.execute("let _x_ -> _y_"),
+        ZiaError::CyclicReduction.to_string()
+    );
 }

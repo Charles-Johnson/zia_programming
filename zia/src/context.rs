@@ -1114,6 +1114,9 @@ where
         syntax: &SharedSyntax<CCI, SR>,
         normal_form: &SharedSyntax<CCI, SR>,
     ) -> ZiaResult<()> {
+        if syntax.is_leaf_variable() && normal_form.is_leaf_variable() {
+            return Err(ZiaError::CyclicReduction);
+        }
         if normal_form.contains(syntax) {
             Err(ZiaError::ExpandingReduction)
         } else {
